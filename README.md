@@ -1,13 +1,3 @@
-
-
-<p>
-  <img src="assets/moon.jpg" alt="Moon" width="1920" />
-Image credit: NASA
-</p>
-
-
-<br />
-
 <div align="center">
 
 <picture>
