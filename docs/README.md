@@ -4,6 +4,7 @@
 |---|---|
 | [product.md](product.md) | Продуктовая концепция: что такое Skaro v2, для кого, основной сценарий, MVP |
 | [architecture.md](architecture.md) | Техническая архитектура: процессы, артефакты `.skaro/`, агенты, MCP, запуск, слияние |
+| [implementation-plan.md](implementation-plan.md) | План реализации по этапам |
 | [agent-output.md](agent-output.md) | Вывод агентов: что отдают Claude Code и Codex, каноническая модель ленты, маппинг, устойчивость к изменениям форматов |
 | [design-brief-agent-feed.md](design-brief-agent-feed.md) | Задание дизайнеру: агентская лента, вопросы, разрешения, поле ввода, модалка агента |
 | [design-brief-2.md](design-brief-2.md) | Задание дизайнеру, итерация 2: правки сданной «Ленты агента», новые блоки, экран «Настройки» |

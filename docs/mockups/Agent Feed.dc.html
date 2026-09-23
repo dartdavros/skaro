@@ -122,7 +122,6 @@ input, button, textarea { font-family: inherit; }
                       <div style="display: flex; gap: 10px; padding: 0 12px; color: {{ d.color }}; white-space: pre;"><span style="flex: none; width: 10px;">{{ d.sign }}</span><span>{{ d.text }}</span></div>
                     </sc-for>
                   </div>
-                  <a href="#1a" style="align-self: flex-start; font-size: 11.5px; font-weight: 600;">Весь дифф — в ревью</a>
                 </div>
               </sc-if>
               <sc-for list="{{ edits }}" as="e" hint-placeholder-count="6">
@@ -1328,7 +1327,7 @@ class Component extends DCLogic {
       dl: 'M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4',
     };
     const ends = [
-      { cap: 'Задача · успех', icon: I.ok, text: 'Агент закончил · 7 файлов · 4:36 · 41k токенов', action: 'Открыть ревью', tip: 'Посмотреть изменения перед влитием' },
+      { cap: 'Задача · успех', icon: I.ok, text: 'Агент закончил · 7 файлов · 4:36 · 41k токенов', action: '' },
       { cap: 'Чат · успех', icon: I.ok, text: 'Готово · 0:48 · 12k токенов', action: '' },
       { cap: 'Остановлено пользователем', icon: I.stop, text: 'Остановлено · 2:11', action: '' },
       { cap: 'Ошибка · лимит', icon: I.err, err: true, text: 'Запуск прервался: закончился лимит', action: 'Перезапустить', tip: 'Запустить заново с того же места' },
