@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: #151515; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; }
+a { color: #2a52be; text-decoration: none; }
+a:hover { color: #2bb3a6; text-decoration: underline; }
+input, button, textarea { font-family: inherit; }
+@keyframes skPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+@keyframes skPulseRing { 0% { opacity: .5; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.2); } }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #282828; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3b3b3b; }
+</style>
+</helmet>
+
+<div style="padding: 44px; background: #151515; width: max-content;">
+<div data-screen-label="План" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onClick="{{ onRootClick }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #0f0f0f; color: #b1b1b1; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
+
+  <div style="height: 42px; flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 0 10px 0 14px; background: #0f0f0f; border-bottom: 1px solid #1a1a1a;">
+    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 11px 11px 0 0; cursor: pointer;" style-hover="background: #161616;">
+      <svg width="16" height="16" viewBox="0 0 127 127" aria-hidden="true"><defs><linearGradient id="skGradT" x1="0%" x2="0%" y1="100%" y2="0%"><stop offset="0%" stop-color="rgb(129,0,70)"></stop><stop offset="16%" stop-color="rgb(168,0,40)"></stop><stop offset="32%" stop-color="rgb(232,0,44)"></stop><stop offset="48%" stop-color="rgb(255,0,0)"></stop><stop offset="64%" stop-color="rgb(255,66,0)"></stop><stop offset="81%" stop-color="rgb(255,84,0)"></stop><stop offset="99%" stop-color="rgb(255,90,0)"></stop></linearGradient></defs><path fill-rule="evenodd" fill="url(#skGradT)" d="M63.500,126.999 C28.429,126.999 0.0,98.570 0.0,63.500 C0.0,59.33 0.466,54.677 1.343,50.471 C5.174,62.937 16.778,72.0 30.500,72.0 C47.344,72.0 60.999,58.344 60.999,41.500 C60.999,24.655 47.344,11.0 30.500,11.0 C29.513,11.0 28.539,11.51 27.577,11.142 C37.795,4.118 50.164,0.0 63.500,0.0 C98.570,0.0 126.999,28.429 126.999,63.500 C126.999,98.570 98.570,126.999 63.500,126.999 Z"></path></svg>
+      <span style="font-size: 13.5px; font-weight: 700; letter-spacing: .04em; color: #ededed;">skaro</span>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 42px; margin-left: -8px;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 11px 0 13px; border-radius: 11px 11px 0 0; background: #121212; border: 1px solid #242424; border-bottom: none; margin-bottom: -1px; position: relative; z-index: 1; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-before="content: ''; position: absolute; bottom: 0; left: -11px; width: 10px; height: 10px; border-bottom-right-radius: 10px; border-right: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: 3px 3px 0 3px #121212; pointer-events: none;" style-after="content: ''; position: absolute; bottom: 0; right: -11px; width: 10px; height: 10px; border-bottom-left-radius: 10px; border-left: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: -3px 3px 0 3px #121212; pointer-events: none;">
+        <span data-tip="Агент работает" style="position: relative; display: inline-flex; width: 7px; height: 7px;">
+          <span style="position: absolute; inset: 0; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+          <span style="position: absolute; inset: 0; border-radius: 50%; border: 1px solid #a6a6a6; animation: skPulseRing 1.8s ease-out infinite;"></span>
+        </span>
+        Shop API
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        <span data-tip="Требует вашего внимания" style="width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
+        Blog Engine
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        Skaro Landing
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Открыть проект">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; height: 42px;">
+      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Настройки">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7h-9M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
+      </button>
+      <div style="width: 1px; height: 16px; background: #1d1d1d; margin: 0 2px;"></div>
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex;">
+
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; background: #121212;">
+
+      <div style="flex: none; padding: 20px 24px 14px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;">
+          <div style="min-width: 0;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #d8d8d8; letter-spacing: -.01em;">План</h1>
+            <div style="margin-top: 5px; font-size: 13px; color: #989898;">{{ subtitle }}</div>
+          </div>
+          <div style="display: flex; gap: 8px; flex: none;">
+            <a href="AgentChat.dc.html" data-tip="Новый чат с агентом — весь план в контексте" style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; background: #242424; color: #d5d5d5; font-size: 12.5px; font-weight: 600; text-decoration: none;" style-hover="background: #2d2d2d; color: #ededed; text-decoration: none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+              Перепланировать с агентом
+            </a>
+            <button onClick="{{ openNewStage }}" style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; border: none; background: #2a52be; color: #ffffff; font-size: 12.5px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+              Новый этап
+            </button>
+          </div>
+        </div>
+
+        <sc-if value="{{ hasPlan }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div onClick="{{ toggleHideDone }}" data-tip="Задачи «Готово» и «Отменена»" style="display: inline-flex; align-items: center; gap: 9px; height: 30px; padding: 0 10px 0 8px; border-radius: 8px; cursor: pointer; font-size: 12.5px; color: #b1b1b1;" style-hover="background: #1a1a1a; color: #d5d5d5;">
+              <span style="flex: none; width: 16px; height: 16px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: {{ hideBoxBg }}; box-shadow: inset 0 0 0 1px {{ hideBoxBorder }}; transition: background .12s, box-shadow .12s;">
+              <sc-if value="{{ hideDone }}" hint-placeholder-val="{{ false }}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ededed" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+              </sc-if>
+            </span>
+              Скрыть готовые
+            </div>
+            <div style="flex: 1;"></div>
+            <button onClick="{{ toggleAll }}" data-tip="{{ toggleAllTip }}" style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;">
+              <sc-if value="{{ anyOpen }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m7 20 5-5 5 5"></path><path d="m7 4 5 5 5-5"></path></svg></sc-if>
+              <sc-if value="{{ noneOpen }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></sc-if>
+            </button>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ noPlan }}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 24px 60px; text-align: center;">
+          <span style="color: #4a4a4a; display: inline-flex;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg></span>
+          <div style="display: flex; flex-direction: column; gap: 6px; max-width: 380px;">
+            <span style="font-size: 15px; font-weight: 700; color: #d5d5d5;">Плана пока нет</span>
+            <span style="font-size: 13px; line-height: 1.6; color: #8a8a8a; text-wrap: pretty;">Обсудите проект с агентом — он предложит этапы и задачи.</span>
+          </div>
+          <a href="AgentChat.dc.html" style="display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 15px; border-radius: 8px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none;" style-hover="background: #3461d6; color: #ffffff; text-decoration: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+            Обсудить с агентом
+          </a>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasPlan }}" hint-placeholder-val="{{ true }}">
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 24px 28px; display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ stages }}" as="s" hint-placeholder-count="4">
+            <div onDragOver="{{ s.dragOverStage }}" onDrop="{{ s.drop }}" style="flex: none; border-radius: 10px; background: #1a1a1a; box-shadow: {{ s.ring }}; opacity: {{ s.op }}; transition: box-shadow .12s;">
+
+              <div draggable="true" onDragStart="{{ s.dragStart }}" onDragEnd="{{ onDragEnd }}" onClick="{{ s.toggle }}" style="position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 10px 12px 8px; border-radius: 10px; cursor: pointer;" style-hover="background: #1e1e1e;">
+                <span data-tip="Перетащите, чтобы изменить порядок этапов" style="flex: none; width: 14px; display: inline-flex; justify-content: center; color: #4a4a4a; cursor: grab;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="18" r="1"></circle></svg></span>
+                <span style="flex: none; display: inline-flex; color: #7d7d7d; transform: rotate({{ s.rot }}); transition: transform .15s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+                <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; font-weight: 600; color: #a1a1a1;">{{ s.id }}</span>
+                <span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: {{ s.nameColor }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ s.name }}</span>
+                <div style="flex: none; display: flex; align-items: center; gap: 12px;">
+                  <sc-for list="{{ s.marks }}" as="m" hint-placeholder-count="0">
+                    <span data-tip="{{ m.tip }}" style="display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #a6a6a6; cursor: default;">
+                      <span style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: {{ m.color }}; animation: {{ m.anim }};"></span>
+                      {{ m.count }}
+                    </span>
+                  </sc-for>
+                </div>
+                <div data-tip="{{ s.progTip }}" style="flex: none; display: flex; align-items: center; gap: 10px; width: 176px;">
+                  <div style="flex: 1; height: 4px; border-radius: 3px; background: #242424; overflow: hidden;">
+                    <div style="height: 100%; width: {{ s.pct }}; border-radius: 3px; background: {{ s.barColor }}; transition: width .3s ease;"></div>
+                  </div>
+                  <span style="flex: none; width: 44px; text-align: right; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #989898;">{{ s.count }}</span>
+                </div>
+                <div data-keep-menu="1" style="position: relative; flex: none;">
+                  <button onClick="{{ s.openMenu }}" data-tip="Действия с этапом" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: {{ s.menuBg }}; color: #989898; cursor: pointer;" style-hover="background: #262626; color: #ededed;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+                  </button>
+                  <sc-if value="{{ s.menuOpen }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ stopProp }}" style="position: absolute; top: 32px; right: 0; z-index: 30; width: 222px; padding: 5px; border-radius: 10px; background: #242424; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px;">
+                      <a href="AgentChat.dc.html" data-tip="Задача создаётся с агентом — этап уже в контексте" style="display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; font-size: 13px; color: #d5d5d5; text-decoration: none;" style-hover="background: #2d2d2d; color: #ededed; text-decoration: none;">
+                        <span style="display: inline-flex; color: #8a8a8a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+                        Новая задача
+                      </a>
+                      <div onClick="{{ s.edit }}" style="display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; font-size: 13px; color: #d5d5d5; cursor: pointer;" style-hover="background: #2d2d2d; color: #ededed;">
+                        <span style="display: inline-flex; color: #8a8a8a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg></span>
+                        Редактировать
+                      </div>
+                      <a href="AgentChat.dc.html" style="display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; font-size: 13px; color: #d5d5d5; text-decoration: none;" style-hover="background: #2d2d2d; color: #ededed; text-decoration: none;">
+                        <span style="display: inline-flex; color: #8a8a8a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></span>
+                        Обсудить с агентом
+                      </a>
+                      <div style="height: 1px; background: #2f2f2f; margin: 4px 2px;"></div>
+                      <div onClick="{{ s.askDelete }}" style="display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; font-size: 13px; color: #d98079; cursor: pointer;" style-hover="background: rgba(239,106,99,.12); color: #ef6a63;">
+                        <span style="display: inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span>
+                        Удалить этап…
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+
+              <sc-if value="{{ s.open }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 0 10px 10px 8px; display: flex; flex-direction: column; gap: 10px;">
+                  <sc-if value="{{ s.hasMeta }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; padding: 2px 10px 4px 46px;">
+                      <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Цель</span>
+                        <span style="font-size: 13px; line-height: 1.55; color: #b1b1b1; text-wrap: pretty;">{{ s.goal }}</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Критерий готовности</span>
+                        <span style="font-size: 13px; line-height: 1.55; color: #b1b1b1; text-wrap: pretty;">{{ s.crit }}</span>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <sc-for list="{{ s.tasks }}" as="t" hint-placeholder-count="4">
+                      <a href="Task.dc.html" draggable="true" onDragStart="{{ t.dragStart }}" onDragEnd="{{ onDragEnd }}" onDragOver="{{ t.dragOver }}" onDrop="{{ t.drop }}" onMouseEnter="{{ t.enter }}" onMouseLeave="{{ onLeaveTask }}" style="display: grid; grid-template-columns: 14px 16px 52px minmax(0, 1fr) auto 20px 64px; align-items: center; gap: 10px; height: 38px; padding: 0 10px 0 0; border-radius: 8px; background: {{ t.bg }}; box-shadow: {{ t.dropLine }}; opacity: {{ t.op }}; color: inherit; text-decoration: none; cursor: pointer; transition: background .12s, opacity .12s;" style-hover="text-decoration: none;">
+                        <span data-tip="Перетащите: порядок или другой этап" style="display: inline-flex; justify-content: center; color: #3b3b3b; cursor: grab;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="18" r="1"></circle></svg></span>
+                        <span data-tip="{{ t.stTip }}" style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px;">
+                          <sc-if value="{{ t.isDot }}" hint-placeholder-val="{{ false }}">
+                            <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ t.dotColor }}; animation: {{ t.dotAnim }};"></span>
+                          </sc-if>
+                          <sc-if value="{{ t.isLock }}" hint-placeholder-val="{{ false }}">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+                          </sc-if>
+                          <sc-if value="{{ t.isTodo }}" hint-placeholder-val="{{ true }}">
+                            <span style="width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #4a4a4a;"></span>
+                          </sc-if>
+                          <sc-if value="{{ t.isDone }}" hint-placeholder-val="{{ false }}">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6f6f6f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                          </sc-if>
+                          <sc-if value="{{ t.isCancel }}" hint-placeholder-val="{{ false }}">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5f5f5f" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+                          </sc-if>
+                        </span>
+                        <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #8a8a8a;">{{ t.id }}</span>
+                        <span style="min-width: 0; font-size: 13px; color: {{ t.titleColor }}; text-decoration: {{ t.strike }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.title }}</span>
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                          <sc-if value="{{ t.hasRel }}" hint-placeholder-val="{{ false }}">
+                            <span style="font-size: 11.5px; color: #7d9ce8;">{{ t.rel }}</span>
+                          </sc-if>
+                          <sc-for list="{{ t.deps }}" as="d" hint-placeholder-count="0">
+                            <span data-tip="{{ d.tip }}" style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: {{ d.color }};">← {{ d.id }}</span>
+                          </sc-for>
+                        </span>
+                        <span data-tip="{{ t.agent }}" style="display: inline-flex; justify-content: center;">
+                          <sc-if value="{{ t.anthropic }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757"></path></svg></sc-if>
+                          <sc-if value="{{ t.openai }}" hint-placeholder-val="{{ false }}"><span style="display: inline-flex; color: #c8c8c8;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg></span></sc-if>
+                        </span>
+                        <span style="text-align: right; font-size: 11.5px; color: #6f6f6f;">{{ t.time }}</span>
+                      </a>
+                    </sc-for>
+                    <sc-if value="{{ s.emptyTasks }}" hint-placeholder-val="{{ false }}">
+                      <div onDragOver="{{ s.dragOverEnd }}" style="height: 38px; display: flex; align-items: center; padding-left: 46px; border-radius: 8px; font-size: 12.5px; color: #6f6f6f; box-shadow: {{ s.endDrop }};">{{ s.emptyText }}</div>
+                    </sc-if>
+                    <div onDragOver="{{ s.dragOverEnd }}" style="height: 6px; border-radius: 3px; box-shadow: {{ s.endDropLine }};"></div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="flex: none; width: 216px; border-left: 1px solid #1a1a1a; padding: 18px 8px 14px 8px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px 8px 10px;">
+          <span style="flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #5f5f5f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
+          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m17.6 10.6 1.4 1.4-1.4 1.4"></path></svg>
+          </button>
+        </div>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="height: 1px; background: #222222; margin: 9px 10px;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 14px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #ededed;">
+            <span style="flex: none; width: 16px; display: inline-flex; align-items: center; justify-content: center; color: {{ n.iconColor }};">
+              <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              </sc-if>
+            </span>
+            <span style="flex: 1; min-width: 0;">{{ n.label }}</span>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ n.count }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+
+
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ panelClosed }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: none; width: 44px; border-left: 1px solid #1a1a1a; padding: 18px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b1b1b1; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m18.4 10.6-1.4 1.4 1.4 1.4"></path></svg>
+        </button>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="width: 20px; height: 1px; background: #222222; margin: 7px 0;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span style="position: absolute; top: 4px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #2a52be;"></span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ tipOn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ tipStyle }}">{{ tipText }}</div>
+  </sc-if>
+
+  <sc-if value="{{ stageModalOn }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position: absolute; inset: 0; z-index: 70; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <div onClick="{{ stopProp }}" style="width: 460px; max-width: 100%; display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 14px; background: #1a1a1a; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 15px; font-weight: 700; color: #d5d5d5;">{{ stageModalTitle }}</span>
+          <button onClick="{{ closeModal }}" data-tip="Закрыть · Esc" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #242424; color: #ededed;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Название</span>
+          <input type="text" value="{{ fName }}" onInput="{{ onFName }}" placeholder="Например, Доставка" style="height: 34px; padding: 0 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #ededed; font-size: 13px; outline: none; box-shadow: inset 0 0 0 1px #2a2a2a;"  style-hover="background: #0b0b0b; box-shadow: inset 0 0 0 1px #363636;" style-focus="background: #0b0b0b; box-shadow: inset 0 0 0 1px #2a52be;"/>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Цель</span>
+          <textarea rows="2" value="{{ fGoal }}" onInput="{{ onFGoal }}" placeholder="Что должно стать возможным после этапа" style="padding: 9px 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #ededed; font-size: 13px; line-height: 1.5; resize: none; outline: none;" style-hover="background: #0b0b0b;" style-focus="box-shadow: inset 0 0 0 1px #2a52be;"></textarea>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Критерий готовности</span>
+          <textarea rows="2" value="{{ fCrit }}" onInput="{{ onFCrit }}" placeholder="Как понять, что этап завершён" style="padding: 9px 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #ededed; font-size: 13px; line-height: 1.5; resize: none; outline: none;" style-hover="background: #0b0b0b;" style-focus="box-shadow: inset 0 0 0 1px #2a52be;"></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button onClick="{{ closeModal }}" style="height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #242424; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #ededed;">Отмена</button>
+          <button onClick="{{ saveStage }}" style="height: 34px; padding: 0 15px; border: none; border-radius: 8px; background: {{ saveBg }}; color: {{ saveColor }}; font-size: 13px; font-weight: 700; cursor: {{ saveCursor }};" style-hover="background: #3461d6; color: #ffffff;">{{ stageModalAction }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ deleteOn }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position: absolute; inset: 0; z-index: 70; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <div onClick="{{ stopProp }}" style="width: 420px; max-width: 100%; display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 14px; background: #1a1a1a; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <span style="flex: none; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(239,106,99,.14); color: #ef6a63;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </span>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 15px; font-weight: 700; color: #d5d5d5;">{{ deleteTitle }}</span>
+            <span style="font-size: 13px; line-height: 1.55; color: #8a8a8a; text-wrap: pretty;">{{ deleteText }}</span>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button onClick="{{ closeModal }}" style="height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #242424; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #ededed;">Отмена</button>
+          <button onClick="{{ confirmDelete }}" style="height: 34px; padding: 0 15px; border: none; border-radius: 8px; background: #d9534d; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #e5625c;">Удалить этап</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1368, &quot;height&quot;: 888}, &quot;panelOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}, &quot;empty&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}}">
+const ST = {
+  todo:      { label: 'Не начата',     color: '#a6a6a6', flag: 'isTodo' },
+  blocked:   { label: 'Заблокирована', color: '#a6a6a6', flag: 'isBlocked' },
+  working:   { label: 'В работе',      color: '#8fb8e6', flag: 'isWorking' },
+  need:      { label: 'Нужен ответ',   color: '#3461d6', flag: 'isNeed' },
+  review:    { label: 'На ревью',      color: '#e8b356', flag: 'isReview' },
+  done:      { label: 'Готово',        color: '#a6a6a6', flag: 'isDone' },
+  error:     { label: 'Ошибка',        color: '#f08b85', flag: 'isError' },
+  cancelled: { label: 'Отменена',      color: '#7d7d7d', flag: 'isTodo' },
+};
+
+const MS = [
+  { id: 'M01', name: 'Базовый API' },
+  { id: 'M02', name: 'Платежи' },
+  { id: 'M03', name: 'Админка' },
+];
+
+const DATA = [
+  { id: 'T-004', title: 'Схема БД и миграции', ms: 'M01', st: 'done', agent: 'anthropic', model: 'Sonnet 5', updated: 'вчера' },
+  { id: 'T-007', title: 'Каталог товаров', ms: 'M01', st: 'done', agent: 'anthropic', model: 'Sonnet 5', updated: 'вчера' },
+  { id: 'T-009', title: 'Точка входа FastAPI', ms: 'M01', st: 'done', agent: 'openai', model: 'GPT-5.6 Terra', updated: 'вчера' },
+  { id: 'T-010', title: 'Корзина', ms: 'M01', st: 'done', agent: 'anthropic', model: 'Opus 5', updated: '2 дн назад' },
+
+  { id: 'T-011', title: 'Ключи и конфиг эквайринга', ms: 'M02', st: 'done', agent: 'anthropic', model: 'Sonnet 5', updated: '3 ч назад' },
+  { id: 'T-012', title: 'Модель платежа', ms: 'M02', st: 'done', agent: 'anthropic', model: 'Opus 5', updated: '2 ч назад' },
+  { id: 'T-013', title: 'Схема платежей', ms: 'M02', st: 'done', agent: 'openai', model: 'GPT-5.6 Terra', updated: '24 мин назад' },
+  { id: 'T-014', title: 'Интеграция с эквайрингом', ms: 'M02', st: 'working', agent: 'anthropic', model: 'Opus 5',
+    line: 'Правит src/pay/acquiring.ts', elapsed: '14:05', updated: 'сейчас' },
+  { id: 'T-019', title: 'Идемпотентность вебхуков', ms: 'M02', st: 'need', agent: 'openai', model: 'GPT-5.6 Terra',
+    line: 'Разрешить установку stripe@17?', elapsed: '03:41', updated: '1 ч назад' },
+  { id: 'T-016', title: 'Возвраты по картам', ms: 'M02', st: 'review', agent: 'anthropic', model: 'Opus 5', par: true,
+    line: '+214 −38 · 7 файлов · Тесты ✓ Линтер ✗', updated: '4 мин назад' },
+  { id: 'T-015', title: 'Webhook статусов оплаты', ms: 'M02', st: 'blocked', dep: '← T-014', updated: 'вчера' },
+  { id: 'T-017', title: 'Отчёты по платежам', ms: 'M02', st: 'error', agent: 'openai', model: 'GPT-5.6 Terra',
+    line: 'Запуск остановлен на 02:11', updated: '40 мин назад' },
+
+  { id: 'T-020', title: 'Роли и доступы админки', ms: 'M03', st: 'todo', par: true, updated: 'вчера' },
+  { id: 'T-021', title: 'Список заказов', ms: 'M03', st: 'todo', par: true, updated: 'вчера' },
+  { id: 'T-022', title: 'Экран возвратов', ms: 'M03', st: 'blocked', dep: '← T-016', updated: 'вчера' },
+];
+
+class Component extends DCLogic {
+  state = { tip: null, panel: null, menu: null, open: null, hideDone: false, hover: null, drag: null, over: null, modal: null, target: null, form: { name: '', goal: '', crit: '' }, data: null };
+
+  seed() {
+    const T = (id, title, st, extra) => Object.assign({ id, title, st, deps: [], agent: null, time: '' }, extra || {});
+    return {
+      order: ['M01', 'M02', 'M03', 'M04'],
+      stages: {
+        M01: { name: 'Базовый API', goal: 'Каталог и заказы доступны через REST API.', crit: 'Все эндпоинты описаны в OpenAPI и покрыты тестами.', tasks: ['T-001', 'T-002', 'T-003', 'T-004', 'T-005', 'T-006'] },
+        M02: { name: 'Платежи', goal: 'Принимать оплату картой и СБП.', crit: 'Оплата проходит end-to-end в тестовом режиме, статусы заказов обновляются по вебхукам.', tasks: ['T-012', 'T-013', 'T-014', 'T-015', 'T-016', 'T-017', 'T-018', 'T-019'] },
+        M03: { name: 'Админка', goal: 'Управлять заказами и доступами без SQL.', crit: 'Менеджер и поддержка работают только в админке, права проверяются на сервере.', tasks: ['T-020', 'T-021', 'T-022', 'T-023', 'T-024'] },
+        M04: { name: 'Запуск', goal: 'Выкатить сервис в прод и видеть его состояние.', crit: 'Деплой по тегу, алерты и ежедневные бэкапы.', tasks: ['T-030', 'T-031', 'T-032'] },
+      },
+      tasks: {
+        'T-001': T('T-001', 'Каркас проекта', 'done', { agent: 'cc', time: '12 сен' }),
+        'T-002': T('T-002', 'Модели каталога', 'done', { agent: 'cc', time: '13 сен', deps: ['T-001'] }),
+        'T-003': T('T-003', 'CRUD товаров', 'done', { agent: 'cx', time: '14 сен', deps: ['T-002'] }),
+        'T-004': T('T-004', 'Схема БД и миграции', 'done', { agent: 'cc', time: '15 сен', deps: ['T-001'] }),
+        'T-005': T('T-005', 'Авторизация JWT', 'done', { agent: 'cc', time: '16 сен', deps: ['T-004'] }),
+        'T-006': T('T-006', 'Документация OpenAPI', 'cancel', { time: '16 сен' }),
+        'T-012': T('T-012', 'Модель платежа', 'done', { agent: 'cc', time: 'вчера', deps: ['T-004'] }),
+        'T-013': T('T-013', 'Идемпотентность платежей', 'done', { agent: 'cx', time: 'вчера', deps: ['T-012'] }),
+        'T-014': T('T-014', 'Интеграция с эквайрингом', 'working', { agent: 'cc', time: '12 мин', deps: ['T-012'] }),
+        'T-015': T('T-015', 'Вебхуки статусов', 'blocked', { agent: 'cc', deps: ['T-014'] }),
+        'T-016': T('T-016', 'Возвраты', 'blocked', { deps: ['T-014'] }),
+        'T-017': T('T-017', 'Оплата через СБП', 'need', { agent: 'cx', time: '40 мин', deps: ['T-012'] }),
+        'T-018': T('T-018', 'Чеки 54-ФЗ', 'review', { agent: 'cc', time: '1 ч', deps: ['T-013'] }),
+        'T-019': T('T-019', 'Отчёт по платежам', 'error', { agent: 'cx', time: '2 ч', deps: ['T-013'] }),
+        'T-020': T('T-020', 'Роли и доступы админки', 'todo', { agent: 'cc', deps: ['T-004'] }),
+        'T-021': T('T-021', 'Список заказов', 'blocked', { deps: ['T-020'] }),
+        'T-022': T('T-022', 'Карточка заказа', 'blocked', { deps: ['T-021'] }),
+        'T-023': T('T-023', 'Журнал действий', 'blocked', { deps: ['T-020'] }),
+        'T-024': T('T-024', 'Экспорт заказов в CSV', 'todo'),
+        'T-030': T('T-030', 'CI/CD по тегу', 'todo'),
+        'T-031': T('T-031', 'Мониторинг и алерты', 'blocked', { deps: ['T-030'] }),
+        'T-032': T('T-032', 'Ежедневные бэкапы', 'todo'),
+      },
+      next: 5,
+    };
+  }
+
+  hover = (e) => {
+    const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!el) return;
+    const text = el.getAttribute('data-tip');
+    if (!text) return;
+    const host = e.currentTarget.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const w = Math.min(260, 6.6 * text.length + 20);
+    const x = Math.max(w / 2 + 10, Math.min(host.width - w / 2 - 10, r.left - host.left + r.width / 2));
+    const next = { text, x, y: r.top - host.top, below: r.top - host.top < 46 };
+    const cur = this.state.tip;
+    if (cur && cur.text === next.text && Math.abs(cur.x - next.x) < 1 && Math.abs(cur.y - next.y) < 1) return;
+    this.setState({ tip: next });
+  };
+  unhover = () => { if (this.state.tip) this.setState({ tip: null }); };
+  closeMenus = (e) => {
+    if (e.target.closest && e.target.closest('[data-keep-menu]')) return;
+    if (this.state.menu) this.setState({ menu: null });
+  };
+  onKey = (e) => { if (e.key === 'Escape' && this.state.modal) this.setState({ modal: null }); };
+  componentDidMount() { window.addEventListener('keydown', this.onKey); }
+  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); }
+
+  data() { return this.state.data || this.seed(); }
+
+  moveTask(tid, toStage, toIndex) {
+    const d = JSON.parse(JSON.stringify(this.data()));
+    const from = d.order.find((k) => d.stages[k].tasks.includes(tid));
+    if (!from) return;
+    const arr = d.stages[from].tasks;
+    const oldIdx = arr.indexOf(tid);
+    arr.splice(oldIdx, 1);
+    let idx = toIndex;
+    if (from === toStage && oldIdx < toIndex) idx -= 1;
+    d.stages[toStage].tasks.splice(Math.max(0, idx), 0, tid);
+    const open = Object.assign({}, this.openMap(), { [toStage]: true });
+    this.setState({ data: d, open });
+  }
+  moveStage(sid, toIndex) {
+    const d = JSON.parse(JSON.stringify(this.data()));
+    const oldIdx = d.order.indexOf(sid);
+    d.order.splice(oldIdx, 1);
+    let idx = toIndex;
+    if (oldIdx < toIndex) idx -= 1;
+    d.order.splice(Math.max(0, idx), 0, sid);
+    this.setState({ data: d });
+  }
+  openMap() { return this.state.open || { M02: true, M03: true }; }
+  endDrag = () => this.setState({ drag: null, over: null });
+
+  renderVals() {
+    const S = this.state;
+    const d = this.data();
+    const empty = this.props.empty ?? false;
+    const panel = S.panel ?? (this.props.panelOpen ?? true);
+    const openMap = this.openMap();
+    const PULSE = 'skPulse 1.6s ease-in-out infinite';
+    const AG = { cc: 'Claude Code', cx: 'Codex' };
+    const doneLike = (st) => st === 'done' || st === 'cancel';
+    const TIP = { todo: 'Не начата', working: 'Агент работает', need: 'Нужен ответ', review: 'На ревью', error: 'Ошибка запуска', done: 'Готово', cancel: 'Отменена' };
+
+    const hov = S.hover ? d.tasks[S.hover] : null;
+    const upstream = new Set(hov ? hov.deps : []);
+    const downstream = new Set(hov ? Object.values(d.tasks).filter((t) => t.deps.includes(hov.id)).map((t) => t.id) : []);
+
+    const drag = S.drag, over = S.over;
+    let totalTasks = 0, totalDone = 0;
+
+    const stages = d.order.map((sid, sIdx) => {
+      const st = d.stages[sid];
+      const all = st.tasks.map((id) => d.tasks[id]);
+      const done = all.filter((t) => t.st === 'done').length;
+      const counted = all.filter((t) => t.st !== 'cancel').length;
+      totalTasks += counted; totalDone += done;
+      const pct = counted ? Math.round(done / counted * 100) : 0;
+      const n = (k) => all.filter((t) => t.st === k).length;
+      const marks = [
+        n('working') && { tip: 'В работе: ' + n('working'), count: n('working'), color: '#a6a6a6', anim: PULSE },
+        (n('need') + n('review')) && { tip: 'Требуют внимания: ' + (n('need') + n('review')), count: n('need') + n('review'), color: '#2a52be', anim: 'none' },
+        n('error') && { tip: 'Ошибка: ' + n('error'), count: n('error'), color: '#ef6a63', anim: 'none' },
+      ].filter(Boolean);
+      const isOpen = !!openMap[sid];
+      const shownTasks = all.filter((t) => !(S.hideDone && doneLike(t.st)));
+      const stageOver = drag && drag.kind === 'stage' && over && over.kind === 'stage' && over.index === sIdx && drag.id !== sid;
+      const endOver = drag && drag.kind === 'task' && over && over.kind === 'task' && over.stage === sid && over.index === st.tasks.length;
+
+      const tasks = shownTasks.map((t) => {
+        const realIdx = st.tasks.indexOf(t.id);
+        const isUp = upstream.has(t.id), isDown = downstream.has(t.id);
+        const related = isUp || isDown;
+        const dim = hov && !related && hov.id !== t.id;
+        const lineOver = drag && drag.kind === 'task' && over && over.kind === 'task' && over.stage === sid && over.index === realIdx && drag.id !== t.id;
+        return {
+          id: t.id, title: t.title,
+          isDot: ['working', 'need', 'review', 'error'].includes(t.st), isLock: t.st === 'blocked', isTodo: t.st === 'todo', isDone: t.st === 'done', isCancel: t.st === 'cancel',
+          dotColor: t.st === 'error' ? '#ef6a63' : (t.st === 'working' ? '#a6a6a6' : '#2a52be'),
+          dotAnim: t.st === 'working' ? PULSE : 'none',
+          stTip: t.st === 'blocked' ? 'Заблокирована: ждёт ' + t.deps.filter((x) => d.tasks[x] && d.tasks[x].st !== 'done').join(', ') : TIP[t.st],
+          titleColor: doneLike(t.st) ? '#7d7d7d' : '#d5d5d5',
+          strike: t.st === 'cancel' ? 'line-through' : 'none',
+          deps: t.deps.map((x) => ({ id: x, tip: 'Зависит от ' + x + ' · ' + (d.tasks[x] ? d.tasks[x].title : ''), color: d.tasks[x] && d.tasks[x].st === 'done' ? '#5f5f5f' : '#a6a6a6' })),
+          hasRel: related, rel: isUp ? 'нужна для неё' : 'зависит от неё',
+          agent: t.agent ? AG[t.agent] : 'Агент не назначен', anthropic: t.agent === 'cc', openai: t.agent === 'cx',
+          time: t.time,
+          bg: hov && hov.id === t.id ? '#222222' : (related ? 'rgba(42,82,190,.14)' : 'transparent'),
+          op: dim ? '.45' : (drag && drag.id === t.id ? '.4' : '1'),
+          dropLine: lineOver ? 'inset 0 2px 0 #2a52be' : 'none',
+          enter: () => { if (!S.drag && S.hover !== t.id) this.setState({ hover: t.id }); },
+          dragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', t.id); } catch (x) {} this.setState({ drag: { kind: 'task', id: t.id }, hover: null, tip: null }); },
+          dragOver: (e) => { if (!S.drag || S.drag.kind !== 'task') return; e.preventDefault(); e.stopPropagation(); if (!over || over.stage !== sid || over.index !== realIdx) this.setState({ over: { kind: 'task', stage: sid, index: realIdx } }); },
+          drop: (e) => { e.preventDefault(); e.stopPropagation(); if (S.drag && S.drag.kind === 'task') this.moveTask(S.drag.id, sid, realIdx); this.endDrag(); },
+        };
+      });
+
+      const hiddenCount = all.length - shownTasks.length;
+      return {
+        id: sid, name: st.name, goal: st.goal, crit: st.crit, hasMeta: !!(st.goal || st.crit),
+        nameColor: counted && done === counted ? '#a6a6a6' : '#d5d5d5',
+        marks, pct: pct + '%', barColor: pct === 100 ? '#a6a6a6' : '#6f6f6f',
+        count: done + ' из ' + counted, progTip: pct === 100 ? 'Этап завершён' : 'Готово ' + done + ' из ' + counted,
+        open: isOpen, rot: isOpen ? '90deg' : '0deg',
+        tasks, emptyTasks: tasks.length === 0,
+        emptyText: all.length === 0 ? 'В этапе пока нет задач — перетащите сюда или создайте с агентом' : 'Все задачи этапа готовы · скрыто ' + hiddenCount,
+        endDrop: endOver ? 'inset 0 2px 0 #2a52be' : 'none', endDropLine: endOver && tasks.length ? 'inset 0 2px 0 #2a52be' : 'none',
+        ring: stageOver ? 'inset 0 2px 0 #2a52be' : 'none',
+        op: drag && drag.kind === 'stage' && drag.id === sid ? '.45' : '1',
+        menuOpen: S.menu === sid, menuBg: S.menu === sid ? '#262626' : 'transparent',
+        toggle: () => this.setState({ open: Object.assign({}, openMap, { [sid]: !isOpen }), menu: null }),
+        openMenu: (e) => { e.stopPropagation(); this.setState({ menu: S.menu === sid ? null : sid, tip: null }); },
+        edit: () => this.setState({ modal: 'edit', target: sid, menu: null, form: { name: st.name, goal: st.goal, crit: st.crit } }),
+        askDelete: () => this.setState({ modal: 'delete', target: sid, menu: null }),
+        dragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', sid); } catch (x) {} this.setState({ drag: { kind: 'stage', id: sid }, menu: null, tip: null }); },
+        dragOverStage: (e) => {
+          if (!S.drag) return;
+          e.preventDefault();
+          if (S.drag.kind === 'stage') { if (!over || over.kind !== 'stage' || over.index !== sIdx) this.setState({ over: { kind: 'stage', index: sIdx } }); }
+          else if (!over || over.stage !== sid || over.index !== st.tasks.length) this.setState({ over: { kind: 'task', stage: sid, index: st.tasks.length } });
+        },
+        dragOverEnd: (e) => { if (!S.drag || S.drag.kind !== 'task') return; e.preventDefault(); e.stopPropagation(); if (!over || over.stage !== sid || over.index !== st.tasks.length) this.setState({ over: { kind: 'task', stage: sid, index: st.tasks.length } }); },
+        drop: (e) => {
+          e.preventDefault();
+          if (S.drag && S.drag.kind === 'stage') this.moveStage(S.drag.id, sIdx);
+          else if (S.drag && S.drag.kind === 'task') this.moveTask(S.drag.id, sid, over && over.stage === sid ? over.index : st.tasks.length);
+          this.endDrag();
+        },
+      };
+    });
+
+    const anyOpen = d.order.some((k) => openMap[k]);
+    const modal = S.modal;
+    const tStage = S.target ? d.stages[S.target] : null;
+    const idx = S.target ? d.order.indexOf(S.target) : -1;
+    const heir = idx > 0 ? d.order[idx - 1] : d.order[idx + 1];
+    const tip = S.tip;
+    const f = S.form;
+    const canSave = f.name.trim().length > 0;
+    const setF = (k) => (e) => this.setState({ form: Object.assign({}, S.form, { [k]: e.target.value }) });
+
+    return {
+      onHover: this.hover, offHover: this.unhover, onRootClick: this.closeMenus,
+      tipOn: !!tip, tipText: tip ? tip.text : '',
+      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + 30 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 11.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
+      panelOpen: panel, panelClosed: !panel,
+      togglePanel: () => this.setState({ panel: !panel, tip: null }),
+      nav: [
+        { key: 'overview', label: 'Обзор', tip: 'Состояние проекта и последние события' },
+        { key: 'spec', label: 'Документы', tip: 'Бриф, архитектура, решения' },
+        { key: 'plan', label: 'План', tip: 'Этапы и их последовательность' },
+        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
+        { key: 'chat', label: 'Чат', tip: 'Работа с агентом', sep: true },
+      ].map((n) => ({
+        sep: !!n.sep, label: n.label, tip: n.tip,
+        railTip: n.count ? n.label + ' · 2 требуют внимания' : n.label,
+        isOverview: n.key === 'overview', isChat: n.key === 'chat', isSpec: n.key === 'spec', isPlan: n.key === 'plan', isTasks: n.key === 'tasks',
+        color: n.key === 'plan' ? '#d5d5d5' : '#a6a6a6',
+        iconColor: n.key === 'plan' ? '#d5d5d5' : '#6f6f6f',
+        weight: n.key === 'plan' ? '600' : '400',
+        hasCount: !!n.count, count: n.count || '',
+        select: () => {},
+      })),
+      hasPlan: !empty, noPlan: empty,
+      subtitle: d.order.length + ' этапа · готово ' + totalDone + ' из ' + totalTasks + ' задач',
+      hideDone: S.hideDone,
+      hideBoxBg: S.hideDone ? '#0b0b0b' : '#1a1a1a', hideBoxBorder: S.hideDone ? '#5a5a5a' : '#353535',
+      toggleHideDone: () => this.setState({ hideDone: !S.hideDone }),
+      anyOpen, noneOpen: !anyOpen, toggleAllTip: anyOpen ? 'Свернуть все этапы' : 'Развернуть все этапы',
+      toggleAll: () => this.setState({ open: anyOpen ? {} : Object.fromEntries(d.order.map((k) => [k, true])) }),
+      stages,
+      onDragEnd: this.endDrag,
+      onLeaveTask: () => { if (S.hover) this.setState({ hover: null }); },
+      stopProp: (e) => e.stopPropagation(),
+      openNewStage: () => this.setState({ modal: 'new', target: null, form: { name: '', goal: '', crit: '' }, menu: null, tip: null }),
+      closeModal: () => this.setState({ modal: null }),
+      stageModalOn: modal === 'new' || modal === 'edit',
+      stageModalTitle: modal === 'edit' ? 'Этап ' + S.target : 'Новый этап',
+      stageModalAction: modal === 'edit' ? 'Сохранить' : 'Создать этап',
+      fName: f.name, fGoal: f.goal, fCrit: f.crit,
+      onFName: setF('name'), onFGoal: setF('goal'), onFCrit: setF('crit'),
+      saveBg: canSave ? '#2a52be' : '#2b2b2b', saveColor: canSave ? '#ffffff' : '#6f6f6f', saveCursor: canSave ? 'pointer' : 'default',
+      saveStage: () => {
+        if (!canSave) return;
+        const nd = JSON.parse(JSON.stringify(d));
+        if (modal === 'edit') Object.assign(nd.stages[S.target], { name: f.name.trim(), goal: f.goal.trim(), crit: f.crit.trim() });
+        else { const id = 'M' + String(nd.next).padStart(2, '0'); nd.next += 1; nd.order.push(id); nd.stages[id] = { name: f.name.trim(), goal: f.goal.trim(), crit: f.crit.trim(), tasks: [] }; this.setState({ open: Object.assign({}, openMap, { [id]: true }) }); }
+        this.setState({ data: nd, modal: null });
+      },
+      deleteOn: modal === 'delete',
+      deleteTitle: tStage ? 'Удалить этап ' + S.target + ' · ' + tStage.name + '?' : '',
+      deleteText: tStage ? (tStage.tasks.length ? 'Задачи этапа (' + tStage.tasks.length + ') не удалятся — они перейдут в этап ' + heir + ' · ' + d.stages[heir].name + '.' : 'В этапе нет задач. Действие нельзя отменить.') : '',
+      confirmDelete: () => {
+        const nd = JSON.parse(JSON.stringify(d));
+        if (heir) nd.stages[heir].tasks = nd.stages[heir].tasks.concat(nd.stages[S.target].tasks);
+        nd.order = nd.order.filter((k) => k !== S.target);
+        delete nd.stages[S.target];
+        this.setState({ data: nd, modal: null });
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

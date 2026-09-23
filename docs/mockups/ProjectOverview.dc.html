@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: #151515; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; }
+a { color: #2a52be; text-decoration: none; }
+a:hover { color: #2bb3a6; text-decoration: underline; }
+input, button, textarea { font-family: inherit; }
+@keyframes skPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+@keyframes skPulseRing { 0% { opacity: .5; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.2); } }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #282828; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3b3b3b; }
+</style>
+</helmet>
+
+<div style="padding: 44px; background: #151515; width: max-content;">
+<div data-screen-label="Обзор проекта" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #0f0f0f; color: #b1b1b1; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
+
+  <div style="height: 42px; flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 0 10px 0 14px; background: #0f0f0f; border-bottom: 1px solid #1a1a1a;">
+    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 11px 11px 0 0; cursor: pointer;" style-hover="background: #161616;">
+      <svg width="16" height="16" viewBox="0 0 127 127" aria-hidden="true"><defs><linearGradient id="skGradA" x1="0%" x2="0%" y1="100%" y2="0%"><stop offset="0%" stop-color="rgb(129,0,70)"></stop><stop offset="16%" stop-color="rgb(168,0,40)"></stop><stop offset="32%" stop-color="rgb(232,0,44)"></stop><stop offset="48%" stop-color="rgb(255,0,0)"></stop><stop offset="64%" stop-color="rgb(255,66,0)"></stop><stop offset="81%" stop-color="rgb(255,84,0)"></stop><stop offset="99%" stop-color="rgb(255,90,0)"></stop></linearGradient></defs><path fill-rule="evenodd" fill="url(#skGradA)" d="M63.500,126.999 C28.429,126.999 0.0,98.570 0.0,63.500 C0.0,59.33 0.466,54.677 1.343,50.471 C5.174,62.937 16.778,72.0 30.500,72.0 C47.344,72.0 60.999,58.344 60.999,41.500 C60.999,24.655 47.344,11.0 30.500,11.0 C29.513,11.0 28.539,11.51 27.577,11.142 C37.795,4.118 50.164,0.0 63.500,0.0 C98.570,0.0 126.999,28.429 126.999,63.500 C126.999,98.570 98.570,126.999 63.500,126.999 Z"></path></svg>
+      <span style="font-size: 13.5px; font-weight: 700; letter-spacing: .04em; color: #ededed;">skaro</span>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 42px; margin-left: -8px;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 11px 0 13px; border-radius: 11px 11px 0 0; background: #121212; border: 1px solid #242424; border-bottom: none; margin-bottom: -1px; position: relative; z-index: 1; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-before="content: ''; position: absolute; bottom: 0; left: -11px; width: 10px; height: 10px; border-bottom-right-radius: 10px; border-right: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: 3px 3px 0 3px #121212; pointer-events: none;" style-after="content: ''; position: absolute; bottom: 0; right: -11px; width: 10px; height: 10px; border-bottom-left-radius: 10px; border-left: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: -3px 3px 0 3px #121212; pointer-events: none;">
+        <span data-tip="Агент работает" style="position: relative; display: inline-flex; width: 7px; height: 7px;">
+          <span style="position: absolute; inset: 0; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+          <span style="position: absolute; inset: 0; border-radius: 50%; border: 1px solid #a6a6a6; animation: skPulseRing 1.8s ease-out infinite;"></span>
+        </span>
+        Shop API
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        <span data-tip="Требует вашего внимания" style="width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
+        Blog Engine
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        Skaro Landing
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Открыть проект">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; height: 42px;">
+      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Настройки">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7h-9M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
+      </button>
+      <div style="width: 1px; height: 16px; background: #1d1d1d; margin: 0 2px;"></div>
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex;">
+
+    <div style="flex: 1; min-width: 0; overflow-y: auto; padding: 22px 26px 28px; background: #121212;">
+
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px;">
+        <div style="min-width: 0;">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #d8d8d8; letter-spacing: -.01em;">Shop API</h1>
+          <div style="margin-top: 6px; display: flex; align-items: center; gap: 12px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #989898;">
+            <span data-tip="Папка проекта на диске">/Users/dev/code/shop-api</span>
+            <span style="display: inline-flex; align-items: center; gap: 5px; color: #b1b1b1;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path><circle cx="18" cy="6" r="3"></circle></svg>
+              main
+            </span>
+            <span data-tip="Нет незакоммиченных изменений" style="color: #a6a6a6;">чисто</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex: none;">
+          <button style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 8px; border: none; background: #202020; color: #ededed; font-size: 12.5px; font-weight: 600; cursor: pointer;" data-tip="Открыть проект в редакторе" style-hover="background: #222222;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+            Редактор
+          </button>
+          <button style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 8px; border: none; background: #202020; color: #ededed; font-size: 12.5px; font-weight: 600; cursor: pointer;" data-tip="Терминал в папке проекта" style-hover="background: #222222;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6M12 19h8"></path></svg>
+            Терминал
+          </button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 312px; gap: 18px; align-items: start;">
+
+        <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+
+          <sc-if value="{{ hasAttention }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
+                <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a6a6a6;">Требует внимания</h2>
+                <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #2a52be;">{{ attentionCount }}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <sc-for list="{{ attention }}" as="a" hint-placeholder-count="2">
+                  <div style="display: flex; align-items: flex-start; gap: 11px; padding: 12px 13px; border-radius: 9px; background: #1e1e1e; cursor: pointer;" style-hover="background: #242424;">
+                    <span data-tip="{{ a.statusTip }}" style="flex: none; margin-top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #2a52be;"></span>
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+                      <div style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #989898;">{{ a.id }}</span>
+                        <span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #d5d5d5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ a.title }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ a.when }}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 11.5px; color: #8a8a8a;">
+                        <span style="flex: none;">{{ a.ms }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace;">{{ a.files }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; color: #58b47c;">{{ a.plus }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; color: #ef6a63;">{{ a.minus }}</span>
+                        <span style="flex: 1;"></span>
+                        <span data-tip="{{ a.agent }}" style="flex: none; display: inline-flex; color: #8a8a8a;">
+                          <sc-if value="{{ a.anthropic }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex: none;"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757"></path></svg></sc-if>
+                          <sc-if value="{{ a.openai }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex: none;"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg></sc-if>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
+              <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a6a6a6;">Сейчас работают</h2>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <sc-for list="{{ runs }}" as="r" hint-placeholder-count="2">
+                  <div style="display: flex; align-items: flex-start; gap: 11px; padding: 12px 13px; border-radius: 9px; background: #1e1e1e; cursor: pointer;" style-hover="background: #242424;">
+                    <span data-tip="Агент работает" style="flex: none; margin-top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+                      <div style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #989898;">{{ r.id }}</span>
+                        <span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #d5d5d5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.title }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ r.when }}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 11.5px; color: #8a8a8a;">
+                        <span style="flex: none;">{{ r.ms }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace;">{{ r.files }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; color: #58b47c;">{{ r.plus }}</span>
+                        <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; color: #ef6a63;">{{ r.minus }}</span>
+                        <span style="flex: 1;"></span>
+                        <span data-tip="{{ r.agent }}" style="flex: none; display: inline-flex; color: #8a8a8a;">
+                          <sc-if value="{{ r.anthropic }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex: none;"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757"></path></svg></sc-if>
+                          <sc-if value="{{ r.openai }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex: none;"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg></sc-if>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+              </sc-for>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-radius: 9px; background: #181818;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#989898" stroke-width="1.9" stroke-linecap="round" style="flex: none;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                <span style="flex: 1; font-size: 12.5px; color: #8a8a8a;">T-018 · Отчёты по платежам — ждёт свободный слот</span>
+              </div>
+            </div>
+          </div>
+
+          <sc-if value="{{ checklistOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="padding: 14px 15px; border-radius: 9px; background: #181818;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+                <div>
+                  <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a6a6a6;">Старт проекта</h2>
+                  <div style="margin-top: 4px; font-size: 12.5px; color: #989898;">Подсказка, а не обязательный путь — можно пропустить любой пункт.</div>
+                </div>
+                <button onClick="{{ hideChecklist }}" style="flex: none; height: 26px; padding: 0 10px; border-radius: 6px; border: none; background: transparent; color: #989898; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #242424; color: #ededed;">Скрыть</button>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <sc-for list="{{ checklist }}" as="c" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: flex-start; gap: 11px; padding: 9px 2px;">
+                    <sc-if value="{{ c.done }}" hint-placeholder-val="{{ true }}">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a6a6a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{ c.pending }}" hint-placeholder-val="{{ false }}">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="1.8" style="flex: none;"><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"></circle></svg>
+                    </sc-if>
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-size: 13.5px; font-weight: 600; color: {{ c.titleColor }};">{{ c.title }}</span>
+                      <span style="font-size: 12.5px; color: #989898; text-wrap: pretty;">{{ c.note }}</span>
+                    </div>
+                    <button style="flex: none; height: 27px; padding: 0 11px; border-radius: 7px; border: none; background: {{ c.btnBg }}; color: {{ c.btnColor }}; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #ededed;">{{ c.btn }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px;">
+              <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a6a6a6;">Этапы</h2>
+              <a href="#plan" style="font-size: 12px; font-weight: 600;">Весь план</a>
+            </div>
+            <div style="padding: 4px 13px; border-radius: 9px; background: #1e1e1e;">
+              <sc-for list="{{ milestones }}" as="m" hint-placeholder-count="3">
+                <div style="padding: 11px 0; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+                    <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; font-weight: 600; color: #989898;">{{ m.id }}</span>
+                    <span style="flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: {{ m.nameColor }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ m.name }}</span>
+                    <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #989898;">{{ m.count }}</span>
+                  </div>
+                  <div style="height: 4px; border-radius: 3px; background: #252525; overflow: hidden;">
+                    <div style="height: 100%; width: {{ m.pct }}; border-radius: 3px; background: {{ m.color }};"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px;">
+              <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a6a6a6;">Недавние события</h2>
+            </div>
+            <div style="padding: 6px 13px; border-radius: 9px; background: #1e1e1e; display: flex; flex-direction: column;">
+              <sc-for list="{{ events }}" as="e" hint-placeholder-count="6">
+                <div style="display: flex; align-items: baseline; gap: 9px; padding: 8px 0; min-width: 0;">
+                  <span style="flex: none; width: 5px; height: 5px; border-radius: 50%; background: {{ e.color }}; position: relative; top: -2px;"></span>
+                  <span style="flex: 1; min-width: 0; font-size: 12.5px; color: #a6a6a6; text-wrap: pretty;">{{ e.text }}</span>
+                  <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; color: #7d7d7d;">{{ e.when }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="flex: none; width: 216px; border-left: 1px solid #1a1a1a; padding: 18px 8px 14px 8px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px 8px 10px;">
+          <span style="flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #5f5f5f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
+          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m17.6 10.6 1.4 1.4-1.4 1.4"></path></svg>
+          </button>
+        </div>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="height: 1px; background: #222222; margin: 9px 10px;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 14px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #ededed;">
+            <span style="flex: none; width: 16px; display: inline-flex; align-items: center; justify-content: center; color: {{ n.iconColor }};">
+              <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              </sc-if>
+            </span>
+            <span style="flex: 1; min-width: 0;">{{ n.label }}</span>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ n.count }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+
+
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ panelClosed }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: none; width: 44px; border-left: 1px solid #1a1a1a; padding: 18px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b1b1b1; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m18.4 10.6-1.4 1.4 1.4 1.4"></path></svg>
+        </button>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="width: 20px; height: 1px; background: #222222; margin: 7px 0;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span style="position: absolute; top: 4px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #2a52be;"></span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ tipOn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ tipStyle }}">{{ tipText }}</div>
+  </sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1368, &quot;height&quot;: 888}, &quot;panelOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}, &quot;showStartChecklist&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}}">
+class Component extends DCLogic {
+  state = { checklist: true, tip: null, panel: null };
+
+  hover = (e) => {
+    const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!el) return;
+    const text = el.getAttribute('data-tip');
+    if (!text) return;
+    const host = e.currentTarget.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const w = Math.min(240, 7.2 * text.length + 20);
+    const x = Math.max(w / 2 + 10, Math.min(host.width - w / 2 - 10, r.left - host.left + r.width / 2));
+    const next = { text, x, y: r.top - host.top, below: r.top - host.top < 46 };
+    const cur = this.state.tip;
+    if (cur && cur.text === next.text && Math.abs(cur.x - next.x) < 1 && Math.abs(cur.y - next.y) < 1) return;
+    this.setState({ tip: next });
+  };
+
+  unhover = () => { if (this.state.tip) this.setState({ tip: null }); };
+
+
+  renderVals() {
+    const attention = [
+      { id: 'T-016', title: 'Возвраты по картам', ms: 'M02 · Платежи', when: '4 мин', files: '7 файлов', plus: '+214', minus: '−38', anthropic: true, openai: false, agent: 'Claude Code · Opus 5', statusTip: 'На ревью' },
+      { id: 'T-019', title: 'Идемпотентность вебхуков', ms: 'M02 · Платежи', when: '1 ч', files: '2 файла', plus: '+38', minus: '−4', anthropic: false, openai: true, agent: 'Codex · GPT-6 Astra', statusTip: 'Нужен ответ' },
+    ];
+
+    const runs = [
+      { id: 'T-014', title: 'Интеграция с эквайрингом', when: '14:05', agent: 'Claude Code · Opus 5', anthropic: true, openai: false, ms: 'M02 · Платежи', files: '3 файла', plus: '+96', minus: '−12' },
+      { id: 'T-017', title: 'Платёжные вебхуки', when: '03:41', agent: 'Codex · GPT-6 Astra', anthropic: false, openai: true, ms: 'M02 · Платежи', files: '5 файлов', plus: '+141', minus: '−27' },
+    ];
+
+    const checklist = [
+      { title: 'Бриф', done: true, pending: false, note: 'brief.md · обновлён 3 дня назад', btn: 'Открыть', titleColor: '#c8c8c8', btnBg: '#242424', btnColor: '#b1b1b1' },
+      { title: 'Архитектура', done: true, pending: false, note: 'architecture.md · 4 ADR, 6 правил для агента', btn: 'Открыть', titleColor: '#c8c8c8', btnBg: '#242424', btnColor: '#b1b1b1' },
+      { title: 'Этапы и задачи', done: false, pending: true, note: 'M03 «Админка» без задач — агент может предложить разбивку', btn: 'Обсудить с агентом', titleColor: '#b1b1b1', btnBg: '#2a52be', btnColor: '#ffffff' },
+    ];
+
+    const milestones = [
+      { id: 'M01', name: 'Базовый API', done: 6, total: 6 },
+      { id: 'M02', name: 'Платежи', done: 3, total: 8, current: true },
+      { id: 'M03', name: 'Админка', done: 0, total: 5 },
+    ].map((m) => {
+      const pct = m.total ? Math.round((m.done / m.total) * 100) : 0;
+      return {
+        id: m.id, name: m.name, count: m.done + ' / ' + m.total, pct: pct + '%',
+        color: pct === 100 ? '#a6a6a6' : (m.current ? '#2a52be' : '#2b2b2b'),
+        nameColor: m.current ? '#d5d5d5' : '#a6a6a6',
+      };
+    });
+
+    const events = [
+      { text: 'T-013 · Схема платежей влита в main', when: '24 мин', color: '#a6a6a6' },
+      { text: 'ADR-0004 · Идемпотентность через ключи запроса принят', when: '1 ч', color: '#2a52be' },
+      { text: 'T-019 ждёт разрешения на установку зависимости', when: '1 ч', color: '#2a52be' },
+      { text: 'Создано 3 задачи в M02 · Платежи', when: '2 ч', color: '#989898' },
+      { text: 'architecture.md обновлён агентом', when: '3 ч', color: '#989898' },
+      { text: 'T-011 · Черновик отчётов отклонён, ветка удалена', when: 'вчера', color: '#ef6a63' },
+    ];
+
+    const panel = this.state.panel ?? (this.props.panelOpen ?? true);
+    const tip = this.state.tip;
+
+    return {
+      panelOpen: panel,
+      panelClosed: !panel,
+      togglePanel: () => this.setState({ panel: !panel, tip: null }),
+      nav: [
+        { key: 'overview', label: 'Обзор', tip: 'Состояние проекта и последние события' },
+        { key: 'spec', label: 'Документы', tip: 'Бриф, архитектура, решения' },
+        { key: 'plan', label: 'План', tip: 'Этапы и их последовательность' },
+        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
+        { key: 'chat', label: 'Чат', tip: 'Работа с агентом', sep: true },
+      ].map((n) => ({
+        sep: !!n.sep,
+        label: n.label, tip: n.tip,
+        railTip: n.count ? n.label + ' · 2 требуют внимания' : n.label,
+        isOverview: n.key === 'overview', isChat: n.key === 'chat', isSpec: n.key === 'spec',
+        isPlan: n.key === 'plan', isTasks: n.key === 'tasks',
+        color: n.key === 'overview' ? '#d5d5d5' : '#a6a6a6',
+        iconColor: n.key === 'overview' ? '#d5d5d5' : '#6f6f6f',
+        weight: n.key === 'overview' ? '600' : '400',
+        hasCount: !!n.count, count: n.count || '',
+        select: () => {},
+      })),
+      onHover: this.hover,
+      offHover: this.unhover,
+      tipOn: !!tip,
+      tipText: tip ? tip.text : '',
+      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + 30 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 11.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
+      attention,
+      hasAttention: attention.length > 0,
+      attentionCount: attention.length,
+      runs,
+      checklist,
+      milestones,
+      events,
+      checklistOpen: this.state.checklist && (this.props.showStartChecklist ?? true),
+      hideChecklist: () => this.setState({ checklist: false }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: #151515; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; }
+a { color: #2a52be; text-decoration: none; }
+a:hover { color: #2bb3a6; text-decoration: underline; }
+input, button, textarea { font-family: inherit; }
+@keyframes skPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+@keyframes skPulseRing { 0% { opacity: .5; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.2); } }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #282828; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3b3b3b; }
+</style>
+<meta name="design_doc_mode" content="canvas" />
+</helmet>
+<div onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onClick="{{ onRootClick }}" style="position: relative; padding: 44px; background: #151515; width: max-content; display: flex; flex-direction: column; gap: 44px;">
+  <sc-for list="{{ screens }}" as="s" hint-placeholder-count="2">
+  <div id="{{ s.id }}" style="display: flex; flex-direction: column; gap: 10px;">
+  <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">{{ s.caption }}</span>
+  <div data-screen-label="{{ s.label }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #171717; color: #b1b1b1; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
+  <div style="height: 42px; flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 0 10px 0 14px; background: #0f0f0f; border-bottom: 1px solid #1a1a1a;">
+    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 11px 11px 0 0; cursor: pointer;" style-hover="background: #161616;">
+      <svg width="16" height="16" viewBox="0 0 127 127" aria-hidden="true"><defs><linearGradient id="skGradT" x1="0%" x2="0%" y1="100%" y2="0%"><stop offset="0%" stop-color="rgb(129,0,70)"></stop><stop offset="16%" stop-color="rgb(168,0,40)"></stop><stop offset="32%" stop-color="rgb(232,0,44)"></stop><stop offset="48%" stop-color="rgb(255,0,0)"></stop><stop offset="64%" stop-color="rgb(255,66,0)"></stop><stop offset="81%" stop-color="rgb(255,84,0)"></stop><stop offset="99%" stop-color="rgb(255,90,0)"></stop></linearGradient></defs><path fill-rule="evenodd" fill="url(#skGradT)" d="M63.500,126.999 C28.429,126.999 0.0,98.570 0.0,63.500 C0.0,59.33 0.466,54.677 1.343,50.471 C5.174,62.937 16.778,72.0 30.500,72.0 C47.344,72.0 60.999,58.344 60.999,41.500 C60.999,24.655 47.344,11.0 30.500,11.0 C29.513,11.0 28.539,11.51 27.577,11.142 C37.795,4.118 50.164,0.0 63.500,0.0 C98.570,0.0 126.999,28.429 126.999,63.500 C126.999,98.570 98.570,126.999 63.500,126.999 Z"></path></svg>
+      <span style="font-size: 13.5px; font-weight: 700; letter-spacing: .04em; color: #ededed;">skaro</span>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 42px; margin-left: -8px;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        <span data-tip="Агент работает" style="position: relative; display: inline-flex; width: 7px; height: 7px;">
+          <span style="position: absolute; inset: 0; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+          <span style="position: absolute; inset: 0; border-radius: 50%; border: 1px solid #a6a6a6; animation: skPulseRing 1.8s ease-out infinite;"></span>
+        </span>
+        Shop API
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        <span data-tip="Требует вашего внимания" style="width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
+        Blog Engine
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        Skaro Landing
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Открыть проект">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; height: 42px;">
+      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: #1c1c1c; border-radius: 7px; color: #ededed; cursor: pointer;" data-tip="Настройки">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7h-9M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
+      </button>
+      <div style="width: 1px; height: 16px; background: #1d1d1d; margin: 0 2px;"></div>
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+      </div>
+    </div>
+  </div>
+
+
+    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; background: #121212;">
+      <div style="flex: none; padding: 14px 18px 10px; display: flex; justify-content: center;">
+        <div style="width: 100%; max-width: 760px; display: flex; align-items: center; gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 700; color: #d8d8d8;">Настройки</span>
+            <span style="font-size: 12px; color: #7d7d7d;">Для всех проектов на этом компьютере</span>
+          </div>
+          <span style="flex: 1;"></span>
+          <span data-tip="Отдельной кнопки сохранения нет" style="font-size: 11.5px; color: #6f6f6f;">Изменения сохраняются сразу</span>
+        </div>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 24px; display: flex; flex-direction: column; align-items: center;">
+        <div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 10px;">
+          <sc-if value="{{ s.update }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 11px; padding: 11px 12px 11px 14px; border-radius: 9px; background: rgba(255,255,255,.04); color: #a6a6a6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg>
+              <span style="flex: 1; font-size: 13px;"><span style="font-weight: 600;">Доступна версия Skaro 2.1.0.</span> Агенты обновятся вместе с ней.</span>
+              <a href="#about" style="flex: none; font-size: 13px; font-weight: 600; color: #a6a6a6;">Подробнее</a>
+            </div>
+          </sc-if>
+          
+            <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 15px 16px; border-radius: 10px; background: #1f1f1f;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Агенты</span><span style="flex: 1;"></span></div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <sc-for list="{{ s.agents }}" as="a" hint-placeholder-count="2">
+                  <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: 10px; background: #171717;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <span style="flex: none; display: inline-flex; color: #d5d5d5;">
+                        <sc-if value="{{ a.anthropic }}" hint-placeholder-val="{{ true }}"><svg width="24" height="24" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757"></path></svg></sc-if>
+                        <sc-if value="{{ a.openai }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg></sc-if>
+                      </span>
+                      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+                        <span style="display: flex; align-items: baseline; gap: 9px;"><span style="font-size: 14px; font-weight: 700; color: #d5d5d5;">{{ a.name }}</span><span data-tip="Версию закрепляет Skaro — обновляется вместе со Skaro" style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d; cursor: default;">{{ a.version }}</span></span>
+                        <span style="display: flex; align-items: center; gap: 7px; font-size: 12px; color: #8a8a8a;"><span data-tip="{{ a.dotTip }}" style="width: 7px; height: 7px; border-radius: 50%; background: {{ a.dot }}; animation: {{ a.dotAnim }};"></span>{{ a.stateText }}</span>
+                      </div>
+                      <sc-if value="{{ a.notLoaded }}" hint-placeholder-val="{{ false }}"><button  data-tip="Иначе агент загрузится при первом запуске" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">Загрузить сейчас</button></sc-if>
+                      <button onClick="{{ a.recheck }}" data-tip="Проверить снова" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #8a8a8a; cursor: pointer;" style-hover="background: #242424; color: #ededed;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate({{ a.spin }}deg); transition: transform .5s;"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg></button>
+                    </div>
+                    <sc-if value="{{ a.loading }}" hint-placeholder-val="{{ false }}">
+                      <div style="display: flex; align-items: center; gap: 12px;"><div style="flex: 1; height: 4px; border-radius: 3px; background: #242424; overflow: hidden;"><div style="height: 100%; width: {{ a.progPct }}; border-radius: 3px; background: #8a8a8a; transition: width .6s ease;"></div></div><span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ a.progText }}</span></div>
+                    </sc-if>
+                    <div style="height: 1px; background: #232323;"></div>
+                    <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px 16px; align-items: center;">
+                      <span style="font-size: 11.5px; color: #8a8a8a;">Аккаунт</span>
+                      <div style="display: flex; align-items: center; gap: 10px; min-height: 28px;">
+                        <sc-if value="{{ a.loggedIn }}" hint-placeholder-val="{{ true }}"><span style="font-size: 12.5px; color: #c8c8c8;">Вы вошли как <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px;">{{ a.account }}</span></span></sc-if>
+                        <sc-if value="{{ a.needLogin }}" hint-placeholder-val="{{ false }}"><span style="flex: 1; font-size: 12.5px; color: #e0a33c;">Не выполнен вход</span></sc-if>
+                        <sc-if value="{{ a.canLogin }}" hint-placeholder-val="{{ false }}"><button  data-tip="Вход откроется в браузере" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">Войти</button></sc-if>
+                        <sc-if value="{{ a.howTo }}" hint-placeholder-val="{{ false }}"><a href="#settings" data-tip="Вход из Skaro невозможен — войдите в терминале агента" style="font-size: 12px; font-weight: 600;">Как войти</a></sc-if>
+                      </div>
+                      <span style="font-size: 11.5px; color: #8a8a8a;">Модель по умолчанию</span>
+                      
+                  <div data-keep-menu="1" style="position: relative; width: 280px;">
+                    <button onClick="{{ a.model.toggle }}" style="width: 100%; height: 34px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0b0b0b;">
+                      <span style="flex: 1; min-width: 0; text-align: left;">{{ a.model.label }}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+                    </button>
+                    <sc-if value="{{ a.model.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="position: absolute; top: 38px; left: 0; z-index: 30; width: 100%; max-height: 300px; overflow: auto; padding: 5px; border-radius: 10px; background: #272727; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px; animation: skIn .14s ease-out;">
+                        <sc-for list="{{ a.model.rows }}" as="m" hint-placeholder-count="4">
+                          <div onClick="{{ m.select }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #303030;">
+                            <span style="flex: none; margin-top: 2px; width: 13px; color: {{ m.checkColor }}; display: inline-flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                              <span style="display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}<sc-if value="{{ m.def }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; color: #7d7d7d;">по умолчанию</span></sc-if></span>
+                              <sc-if value="{{ m.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; line-height: 1.4; color: #7d7d7d;">{{ m.note }}</span></sc-if>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                      <span style="font-size: 11.5px; color: #8a8a8a;">Усилие</span>
+                      <dc-import name="EffortSlider" levels="{{ a.effLevels }}" value="{{ a.effCur }}" model="{{ a.model.label }}" on-change="{{ a.onEff }}" hint-size="100%,96px"></dc-import>
+                    </div>
+                    <div style="height: 1px; background: #232323;"></div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <span data-tip="Skaro подключает эти настройки к каждому запуску агента" style="flex: 1; font-size: 12.5px; font-weight: 600; color: #c8c8c8; cursor: default;">Ваши настройки агента · <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; font-weight: 400; color: #8a8a8a;">{{ a.dir }}</span></span>
+                        <a href="#settings" style="font-size: 12px; font-weight: 600;">Открыть папку настроек</a>
+                      </div>
+                      <div style="display: flex; flex-direction: column;">
+                        <sc-for list="{{ a.mcp }}" as="m" hint-placeholder-count="2">
+                          <div style="display: flex; align-items: center; gap: 10px; padding: 6px 2px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px;">
+                            <span data-tip="{{ m.tip }}" style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: {{ m.dot }};"></span>
+                            <span style="flex: 1; min-width: 0; color: #a6a6a6;">{{ m.name }}</span>
+                            <span style="flex: none; color: {{ m.metaColor }};">{{ m.meta }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <span style="font-size: 12px; color: #8a8a8a;">Навыки · <span style="font-family: 'JetBrains Mono', Consolas, monospace;">{{ a.skills }}</span>  ·  Хуки · <span style="font-family: 'JetBrains Mono', Consolas, monospace;">{{ a.hooks }}</span></span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          
+            <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 15px 16px; border-radius: 10px; background: #1f1f1f;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Выполнение</span><span style="flex: 1;"></span></div>
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 13px; color: #c8c8c8;">Одновременных запусков</span><span style="font-size: 11.5px; color: #7d7d7d;">Задачи сверх лимита встают в очередь</span></div>
+                <div style="display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #060606;">
+                  <button onClick="{{ s.dec }}" data-tip="Меньше" style="width: 28px; height: 27px; border: none; border-radius: 6px; background: transparent; color: #989898; font-size: 15px; cursor: pointer;" style-hover="background: #1a1a1a; color: #d5d5d5;">−</button>
+                  <span style="min-width: 30px; text-align: center; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; color: #ededed;">{{ s.runs }}</span>
+                  <button onClick="{{ s.inc }}" data-tip="Больше" style="width: 28px; height: 27px; border: none; border-radius: 6px; background: transparent; color: #989898; font-size: 15px; cursor: pointer;" style-hover="background: #1a1a1a; color: #d5d5d5;">+</button>
+                </div>
+              </div>
+            </div>
+          
+            <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 15px 16px; border-radius: 10px; background: #1f1f1f;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Проекты</span><span style="flex: 1;"></span></div>
+              <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px 16px; align-items: center;">
+                <span style="font-size: 11.5px; color: #8a8a8a;">Папка для новых</span>
+                <div style="display: flex; gap: 8px;"><div style="flex: 1; min-width: 0; height: 34px; padding: 0 11px; display: flex; align-items: center; border-radius: 8px; background: #0f0f0f; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #c8c8c8;">~/Projects</div><button   style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">Выбрать…</button></div>
+                <span style="font-size: 11.5px; color: #8a8a8a;">Внешний редактор</span>
+                
+                  <div data-keep-menu="1" style="position: relative; width: 280px;">
+                    <button onClick="{{ s.editor.toggle }}" style="width: 100%; height: 34px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0b0b0b;">
+                      <span style="flex: 1; min-width: 0; text-align: left;">{{ s.editor.label }}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+                    </button>
+                    <sc-if value="{{ s.editor.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="position: absolute; top: 38px; left: 0; z-index: 30; width: 100%; max-height: 300px; overflow: auto; padding: 5px; border-radius: 10px; background: #272727; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px; animation: skIn .14s ease-out;">
+                        <sc-for list="{{ s.editor.rows }}" as="m" hint-placeholder-count="4">
+                          <div onClick="{{ m.select }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #303030;">
+                            <span style="flex: none; margin-top: 2px; width: 13px; color: {{ m.checkColor }}; display: inline-flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                              <span style="display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}<sc-if value="{{ m.def }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; color: #7d7d7d;">по умолчанию</span></sc-if></span>
+                              <sc-if value="{{ m.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; line-height: 1.4; color: #7d7d7d;">{{ m.note }}</span></sc-if>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                <span style="font-size: 11.5px; color: #8a8a8a;">Терминал</span>
+                
+                  <div data-keep-menu="1" style="position: relative; width: 280px;">
+                    <button onClick="{{ s.term.toggle }}" style="width: 100%; height: 34px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0b0b0b;">
+                      <span style="flex: 1; min-width: 0; text-align: left;">{{ s.term.label }}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+                    </button>
+                    <sc-if value="{{ s.term.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="position: absolute; top: 38px; left: 0; z-index: 30; width: 100%; max-height: 300px; overflow: auto; padding: 5px; border-radius: 10px; background: #272727; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px; animation: skIn .14s ease-out;">
+                        <sc-for list="{{ s.term.rows }}" as="m" hint-placeholder-count="4">
+                          <div onClick="{{ m.select }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #303030;">
+                            <span style="flex: none; margin-top: 2px; width: 13px; color: {{ m.checkColor }}; display: inline-flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                              <span style="display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}<sc-if value="{{ m.def }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; color: #7d7d7d;">по умолчанию</span></sc-if></span>
+                              <sc-if value="{{ m.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; line-height: 1.4; color: #7d7d7d;">{{ m.note }}</span></sc-if>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+              </div>
+            </div>
+          
+            <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 15px 16px; border-radius: 10px; background: #1f1f1f;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Уведомления</span><span style="flex: 1;"></span></div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <sc-for list="{{ s.notif }}" as="c" hint-placeholder-count="4">
+                  <div onClick="{{ c.toggle }}" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <span style="flex: none; width: 16px; height: 16px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: {{ c.boxBg }}; box-shadow: inset 0 0 0 1px {{ c.boxBorder }};"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ true }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ededed" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span>
+                    <span style="font-size: 13px; color: {{ c.color }};">{{ c.label }}</span>
+                  </div>
+                </sc-for>
+                <div style="height: 1px; background: #262626; margin: 2px 0;"></div>
+                <div style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; font-size: 13px; color: #c8c8c8;">Звук</span><span onClick="{{ s.toggleSound }}" style="flex: none; position: relative; width: 32px; height: 18px; border-radius: 999px; background: {{ s.soundBg }}; cursor: pointer; transition: background .15s;"><span style="position: absolute; top: 2px; left: {{ s.soundX }}; width: 14px; height: 14px; border-radius: 50%; background: #ededed; transition: left .15s;"></span></span></div>
+              </div>
+            </div>
+          
+            <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 15px 16px; border-radius: 10px; background: #1f1f1f;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Внешний вид</span><span style="flex: 1;"></span></div>
+              <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px 16px; align-items: center;">
+                <span style="font-size: 11.5px; color: #8a8a8a;">Язык интерфейса</span><div style="align-self: flex-start; justify-self: start; width: max-content; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #060606;"><sc-for list="{{ s.lang }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.select }}" data-tip="{{ o.tip }}" style="{{ o.style }}" style-hover="color: #d5d5d5;">{{ o.label }}</button></sc-for></div>
+                <span style="font-size: 11.5px; color: #8a8a8a;">Шрифт в ленте агента</span><div style="align-self: flex-start; justify-self: start; width: max-content; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #060606;"><sc-for list="{{ s.font }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.select }}" data-tip="{{ o.tip }}" style="{{ o.style }}" style-hover="color: #d5d5d5;">{{ o.label }}</button></sc-for></div>
+              </div>
+            </div>
+          <div id="about">
+            <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 15px 16px; border-radius: 10px; background: #1f1f1f;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">О программе</span><span style="flex: 1;"></span></div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="flex: 1; font-size: 13px; color: #c8c8c8;">Skaro <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #a6a6a6;">2.0.3</span></span>
+                <sc-if value="{{ s.noUpdate }}" hint-placeholder-val="{{ true }}"><button onClick="{{ s.check }}" data-tip="{{ s.checkTip }}" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">Проверить обновления</button></sc-if>
+                <sc-if value="{{ s.update }}" hint-placeholder-val="{{ false }}"><button style="flex: none; height: 28px; padding: 0 13px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Обновить до 2.1.0 и перезапустить</button></sc-if>
+              </div>
+              <div style="display: flex; gap: 18px; font-size: 12.5px; font-weight: 600;"><a href="https://github.com/skarodev/skaro" target="_blank">GitHub</a><a href="#about">Сайт</a><a href="#about">Сообщество</a></div>
+            </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  </sc-for>
+  <sc-if value="{{ tipOn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ tipStyle }}">{{ tipText }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1368, &quot;height&quot;: 1780}}">
+class Component extends DCLogic {
+  state = { tip: null, menu: null, tick: 0, v: {} };
+  componentDidMount() { this.iv = setInterval(() => this.setState((s) => ({ tick: s.tick + 1 })), 1000); }
+  componentWillUnmount() { clearInterval(this.iv); }
+  hover = (e) => {
+    const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!el) return;
+    const text = el.getAttribute('data-tip');
+    if (!text) return;
+    const host = e.currentTarget.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const w = Math.min(260, 6.6 * text.length + 20);
+    const cx = Math.max(w / 2 + 8, Math.min(window.innerWidth - w / 2 - 8, r.left + r.width / 2));
+    const below = r.top < 50;
+    const next = { text, x: cx - host.left, y: (below ? r.bottom + 8 : r.top - 8) - host.top, below };
+    const cur = this.state.tip;
+    if (cur && cur.text === next.text && Math.abs(cur.x - next.x) < 1 && Math.abs(cur.y - next.y) < 1) return;
+    this.setState({ tip: next });
+  };
+  unhover = () => { if (this.state.tip) this.setState({ tip: null }); };
+  rootClick = (e) => { if (e.target.closest && e.target.closest('[data-keep-menu]')) return; if (this.state.menu) this.setState({ menu: null }); };
+  seg(active) {
+    return 'display: inline-flex; align-items: center; justify-content: center; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; ' + (active ? 'background: #121212; color: #ededed; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #989898;');
+  }
+  renderVals() {
+    const S = this.state, tk = S.tick;
+    const g = (k, d) => (S.v[k] ?? d);
+    const put = (k, val) => this.setState({ v: Object.assign({}, this.state.v, { [k]: val }), menu: null, tip: null });
+    const dd = (key, list, def) => {
+      const cur = g(key, def);
+      return { label: cur, open: S.menu === key, toggle: () => this.setState({ menu: S.menu === key ? null : key, tip: null }),
+        rows: list.map((m) => ({ label: m[0], note: m[1] || '', hasNote: !!m[1], def: !!m[2], bg: cur === m[0] ? '#292929' : 'transparent', checkColor: cur === m[0] ? '#2a52be' : 'transparent', labelColor: cur === m[0] ? '#ededed' : '#c8c8c8', select: () => put(key, m[0]) })) };
+    };
+    const sg = (key, labels, def, tips) => labels.map((l, i) => ({ label: l, tip: tips ? tips[i] : '', style: this.seg(g(key, def) === l), select: () => put(key, l) }));
+    const CM = [['Fable 5.1', 'Максимальная глубина — медленнее и дороже'], ['Opus 5', 'Для агентной разработки', true], ['Sonnet 5', 'Баланс скорости и качества'], ['Haiku 4.5', 'Быстрая и дешёвая'], ['Mythos 5.1', 'Доступ по приглашению']];
+    const XM = [['GPT-6 Astra', 'Флагман', true], ['GPT-5.6 Terra', 'Предыдущий флагман'], ['GPT-5.6 Sol', 'Быстрее, для коротких итераций'], ['GPT-5.6 Luna', 'Лёгкая, для простых задач']];
+    const ET = ['Минимум рассуждений — быстро и дёшево', 'Значение по умолчанию', 'Больше рассуждений и самопроверок'];
+    const mb = 84 + ((tk * 4) % 146);
+    const mcpOk = (n, tools) => ({ name: n, meta: tools + ' инструментов', dot: '#a6a6a6', metaColor: '#7d7d7d', tip: 'Работает' });
+    const mcpErr = (n) => ({ name: n, meta: 'не запускается', dot: '#ef6a63', metaColor: '#ef6a63', tip: 'Ошибка — сервер не отвечает при старте' });
+    const mk = (sid, a) => {
+      const p = sid + '.' + a.key;
+      const spin = g(p + '.spin', 0);
+      return Object.assign({ anthropic: a.key === 'cc', openai: a.key === 'cx', loading: false, notLoaded: false, loggedIn: true, needLogin: false, canLogin: false, howTo: false, progPct: '0%', progText: '', dotAnim: 'none' }, a, {
+        model: dd(p + '.model', a.key === 'cc' ? CM : XM, a.key === 'cc' ? 'Opus 5' : 'GPT-6 Astra'),
+        effort: (() => { const EB = { 'Fable 5.1': 5, 'Opus 5': 5, 'Mythos 5.1': 5, 'Sonnet 5': 4, 'Haiku 4.5': 0, 'GPT-6 Astra': 'x5', 'GPT-5.6 Terra': 'x4', 'GPT-5.6 Sol': 3, 'GPT-5.6 Luna': 2 };
+          const L = { 5: ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 4: ['Низкое', 'Среднее', 'Высокое', 'Максимум'], x5: ['Минимальное', 'Низкое', 'Среднее', 'Высокое', 'Очень высокое'], x4: ['Минимальное', 'Низкое', 'Среднее', 'Высокое'], 3: ['Низкое', 'Среднее', 'Высокое'], 2: ['Низкое', 'Высокое'], 0: [] };
+          const TT = { 'Минимальное': 'Почти без рассуждений', 'Низкое': 'Быстро и дёшево', 'Среднее': 'Значение по умолчанию', 'Высокое': 'Больше рассуждений', 'Очень высокое': 'Для сложных задач', 'Максимум': 'Предел модели' };
+          const list = L[EB[g(p + '.model', a.key === 'cc' ? 'Opus 5' : 'GPT-6 Astra')]] || L[3];
+          const cur = list.includes(g(p + '.eff', 'Среднее')) ? g(p + '.eff', 'Среднее') : (list.includes('Среднее') ? 'Среднее' : list[0]);
+          return list.map((l) => ({ on: cur === l, label: l, tip: TT[l], style: this.seg(cur === l) + (list.length > 4 ? ' padding: 0 8px;' : ''), select: () => put(p + '.eff', l) })); })(),
+        noEffort: false,
+        onEff: (v) => put(p + '.eff', v),
+        spin, recheck: () => put(p + '.spin', spin + 360),
+      });
+    };
+    const fin = (a) => Object.assign(a, { effLevels: a.effort.map((o) => o.label), effCur: (a.effort.find((o) => o.on) || a.effort[0] || {}).label, hasEff: a.effort.length > 0 });
+    const screens = ['ok', 'bad'].map((sid) => {
+      const bad = sid === 'bad';
+      const agents = bad ? [
+        mk(sid, { key: 'cc', name: 'Claude Code', version: '2.1.4', stateText: 'Загружается · ' + mb + ' из 230 МБ', dot: '#a6a6a6', dotAnim: 'skPulse 1.6s ease-in-out infinite', dotTip: 'Загружается', loading: true, progPct: Math.round(mb / 230 * 100) + '%', progText: mb + ' / 230 МБ',
+          loggedIn: false, needLogin: true, howTo: true, dir: '~/.claude', mcp: [mcpOk('github', 12), mcpErr('linear')], skills: 4, hooks: 2 }),
+        mk(sid, { key: 'cx', name: 'Codex', version: '0.48.0', stateText: 'Не загружен · ~230 МБ', dot: '#4a4a4a', dotTip: 'Не загружен', notLoaded: true,
+          loggedIn: false, needLogin: true, canLogin: true, dir: '~/.codex', mcp: [mcpOk('github', 12)], skills: 0, hooks: 0 }),
+      ] : [
+        mk(sid, { key: 'cc', name: 'Claude Code', version: '2.1.4', stateText: 'Готов', dot: '#a6a6a6', dotTip: 'Готов к работе', account: 'anna@shop.dev', dir: '~/.claude', mcp: [mcpOk('github', 12), mcpOk('linear', 9)], skills: 4, hooks: 2 }),
+        mk(sid, { key: 'cx', name: 'Codex', version: '0.48.0', stateText: 'Готов', dot: '#a6a6a6', dotTip: 'Готов к работе', account: 'anna@shop.dev', dir: '~/.codex', mcp: [mcpOk('github', 12)], skills: 1, hooks: 0 }),
+      ];
+      const runs = g(sid + '.runs', 3);
+      const NT = [['need', 'Нужен ответ'], ['review', 'Задача на ревью'], ['error', 'Ошибка запуска'], ['merged', 'Изменения влиты']];
+      const notif = NT.map((n) => { const on = g(sid + '.n.' + n[0], n[0] !== 'merged'); return { label: n[1], on, boxBg: on ? '#0b0b0b' : '#1f1f1f', boxBorder: on ? '#5a5a5a' : '#353535', color: on ? '#d5d5d5' : '#a6a6a6', toggle: () => put(sid + '.n.' + n[0], !on) }; });
+      const sound = g(sid + '.sound', true);
+      const checked = g(sid + '.checked', false);
+      agents.forEach(fin);
+      return {
+        id: bad ? 'settings-states' : 'settings', caption: bad ? 'Настройки · состояния: загружается, не загружен, нет входа, ошибка MCP, есть обновление' : 'Настройки · всё готово',
+        label: bad ? 'Настройки — состояния' : 'Настройки',
+        agents, update: bad, noUpdate: !bad, runs: String(runs),
+        dec: () => put(sid + '.runs', Math.max(1, runs - 1)), inc: () => put(sid + '.runs', Math.min(8, runs + 1)),
+        editor: dd(sid + '.editor', [['VS Code'], ['Cursor'], ['JetBrains'], ['Другой…']], 'VS Code'),
+        term: dd(sid + '.term', [['Системный терминал'], ['iTerm2'], ['Warp'], ['Другой…']], 'Системный терминал'),
+        notif, soundBg: sound ? '#2a52be' : '#383838', soundX: sound ? '16px' : '2px', toggleSound: () => put(sid + '.sound', !sound),
+        lang: sg(sid + '.lang', ['Русский', 'English'], 'Русский'),
+        font: sg(sid + '.font', ['Мелкий', 'Обычный', 'Крупный'], 'Обычный', ['12px', '13px', '14px']),
+        check: () => put(sid + '.checked', true), checkTip: checked ? 'Установлена последняя версия' : 'Проверить, есть ли новая версия',
+      };
+    });
+    const tip = S.tip;
+    return {
+      onHover: this.hover, offHover: this.unhover, onRootClick: this.rootClick, screens,
+      tipOn: !!tip, tipText: tip ? tip.text : '',
+      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? tip.y : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); width: max-content; max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 11.5px; line-height: 1.4; text-wrap: pretty; pointer-events: none;',
+    };
+  }
+}
+</script>
+</body>
+</html>

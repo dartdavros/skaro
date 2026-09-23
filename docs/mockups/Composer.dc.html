@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div ref="{{ rootRef }}" data-keep-menu="1" style="position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 8px 8px 8px; border-radius: 14px; background: #2b2b2b; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;">
+  <sc-if value="{{ slashOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 40; max-height: 260px; overflow: auto; padding: 5px; border-radius: 10px; background: #242424; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px; animation: skIn .14s ease-out;">
+      <sc-for list="{{ slash }}" as="m" hint-placeholder-count="5">
+        <div onClick="{{ m.pick }}" style="display: flex; align-items: baseline; gap: 12px; padding: 7px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #2d2d2d;">
+          <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #e8875b;">{{ m.cmd }}</span>
+          <span style="flex: 1; min-width: 0; font-size: 12px; color: #8a8a8a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ m.note }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{ atOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 40; padding: 5px; border-radius: 10px; background: #242424; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 4px; animation: skIn .14s ease-out;">
+      <div style="position: relative;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#989898" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 10px; top: 9px;"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input type="text" value="{{ atQuery }}" onInput="{{ onAtQuery }}" placeholder="Файл или папка проекта" style="width: 100%; height: 32px; padding: 0 10px 0 31px; border: none; border-radius: 8px; background: #121212; color: #ededed; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; outline: none;" style-focus="box-shadow: inset 0 0 0 1px #2a52be;" />
+      </div>
+      <div style="max-height: 210px; overflow: auto; display: flex; flex-direction: column; gap: 1px;">
+        <sc-for list="{{ atRows }}" as="m" hint-placeholder-count="5">
+          <div onClick="{{ m.pick }}" style="display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #2d2d2d;">
+            <sc-if value="{{ m.folder }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 20a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6.6a1 1 0 0 1-.8-.4l-1.2-1.6A2 2 0 0 0 9.8 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg></sc-if>
+            <sc-if value="{{ m.file }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg></sc-if>
+            <span style="flex: 1; min-width: 0; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #c8c8c8;">{{ m.path }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ permOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 36px; bottom: 42px; z-index: 40; width: 280px; padding: 5px; border-radius: 10px; background: #242424; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px; animation: skIn .14s ease-out;">
+      <sc-for list="{{ permRows }}" as="p" hint-placeholder-count="3">
+        <div onClick="{{ p.pick }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 7px; background: {{ p.bg }}; cursor: pointer;" style-hover="background: #2d2d2d;">
+          <span style="flex: none; margin-top: 2px; width: 13px; color: {{ p.check }}; display: inline-flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 12.5px; font-weight: 600; color: {{ p.color }};">{{ p.label }}</span>
+            <span style="font-size: 11px; line-height: 1.4; color: #7d7d7d;">{{ p.note }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{ hasAtt }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 2px 8px;">
+      <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="0">
+        <div data-tip="{{ t.tip }}" style="position: relative; flex: none; width: 40px; height: 40px; border-radius: 8px; background: #383838; display: inline-flex; align-items: center; justify-content: center; color: #8a8a8a;">
+          <img src="{{ t.src }}" alt="" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; display: block;" />
+          <sc-if value="{{ t.warn }}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: -4px; bottom: -4px; width: 17px; height: 17px; border-radius: 50%; background: #121212; display: inline-flex; align-items: center; justify-content: center; color: #e0a33c;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"></path></svg></span></sc-if>
+          <button onClick="{{ t.remove }}" data-tip="Убрать" style="position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: #121212; color: #a6a6a6; cursor: pointer;" style-hover="color: #ededed;">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+        </div>
+      </sc-for>
+      <sc-for list="{{ chips }}" as="c" hint-placeholder-count="2">
+        <span data-tip="{{ c.tip }}" style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 5px 0 10px; border-radius: 999px; background: #383838; color: #c8c8c8;">
+          <sc-if value="{{ c.file }}" hint-placeholder-val="{{ true }}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>
+          </sc-if>
+          <sc-if value="{{ c.folder }}" hint-placeholder-val="{{ false }}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 20a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6.6a1 1 0 0 1-.8-.4l-1.2-1.6A2 2 0 0 0 9.8 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg>
+          </sc-if>
+          <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; white-space: nowrap;">{{ c.label }}</span>
+          <button onClick="{{ c.remove }}" data-tip="Убрать" style="flex: none; width: 18px; height: 18px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: transparent; color: #8a8a8a; cursor: pointer;" style-hover="background: #454545; color: #ededed;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+        </span>
+      </sc-for>
+    </div>
+  </sc-if>
+  <textarea value="{{ draft }}" onInput="{{ onInput }}" rows="2" placeholder="{{ placeholder }}" style="width: 100%; box-sizing: border-box; height: 48px; overflow-y: hidden; padding: 0 6px; border: none; background: transparent; color: #d5d5d5; font-family: inherit; font-size: 14px; line-height: 1.5; resize: none; outline: none;"></textarea>
+  <div style="display: flex; align-items: center; gap: 4px;">
+    <div style="position: relative; flex: none;">
+      <button onClick="{{ toggleAttach }}" data-tip="Приложить к сообщению" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: {{ attachBg }}; color: #8a8a8a; cursor: pointer;" style-hover="background: #383838; color: #e2e2e2;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+      <sc-if value="{{ attachOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position: absolute; bottom: 34px; left: 0; z-index: 40; width: 208px; padding: 5px; border-radius: 10px; background: #242424; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px; animation: skIn .14s ease-out;">
+          <div onClick="{{ toggleAttach }}" style="display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 7px; cursor: pointer; font-size: 12.5px; color: #c8c8c8;" style-hover="background: #2d2d2d;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>Прикрепить файл</div>
+          <div onClick="{{ toggleAttach }}" style="display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 7px; cursor: pointer; font-size: 12.5px; color: #c8c8c8;" style-hover="background: #2d2d2d;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6.6a1 1 0 0 1-.8-.4l-1.2-1.6A2 2 0 0 0 9.8 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg>Прикрепить папку</div>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ showPerm }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ togglePerm }}" data-tip="Режим прав — меняется сразу, без перезапуска" style="flex: none; height: 28px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 999px; background: {{ permBg }}; color: {{ permColor }}; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #383838;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+        {{ permLabel }}
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+    </sc-if>
+    <sc-if value="{{ planPill }}" hint-placeholder-val="{{ false }}">
+      <span data-tip="Сначала план — агент изучит код и предложит план до правок" style="flex: none; height: 28px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: #383838; color: #d5d5d5; font-size: 12.5px; font-weight: 600;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+        План
+      </span>
+    </sc-if>
+    <span style="flex: 1;"></span>
+    <sc-if value="{{ showCtx }}" hint-placeholder-val="{{ false }}">
+      <span data-tip="{{ ctxTip }}" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; cursor: default;" style-hover="background: #383838;">
+        <svg width="16" height="16" viewBox="0 0 16 16" style="transform: rotate(-90deg);"><circle cx="8" cy="8" r="6" fill="none" stroke="#454545" stroke-width="2.2"></circle><circle cx="8" cy="8" r="6" fill="none" stroke="{{ ctxColor }}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="{{ ctxDash }}"></circle></svg>
+      </span>
+    </sc-if>
+    <button onClick="{{ onModel }}" data-tip="{{ modelTip }}" style="flex: none; height: 28px; padding: 0 10px 0 9px; display: inline-flex; align-items: center; gap: 7px; border: none; border-radius: 999px; background: transparent; color: #b1b1b1; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #383838; color: #e2e2e2;">
+      <sc-if value="{{ isAnthropic }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757"></path></svg></sc-if>
+      <sc-if value="{{ isOpenai }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.970-3.473 1.950-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.070 3.473-2.760 4.163zM7.802 12.703l-1.950-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.950-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.230 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.570v-3.330L12 8.658l2.795 1.570v3.330L12 15.128zm1.796 7.230c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.210 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.950 1.118a.432.432 0 01-.476 0zm-.262 3.900c-2.688 0-4.662-2.021-4.662-4.519 0-.190.024-.380.047-.570l4.686 2.710c.286.167.571.167.856 0l5.970-3.448v2.260c0 .190-.070.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.830a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.840 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.500.190-.999.190-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.260.095-1.880.310A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.490c0 1.666.713 3.283 1.998 4.448-.119.500-.190 1-.190 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.260-.095 1.880-.309a5.960 5.960 0 004.162 1.713z"></path></svg></sc-if>
+      {{ model }}
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+    </button>
+    <sc-if value="{{ showSend }}" hint-placeholder-val="{{ true }}">
+      <button data-tip="{{ sendTip }}" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: {{ sendBg }}; color: {{ sendColor }}; cursor: pointer;" style-hover="background: #3461d6; color: #ffffff;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="m5 12 7-7 7 7"></path></svg>
+      </button>
+    </sc-if>
+    <sc-if value="{{ showStop }}" hint-placeholder-val="{{ false }}">
+      <button data-tip="Остановить агента" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: transparent; color: #d5d5d5; cursor: pointer;" style-hover="background: #383838; color: #ffffff;">
+        <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"></circle><rect x="5.25" y="5.25" width="5.5" height="5.5" rx="1" fill="currentColor"></rect></svg>
+      </button>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:640,&quot;height&quot;:140},&quot;placeholder&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Дописать агенту · Enter — отправить&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;text&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;running&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;agent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;anthropic&quot;,&quot;openai&quot;],&quot;default&quot;:&quot;anthropic&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;model&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Opus 5&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;modelTip&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;chips&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{kind:string,label:string}[]&quot;},&quot;thumbs&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string[]&quot;}}">
+class Component extends DCLogic {
+  rootRef = React.createRef();
+  componentDidMount() {
+    this.onDoc = (e) => { const r = this.rootRef.current; if (r && !r.contains(e.target) && (this.state.attach || this.state.permOpen)) this.setState({ attach: false, permOpen: false }); };
+    document.addEventListener('mousedown', this.onDoc);
+  }
+  componentWillUnmount() { document.removeEventListener('mousedown', this.onDoc); }
+  state = { draft: null, gone: {}, perm: null, permOpen: false, atQuery: null, picked: null, attach: false };
+  onInput = (e) => {
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = Math.min(Math.max(el.scrollHeight, 48), 21 * 7 + 4) + 'px';
+    el.style.overflowY = el.scrollHeight > 21 * 7 + 4 ? 'auto' : 'hidden';
+    this.setState({ draft: el.value });
+  };
+  renderVals() {
+    const p = this.props;
+    const draft = this.state.draft ?? (p.text || '');
+    const has = draft.trim().length > 0;
+    const running = !!p.running;
+    const rm = (k) => () => this.setState({ gone: Object.assign({}, this.state.gone, { [k]: true }) });
+    const chips = (p.chips || []).filter((c) => !this.state.gone['c' + c.label]).map((c) => ({
+      label: c.label, file: c.kind !== 'folder', folder: c.kind === 'folder',
+      tip: c.kind === 'folder' ? 'Ссылка на папку — содержимое не загружается' : 'Файл приложен к сообщению',
+      remove: rm('c' + c.label),
+    }));
+    const noop = () => {};
+    const thumbs = (p.thumbs || []).filter((t) => !this.state.gone['t' + t]).map((t) => ({ src: t, warn: !!p.imgWarn, tip: p.imgWarn ? 'Эта модель не принимает изображения' : t.split('/').pop(), remove: rm('t' + t) }));
+    const P = [['Спрашивать', 'Разрешение на каждую команду и запись'], ['Авто', 'Свободно в ветке задачи, спрашивает про остальное'], ['Полный доступ', 'Любые команды без вопросов', true]];
+    const perm = this.state.perm || p.perm || 'Авто';
+    const warnPerm = perm === 'Полный доступ';
+    const permRows = P.map((x) => ({ label: x[0], note: x[1], bg: perm === x[0] ? '#2b2b2b' : 'transparent', check: perm === x[0] ? (x[2] ? '#e0a33c' : '#2a52be') : 'transparent', color: x[2] && perm === x[0] ? '#e0a33c' : '#d5d5d5', pick: () => this.setState({ perm: x[0], permOpen: false }) }));
+    const SL = p.slash || [['/compact', 'Сжать историю разговора'], ['/review', 'Ревью текущих изменений'], ['/init', 'Описать проект в CLAUDE.md'], ['/security-review', 'Проверить изменения на уязвимости'], ['/test-runner', 'Навык · запуск и разбор тестов']];
+    const slash = SL.map((x, i) => ({ cmd: x[0], note: x[1], bg: i === 0 ? '#2d2d2d' : 'transparent', pick: noop }));
+    const AT = ['src/auth/', 'src/auth/policy.ts', 'src/auth/roles.ts', 'src/auth/middleware.ts', 'src/auth/policy.test.ts', 'src/admin/role-guard.ts'];
+    const q = this.state.atQuery ?? 'src/auth';
+    const atRows = AT.filter((x) => x.includes(q.trim())).map((x, i) => ({ path: x, folder: x.endsWith('/'), file: !x.endsWith('/'), bg: i === 0 ? '#2d2d2d' : 'transparent', pick: noop }));
+    const ctx = p.ctx;
+    return {
+      rootRef: this.rootRef,
+      attachOpen: this.state.attach, attachBg: this.state.attach ? '#383838' : 'transparent', toggleAttach: () => this.setState({ attach: !this.state.attach }),
+      onModel: p.onModel || (() => {}),
+      slashOpen: p.menu === 'slash', atOpen: p.menu === 'at', slash, atRows, atQuery: q, onAtQuery: (e) => this.setState({ atQuery: e.target.value }),
+      showPerm: !!p.permPill, permLabel: perm, permBg: warnPerm ? 'rgba(224,163,60,.1)' : (this.state.permOpen ? '#383838' : 'transparent'), permColor: warnPerm ? '#e0a33c' : '#b1b1b1',
+      permOpen: this.state.permOpen, togglePerm: () => this.setState({ permOpen: !this.state.permOpen }), permRows,
+      planPill: !!p.planPill,
+      showCtx: ctx != null, ctxLabel: ctx + '%', ctxColor: ctx >= 85 ? '#e0a33c' : '#2a52be', ctxDash: (37.7 * (ctx || 0) / 100).toFixed(1) + ' 37.7', ctxTip: 'Контекст заполнен на ' + ctx + '% — при заполнении агент сожмёт историю',
+      draft, onInput: this.onInput,
+      placeholder: p.placeholder || 'Дописать агенту · Enter — отправить',
+      hasAtt: chips.length + thumbs.length > 0, chips, thumbs,
+      isAnthropic: (p.agent || 'anthropic') === 'anthropic', isOpenai: p.agent === 'openai',
+      model: p.model || 'Opus 5',
+      modelTip: p.modelTip || 'Агент, модель, усилие и режим прав',
+      running,
+      showSend: running ? has : true, showStop: running && !has,
+      sendBg: has ? '#2a52be' : '#383838', sendColor: has ? '#ffffff' : '#7d7d7d',
+      sendTip: running ? 'В очередь — агент прочитает после текущего шага' : 'Отправить · Enter',
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display: flex; flex-direction: column; gap: 12px; padding: 12px 14px 14px; border-radius: 12px; background: #171717; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; user-select: none;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span data-tip="Усилие — сколько агент рассуждает перед ответом" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; color: #6f6f6f;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+    </span>
+    <div style="flex: 1; min-width: 0; display: flex; justify-content: center;">
+      <span data-tip="{{ tip }}" style="font-size: 14px; font-weight: 700; color: #7d9ce8; cursor: default;">{{ label }}</span>
+    </div>
+    <button onClick="{{ reset }}" data-tip="{{ resetTip }}" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #242424; color: #ededed;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+    </button>
+  </div>
+  <div ref="{{ trackRef }}" onMouseDown="{{ down }}" onKeyDown="{{ key }}" tabindex="0" role="slider" aria-label="Усилие" style="position: relative; height: 24px; border-radius: 999px; background: #242424; cursor: pointer; outline: none;" style-focus="box-shadow: 0 0 0 1px #2a52be;">
+    <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ fillW }}; border-radius: 999px; background: #3461d6; transition: {{ trans }};"></div>
+    <sc-for list="{{ dots }}" as="d" hint-placeholder-count="5">
+      <span data-tip="{{ d.label }}" style="position: absolute; top: 50%; left: {{ d.left }}; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: {{ d.color }};"></span>
+    </sc-for>
+    <span style="position: absolute; top: 50%; left: {{ knobL }}; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,.45); transition: {{ trans }};"></span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:404,&quot;height&quot;:110},&quot;levels&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string[]&quot;},&quot;value&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Очень высокое&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;defaultValue&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;model&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;GPT-6 Astra&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tips&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Record&lt;string,string&gt;&quot;},&quot;onChange&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(v: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { val: null, drag: false };
+  trackRef = React.createRef();
+  levels() { const l = this.props.levels; return Array.isArray(l) && l.length ? l : ['Низкое', 'Среднее', 'Высокое']; }
+  cur() {
+    const L = this.levels();
+    const v = this.state.val ?? this.props.value;
+    return Math.max(0, L.indexOf(v) >= 0 ? L.indexOf(v) : L.indexOf('Среднее') >= 0 ? L.indexOf('Среднее') : 0);
+  }
+  pick(i) {
+    const L = this.levels();
+    const k = Math.max(0, Math.min(L.length - 1, i));
+    if (L[k] === (this.state.val ?? this.props.value)) return;
+    this.setState({ val: L[k] });
+    if (this.props.onChange) this.props.onChange(L[k]);
+  }
+  fromX(x) {
+    const el = this.trackRef.current; if (!el) return;
+    const r = el.getBoundingClientRect(); const n = this.levels().length;
+    const f = (x - r.left - 12) / Math.max(1, r.width - 24);
+    this.pick(Math.round(f * (n - 1)));
+  }
+  down = (e) => {
+    e.preventDefault();
+    if (this.trackRef.current) this.trackRef.current.focus();
+    this.fromX(e.clientX);
+    const mv = (ev) => this.fromX(ev.clientX);
+    const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); this.setState({ drag: false }); };
+    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+    this.setState({ drag: true });
+  };
+  key = (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); this.pick(this.cur() + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); this.pick(this.cur() - 1); }
+  };
+  renderVals() {
+    const L = this.levels(), n = L.length, i = this.cur();
+    const pos = (k) => n > 1 ? 'calc(12px + (100% - 24px) * ' + (k / (n - 1)).toFixed(4) + ')' : '50%';
+    const TIPS = { 'Минимальное': 'Почти без рассуждений — самые быстрые ответы', 'Низкое': 'Минимум рассуждений — быстро и дёшево', 'Среднее': 'Значение по умолчанию', 'Высокое': 'Больше рассуждений и самопроверок', 'Очень высокое': 'Долгие рассуждения для сложных задач', 'Максимум': 'Предел модели — медленно и дорого' };
+    const def = this.props.defaultValue || (L.includes('Среднее') ? 'Среднее' : L[0]);
+    return {
+      trackRef: this.trackRef, down: this.down, key: this.key,
+      label: L[i], tip: (this.props.tips && this.props.tips[L[i]]) || TIPS[L[i]] || '', model: this.props.model || '',
+      fillW: n > 1 ? 'calc(23px + (100% - 24px) * ' + (i / (n - 1)).toFixed(4) + ')' : '100%',
+      knobL: pos(i), trans: this.state.drag ? 'left .08s, width .08s' : 'left .15s, width .15s',
+      dots: L.map((l, k) => ({ label: l, left: pos(k), color: k < i ? 'rgba(255,255,255,.55)' : k === i ? 'transparent' : '#4a4a4a' })),
+      reset: () => this.pick(L.indexOf(def)), resetTip: 'Вернуть по умолчанию · ' + def,
+    };
+  }
+}
+</script>
+</body>
+</html>

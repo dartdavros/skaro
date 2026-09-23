@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="border-radius: 10px; background: #1a1a1a; padding: 12px 13px; display: flex; flex-direction: column; gap: 10px; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;">
+  <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+    <span style="font-size: 13px; font-weight: 600; color: #d5d5d5;">{{ title }}</span>
+    <sc-if value="{{ isCmd }}" hint-placeholder-val="{{ true }}">
+      <code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #e8875b; word-break: break-all;">{{ what }}</code>
+    </sc-if>
+    <sc-if value="{{ isPath }}" hint-placeholder-val="{{ false }}">
+      <span data-tip="Открыть файл" style="align-self: flex-start; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #7d9ce8; cursor: pointer; word-break: break-all;" style-hover="text-decoration: underline;">{{ what }}</span>
+    </sc-if>
+    <sc-if value="{{ isHost }}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #c8c8c8;">{{ what }}</span>
+    </sc-if>
+    <sc-if value="{{ hasWhy }}" hint-placeholder-val="{{ true }}">
+      <span style="font-size: 12.5px; line-height: 1.5; color: #a6a6a6; text-wrap: pretty;">{{ why }}</span>
+    </sc-if>
+  </div>
+  <sc-if value="{{ denyOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <input type="text" value="{{ reason }}" onInput="{{ onReason }}" placeholder="Почему? Агент увидит ответ" style="flex: 1; min-width: 0; height: 28px; padding: 0 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #ededed; font-family: inherit; font-size: 12.5px; outline: none; box-shadow: inset 0 0 0 1px #2a2a2a;"  style-hover="background: #0b0b0b; box-shadow: inset 0 0 0 1px #363636;" style-focus="background: #0b0b0b; box-shadow: inset 0 0 0 1px #2a52be;"/>
+      <button onClick="{{ cancelDeny }}" style="flex: none; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: transparent; color: #989898; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #242424; color: #d5d5d5;">Отмена</button>
+      <button onClick="{{ sendDeny }}" data-tip="Причину можно не писать" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">Отправить</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ buttonsOn }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 6px; flex-wrap: wrap;">
+      <button onClick="{{ openDeny }}" data-tip="Агент получит отказ и продолжит без этого" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">Запретить</button>
+      <button onClick="{{ allowAll }}" data-tip="{{ allowAllTip }}" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">{{ allowAllLabel }}</button>
+      <sc-if value="{{ primary }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ allow }}" data-tip="Только этот раз" style="flex: none; height: 28px; padding: 0 13px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Разрешить</button>
+      </sc-if>
+      <sc-if value="{{ secondary }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ allow }}" data-tip="Только этот раз" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #ededed;">Разрешить</button>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:620,&quot;height&quot;:150},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Разрешить команду?&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cmd&quot;,&quot;path&quot;,&quot;host&quot;],&quot;default&quot;:&quot;cmd&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;what&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;npm install @casl/ability@6&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;why&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;scope&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;задачи&quot;,&quot;чата&quot;],&quot;default&quot;:&quot;задачи&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;primary&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;denyOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onResolve&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { deny: null, reason: '' };
+  done(r) { if (this.props.onResolve) this.props.onResolve(r); this.setState({ deny: false, reason: '' }); }
+  renderVals() {
+    const p = this.props;
+    const kind = p.kind || 'cmd';
+    const deny = this.state.deny ?? !!p.denyOpen;
+    const primary = p.primary ?? true;
+    const scope = p.scope || 'задачи';
+    return {
+      title: p.title || 'Разрешить команду?', what: p.what || '', why: p.why || '', hasWhy: !!p.why,
+      isCmd: kind === 'cmd', isPath: kind === 'path', isHost: kind === 'host',
+      denyOpen: deny, buttonsOn: !deny,
+      reason: this.state.reason, onReason: (e) => this.setState({ reason: e.target.value }),
+      openDeny: () => this.setState({ deny: true }), cancelDeny: () => this.setState({ deny: false }),
+      sendDeny: () => this.done('deny'),
+      allow: () => this.done('allow'), allowAll: () => this.done('always'),
+      allowAllLabel: 'Разрешить до конца ' + scope,
+      allowAllTip: 'Больше не спрашивать о таких действиях до конца ' + scope,
+      primary, secondary: !primary,
+    };
+  }
+}
+</script>
+</body>
+</html>

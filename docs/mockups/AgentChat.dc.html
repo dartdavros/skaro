@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: #151515; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; }
+a { color: #2a52be; text-decoration: none; }
+a:hover { color: #2bb3a6; text-decoration: underline; }
+input, button, textarea { font-family: inherit; }
+@keyframes skPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+@keyframes skPulseRing { 0% { opacity: .5; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.2); } }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #282828; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3b3b3b; }
+</style>
+</helmet>
+
+<div style="padding: 44px; background: #151515; width: max-content;">
+<div data-screen-label="Агент" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onClick="{{ onRootClick }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #171717; color: #b1b1b1; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
+
+  <div style="height: 42px; flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 0 10px 0 14px; background: #0f0f0f; border-bottom: 1px solid #1a1a1a;">
+    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 11px 11px 0 0; cursor: pointer;" style-hover="background: #161616;">
+      <svg width="16" height="16" viewBox="0 0 127 127" aria-hidden="true"><defs><linearGradient id="skGradT" x1="0%" x2="0%" y1="100%" y2="0%"><stop offset="0%" stop-color="rgb(129,0,70)"></stop><stop offset="16%" stop-color="rgb(168,0,40)"></stop><stop offset="32%" stop-color="rgb(232,0,44)"></stop><stop offset="48%" stop-color="rgb(255,0,0)"></stop><stop offset="64%" stop-color="rgb(255,66,0)"></stop><stop offset="81%" stop-color="rgb(255,84,0)"></stop><stop offset="99%" stop-color="rgb(255,90,0)"></stop></linearGradient></defs><path fill-rule="evenodd" fill="url(#skGradT)" d="M63.500,126.999 C28.429,126.999 0.0,98.570 0.0,63.500 C0.0,59.33 0.466,54.677 1.343,50.471 C5.174,62.937 16.778,72.0 30.500,72.0 C47.344,72.0 60.999,58.344 60.999,41.500 C60.999,24.655 47.344,11.0 30.500,11.0 C29.513,11.0 28.539,11.51 27.577,11.142 C37.795,4.118 50.164,0.0 63.500,0.0 C98.570,0.0 126.999,28.429 126.999,63.500 C126.999,98.570 98.570,126.999 63.500,126.999 Z"></path></svg>
+      <span style="font-size: 13.5px; font-weight: 700; letter-spacing: .04em; color: #ededed;">skaro</span>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 42px; margin-left: -8px;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 11px 0 13px; border-radius: 11px 11px 0 0; background: #121212; border: 1px solid #242424; border-bottom: none; margin-bottom: -1px; position: relative; z-index: 1; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-before="content: ''; position: absolute; bottom: 0; left: -11px; width: 10px; height: 10px; border-bottom-right-radius: 10px; border-right: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: 3px 3px 0 3px #121212; pointer-events: none;" style-after="content: ''; position: absolute; bottom: 0; right: -11px; width: 10px; height: 10px; border-bottom-left-radius: 10px; border-left: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: -3px 3px 0 3px #121212; pointer-events: none;">
+        <span data-tip="Агент работает" style="position: relative; display: inline-flex; width: 7px; height: 7px;">
+          <span style="position: absolute; inset: 0; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+          <span style="position: absolute; inset: 0; border-radius: 50%; border: 1px solid #a6a6a6; animation: skPulseRing 1.8s ease-out infinite;"></span>
+        </span>
+        Shop API
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        <span data-tip="Требует вашего внимания" style="width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
+        Blog Engine
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        Skaro Landing
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Открыть проект">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; height: 42px;">
+      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Настройки">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7h-9M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
+      </button>
+      <div style="width: 1px; height: 16px; background: #1d1d1d; margin: 0 2px;"></div>
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex;">
+
+    <div style="flex: 1; min-width: 0; min-height: 0; display: flex; background: #121212;">
+
+      <div style="flex: none; width: 224px; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px 10px 12px 14px;">
+        <button onClick="{{ newSession }}" data-tip="Начать новый чат" style="flex: none; height: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 0 11px; border: none; border-radius: 8px; background: transparent; color: #c8c8c8; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg>
+          Новый чат
+        </button>
+        <div style="flex: none; align-self: flex-start; display: flex; align-items: center; gap: 2px; padding: 2px; margin: 6px 0; border-radius: 8px; background: #060606;">
+          <sc-for list="{{ listTabs }}" as="t" hint-placeholder-count="2">
+            <button onClick="{{ t.select }}" data-tip="{{ t.tip }}" style="{{ t.style }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;">
+          <sc-for list="{{ sessions }}" as="t" hint-placeholder-count="4">
+            <div onClick="{{ t.select }}" style="display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px 4px 10px; border-radius: 8px; background: {{ t.bg }}; cursor: pointer;" style-hover="background: #1c1c1c;">
+              <div data-tip="{{ t.title }}" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 12.5px; color: {{ t.color }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.title }}</span>
+              </div>
+              <sc-if value="{{ t.live }}" hint-placeholder-val="{{ false }}">
+                <span data-tip="Агент отвечает" style="flex: none; width: 6px; height: 6px; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+              </sc-if>
+              <sc-if value="{{ t.archived }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ t.restore }}" data-tip="Вернуть из архива" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #272727; color: #d5d5d5;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path></svg>
+                </button>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+            <span style="padding: 18px 10px; font-size: 12px; line-height: 1.5; color: #6f6f6f; text-align: center; text-wrap: pretty;">{{ listEmptyText }}</span>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column;">
+
+        <div style="flex: none; display: flex; align-items: center; gap: 8px; padding: 4px 14px 0;">
+          <span style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: #c8c8c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ sessionTitle }}</span>
+          <sc-if value="{{ curActive }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ archiveCurrent }}" data-tip="Архивировать чат" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #6f6f6f; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path></svg>
+            </button>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px;">
+            <span style="font-size: 14px; font-weight: 600; color: #a6a6a6;">С чего начнём проект?</span>
+            <span style="max-width: 340px; font-size: 12.5px; line-height: 1.5; color: #7d7d7d; text-align: center; text-wrap: pretty;">Расскажите, что нужно построить. Я предложу бриф, архитектуру, этапы и задачи — вы подтвердите.</span>
+            <div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: center;">
+              <sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
+                <button onClick="{{ c.select }}" style="height: 29px; padding: 0 13px; border: none; border-radius: 8px; background: #1c1c1c; color: #c8c8c8; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #242424; color: #ededed;">{{ c.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasChat }}" hint-placeholder-val="{{ true }}">
+          <div style="flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column;">
+          <div style="position: absolute; left: 0; right: 5px; top: 0; height: 30px; z-index: 3; pointer-events: none; background: linear-gradient(180deg, #121212 0%, rgba(18,18,18,.85) 35%, rgba(18,18,18,0) 100%);"></div>
+          <div ref="{{ chatRef }}" onScroll="{{ onChatScroll }}" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 34px 26px 30px; display: flex; flex-direction: column; gap: 14px;">
+
+            <div onMouseEnter="{{ msgIn }}" onMouseLeave="{{ msgOut }}" style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+              <div style="max-width: 76%; padding: 10px 15px; border-radius: 20px; background: #1c2a4d; font-size: 13px; line-height: 1.55; color: #dfe5f3; text-wrap: pretty;">Дальше делаем платежи. Разбей на этап и задачи, зависимости учти.</div>
+              <div style="display: flex; gap: 2px; opacity: {{ msgOp }}; transition: opacity .12s;"><button onClick="{{ noop }}" data-tip="Изменить" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg></button><button onClick="{{ noop }}" data-tip="Откатить к этому сообщению" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg></button></div>
+            </div>
+            <div style="flex: none; display: flex; flex-direction: column; gap: 6px; margin-top: -8px;">
+              <div onClick="{{ ex.think }}" data-tip="Размышления агента" style="display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 11.5px; color: #6f6f6f; cursor: pointer;" style-hover="color: #a6a6a6;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ ex.thinkRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg>Думал 8 с</div>
+              <sc-if value="{{ ex.thinkOn }}" hint-placeholder-val="{{ false }}"><div style="margin-left: 19px; font-size: 12.5px; line-height: 1.55; color: #7d7d7d; text-wrap: pretty;">Нужно понять, как сейчас устроены заказы и есть ли уже решения по оплате. Прочитаю архитектуру и ADR, потом предложу этап и задачи с зависимостями.</div></sc-if>
+            </div>
+
+            <div style="flex: none; display: flex; flex-direction: column; gap: 8px;">
+              <div onClick="{{ ex.read }}" data-tip="Что читал и искал агент" style="display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 11.5px; color: #6f6f6f; cursor: pointer;" style-hover="color: #a6a6a6;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ ex.readRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg><span>Прочитал 6 файлов · искал «<code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; color: #e8875b;">payment</code>»</span>
+              </div>
+              <sc-if value="{{ ex.readOn }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-left: 19px; display: flex; flex-direction: column;">
+                  <sc-for list="{{ readRows }}" as="r" hint-placeholder-count="6">
+                    <div data-tip="{{ r.tip }}" style="display: flex; align-items: center; gap: 12px; padding: 4px 2px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; cursor: pointer;" style-hover="background: #161616;">
+                      <span style="flex: 1; min-width: 0; color: {{ r.color }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.path }}</span>
+                      <span style="flex: none; font-size: 11.5px; color: #6f6f6f;">{{ r.meta }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div style="font-size: 13px; line-height: 1.6; color: #c8c8c8; text-wrap: pretty;">Эквайринг лучше вынести за интерфейс провайдера — тогда webhook-обработчик не зависит от конкретного сервиса. Записал это решением и собрал этап.</div>
+            </div>
+
+            <div style="flex: none; border-radius: 10px; background: #202020; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 9px; padding: 11px 13px 9px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>
+                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: #d5d5d5;">Обновить architecture.md</span>
+                <span style="display: inline-flex; gap: 6px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px;"><span style="color: #58b47c;">+18</span><span style="color: #ef6a63;">−2</span></span>
+              </div>
+              <div style="padding: 0 13px 10px; display: flex; flex-direction: column; gap: 3px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-width: 0;">
+                <span style="color: #58b47c;">+ ## Платежи</span>
+                <span style="color: #58b47c;">+ Эквайринг за интерфейсом PaymentProvider, webhook-обработчик идемпотентен.</span>
+                <span style="color: #6f6f6f;">  ## Каталог</span>
+              </div>
+              <div style="padding: 0 13px 12px; display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1; font-size: 11.5px; color: #7d7d7d;">Автоприменение выключено в параметрах</span>
+                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Открыть</button>
+                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отклонить</button>
+                <button style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Применить</button>
+              </div>
+            </div>
+
+            <div style="flex: none; border-radius: 10px; background: #202020; padding: 11px 13px; display: flex; flex-direction: column; gap: 9px;">
+              <div style="display: flex; align-items: center; gap: 9px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 3v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="6" r="3"></circle><path d="M18 9v3a3 3 0 0 1-3 3H9"></path></svg>
+                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: #d5d5d5;">ADR-0007 · Провайдер эквайринга за интерфейсом</span>
+              </div>
+              <span style="font-size: 12.5px; line-height: 1.55; color: #a6a6a6; text-wrap: pretty;">Работаем через <code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #e8875b;">PaymentProvider</code>; конкретный сервис подключается адаптером. Причина — смена провайдера не должна трогать бизнес-логику заказов.</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1;"></span>
+                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отклонить</button>
+                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Изменить</button>
+                <button style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Принять</button>
+              </div>
+            </div>
+
+            <div style="flex: none; border-radius: 10px; background: #202020; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 9px; padding: 11px 13px 4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a52be" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M12 22V12"></path><polyline points="3.29 7 12 12 20.71 7"></polyline></svg>
+                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: #d5d5d5;">{{ tasksTitle }}</span>
+              </div>
+              <div style="padding: 0 13px; display: flex; flex-direction: column;">
+                <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="4">
+                  <div onClick="{{ t.toggle }}" style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; cursor: pointer;">
+                    <span style="flex: none; margin-top: 2px; width: 16px; height: 16px; border-radius: 5px; background: {{ t.boxBg }}; box-shadow: inset 0 0 0 1px {{ t.boxBorder }}; transition: background .12s, box-shadow .12s; display: inline-flex; align-items: center; justify-content: center; color: #d5d5d5;">
+                      <sc-if value="{{ t.checked }}" hint-placeholder-val="{{ true }}">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ededed" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                      </sc-if>
+                    </span>
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-size: 12.5px; font-weight: 600; color: {{ t.titleColor }};">{{ t.title }}</span>
+                      <span style="font-size: 11.5px; color: #7d7d7d;">{{ t.meta }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="padding: 10px 13px 12px; display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1; font-size: 11.5px; color: #7d7d7d;">{{ tasksHint }}</span>
+                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отклонить</button>
+                <button style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">{{ tasksAction }}</button>
+              </div>
+            </div>
+
+            <div style="flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 2px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <span style="flex: 1; font-size: 12px; color: #8a8a8a;">Создан этап M01 «Базовый API» и 6 задач</span>
+              <span data-tip="Открыть этап" style="flex: none; font-size: 11.5px; font-weight: 600; color: #a6a6a6; cursor: pointer;" style-hover="color: #ededed;">Открыть</span>
+            </div>
+
+            <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; background: #202020;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <span style="flex: 1; min-width: 0; font-size: 12px; color: #8a8a8a;">Готово · 0:48 · 12k токенов</span>
+            </div>
+
+            <div style="flex: none; display: flex; gap: 2px; margin-top: -8px;">
+              <button onClick="{{ copyAnswer }}" data-tip="{{ copyTip }}" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
+                <sc-if value="{{ notCopied }}" hint-placeholder-val="{{ true }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+                </sc-if>
+                <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                </sc-if>
+              </button>
+              <button onClick="{{ noop }}" data-tip="Повторить" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+            </div>
+
+          </div>
+          <sc-if value="{{ showDown }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ toBottom }}" data-tip="К концу диалога" style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 4; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: rgba(12,12,12,.72); backdrop-filter: blur(8px); box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 8px 20px rgba(0,0,0,.45); color: #d5d5d5; cursor: pointer;" style-hover="background: rgba(30,30,30,.9); color: #ffffff;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>
+            </button>
+          </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ curArchived }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: none; padding: 0 14px 12px;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 11px; background: #2b2b2b;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path></svg>
+              <span style="flex: 1; font-size: 12.5px; color: #8a8a8a;">Чат в архиве — только чтение</span>
+              <button onClick="{{ restoreCurrent }}" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #c8c8c8; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Вернуть из архива</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ curActive }}" hint-placeholder-val="{{ true }}">
+        <div style="flex: none; padding: 0 14px 12px;">
+          <dc-import name="Composer" placeholder="Спросить агента · Enter — отправить" ctx="{{ 34 }}" agent="{{ agentKey }}" model="{{ modelLabel }}" model-tip="Модель · агента сменить можно только в новом чате" on-model="{{ openAgentModal }}" hint-size="100%,96px"></dc-import>
+        </div>
+        </sc-if>
+      </div>
+
+      <div style="flex: none; width: 216px; min-height: 0; display: flex; flex-direction: column; gap: 9px; padding: 12px 14px 12px 8px;">
+        <span style="flex: none; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Изменено в чате</span>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 3px;">
+          <sc-for list="{{ changed }}" as="c" hint-placeholder-count="3">
+            <div data-tip="{{ c.tip }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 8px; cursor: pointer;" style-hover="background: #1c1c1c;">
+              <span style="flex: none; margin-top: 1px; color: #6f6f6f; display: inline-flex;">
+                <sc-if value="{{ c.isDoc }}" hint-placeholder-val="{{ true }}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>
+                </sc-if>
+                <sc-if value="{{ c.isAdr }}" hint-placeholder-val="{{ false }}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="6" r="3"></circle><path d="M18 9v3a3 3 0 0 1-3 3H9"></path></svg>
+                </sc-if>
+                <sc-if value="{{ c.isMs }}" hint-placeholder-val="{{ false }}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M12 22V12"></path></svg>
+                </sc-if>
+              </span>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 12px; color: #c8c8c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.title }}</span>
+                <span style="font-size: 11px; color: {{ c.noteColor }};">{{ c.note }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="flex: none; width: 216px; border-left: 1px solid #1a1a1a; padding: 18px 8px 14px 8px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px 8px 10px;">
+          <span style="flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #5f5f5f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
+          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m17.6 10.6 1.4 1.4-1.4 1.4"></path></svg>
+          </button>
+        </div>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="height: 1px; background: #222222; margin: 9px 10px;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 14px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #ededed;">
+            <span style="flex: none; width: 16px; display: inline-flex; align-items: center; justify-content: center; color: {{ n.iconColor }};">
+              <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isSettings }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </sc-if>
+            </span>
+            <span style="flex: 1; min-width: 0;">{{ n.label }}</span>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ n.count }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+
+
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ panelClosed }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: none; width: 44px; border-left: 1px solid #1a1a1a; padding: 18px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b1b1b1; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m18.4 10.6-1.4 1.4 1.4 1.4"></path></svg>
+        </button>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="width: 20px; height: 1px; background: #222222; margin: 7px 0;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isSettings }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </sc-if>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span style="position: absolute; top: 4px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #2a52be;"></span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ agentModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAgentModal }}" style="position: absolute; inset: 0; z-index: 80; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center;">
+      <div data-keep-menu="1" onClick="{{ stopProp }}" style="width: 468px; max-width: 92%; border-radius: 14px; background: #1e1e1e; box-shadow: 0 30px 70px rgba(0,0,0,.6); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 15px; font-weight: 700; color: #d8d8d8;">Агент чата</span>
+          <span style="font-size: 12px; color: #7d7d7d;">Применится к следующему запросу в чате</span>
+        </div>
+        <div style="padding: 0 18px 4px; display: flex; flex-direction: column; gap: 15px;">
+          <div style="display: flex; gap: 9px;">
+            <sc-for list="{{ agentCards }}" as="a" hint-placeholder-count="2">
+              <div onClick="{{ a.select }}" data-tip="{{ a.tip }}" style="flex: 1; padding: 11px 13px; border-radius: 9px; background: {{ a.bg }}; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                <span style="flex: none; color: {{ a.iconColor }}; display: inline-flex;">
+                  <sc-if value="{{ a.anthropic }}" hint-placeholder-val="{{ true }}">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757"></path></svg>
+                  </sc-if>
+                  <sc-if value="{{ a.openai }}" hint-placeholder-val="{{ false }}">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg>
+                  </sc-if>
+                </span>
+                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 13px; font-weight: 600; color: {{ a.nameColor }};">{{ a.name }}</span>
+                  <span style="font-size: 11.5px; color: {{ a.stateColor }};">{{ a.state }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Модель</span>
+            <div data-keep-menu="1" style="position: relative;">
+              <button onClick="{{ toggleModelMenu }}" data-tip="{{ modelTip }}" style="width: 100%; height: 34px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0b0b0b;">
+                <span style="flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ modelLabel }}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg>
+              </button>
+              <sc-if value="{{ modelMenuOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; top: 38px; left: 0; z-index: 30; width: 100%; padding: 5px; border-radius: 10px; background: #272727; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px;">
+                  <sc-for list="{{ modelOptions }}" as="m" hint-placeholder-count="4">
+                    <div onClick="{{ m.select }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #303030;">
+                      <span style="flex: none; margin-top: 2px; width: 13px; color: {{ m.checkColor }}; display: inline-flex;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                      </span>
+                      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                        <span style="font-size: 12.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}</span>
+                        <span style="font-size: 11px; line-height: 1.4; color: #7d7d7d; text-wrap: pretty;">{{ m.tip }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{ hasEffort }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Усилие</span>
+            <dc-import name="EffortSlider" levels="{{ effortLevels }}" value="{{ effortValue }}" model="{{ modelLabel }}" on-change="{{ onEffort }}" hint-size="100%,96px"></dc-import>
+          </div></sc-if>
+
+          
+        </div>
+        <div style="padding: 16px 18px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+          <button onClick="{{ closeAgentModal }}" style="height: 31px; padding: 0 13px; border: none; border-radius: 8px; background: #272727; color: #b1b1b1; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отмена</button>
+          <button onClick="{{ closeAgentModal }}" style="height: 31px; padding: 0 15px; border: none; border-radius: 8px; background: #2a52be; color: #ffffff; font-size: 12.5px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Применить</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tipOn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ tipStyle }}">{{ tipText }}</div>
+  </sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1368, &quot;height&quot;: 888}, &quot;threadState&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;Идёт обсуждение&quot;, &quot;Новый чат&quot;], &quot;default&quot;: &quot;Идёт обсуждение&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Экран&quot;}, &quot;panelOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}}">
+class Component extends DCLogic {
+  state = { tip: null, panel: null, modelMenu: false, agentModal: false, agent: 'anthropic', model: null, effort: 'Среднее', perm: 'Авто в пределах задачи', thread: 't1', listTab: 'active', archived: { t5: true, t6: true }, tasksChecked: null };
+
+  hover = (e) => {
+    const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!el) return;
+    const text = el.getAttribute('data-tip');
+    if (!text) return;
+    const host = e.currentTarget.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const w = Math.min(240, 7.2 * text.length + 20);
+    const x = Math.max(w / 2 + 10, Math.min(host.width - w / 2 - 10, r.left - host.left + r.width / 2));
+    const next = { text, x, y: r.top - host.top, below: r.top - host.top < 46 };
+    const cur = this.state.tip;
+    if (cur && cur.text === next.text && Math.abs(cur.x - next.x) < 1 && Math.abs(cur.y - next.y) < 1) return;
+    this.setState({ tip: next });
+  };
+
+  closeMenus = (e) => {
+    if (e.target.closest && e.target.closest('[data-keep-menu]')) return;
+    if (this.state.modelMenu || this.state.attachMenu) this.setState({ modelMenu: false, attachMenu: false });
+  };
+
+  chatRef = React.createRef();
+
+  componentDidMount() {
+    requestAnimationFrame(() => { const el = this.chatRef.current; if (el) el.scrollTop = el.scrollHeight; });
+  }
+
+  onChatScroll = (e) => {
+    const el = e.currentTarget;
+    const away = el.scrollHeight - el.scrollTop - el.clientHeight > 60;
+    if (away !== !!this.state.away) this.setState({ away, tip: null });
+  };
+
+  toBottom = () => {
+    const el = this.chatRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  };
+
+  copyAnswer = () => {
+    this.setState({ copied: true });
+    clearTimeout(this._copyT);
+    this._copyT = setTimeout(() => this.setState({ copied: false }), 1400);
+  };
+
+  grow = (e) => {
+    const el = e.target;
+    el.style.height = 'auto';
+    const max = 21 * 7 + 6;
+    el.style.height = Math.max(48, Math.min(el.scrollHeight, max)) + 'px';
+    el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
+  };
+
+  unhover = () => { if (this.state.tip) this.setState({ tip: null }); };
+
+  renderVals() {
+    const panel = this.state.panel ?? (this.props.panelOpen ?? true);
+    const tip = this.state.tip;
+    const agent = this.state.agent;
+    const empty = (this.props.threadState ?? 'Идёт обсуждение') === 'Новый чат';
+
+    const MODELS = {
+      anthropic: [
+        { label: 'Fable 5.1', tip: 'Максимальная глубина — медленнее и дороже' },
+        { label: 'Opus 5', tip: 'По умолчанию для агентной разработки' },
+        { label: 'Sonnet 5', tip: 'Баланс скорости и качества' },
+        { label: 'Haiku 4.5', tip: 'Быстрая и дешёвая, для простых правок' },
+        { label: 'Mythos 5.1', tip: 'Доступ по приглашению (Project Glasswing)' },
+      ],
+      openai: [
+        { label: 'GPT-6 Astra', tip: 'Флагман, по умолчанию в Codex' },
+        { label: 'GPT-5.6 Terra', tip: 'Предыдущий флагман' },
+        { label: 'GPT-5.6 Sol', tip: 'Быстрее, для коротких итераций' },
+        { label: 'GPT-5.6 Luna', tip: 'Лёгкая, для простых задач и субагентов' },
+      ],
+    };
+    const models = MODELS[agent];
+    const model = this.state.model && models.some((m) => m.label === this.state.model) ? this.state.model : (agent === 'anthropic' ? 'Opus 5' : 'GPT-6 Astra');
+
+    const all = [
+      { key: 't1', title: 'Платежи: этапы и задачи', meta: 'сейчас', live: true },
+      { key: 't2', title: 'Идемпотентность вебхуков', meta: '2 ч назад' },
+      { key: 't3', title: 'Разбор ТЗ по админке', meta: 'вчера' },
+      { key: 't4', title: 'Выбор очереди задач', meta: '3 дн назад' },
+      { key: 't5', title: 'Первичный бриф проекта', meta: '12 сен' },
+      { key: 't6', title: 'Сравнение ORM', meta: '9 сен' },
+    ];
+    const arch = this.state.archived;
+    const setArch = (key, v) => this.setState({ archived: Object.assign({}, arch, { [key]: v }), tip: null });
+    const listTab = this.state.listTab;
+    const thread = this.state.thread;
+    const visible = all.filter((t) => (listTab === 'archive' ? !!arch[t.key] : !arch[t.key]));
+    const sessions = visible.map((t) => ({
+      title: t.title, meta: t.meta, live: !!t.live && !arch[t.key], archived: !!arch[t.key],
+      bg: thread === t.key ? '#1e1e1e' : 'transparent',
+      color: thread === t.key ? '#d5d5d5' : '#a6a6a6',
+      select: () => this.setState({ thread: t.key, tip: null }),
+      restore: (e) => { e.stopPropagation(); setArch(t.key, false); },
+    }));
+    const cur = all.find((t) => t.key === thread) || all[0];
+    const curArchived = !!arch[cur.key];
+    const archCount = all.filter((t) => arch[t.key]).length;
+    const listTabs = [
+      { key: 'active', label: 'Активные', tip: 'Текущие чаты' },
+      { key: 'archive', label: archCount ? 'Архив · ' + archCount : 'Архив', tip: 'Архивные чаты — можно вернуть' },
+    ].map((t) => ({
+      label: t.label, tip: t.tip,
+      style: 'display: inline-flex; align-items: center; gap: 6px; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; ' + (listTab === t.key ? 'background: #121212; color: #ededed; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #989898;'),
+      select: () => this.setState({ listTab: t.key, tip: null }),
+    }));
+
+    const tasksRaw = [
+      { title: 'Ключи и конфиг эквайринга', meta: 'M02 · без зависимостей' },
+      { title: 'Модель платежа', meta: 'M02 · после «Схема БД»' },
+      { title: 'Webhook статусов оплаты', meta: 'M02 · после «Интеграция с эквайрингом»' },
+      { title: 'Возвраты по картам', meta: 'M02 · после «Модель платежа»' },
+    ];
+    const checked = this.state.tasksChecked ?? tasksRaw.map(() => true);
+    const tasks = tasksRaw.map((t, i) => ({
+      title: t.title, meta: t.meta, checked: checked[i],
+      boxBg: checked[i] ? '#0b0b0b' : '#1a1a1a',
+      boxBorder: checked[i] ? '#5a5a5a' : '#353535',
+      titleColor: checked[i] ? '#d5d5d5' : '#8a8a8a',
+      toggle: () => this.setState({ tasksChecked: checked.map((v, k) => (k === i ? !v : v)) }),
+    }));
+    const n = checked.filter(Boolean).length;
+
+    const changed = [
+      { title: 'architecture.md', note: 'Обновлён · применено', kind: 'doc', done: true },
+      { title: 'ADR-0007 · Провайдер эквайринга', note: 'Ждёт решения', kind: 'adr', done: false },
+      { title: 'M02 · Платежи', note: 'Этап создан', kind: 'ms', done: true },
+    ].map((c) => ({
+      title: c.title, note: c.note,
+      isDoc: c.kind === 'doc', isAdr: c.kind === 'adr', isMs: c.kind === 'ms',
+      noteColor: c.done ? '#8a8a8a' : '#e8b356',
+      tip: c.done ? 'Открыть' : 'Требует вашего решения',
+    }));
+
+    const pill = (on) => 'display: inline-flex; align-items: center; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; ' + (on ? 'background: #121212; color: #ededed; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #989898;');
+    const agentCards = [
+      { key: 'anthropic', name: 'Claude Code', state: 'Агент по умолчанию', tip: 'Настроен в проекте' },
+      { key: 'openai', name: 'Codex', state: 'Готов к работе', tip: 'Переключить на Codex' },
+    ].map((a) => ({
+      name: a.name, state: a.state, tip: a.tip,
+      anthropic: a.key === 'anthropic', openai: a.key === 'openai',
+      bg: agent === a.key ? '#0d0d0d' : '#1c1c1c',
+      iconColor: agent === a.key ? '#d5d5d5' : '#8a8a8a',
+      nameColor: agent === a.key ? '#d5d5d5' : '#a6a6a6',
+      stateColor: '#7d7d7d',
+      select: () => this.setState({ agent: a.key, model: null, modelMenu: false }),
+    }));
+    const EFF_TIPS = { 'Минимальное': 'Почти без рассуждений — самые быстрые ответы', 'Низкое': 'Минимум рассуждений — быстро и дёшево', 'Среднее': 'Значение по умолчанию', 'Высокое': 'Больше рассуждений и самопроверок', 'Очень высокое': 'Долгие рассуждения для сложных задач', 'Максимум': 'Предел модели — медленно и дорого' };
+    const EFF_BY_MODEL = { 'Fable 5.1': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Opus 5': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Mythos 5.1': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Sonnet 5': ['Низкое', 'Среднее', 'Высокое', 'Максимум'], 'Haiku 4.5': [],
+      'GPT-6 Astra': ['Минимальное', 'Низкое', 'Среднее', 'Высокое', 'Очень высокое'], 'GPT-5.6 Terra': ['Минимальное', 'Низкое', 'Среднее', 'Высокое'], 'GPT-5.6 Sol': ['Низкое', 'Среднее', 'Высокое'], 'GPT-5.6 Luna': ['Низкое', 'Высокое'] };
+    const effList = EFF_BY_MODEL[model] || ['Низкое', 'Среднее', 'Высокое'];
+    const effCur = effList.includes(this.state.effort) ? this.state.effort : (effList.includes('Среднее') ? 'Среднее' : effList[0]);
+    const effortOptions = effList.map((l) => ({ label: l, tip: EFF_TIPS[l], style: pill(effCur === l) + (effList.length > 4 ? ' padding: 0 8px;' : ''), select: () => this.setState({ effort: l }) }));
+    const hasEffort = effList.length > 0;
+    const radio = (on, warn) => ({
+      bg: on ? '#1c1c1c' : 'transparent',
+      dotBorder: on ? (warn ? '#e0a33c' : '#2a52be') : '#3b3b3b',
+      dotBg: on ? (warn ? '#e0a33c' : '#2a52be') : 'transparent',
+      titleColor: on ? '#d5d5d5' : '#a6a6a6',
+      noteColor: on && warn ? '#d0a45c' : '#7d7d7d',
+    });
+    const permOptions = [
+      { label: 'Спрашивать', note: 'Агент запрашивает разрешение на каждую команду и запись.' },
+      { label: 'Авто в пределах задачи', note: 'Свободно работает в своей ветке, спрашивает про всё за её пределами.' },
+      { label: 'Полный доступ', note: 'Любые команды без вопросов — только для доверенных проектов.', warn: true },
+    ].map((p) => Object.assign({ label: p.label, note: p.note, select: () => this.setState({ perm: p.label }) }, radio(this.state.perm === p.label, p.warn)));
+
+    return {
+      onHover: this.hover,
+      growInput: this.grow,
+      chatRef: this.chatRef,
+      onChatScroll: this.onChatScroll,
+      toBottom: this.toBottom,
+      showDown: !!this.state.away && !empty,
+      copyAnswer: this.copyAnswer,
+      copied: !!this.state.copied,
+      notCopied: !this.state.copied,
+      copyTip: this.state.copied ? 'Скопировано' : 'Скопировать ответ',
+      sessions, listTabs,
+      listEmpty: sessions.length === 0,
+      listEmptyText: listTab === 'archive' ? 'Архив пуст' : 'Активных чатов нет',
+      sessionTitle: cur.title,
+      curArchived, curActive: !curArchived,
+      archiveCurrent: () => setArch(cur.key, true),
+      restoreCurrent: () => setArch(cur.key, false),
+      newSession: () => this.setState({ listTab: 'active', tip: null }),
+      noop: () => {}, msgIn: () => this.setState({ msgHover: true }), msgOut: () => this.setState({ msgHover: false }), msgOp: this.state.msgHover ? '1' : '0',
+      ex: (() => { const o = this.state.ex || {}; const r = {}; ['think', 'read'].forEach((k) => { r[k] = () => this.setState({ ex: Object.assign({}, o, { [k]: !o[k] }), tip: null }); r[k + 'On'] = !!o[k]; r[k + 'Rot'] = o[k] ? 'rotate(90deg)' : 'none'; }); return r; })(),
+      readRows: [['docs/architecture.md', 'целиком'], ['docs/adr/0004-orders.md', 'целиком'], ['src/orders/order.service.ts', 'строки 1–140'], ['src/orders/order.entity.ts', 'целиком'], ['src/checkout/checkout.controller.ts', 'строки 20–90'], ['package.json', 'целиком'], ['поиск «payment»', '9 совпадений']].map((x) => ({ path: x[0], meta: x[1], color: x[0].startsWith('поиск') ? '#a6a6a6' : '#7d9ce8', tip: x[0].startsWith('поиск') ? 'Поиск по коду' : 'Открыть файл' })),
+      agentCards, effortOptions, hasEffort, effortLevels: effList, effortValue: effCur, onEffort: (v) => this.setState({ effort: v }), permOptions, agentKey: this.state.agent === 'openai' ? 'openai' : 'anthropic',
+      modelTip: 'Выбрать модель',
+      effortLine: (agent === 'anthropic' ? 'Claude Code' : 'Codex') + ' · усилие: ' + this.state.effort.toLowerCase(),
+      openAgentModal: () => this.setState({ agentModal: true, tip: null }),
+      closeAgentModal: () => this.setState({ agentModal: false, modelMenu: false, tip: null }),
+      agentModalOpen: !!this.state.agentModal,
+      stopProp: (e) => e.stopPropagation(),
+      attachOpen: !!this.state.attachMenu,
+      toggleAttach: () => this.setState({ attachMenu: !this.state.attachMenu, tip: null }),
+      attachBg: this.state.attachMenu ? '#383838' : 'transparent',
+      attachColor: this.state.attachMenu ? '#e2e2e2' : '#8a8a8a',
+      pickFile: () => this.setState({ attachMenu: false }),
+      pickFolder: () => this.setState({ attachMenu: false }),
+      onRootClick: this.closeMenus,
+      offHover: this.unhover,
+      tipOn: !!tip,
+      tipText: tip ? tip.text : '',
+      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + 30 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 11.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
+      panelOpen: panel,
+      panelClosed: !panel,
+      togglePanel: () => this.setState({ panel: !panel, tip: null }),
+      nav: [
+        { key: 'overview', label: 'Обзор', tip: 'Состояние проекта и последние события' },
+        { key: 'spec', label: 'Документы', tip: 'Бриф, архитектура, решения' },
+        { key: 'plan', label: 'План', tip: 'Этапы и их последовательность' },
+        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
+        { key: 'chat', label: 'Чат', tip: 'Работа с агентом', sep: true },
+        { key: 'settings', label: 'Параметры', tip: 'Агент, ветки и инструкции' },
+      ].map((x) => ({
+        sep: !!x.sep,
+        label: x.label, tip: x.tip,
+        railTip: x.count ? x.label + ' · 2 требуют внимания' : x.label,
+        isOverview: x.key === 'overview', isChat: x.key === 'chat', isSpec: x.key === 'spec',
+        isPlan: x.key === 'plan', isTasks: x.key === 'tasks', isSettings: x.key === 'settings',
+        color: x.key === 'chat' ? '#d5d5d5' : '#a6a6a6',
+        iconColor: x.key === 'chat' ? '#d5d5d5' : '#6f6f6f',
+        weight: x.key === 'chat' ? '600' : '400',
+        hasCount: !!x.count, count: x.count || '',
+        select: () => {},
+      })),
+      isAnthropic: agent === 'anthropic',
+      isOpenai: agent === 'openai',
+      agentName: agent === 'anthropic' ? 'Claude Code' : 'Codex',
+      modelLabel: model,
+      modelMenuOpen: !!this.state.modelMenu,
+      toggleModelMenu: () => this.setState({ modelMenu: !this.state.modelMenu, tip: null }),
+      modelOptions: models.map((m) => ({
+        label: m.label, tip: m.tip,
+        bg: model === m.label ? '#303030' : 'transparent',
+        checkColor: model === m.label ? '#2a52be' : 'transparent',
+        labelColor: model === m.label ? '#ededed' : '#c8c8c8',
+        select: () => this.setState({ model: m.label, modelMenu: false }),
+      })),
+      switchAgent: () => this.setState({ agent: agent === 'anthropic' ? 'openai' : 'anthropic', model: null, modelMenu: false, tip: null }),
+      isEmpty: empty,
+      hasChat: !empty,
+      chips: ['Опишу идею', 'Приложу ТЗ', 'Есть готовый код'].map((c) => ({ label: c, select: () => {} })),
+      tasks,
+      tasksTitle: 'Этап M02 «Платежи» и 4 задачи',
+      tasksAction: n === 0 ? 'Выберите задачи' : (n === 4 ? 'Создать 4 задачи' : 'Создать ' + n),
+      tasksHint: n === 0 ? 'Ничего не выбрано' : 'Задачи попадут в этап M02',
+      changed,
+    };
+  }
+}
+</script>
+</body>
+</html>

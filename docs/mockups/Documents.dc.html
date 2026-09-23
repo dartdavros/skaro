@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: #151515; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; }
+a { color: #2a52be; text-decoration: none; }
+a:hover { color: #2bb3a6; text-decoration: underline; }
+input, button, textarea { font-family: inherit; }
+@keyframes skPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+@keyframes skPulseRing { 0% { opacity: .5; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.2); } }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #282828; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3b3b3b; }
+</style>
+</helmet>
+
+<div style="padding: 44px; background: #151515; width: max-content;">
+<div data-screen-label="Документы" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onClick="{{ onRootClick }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #0f0f0f; color: #b1b1b1; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
+
+  <div style="height: 42px; flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 0 10px 0 14px; background: #0f0f0f; border-bottom: 1px solid #1a1a1a;">
+    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 11px 11px 0 0; cursor: pointer;" style-hover="background: #161616;">
+      <svg width="16" height="16" viewBox="0 0 127 127" aria-hidden="true"><defs><linearGradient id="skGradT" x1="0%" x2="0%" y1="100%" y2="0%"><stop offset="0%" stop-color="rgb(129,0,70)"></stop><stop offset="16%" stop-color="rgb(168,0,40)"></stop><stop offset="32%" stop-color="rgb(232,0,44)"></stop><stop offset="48%" stop-color="rgb(255,0,0)"></stop><stop offset="64%" stop-color="rgb(255,66,0)"></stop><stop offset="81%" stop-color="rgb(255,84,0)"></stop><stop offset="99%" stop-color="rgb(255,90,0)"></stop></linearGradient></defs><path fill-rule="evenodd" fill="url(#skGradT)" d="M63.500,126.999 C28.429,126.999 0.0,98.570 0.0,63.500 C0.0,59.33 0.466,54.677 1.343,50.471 C5.174,62.937 16.778,72.0 30.500,72.0 C47.344,72.0 60.999,58.344 60.999,41.500 C60.999,24.655 47.344,11.0 30.500,11.0 C29.513,11.0 28.539,11.51 27.577,11.142 C37.795,4.118 50.164,0.0 63.500,0.0 C98.570,0.0 126.999,28.429 126.999,63.500 C126.999,98.570 98.570,126.999 63.500,126.999 Z"></path></svg>
+      <span style="font-size: 13.5px; font-weight: 700; letter-spacing: .04em; color: #ededed;">skaro</span>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 42px; margin-left: -8px;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 11px 0 13px; border-radius: 11px 11px 0 0; background: #121212; border: 1px solid #242424; border-bottom: none; margin-bottom: -1px; position: relative; z-index: 1; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-before="content: ''; position: absolute; bottom: 0; left: -11px; width: 10px; height: 10px; border-bottom-right-radius: 10px; border-right: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: 3px 3px 0 3px #121212; pointer-events: none;" style-after="content: ''; position: absolute; bottom: 0; right: -11px; width: 10px; height: 10px; border-bottom-left-radius: 10px; border-left: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: -3px 3px 0 3px #121212; pointer-events: none;">
+        <span data-tip="Агент работает" style="position: relative; display: inline-flex; width: 7px; height: 7px;">
+          <span style="position: absolute; inset: 0; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+          <span style="position: absolute; inset: 0; border-radius: 50%; border: 1px solid #a6a6a6; animation: skPulseRing 1.8s ease-out infinite;"></span>
+        </span>
+        Shop API
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        <span data-tip="Требует вашего внимания" style="width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
+        Blog Engine
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+        Skaro Landing
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Открыть проект">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; height: 42px;">
+      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Настройки">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7h-9M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
+      </button>
+      <div style="width: 1px; height: 16px; background: #1d1d1d; margin: 0 2px;"></div>
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex;">
+
+    <div style="flex: 1; min-width: 0; display: flex; background: #121212;">
+
+      <sc-if value="{{ treeOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="flex: none; position: relative; width: {{ treeWpx }}; display: flex; flex-direction: column; border-right: 1px solid #1f1f1f;">
+          <div style="flex: none; display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 8px 0 16px;">
+            <span style="font-size: 14px; font-weight: 700; color: #d5d5d5;">Документы</span>
+            <button onClick="{{ toggleTree }}" data-tip="Скрыть дерево" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+          </div>
+          <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 2px;">
+            <sc-for list="{{ tree }}" as="r" hint-placeholder-count="9">
+              <sc-if value="{{ r.isGroup }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ r.toggle }}" style="display: flex; align-items: center; gap: 6px; height: 28px; margin-top: 10px; padding: 0 8px 0 6px; border-radius: 7px; cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;" style-hover="background: #1a1a1a; color: #a6a6a6;">
+                  <span style="display: inline-flex; color: #6f6f6f; transform: rotate({{ r.rot }}); transition: transform .15s;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+                  <span style="flex: 1;">{{ r.label }}</span>
+                  <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; font-weight: 400; letter-spacing: 0; color: #5f5f5f;">{{ r.count }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.isItem }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ r.select }}" data-tip="{{ r.tip }}" style="display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 10px; border-radius: 8px; background: {{ r.bg }}; cursor: pointer;" style-hover="background: #1a1a1a;">
+                  <sc-if value="{{ r.hasIcon }}" hint-placeholder-val="{{ true }}">
+                    <span style="flex: none; display: inline-flex; color: {{ r.iconColor }};">
+                      <sc-if value="{{ r.iBrief }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg></sc-if>
+                      <sc-if value="{{ r.iArch }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg></sc-if>
+                      <sc-if value="{{ r.iDoc }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg></sc-if>
+                    </span>
+                  </sc-if>
+                  <sc-if value="{{ r.hasNum }}" hint-placeholder-val="{{ false }}">
+                    <span style="flex: none; width: 32px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ r.num }}</span>
+                  </sc-if>
+                  <span style="flex: 1; min-width: 0; font-size: 13px; font-weight: {{ r.weight }}; color: {{ r.color }}; text-decoration: {{ r.strike }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.label }}</span>
+                  <sc-if value="{{ r.hasDot }}" hint-placeholder-val="{{ false }}">
+                    <span style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </sc-for>
+          </div>
+          <div style="flex: none; padding: 8px; border-top: 1px solid #1a1a1a;">
+            <button onClick="{{ openNewDoc }}" style="width: 100%; display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 10px; border: none; border-radius: 8px; background: transparent; color: #a6a6a6; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Новый документ</button>
+          </div>
+          <div onMouseDown="{{ startResize }}" data-tip="Потяните, чтобы изменить ширину" style="position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; z-index: 5; cursor: col-resize; display: flex; justify-content: center;" style-hover="background: transparent;">
+            <span style="width: 2px; height: 100%; background: {{ resizeLine }}; transition: background .15s;"></span>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column;">
+
+        <sc-if value="{{ treeClosedView }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ toggleTree }}" data-tip="Показать дерево документов" style="position: absolute; top: 12px; left: 12px; z-index: 6; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+        </sc-if>
+
+        <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: none; display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-bottom: 1px solid #1f1f1f;">
+            <sc-if value="{{ treeClosed }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ toggleTree }}" data-tip="Показать дерево документов" style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+            </sc-if>
+            <div style="min-width: 0; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 14px; font-weight: 700; color: #d5d5d5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ docTitle }}</span>
+              <sc-if value="{{ dirty }}" hint-placeholder-val="{{ false }}">
+                <span data-tip="Есть несохранённые изменения" style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
+              </sc-if>
+            </div>
+            <div style="display: flex; align-items: center; gap: 2px; padding-left: 8px; border-left: 1px solid #242424;">
+              <button onClick="{{ fmtBold }}" data-tip="Жирный · Ctrl+B" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"></path></svg></button>
+              <button onClick="{{ fmtItalic }}" data-tip="Курсив · Ctrl+I" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 4h-9M14 20H5M15 4 9 20"></path></svg></button>
+              <button onClick="{{ fmtHeading }}" data-tip="Заголовок" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12"></path><path d="M6 20V4"></path><path d="M18 20V4"></path></svg></button>
+              <button onClick="{{ fmtList }}" data-tip="Список" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg></button>
+              <button onClick="{{ fmtCode }}" data-tip="Код" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"></path><path d="m8 6-6 6 6 6"></path></svg></button>
+              <button onClick="{{ fmtLink }}" data-tip="Ссылка" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
+              <button onClick="{{ fmtTable }}" data-tip="Таблица" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"></path><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M3 15h18"></path></svg></button>
+            </div>
+            <div style="flex: 1;"></div>
+            <div style="flex: none; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #060606;">
+              <sc-for list="{{ editViews }}" as="o" hint-placeholder-count="3">
+                <button onClick="{{ o.select }}" style="{{ o.style }}" style-hover="{{ o.hover }}">{{ o.label }}</button>
+              </sc-for>
+            </div>
+            <button onClick="{{ cancelEdit }}" style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; border: none; background: #242424; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: none;" style-hover="background: #2d2d2d; color: #ededed; text-decoration: none;">Отмена</button>
+            <button onClick="{{ saveEdit }}" data-tip="Ctrl+S" style="display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 8px; border: none; background: {{ saveBg }}; color: {{ saveColor }}; font-size: 12.5px; font-weight: 700; cursor: {{ saveCursor }};" style-hover="{{ saveHover }}">Сохранить</button>
+          </div>
+          <sc-if value="{{ conflictOn }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: none; margin: 10px 16px 0; display: flex; align-items: center; gap: 11px; padding: 10px 10px 10px 14px; border-radius: 9px; background: rgba(224,163,60,.1); color: #e0a33c;">
+              <span style="flex: none; display: inline-flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"></path></svg></span>
+              <span style="flex: 1; min-width: 0; font-size: 13px;"><span style="font-weight: 600;">Файл изменился на диске.</span> Его сохранили в другом месте, пока вы редактировали.</span>
+              <span onClick="{{ loadDisk }}" style="flex: none; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="text-decoration: underline;">Загрузить с диска</span>
+              <span onClick="{{ keepMine }}" style="flex: none; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="text-decoration: underline;">Оставить мою версию</span>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <div style="flex: 1; min-height: 0; display: flex;">
+          <sc-if value="{{ showEditor }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; min-width: 0; display: flex; padding: 14px 16px 16px; border-right: {{ editorBorder }};">
+              <textarea ref="{{ taRef }}" value="{{ draft }}" onInput="{{ onDraft }}" onKeyDown="{{ onEditorKey }}" spellcheck="false" style="flex: 1; width: 100%; height: 100%; padding: 14px 16px; border: none; border-radius: 10px; background: #1a1a1a; color: #d5d5d5; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; line-height: 1.7; resize: none; outline: none;" style-focus="box-shadow: inset 0 0 0 1px #2a52be;"></textarea>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showPreview }}" hint-placeholder-val="{{ true }}">
+            <div ref="{{ docRef }}" onScroll="{{ onDocScroll }}" style="flex: 1; min-width: 0; position: relative; overflow-y: auto;">
+              <sc-if value="{{ emptyBrief }}" hint-placeholder-val="{{ false }}">
+                <div style="min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px 24px 80px; text-align: center;">
+                  <span style="color: #4a4a4a; display: inline-flex;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg></span>
+                  <div style="display: flex; flex-direction: column; gap: 6px; max-width: 380px;">
+                    <span style="font-size: 15px; font-weight: 700; color: #d5d5d5;">Бриф ещё не создан</span>
+                    <span style="font-size: 13px; line-height: 1.6; color: #8a8a8a; text-wrap: pretty;">Что строим, для кого и где границы. Агент опирается на бриф в каждой задаче.</span>
+                  </div>
+                  <div style="display: flex; gap: 8px;">
+                    <button onClick="{{ writeBrief }}" style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; border: none; background: #242424; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: none; height: 34px;" style-hover="background: #2d2d2d; color: #ededed; text-decoration: none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg>Написать самому</button>
+                    <a href="AgentChat.dc.html" style="display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 15px; border-radius: 8px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none;" style-hover="background: #3461d6; color: #ffffff; text-decoration: none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>Обсудить с агентом</a>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasDoc }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; justify-content: center; gap: 44px; padding: {{ docPad }};">
+                  <article style="flex: 1; min-width: 0; max-width: 760px; display: flex; flex-direction: column; gap: 14px;">
+                    <sc-if value="{{ viewing }}" hint-placeholder-val="{{ true }}">
+                      <div style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 6px;">
+                  <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+                      <sc-if value="{{ isAdr }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; font-weight: 600; color: #8a8a8a;">ADR-{{ adrNum }}</span>
+                      </sc-if>
+                      <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #d8d8d8; letter-spacing: -.01em;">{{ docTitle }}</h1>
+                      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #7d7d7d; white-space: nowrap;">
+                        <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px;">{{ docPath }}</span>
+                        <span style="color: #3b3b3b;">·</span>
+                        <span>изменён {{ docEdited }}</span>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                      
+                      <a href="AgentChat.dc.html" data-tip="Новый чат, документ уже в контексте" style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; border: none; background: #242424; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: none;" style-hover="background: #2d2d2d; color: #ededed; text-decoration: none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>Обсудить с агентом</a>
+                      <button onClick="{{ startEdit }}" style="display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; border: none; background: #242424; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: none;" style-hover="background: #2d2d2d; color: #ededed; text-decoration: none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg>Редактировать</button>
+                      <button onClick="{{ reveal }}" data-tip="Показать в папке" style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1a1a1a; color: #ededed;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6.6a1 1 0 0 1-.8-.4l-1.2-1.6A2 2 0 0 0 9.8 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg></button>
+                    </div>
+                  </div>
+                  <sc-if value="{{ isAdr }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                      <div data-keep-menu="1" style="position: relative;">
+                        <button onClick="{{ toggleStatusMenu }}" data-tip="Сменить статус решения" style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 9px 0 10px; border: none; border-radius: 8px; background: {{ statusBtnBg }}; color: #c8c8c8; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #262626; color: #ededed;">
+                          <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ adrDot }};"></span>
+                          {{ adrStatusLabel }}
+                          <span style="display: inline-flex; color: #7d7d7d;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span>
+                        </button>
+                        <sc-if value="{{ statusMenuOpen }}" hint-placeholder-val="{{ false }}">
+                          <div style="position: absolute; top: 32px; left: 0; z-index: 30; width: 200px; padding: 5px; border-radius: 10px; background: #242424; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px;">
+                            <sc-for list="{{ statusOpts }}" as="o" hint-placeholder-count="3">
+                              <div onClick="{{ o.select }}" style="display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; background: {{ o.bg }}; cursor: pointer;" style-hover="background: #2d2d2d;">
+                                <span style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: {{ o.dot }};"></span>
+                                <span style="flex: 1; font-size: 12.5px; color: #d5d5d5;">{{ o.label }}</span>
+                                <span style="display: inline-flex; color: {{ o.check }};"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </sc-if>
+                      </div>
+                      <span style="font-size: 12.5px; color: #7d7d7d;">{{ adrDate }}</span>
+                      <sc-if value="{{ hasReplaces }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-size: 12.5px; color: #7d7d7d;">Заменяет <a href="#" onClick="{{ goReplaces }}" style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #7d9ce8; text-decoration: none;" style-hover="text-decoration: underline;">ADR-{{ replaces }}</a></span>
+                      </sc-if>
+                      <sc-if value="{{ hasReplacedBy }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-size: 12.5px; color: #7d7d7d;">Заменён на <a href="#" onClick="{{ goReplacedBy }}" style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #7d9ce8; text-decoration: none;" style-hover="text-decoration: underline;">ADR-{{ replacedBy }}</a></span>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+                    </sc-if>
+                    <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="6">
+                <sc-if value="{{ b.isH2 }}" hint-placeholder-val="{{ false }}">
+                  <h2 data-hid="{{ b.hid }}" style="margin: 14px 0 0; font-size: 17px; font-weight: 700; color: #d5d5d5; letter-spacing: -.005em;">{{ b.text }}</h2>
+                </sc-if>
+                <sc-if value="{{ b.isH3 }}" hint-placeholder-val="{{ false }}">
+                  <h3 style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #c8c8c8;">{{ b.text }}</h3>
+                </sc-if>
+                <sc-if value="{{ b.isP }}" hint-placeholder-val="{{ true }}">
+                  <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #b1b1b1; text-wrap: pretty;"><sc-for list="{{ b.parts }}" as="x" hint-placeholder-count="1"><sc-if value="{{ x.plain }}" hint-placeholder-val="{{ true }}">{{ x.text }}</sc-if><sc-if value="{{ x.code }}" hint-placeholder-val="{{ false }}"><code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #e8875b;">{{ x.text }}</code></sc-if><sc-if value="{{ x.bold }}" hint-placeholder-val="{{ false }}"><strong style="font-weight: 700; color: #d5d5d5;">{{ x.text }}</strong></sc-if><sc-if value="{{ x.link }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ x.go }}" style="color: #7d9ce8; text-decoration: none;" style-hover="text-decoration: underline; color: #9bb4ee;">{{ x.text }}</a></sc-if></sc-for></p>
+                </sc-if>
+                <sc-if value="{{ b.isUl }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <sc-for list="{{ b.items }}" as="it" hint-placeholder-count="3">
+                      <div style="display: flex; gap: 11px; font-size: 14px; line-height: 1.65; color: #b1b1b1;">
+                        <span style="flex: none; width: 5px; height: 5px; margin-top: 10px; border-radius: 50%; background: #5f5f5f;"></span>
+                        <span style="min-width: 0; text-wrap: pretty;"><sc-for list="{{ it.parts }}" as="x" hint-placeholder-count="1"><sc-if value="{{ x.plain }}" hint-placeholder-val="{{ true }}">{{ x.text }}</sc-if><sc-if value="{{ x.code }}" hint-placeholder-val="{{ false }}"><code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #e8875b;">{{ x.text }}</code></sc-if><sc-if value="{{ x.bold }}" hint-placeholder-val="{{ false }}"><strong style="font-weight: 700; color: #d5d5d5;">{{ x.text }}</strong></sc-if><sc-if value="{{ x.link }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ x.go }}" style="color: #7d9ce8; text-decoration: none;" style-hover="text-decoration: underline; color: #9bb4ee;">{{ x.text }}</a></sc-if></sc-for></span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ b.isCode }}" hint-placeholder-val="{{ false }}">
+                  <div style="border-radius: 10px; background: #1a1a1a; overflow: hidden;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 6px 0 14px; border-bottom: 1px solid #141414;">
+                      <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; color: #6f6f6f;">{{ b.lang }}</span>
+                      <button onClick="{{ b.copy }}" data-tip="{{ b.copyTip }}" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #242424; color: #d5d5d5;">
+                        <sc-if value="{{ b.notCopied }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg></sc-if>
+                        <sc-if value="{{ b.copied }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+                      </button>
+                    </div>
+                    <pre style="margin: 0; padding: 12px 14px 14px; overflow-x: auto; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; line-height: 1.65; color: #c8c8c8;">{{ b.text }}</pre>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ b.isTable }}" hint-placeholder-val="{{ false }}">
+                  <div style="border-radius: 10px; background: #1a1a1a; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                      <thead>
+                        <tr>
+                          <sc-for list="{{ b.head }}" as="th" hint-placeholder-count="3">
+                            <th style="text-align: left; padding: 10px 14px; border-bottom: 1px solid #242424; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">{{ th.text }}</th>
+                          </sc-for>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="3">
+                          <tr>
+                            <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="3">
+                              <td style="padding: 9px 14px; border-top: 1px solid #141414; color: #b1b1b1; line-height: 1.5; vertical-align: top;"><sc-for list="{{ c.parts }}" as="x" hint-placeholder-count="1"><sc-if value="{{ x.plain }}" hint-placeholder-val="{{ true }}">{{ x.text }}</sc-if><sc-if value="{{ x.code }}" hint-placeholder-val="{{ false }}"><code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #e8875b;">{{ x.text }}</code></sc-if><sc-if value="{{ x.bold }}" hint-placeholder-val="{{ false }}"><strong style="font-weight: 700; color: #d5d5d5;">{{ x.text }}</strong></sc-if><sc-if value="{{ x.link }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ x.go }}" style="color: #7d9ce8; text-decoration: none;" style-hover="text-decoration: underline; color: #9bb4ee;">{{ x.text }}</a></sc-if></sc-for></td>
+                            </sc-for>
+                          </tr>
+                        </sc-for>
+                      </tbody>
+                    </table>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ b.isRules }}" hint-placeholder-val="{{ false }}">
+                  <div data-hid="{{ b.hid }}" style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px; padding: 16px 18px 18px; border-radius: 12px; background: #1a1a1a;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span style="flex: none; display: inline-flex; color: #e8875b;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg></span>
+                      <span style="flex: 1; font-size: 15px; font-weight: 700; color: #d5d5d5;">Правила и ограничения</span>
+                      <span data-tip="Агент получает эти правила в каждом запуске" style="font-size: 12px; color: #7d7d7d; cursor: default;">Обязательны для агента</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                      <sc-for list="{{ b.items }}" as="it" hint-placeholder-count="4">
+                        <div style="display: flex; gap: 12px; padding: 7px 0; border-top: 1px solid #141414; font-size: 13.5px; line-height: 1.6; color: #c8c8c8;">
+                          <span style="flex: none; width: 20px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; line-height: 22px; color: #e8875b;">{{ it.num }}</span>
+                          <span style="min-width: 0; text-wrap: pretty;"><sc-for list="{{ it.parts }}" as="x" hint-placeholder-count="1"><sc-if value="{{ x.plain }}" hint-placeholder-val="{{ true }}">{{ x.text }}</sc-if><sc-if value="{{ x.code }}" hint-placeholder-val="{{ false }}"><code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #e8875b;">{{ x.text }}</code></sc-if><sc-if value="{{ x.bold }}" hint-placeholder-val="{{ false }}"><strong style="font-weight: 700; color: #d5d5d5;">{{ x.text }}</strong></sc-if><sc-if value="{{ x.link }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ x.go }}" style="color: #7d9ce8; text-decoration: none;" style-hover="text-decoration: underline; color: #9bb4ee;">{{ x.text }}</a></sc-if></sc-for></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ b.isDiagram }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 22px 16px; border-radius: 10px; background: #1a1a1a;">
+                    <sc-for list="{{ b.nodes }}" as="nd" hint-placeholder-count="4">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="padding: 8px 12px; border-radius: 8px; background: #242424; font-size: 12.5px; font-weight: 600; color: #c8c8c8; white-space: nowrap;">{{ nd.label }}</span>
+                        <sc-if value="{{ nd.arrow }}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; color: #5f5f5f;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </sc-for>
+                    <sc-if value="{{ blankDoc }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size: 13px; color: #6f6f6f;">Документ пуст — начните писать слева.</span>
+                    </sc-if>
+                  </article>
+                  <sc-if value="{{ showToc }}" hint-placeholder-val="{{ true }}">
+                    <nav style="flex: none; width: 184px; position: sticky; top: 28px; align-self: flex-start; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f; padding: 0 10px 8px;">На странице</span>
+                      <sc-for list="{{ toc }}" as="h" hint-placeholder-count="5">
+                        <div onClick="{{ h.go }}" style="padding: 5px 10px; border-radius: 7px; font-size: 12.5px; line-height: 1.4; color: {{ h.color }}; font-weight: {{ h.weight }}; cursor: pointer;" style-hover="background: #1a1a1a; color: #d5d5d5;">{{ h.text }}</div>
+                      </sc-for>
+                    </nav>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="flex: none; width: 216px; border-left: 1px solid #1a1a1a; padding: 18px 8px 14px 8px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px 8px 10px;">
+          <span style="flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #5f5f5f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
+          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m17.6 10.6 1.4 1.4-1.4 1.4"></path></svg>
+          </button>
+        </div>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="height: 1px; background: #222222; margin: 9px 10px;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 14px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #ededed;">
+            <span style="flex: none; width: 16px; display: inline-flex; align-items: center; justify-content: center; color: {{ n.iconColor }};">
+              <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+              </sc-if>
+              <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              </sc-if>
+            </span>
+            <span style="flex: 1; min-width: 0;">{{ n.label }}</span>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ n.count }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+
+
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ panelClosed }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: none; width: 44px; border-left: 1px solid #1a1a1a; padding: 18px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b1b1b1; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m18.4 10.6-1.4 1.4 1.4 1.4"></path></svg>
+        </button>
+
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="width: 20px; height: 1px; background: #222222; margin: 7px 0;"></div>
+          </sc-if>
+          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+            <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isChat }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isSpec }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"></path><path d="M15 8h-5"></path><path d="M19 17V5a2 2 0 0 0-2-2H4"></path><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isPlan }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.isTasks }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </sc-if>
+            <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
+              <span style="position: absolute; top: 4px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #2a52be;"></span>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1;"></div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ tipOn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ tipStyle }}">{{ tipText }}</div>
+  </sc-if>
+
+  <sc-if value="{{ newDocOn }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position: absolute; inset: 0; z-index: 70; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <div onClick="{{ stopProp }}" style="width: 420px; max-width: 100%; display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 14px; background: #1a1a1a; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 15px; font-weight: 700; color: #d5d5d5;">Новый документ</span>
+          <button onClick="{{ closeModal }}" data-tip="Закрыть · Esc" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #242424; color: #ededed;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Имя файла</span>
+          <div style="position: relative;">
+            <input type="text" value="{{ newName }}" onInput="{{ onNewName }}" onKeyDown="{{ onNewKey }}" placeholder="delivery-notes" style="width: 100%; height: 34px; padding: 0 44px 0 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #ededed; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; outline: none; box-shadow: inset 0 0 0 1px #2a2a2a;"  style-hover="background: #0b0b0b; box-shadow: inset 0 0 0 1px #363636;" style-focus="background: #0b0b0b; box-shadow: inset 0 0 0 1px #2a52be;"/>
+            <span style="position: absolute; right: 11px; top: 9px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #6f6f6f; pointer-events: none;">.md</span>
+          </div>
+          <span style="font-size: 12px; color: #6f6f6f;">Сохранится в <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #8a8a8a;">.skaro/docs/</span></span>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button onClick="{{ closeModal }}" style="height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #242424; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #ededed;">Отмена</button>
+          <button onClick="{{ createDoc }}" style="height: 34px; padding: 0 15px; border: none; border-radius: 8px; background: {{ createBg }}; color: {{ createColor }}; font-size: 13px; font-weight: 700; cursor: {{ createCursor }};" style-hover="{{ createHover }}">Создать</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ leaveOn }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position: absolute; inset: 0; z-index: 70; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <div onClick="{{ stopProp }}" style="width: 400px; max-width: 100%; display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 14px; background: #1a1a1a; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 15px; font-weight: 700; color: #d5d5d5;">Отменить изменения?</span>
+          <span style="font-size: 13px; line-height: 1.55; color: #8a8a8a; text-wrap: pretty;">Несохранённые правки в «{{ docTitle }}» будут потеряны.</span>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button onClick="{{ closeModal }}" style="height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #242424; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #ededed;">Продолжить правку</button>
+          <button onClick="{{ confirmLeave }}" style="height: 34px; padding: 0 15px; border: none; border-radius: 8px; background: #d9534d; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #e5625c;">Отменить правки</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1368, &quot;height&quot;: 888}, &quot;panelOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}, &quot;noBrief&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Состояния&quot;}, &quot;diskConflict&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Состояния&quot;}}">
+const ST = {
+  todo:      { label: 'Не начата',     color: '#a6a6a6', flag: 'isTodo' },
+  blocked:   { label: 'Заблокирована', color: '#a6a6a6', flag: 'isBlocked' },
+  working:   { label: 'В работе',      color: '#8fb8e6', flag: 'isWorking' },
+  need:      { label: 'Нужен ответ',   color: '#3461d6', flag: 'isNeed' },
+  review:    { label: 'На ревью',      color: '#e8b356', flag: 'isReview' },
+  done:      { label: 'Готово',        color: '#a6a6a6', flag: 'isDone' },
+  error:     { label: 'Ошибка',        color: '#f08b85', flag: 'isError' },
+  cancelled: { label: 'Отменена',      color: '#7d7d7d', flag: 'isTodo' },
+};
+
+const MS = [
+  { id: 'M01', name: 'Базовый API' },
+  { id: 'M02', name: 'Платежи' },
+  { id: 'M03', name: 'Админка' },
+];
+
+const DATA = [
+  { id: 'T-004', title: 'Схема БД и миграции', ms: 'M01', st: 'done', agent: 'anthropic', model: 'Sonnet 5', updated: 'вчера' },
+  { id: 'T-007', title: 'Каталог товаров', ms: 'M01', st: 'done', agent: 'anthropic', model: 'Sonnet 5', updated: 'вчера' },
+  { id: 'T-009', title: 'Точка входа FastAPI', ms: 'M01', st: 'done', agent: 'openai', model: 'GPT-5.6 Terra', updated: 'вчера' },
+  { id: 'T-010', title: 'Корзина', ms: 'M01', st: 'done', agent: 'anthropic', model: 'Opus 5', updated: '2 дн назад' },
+
+  { id: 'T-011', title: 'Ключи и конфиг эквайринга', ms: 'M02', st: 'done', agent: 'anthropic', model: 'Sonnet 5', updated: '3 ч назад' },
+  { id: 'T-012', title: 'Модель платежа', ms: 'M02', st: 'done', agent: 'anthropic', model: 'Opus 5', updated: '2 ч назад' },
+  { id: 'T-013', title: 'Схема платежей', ms: 'M02', st: 'done', agent: 'openai', model: 'GPT-5.6 Terra', updated: '24 мин назад' },
+  { id: 'T-014', title: 'Интеграция с эквайрингом', ms: 'M02', st: 'working', agent: 'anthropic', model: 'Opus 5',
+    line: 'Правит src/pay/acquiring.ts', elapsed: '14:05', updated: 'сейчас' },
+  { id: 'T-019', title: 'Идемпотентность вебхуков', ms: 'M02', st: 'need', agent: 'openai', model: 'GPT-5.6 Terra',
+    line: 'Разрешить установку stripe@17?', elapsed: '03:41', updated: '1 ч назад' },
+  { id: 'T-016', title: 'Возвраты по картам', ms: 'M02', st: 'review', agent: 'anthropic', model: 'Opus 5', par: true,
+    line: '+214 −38 · 7 файлов · Тесты ✓ Линтер ✗', updated: '4 мин назад' },
+  { id: 'T-015', title: 'Webhook статусов оплаты', ms: 'M02', st: 'blocked', dep: '← T-014', updated: 'вчера' },
+  { id: 'T-017', title: 'Отчёты по платежам', ms: 'M02', st: 'error', agent: 'openai', model: 'GPT-5.6 Terra',
+    line: 'Запуск остановлен на 02:11', updated: '40 мин назад' },
+
+  { id: 'T-020', title: 'Роли и доступы админки', ms: 'M03', st: 'todo', par: true, updated: 'вчера' },
+  { id: 'T-021', title: 'Список заказов', ms: 'M03', st: 'todo', par: true, updated: 'вчера' },
+  { id: 'T-022', title: 'Экран возвратов', ms: 'M03', st: 'blocked', dep: '← T-016', updated: 'вчера' },
+];
+
+class Component extends DCLogic {
+  state = { tip: null, panel: null, menu: null, modal: null, sel: 'architecture', treeOpen: true, treeW: 256, resizing: false,
+    groups: { adr: true, docs: true }, mode: 'view', editView: 'Рядом', draft: '', saved: {}, status: {}, extraDocs: [], newName: '',
+    activeH: null, copied: null, conflictDone: false, briefWritten: false, pending: null };
+  taRef = React.createRef();
+  docRef = React.createRef();
+
+  docs() {
+    const C = (t) => '\x60' + t + '\x60';
+    const F = '\x60\x60\x60';
+    return {
+      brief: { kind: 'brief', title: 'Бриф', path: '.skaro/brief.md', edited: '3 дня назад', src: [
+        '## Что строим', 'Shop API — бэкенд интернет-магазина: каталог, заказы, оплата и админка для менеджеров. Клиенты — веб-витрина и мобильное приложение.', '',
+        '## Для кого', '- **Покупатели** — через витрину и приложение', '- **Менеджеры** — обработка заказов в админке', '- **Поддержка** — возвраты и ответы клиентам', '',
+        '## Границы', '### Входит', '- REST API каталога и заказов', '- Оплата картой и через СБП, чеки по 54-ФЗ', '- Админка с ролями и журналом действий', '',
+        '### Не входит', '- Витрина и мобильное приложение — отдельные проекты', '- Складской учёт — остаётся в 1С'].join('\n') },
+      architecture: { kind: 'arch', title: 'Архитектура', path: '.skaro/architecture.md', edited: '2 ч назад', src: [
+        '## Обзор', 'Монолит на **Node.js** с разделением на модули. Внешний мир общается с сервисом только через REST API, описанный в ' + C('openapi.yaml') + '.', '',
+        F + 'mermaid', 'flowchart LR', '  Client[Витрина и приложение] --> API[REST API]', '  API --> Services[Сервисный слой]', '  Services --> DB[(PostgreSQL)]', '  Services --> Queue[Очередь задач]', F, '',
+        '## Компоненты', '| Модуль | Отвечает за | Где |', '|---|---|---|', '| catalog | Товары, категории, остатки | ' + C('src/catalog') + ' |', '| orders | Корзина, заказы, статусы | ' + C('src/orders') + ' |', '| payments | Эквайринг, СБП, возвраты, чеки | ' + C('src/payments') + ' |', '| admin | Роли, доступы, журнал | ' + C('src/admin') + ' |', '',
+        '## Потоки данных', 'Оплата идёт асинхронно: API создаёт платёж, провайдер присылает вебхук, обработчик в очереди обновляет статус заказа. Выбор базы — в [ADR-0001](adr/0001), очередь — в [ADR-0002](adr/0002).', '',
+        F + 'ts', '// src/payments/webhook.ts', 'export async function onWebhook(evt: ProviderEvent) {', "  await queue.add('payment.status', evt, { jobId: evt.id });", '}', F, '',
+        '## Правила и ограничения', '- Бизнес-логика только в сервисном слое, контроллеры тонкие', '- Проверка прав — на сервере, в ' + C('src/auth/policy.ts') + ', а не только в UI', '- Любая операция с деньгами идемпотентна по ключу запроса', '- Секреты — только из переменных окружения, никогда в репозитории', '- Новая зависимость — только через ADR', '',
+        '## Хранение', 'PostgreSQL 16, миграции через ' + C('node-pg-migrate') + '. Схема меняется только миграциями, ручные правки в проде запрещены.'].join('\n') },
+      'adr-0001': { kind: 'adr', num: '0001', title: 'Выбор БД', path: '.skaro/adr/0001-database.md', edited: '12 сен', date: '12 сен 2026', status: 'accepted', src: [
+        '## Контекст', 'Нужны транзакции для заказов и платежей, отчёты и гибкие атрибуты товаров.', '',
+        '## Решение', 'Используем **PostgreSQL 16**. Атрибуты товаров храним в ' + C('jsonb') + '.', '',
+        '## Последствия', '- Отчёты строятся SQL-запросами без отдельного хранилища', '- Схема меняется только миграциями'].join('\n') },
+      'adr-0002': { kind: 'adr', num: '0002', title: 'Очередь задач', path: '.skaro/adr/0002-queue.md', edited: 'вчера', date: '21 сен 2026', status: 'proposed', src: [
+        '## Контекст', 'Вебхуки провайдера и отправка чеков должны переживать рестарты и повторяться при сбоях.', '',
+        '## Решение', 'Фоновые задачи — **BullMQ** на Redis. Ключ задачи — ID события провайдера, чтобы не обработать его дважды.', '',
+        '## Последствия', '- В инфраструктуре появляется Redis', '- Нужен мониторинг длины очереди'].join('\n') },
+      'adr-0003': { kind: 'adr', num: '0003', title: 'Сессии в Redis', path: '.skaro/adr/0003-sessions.md', edited: '10 сен', date: '10 сен 2026', status: 'superseded', replacedBy: '0004', src: [
+        '## Контекст', 'Админке нужна авторизация с возможностью отозвать сессию.', '',
+        '## Решение', 'Храним серверные сессии в Redis, в cookie — только ID сессии.'].join('\n') },
+      'adr-0004': { kind: 'adr', num: '0004', title: 'Авторизация JWT', path: '.skaro/adr/0004-jwt.md', edited: '16 сен', date: '16 сен 2026', status: 'accepted', replaces: '0003', src: [
+        '## Контекст', 'Мобильному приложению неудобны cookie-сессии, а Redis на старте хочется не держать.', '',
+        '## Решение', 'Короткоживущий **JWT** (15 минут) и refresh-токен в БД. Отзыв — удалением refresh-токена.', '',
+        '## Последствия', '- Access-токен нельзя отозвать до истечения срока', '- Список активных входов виден в админке'].join('\n') },
+      'doc-req': { kind: 'doc', title: 'requirements.md', path: '.skaro/docs/requirements.md', edited: '5 дней назад', src: [
+        '## Нефункциональные требования', '- Ответ API — не дольше 300 мс для 95% запросов', '- Доступность — 99,5% в месяц', '- Персональные данные хранятся в РФ', '',
+        '## Нагрузка', 'Пиковая — 50 заказов в минуту во время распродаж.'].join('\n') },
+      'doc-research': { kind: 'doc', title: 'research-payments.md', path: '.skaro/docs/research-payments.md', edited: 'неделю назад', src: [
+        '## Провайдеры', '| Провайдер | Комиссия | СБП | Чеки |', '|---|---|---|---|', '| ЮKassa | 2,8% | да | да |', '| CloudPayments | 2,7% | да | да |', '| Т-Касса | 2,5% | да | нет |', '',
+        '## Вывод', 'Берём **ЮKassa**: есть СБП и чеки из коробки, понятные вебхуки.'].join('\n') },
+    };
+  }
+
+  allDocs() {
+    const d = this.docs();
+    this.state.extraDocs.forEach((x) => { d[x.id] = x; });
+    Object.keys(this.state.saved).forEach((k) => { if (d[k]) d[k] = Object.assign({}, d[k], { src: this.state.saved[k], edited: 'только что' }); });
+    Object.keys(this.state.status).forEach((k) => { if (d[k]) d[k] = Object.assign({}, d[k], { status: this.state.status[k] }); });
+    return d;
+  }
+
+  inline(text) {
+    const out = [];
+    const re = /(\x60[^\x60]+\x60)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\([^)]+\))/g;
+    let last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) out.push({ plain: true, text: text.slice(last, m.index) });
+      const t = m[0];
+      if (m[1]) out.push({ code: true, text: t.slice(1, -1) });
+      else if (m[2]) out.push({ bold: true, text: t.slice(2, -2) });
+      else {
+        const mm = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(t);
+        const href = mm[2];
+        out.push({ link: true, text: mm[1], go: (e) => { e.preventDefault(); const a = /^adr\/(\d{4})/.exec(href); if (a) this.select('adr-' + a[1]); } });
+      }
+      last = m.index + t.length;
+    }
+    if (last < text.length) out.push({ plain: true, text: text.slice(last) });
+    return out.map((x) => Object.assign({ plain: false, code: false, bold: false, link: false }, x));
+  }
+
+  parse(src) {
+    const lines = src.split('\n');
+    const blocks = [];
+    let i = 0, rules = null, h = 0;
+    const B = { isH2: false, isH3: false, isP: false, isUl: false, isCode: false, isTable: false, isRules: false, isDiagram: false };
+    const push = (b) => { const x = Object.assign({}, B, b); blocks.push(x); return x; };
+    const FENCE = '\x60\x60\x60';
+    while (i < lines.length) {
+      const ln = lines[i];
+      if (ln.startsWith(FENCE)) {
+        const lang = ln.slice(3).trim();
+        const body = []; i++;
+        while (i < lines.length && !lines[i].startsWith(FENCE)) { body.push(lines[i]); i++; }
+        i++;
+        if (lang === 'mermaid') {
+          const nodes = []; const seen = {};
+          const re = /(\w+)\[\(?([^\])]+)\)?\]/g; let m;
+          const txt = body.join('\n');
+          while ((m = re.exec(txt))) { if (!seen[m[1]]) { seen[m[1]] = 1; nodes.push(m[2]); } }
+          push({ isDiagram: true, nodes: nodes.map((label, k) => ({ label, arrow: k < nodes.length - 1 })) });
+        } else push({ isCode: true, lang: lang || 'text', text: body.join('\n') });
+        rules = null; continue;
+      }
+      if (ln.startsWith('## ')) {
+        const text = ln.slice(3).trim(); h++;
+        if (text === 'Правила и ограничения') rules = push({ isRules: true, hid: 'h' + h, text, items: [] });
+        else { rules = null; push({ isH2: true, text, hid: 'h' + h }); }
+        i++; continue;
+      }
+      if (ln.startsWith('### ')) { rules = null; push({ isH3: true, text: ln.slice(4).trim() }); i++; continue; }
+      if (ln.startsWith('|')) {
+        const rows = [];
+        while (i < lines.length && lines[i].startsWith('|')) { if (!/^\|[\s:|-]+\|?$/.test(lines[i])) rows.push(lines[i].replace(/^\||\|$/g, '').split('|').map((c) => c.trim())); i++; }
+        push({ isTable: true, head: (rows[0] || []).map((t) => ({ text: t })), rows: rows.slice(1).map((r) => ({ cells: r.map((c) => ({ parts: this.inline(c) })) })) });
+        continue;
+      }
+      if (ln.startsWith('- ')) {
+        const items = [];
+        while (i < lines.length && lines[i].startsWith('- ')) { items.push(lines[i].slice(2)); i++; }
+        if (rules) items.forEach((t) => rules.items.push({ num: String(rules.items.length + 1).padStart(2, '0'), parts: this.inline(t) }));
+        else push({ isUl: true, items: items.map((t) => ({ parts: this.inline(t) })) });
+        continue;
+      }
+      if (!ln.trim()) { i++; continue; }
+      const para = [];
+      while (i < lines.length && lines[i].trim() && !/^(#{2,3} |- |\||\x60\x60\x60)/.test(lines[i])) { para.push(lines[i].trim()); i++; }
+      if (!para.length) { para.push(lines[i].trim()); i++; }
+      push({ isP: true, parts: this.inline(para.join(' ')) });
+    }
+    return blocks;
+  }
+
+  current() { const d = this.allDocs(); return d[this.state.sel] || d.architecture; }
+  isDirty() { return this.state.mode === 'edit' && this.state.draft !== this.current().src; }
+  select(id) {
+    if (this.isDirty()) { this.setState({ modal: 'leave', pending: id }); return; }
+    this.setState({ sel: id, mode: 'view', activeH: null, menu: null, conflictDone: false }, () => { const el = this.docRef.current; if (el) el.scrollTop = 0; });
+  }
+
+  hover = (e) => {
+    if (this.state.resizing) return;
+    const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!el) return;
+    const text = el.getAttribute('data-tip');
+    if (!text) return;
+    const host = e.currentTarget.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const w = Math.min(260, 6.6 * text.length + 20);
+    const x = Math.max(w / 2 + 10, Math.min(host.width - w / 2 - 10, r.left - host.left + r.width / 2));
+    const next = { text, x, y: r.top - host.top, h: r.height, below: r.top - host.top < 46 };
+    const cur = this.state.tip;
+    if (cur && cur.text === next.text && Math.abs(cur.x - next.x) < 1 && Math.abs(cur.y - next.y) < 1) return;
+    this.setState({ tip: next });
+  };
+  unhover = () => { if (this.state.tip) this.setState({ tip: null }); };
+  closeMenus = (e) => {
+    if (e.target.closest && e.target.closest('[data-keep-menu]')) return;
+    if (this.state.menu) this.setState({ menu: null });
+  };
+  onKey = (e) => {
+    if (e.key === 'Escape' && this.state.modal) this.setState({ modal: null });
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && this.state.mode === 'edit') { e.preventDefault(); this.save(); }
+  };
+  componentDidMount() { window.addEventListener('keydown', this.onKey); }
+  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); this.stopResize(); }
+
+  startResize = (e) => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = this.state.treeW;
+    this._mv = (ev) => this.setState({ treeW: Math.max(200, Math.min(400, w0 + ev.clientX - x0)) });
+    this._up = () => this.stopResize();
+    window.addEventListener('mousemove', this._mv);
+    window.addEventListener('mouseup', this._up);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    this.setState({ resizing: true, tip: null });
+  };
+  stopResize() {
+    if (this._mv) window.removeEventListener('mousemove', this._mv);
+    if (this._up) window.removeEventListener('mouseup', this._up);
+    this._mv = this._up = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (this.state.resizing) this.setState({ resizing: false });
+  }
+
+  onDocScroll = () => {
+    const el = this.docRef.current;
+    if (!el || this.state.mode === 'edit') return;
+    const hs = el.querySelectorAll('[data-hid]');
+    let cur = null;
+    hs.forEach((h) => { if (h.offsetTop - 60 <= el.scrollTop) cur = h.getAttribute('data-hid'); });
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4 && hs.length) cur = hs[hs.length - 1].getAttribute('data-hid');
+    if (cur && cur !== this.state.activeH) this.setState({ activeH: cur });
+  };
+
+  startEdit(src) {
+    const s = typeof src === 'string' ? src : this.current().src;
+    this.setState({ mode: 'edit', draft: s, menu: null, tip: null, conflictDone: false }, () => { const t = this.taRef.current; if (t) t.focus(); });
+  }
+  save = () => {
+    if (!this.isDirty()) return;
+    const id = this.state.sel;
+    if (this.state.extraDocs.some((x) => x.id === id)) this.setState({ extraDocs: this.state.extraDocs.map((x) => (x.id === id ? Object.assign({}, x, { src: this.state.draft, edited: 'только что' }) : x)), mode: 'view' });
+    else this.setState({ saved: Object.assign({}, this.state.saved, { [id]: this.state.draft }), mode: 'view', briefWritten: this.state.briefWritten || id === 'brief' });
+  };
+
+  fmt(kind) {
+    const t = this.taRef.current;
+    if (!t) return;
+    const v = this.state.draft;
+    const a = t.selectionStart, b = t.selectionEnd;
+    const sel = v.slice(a, b);
+    let ins, ca, cb;
+    const wrap = (m, ph) => { const x = sel || ph; ins = m + x + m; ca = a + m.length; cb = ca + x.length; };
+    if (kind === 'bold') wrap('**', 'текст');
+    else if (kind === 'italic') wrap('_', 'текст');
+    else if (kind === 'code') wrap('\x60', 'код');
+    else if (kind === 'link') { const x = sel || 'текст'; ins = '[' + x + '](url)'; ca = a + x.length + 3; cb = ca + 3; }
+    else if (kind === 'heading' || kind === 'list') {
+      const ls = v.lastIndexOf('\n', a - 1) + 1;
+      const pre = kind === 'heading' ? '## ' : '- ';
+      this.setState({ draft: v.slice(0, ls) + pre + v.slice(ls) }, () => { t.focus(); t.setSelectionRange(a + pre.length, b + pre.length); });
+      return;
+    } else { ins = (a && v[a - 1] !== '\n' ? '\n' : '') + '| Колонка | Колонка |\n|---|---|\n| | |\n'; ca = cb = a + ins.length; }
+    this.setState({ draft: v.slice(0, a) + ins + v.slice(b) }, () => { t.focus(); t.setSelectionRange(ca, cb); });
+  }
+
+  seg(active) {
+    return {
+      style: 'display: inline-flex; align-items: center; justify-content: center; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; ' + (active ? 'background: #121212; color: #ededed; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #989898;'),
+      hover: active ? 'color: #ededed;' : 'background: #1a1a1a; color: #d5d5d5;',
+    };
+  }
+
+  renderVals() {
+    const S = this.state;
+    const set = (o) => this.setState(o);
+    const panel = S.panel ?? (this.props.panelOpen ?? true);
+    const noBrief = (this.props.noBrief ?? false) && !S.briefWritten;
+    const docs = this.allDocs();
+    const doc = docs[S.sel] || docs.architecture;
+    const editing = S.mode === 'edit';
+    const ST = { proposed: { label: 'Предложен', dot: '#2a52be' }, accepted: { label: 'Принят', dot: '#a6a6a6' }, superseded: { label: 'Заменён', dot: '#4a4a4a' } };
+
+    const item = (id, extra) => {
+      const d = docs[id];
+      const on = S.sel === id;
+      const missing = id === 'brief' && noBrief;
+      const sup = d.status === 'superseded';
+      return Object.assign({ isGroup: false, isItem: true, hasIcon: true, hasNum: false, iBrief: false, iArch: false, iDoc: false, hasDot: false, num: '', tip: '',
+        label: d.title, bg: on ? '#1e1e1e' : 'transparent',
+        color: missing || sup ? '#6f6f6f' : (on ? '#d5d5d5' : '#a6a6a6'), iconColor: on ? '#d5d5d5' : '#6f6f6f',
+        weight: on ? '600' : '400', strike: 'none', select: () => this.select(id) }, extra || {}, missing ? { tip: 'Ещё не создан' } : {});
+    };
+    const adrIds = Object.keys(docs).filter((k) => docs[k].kind === 'adr');
+    const docIds = Object.keys(docs).filter((k) => docs[k].kind === 'doc');
+    const group = (k, label, count) => ({ isGroup: true, isItem: false, label, count: String(count), rot: S.groups[k] ? '90deg' : '0deg', toggle: () => set({ groups: Object.assign({}, S.groups, { [k]: !S.groups[k] }) }) });
+    const tree = [item('brief', { iBrief: true }), item('architecture', { iArch: true }), group('adr', 'ADR', adrIds.length)];
+    if (S.groups.adr) adrIds.forEach((id) => { const d = docs[id]; tree.push(item(id, { hasIcon: false, hasNum: true, num: d.num, hasDot: d.status === 'proposed',
+      tip: d.status === 'proposed' ? 'Предложен — ждёт решения' : (d.status === 'superseded' ? 'Заменён на ADR-' + (d.replacedBy || '') : '') })); });
+    tree.push(group('docs', 'Документы', docIds.length));
+    if (S.groups.docs) docIds.forEach((id) => tree.push(item(id, { iDoc: true })));
+
+    const emptyBrief = !editing && S.sel === 'brief' && noBrief;
+    const src = editing ? S.draft : doc.src;
+    const parsed = emptyBrief ? [] : this.parse(src);
+    const blocks = parsed.map((b, k) => b.isCode ? Object.assign({}, b, {
+      copied: S.copied === k, notCopied: S.copied !== k, copyTip: S.copied === k ? 'Скопировано' : 'Скопировать',
+      copy: () => { try { navigator.clipboard.writeText(b.text); } catch (x) {} set({ copied: k }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: null }), 1400); },
+    }) : b);
+    const heads = parsed.filter((b) => b.isH2 || b.isRules);
+    const activeH = S.activeH || (heads[0] && heads[0].hid);
+    const toc = heads.map((h) => ({ text: h.text, color: h.hid === activeH ? '#d5d5d5' : '#8a8a8a', weight: h.hid === activeH ? '600' : '400',
+      go: () => { const el = this.docRef.current; if (!el) return; const t = el.querySelector('[data-hid="' + h.hid + '"]'); if (t) el.scrollTo({ top: Math.max(0, t.offsetTop - 24), behavior: 'smooth' }); set({ activeH: h.hid }); } }));
+    const showEditor = editing && S.editView !== 'Просмотр';
+    const showPreview = !editing || S.editView !== 'Редактор';
+    const dirty = this.isDirty();
+
+    const adr = doc.kind === 'adr';
+    const statusOpts = ['proposed', 'accepted', 'superseded'].map((k) => ({ label: ST[k].label, dot: ST[k].dot, bg: doc.status === k ? '#2b2b2b' : 'transparent', check: doc.status === k ? '#ededed' : 'transparent',
+      select: () => set({ status: Object.assign({}, S.status, { [S.sel]: k }), menu: null }) }));
+
+    const tip = S.tip;
+    const nn = S.newName.trim().replace(/\.md$/, '');
+    const canCreate = /^[\w.-]+$/.test(nn);
+    const create = () => {
+      if (!canCreate) return;
+      const id = 'doc-new-' + Date.now();
+      const file = nn + '.md';
+      const x = { id, kind: 'doc', title: file, path: '.skaro/docs/' + file, edited: 'только что', src: '' };
+      this.setState({ extraDocs: S.extraDocs.concat([x]), sel: id, modal: null, newName: '', groups: Object.assign({}, S.groups, { docs: true }), mode: 'edit', draft: '## ', editView: 'Рядом' }, () => { const t = this.taRef.current; if (t) { t.focus(); t.setSelectionRange(3, 3); } });
+    };
+
+    return {
+      onHover: this.hover, offHover: this.unhover, onRootClick: this.closeMenus,
+      tipOn: !!tip, tipText: tip ? tip.text : '',
+      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + tip.h + 8 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 11.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
+      panelOpen: panel, panelClosed: !panel,
+      togglePanel: () => set({ panel: !panel, tip: null }),
+      nav: [
+        { key: 'overview', label: 'Обзор', tip: 'Состояние проекта и последние события' },
+        { key: 'spec', label: 'Документы', tip: 'Бриф, архитектура, решения' },
+        { key: 'plan', label: 'План', tip: 'Этапы и их последовательность' },
+        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
+        { key: 'chat', label: 'Чат', tip: 'Работа с агентом', sep: true },
+      ].map((n) => ({
+        sep: !!n.sep, label: n.label, tip: n.tip,
+        railTip: n.count ? n.label + ' · 2 требуют внимания' : n.label,
+        isOverview: n.key === 'overview', isChat: n.key === 'chat', isSpec: n.key === 'spec', isPlan: n.key === 'plan', isTasks: n.key === 'tasks',
+        color: n.key === 'spec' ? '#d5d5d5' : '#a6a6a6',
+        iconColor: n.key === 'spec' ? '#d5d5d5' : '#6f6f6f',
+        weight: n.key === 'spec' ? '600' : '400',
+        hasCount: !!n.count, count: n.count || '',
+        select: () => {},
+      })),
+      treeOpen: S.treeOpen, treeClosed: !S.treeOpen, treeClosedView: !S.treeOpen && !editing,
+      toggleTree: () => set({ treeOpen: !S.treeOpen, tip: null }),
+      treeWpx: S.treeW + 'px', startResize: this.startResize, resizeLine: S.resizing ? '#2a52be' : 'transparent',
+      tree,
+      openNewDoc: () => set({ modal: 'new', newName: '', tip: null }),
+      editing, viewing: !editing,
+      docTitle: doc.title, docPath: doc.path, docEdited: doc.edited,
+      isAdr: adr && !editing, adrNum: doc.num || '',
+      adrStatusLabel: adr ? ST[doc.status].label : '', adrDot: adr ? ST[doc.status].dot : 'transparent',
+      adrDate: doc.date || '',
+      hasReplaces: !!doc.replaces, replaces: doc.replaces || '', goReplaces: (e) => { e.preventDefault(); this.select('adr-' + doc.replaces); },
+      hasReplacedBy: adr && doc.status === 'superseded' && !!doc.replacedBy, replacedBy: doc.replacedBy || '', goReplacedBy: (e) => { e.preventDefault(); this.select('adr-' + doc.replacedBy); },
+      statusMenuOpen: S.menu === 'status', statusBtnBg: S.menu === 'status' ? '#262626' : '#1f1f1f',
+      toggleStatusMenu: () => set({ menu: S.menu === 'status' ? null : 'status', tip: null }), statusOpts,
+      reveal: () => {},
+      startEdit: () => this.startEdit(),
+      writeBrief: () => this.startEdit('## Что строим\n\n\n## Для кого\n- \n\n## Границы\n### Входит\n- \n\n### Не входит\n- '),
+      cancelEdit: () => { if (dirty) set({ modal: 'leave', pending: null }); else set({ mode: 'view' }); },
+      saveEdit: this.save,
+      dirty, saveBg: dirty ? '#2a52be' : '#242424', saveColor: dirty ? '#ffffff' : '#6f6f6f', saveCursor: dirty ? 'pointer' : 'default', saveHover: dirty ? 'background: #3461d6;' : '',
+      editViews: ['Редактор', 'Просмотр', 'Рядом'].map((l) => Object.assign({ label: l, select: () => set({ editView: l }) }, this.seg(S.editView === l))),
+      fmtBold: () => this.fmt('bold'), fmtItalic: () => this.fmt('italic'), fmtHeading: () => this.fmt('heading'), fmtList: () => this.fmt('list'),
+      fmtCode: () => this.fmt('code'), fmtLink: () => this.fmt('link'), fmtTable: () => this.fmt('table'),
+      conflictOn: editing && (this.props.diskConflict ?? false) && !S.conflictDone,
+      loadDisk: () => set({ draft: doc.src, conflictDone: true }), keepMine: () => set({ conflictDone: true }),
+      showEditor, showPreview, editorBorder: showEditor && showPreview ? '1px solid #1f1f1f' : 'none',
+      taRef: this.taRef, draft: S.draft,
+      onDraft: (e) => set({ draft: e.target.value }),
+      onEditorKey: (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); this.fmt('bold'); }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); this.fmt('italic'); }
+      },
+      docRef: this.docRef, onDocScroll: this.onDocScroll,
+      emptyBrief, hasDoc: !emptyBrief,
+      docPad: editing ? '22px 28px 60px' : '32px 36px 80px',
+      blocks, blankDoc: editing && !parsed.length,
+      showToc: !editing && heads.length >= 3, toc,
+      stopProp: (e) => e.stopPropagation(),
+      closeModal: () => set({ modal: null }),
+      newDocOn: S.modal === 'new', newName: S.newName,
+      onNewName: (e) => set({ newName: e.target.value }),
+      onNewKey: (e) => { if (e.key === 'Enter') create(); },
+      createDoc: create,
+      createBg: canCreate ? '#2a52be' : '#242424', createColor: canCreate ? '#ffffff' : '#6f6f6f', createCursor: canCreate ? 'pointer' : 'default', createHover: canCreate ? 'background: #3461d6;' : '',
+      leaveOn: S.modal === 'leave',
+      confirmLeave: () => {
+        const p = S.pending;
+        this.setState({ modal: null, mode: 'view', draft: '', pending: null }, () => { if (p) this.select(p); });
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>
