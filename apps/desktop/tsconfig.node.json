@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["electron.vite.config.ts", "playwright.config.ts", "src/main", "src/preload", "e2e"]
+}

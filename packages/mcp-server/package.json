@@ -1,0 +1,13 @@
+{
+  "name": "@skaro/mcp-server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Skaro MCP server: document, ADR, milestone and task proposals.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
+}

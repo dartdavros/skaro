@@ -1,0 +1,13 @@
+{
+  "name": "@skaro/adapter-claude",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Claude Code adapter (Agent SDK).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
+}

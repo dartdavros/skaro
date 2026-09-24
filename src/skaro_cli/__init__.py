@@ -1,1 +1,0 @@
-"""Skaro CLI package."""

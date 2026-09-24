@@ -1,0 +1,31 @@
+{
+  "name": "@skaro/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Skaro desktop app",
+  "author": "Skaro <hello@skaro.dev>",
+  "homepage": "https://skaro.dev",
+  "license": "AGPL-3.0-only",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "electron-vite build && electron-builder --dir",
+    "dist": "electron-vite build && electron-builder",
+    "typecheck": "tsc -p tsconfig.node.json && svelte-check --tsconfig tsconfig.web.json --fail-on-warnings",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@types/node": "^24.0.0",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "~6.0.3",
+    "vite": "^7.3.6"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@skaro/adapter-codex",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Codex adapter (codex app-server, JSON-RPC v2).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
+}
