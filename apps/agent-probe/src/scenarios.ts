@@ -8,8 +8,6 @@ export interface Scenario {
   permission: PermissionLevel;
   authMissing?: boolean;
   sandbox?: boolean;
-  /** Codex: needs the experimental API. */
-  experimental?: boolean;
   responder?: Responder;
   run(session: ProbeSession): Promise<void>;
 }
@@ -75,7 +73,6 @@ export const scenarios: Scenario[] = [
     id: 'question',
     title: 'Question to the user',
     permission: 'ask',
-    experimental: true,
     run: async (s) => {
       await s.turn(
         'Before doing anything, ask me which approach I prefer, using your tool for asking the user a question with options: ' +
@@ -112,7 +109,6 @@ export const scenarios: Scenario[] = [
     id: 'subagent',
     title: 'Subagent',
     permission: 'full',
-    experimental: true,
     run: async (s) => {
       await s.turn(
         'Delegate this to a subagent: find every function defined under src/ and list them with a one-line description. ' +
@@ -177,23 +173,26 @@ export const scenarios: Scenario[] = [
     id: 'plan-first',
     title: 'Plan first, approve, then implement',
     permission: 'plan',
-    experimental: true,
     run: async (s) => {
       await s.turn('Fix the bug in add() in src/math.js. Keep the plan to three steps or fewer.');
-      if (
-        !s.events.some(
-          (e) => e.t === 'interaction.opened' && e.interaction.kind === 'plan_approval',
-        )
-      ) {
-        await s.approvePlan();
-      }
+      // Codex asks to approve the plan right after the turn ends; the approval starts the next turn.
+      const next = s.waitFor((e) => e.t === 'turn.completed');
+      next.catch(() => undefined);
+      await new Promise((r) => setTimeout(r, 1000));
+      const approved = s.events.some(
+        (e) => e.t === 'interaction.opened' && e.interaction.kind === 'plan_approval',
+      );
+      const inPlace = s.events.some(
+        (e) => e.t === 'item.upsert' && e.item.kind === 'file_change' && e.item.status === 'done',
+      );
+      // Claude approves inside the turn (edits already done); Codex needs the next turn.
+      if (approved && !inPlace) await next;
     },
   },
   {
     id: 'question-plan',
     title: 'Question to the user while planning',
     permission: 'plan',
-    experimental: true,
     run: async (s) => {
       await s.turn(
         'Before planning, ask me which approach I prefer, using your tool for asking the user a question with options: ' +

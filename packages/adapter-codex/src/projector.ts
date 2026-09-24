@@ -5,6 +5,7 @@ import {
   arr,
   bool,
   countDiff,
+  formFields,
   num,
   obj,
   str,
@@ -67,6 +68,12 @@ export class CodexProjector {
   /** Thread of the session; other threads are subagents. */
   private mainThread = '';
   private retryNoticeId: string | undefined;
+  /** Turn named in the last thread/revert request. */
+  private revertTurn: string | undefined;
+  /** Turns started in plan mode, and the plan approval waiting for the next turn. */
+  private readonly planTurns = new Set<string>();
+  private nextTurnPlans = false;
+  private openPlan: string | undefined;
 
   private readonly ctx: ProjectionContext;
   private readonly emit: Emit;
@@ -84,6 +91,10 @@ export class CodexProjector {
       const id = msg['id'];
       if (typeof msg['method'] === 'string' && id !== undefined) {
         this.requests.set(String(id), msg['method']);
+        if (msg['method'] === 'turn/start') this.onTurnStartRequest(obj(msg['params']) ?? {});
+        if (msg['method'] === 'thread/revert') {
+          this.revertTurn = str(obj(msg['params'])?.['beforeTurnId']);
+        }
       } else if (id !== undefined && ('result' in msg || 'error' in msg)) {
         this.closeInteraction(String(id));
       }
@@ -141,12 +152,28 @@ export class CodexProjector {
           this.onItem(item, this.turnId, `agent-${threadId}`);
         return;
       }
+      // The subagent thread finishing its turn finishes the subagent task.
+      if (method === 'turn/completed') {
+        const task = this.items.get(`agent-${threadId}`);
+        const status = str(obj(p['turn'])?.['status']);
+        if (task?.kind === 'task' && task.status === 'running') {
+          this.upsert({
+            ...task,
+            status:
+              status === 'failed' ? 'failed' : status === 'interrupted' ? 'interrupted' : 'done',
+            endedAt: this.ctx.now(),
+          });
+        }
+        return;
+      }
       if (!method.startsWith('item/')) return;
     }
     switch (method) {
       case 'turn/started': {
         this.turnId = str(obj(p['turn'])?.['id']) ?? '';
         this.retryNoticeId = undefined;
+        if (this.nextTurnPlans) this.planTurns.add(this.turnId);
+        this.nextTurnPlans = false;
         this.emit({ t: 'turn.started', turnId: this.turnId });
         return;
       }
@@ -305,9 +332,15 @@ export class CodexProjector {
           );
         return;
       }
-      case 'thread/reverted':
-        this.emit({ t: 'rewound', toItemId: '' });
+      case 'thread/reverted': {
+        // The conversation goes back to before the reverted turn: its first item is the target.
+        const first = [...this.items.values()].find(
+          (i) => i.turnId === this.revertTurn && !i.parentId,
+        );
+        if (first) this.emit({ t: 'rewound', toItemId: first.id });
+        this.revertTurn = undefined;
         return;
+      }
       case 'serverRequest/resolved': {
         const requestId = p['requestId'];
         if (requestId !== undefined) this.closeInteraction(String(requestId));
@@ -389,6 +422,21 @@ export class CodexProjector {
           }),
         };
         break;
+      case 'mcpServer/elicitation/request': {
+        const server = str(p['serverName']) ?? 'mcp';
+        const url = str(p['url']);
+        interaction =
+          p['mode'] === 'url' && url
+            ? { kind: 'login', id: interactionId, server, url }
+            : {
+                kind: 'form',
+                id: interactionId,
+                server,
+                title: str(p['message']) ?? server,
+                fields: formFields(p['requestedSchema']),
+              };
+        break;
+      }
       default:
         this.emitUnknown({ method, params: p, id });
         return;
@@ -660,6 +708,31 @@ export class CodexProjector {
           ? { category: errorCategory(error), message: str(error?.['message']) ?? '' }
           : undefined,
     });
+    // Codex does not ask to approve a plan: a plan made in plan mode waits for the next turn.
+    const plan = [...this.items.values()].find(
+      (i) => i.turnId === turnId && i.kind === 'message' && i.phase === 'plan' && !i.parentId,
+    );
+    if (outcome === 'done' && this.planTurns.has(turnId) && plan?.kind === 'message') {
+      this.openPlan = `plan-${turnId}`;
+      this.emit({
+        t: 'interaction.opened',
+        interaction: { kind: 'plan_approval', id: this.openPlan, plan: plan.text },
+      });
+    }
+  }
+
+  /** Skaro's turn/start: the answer to an open plan approval, and whether it plans again. */
+  private onTurnStartRequest(params: Obj): void {
+    if (this.openPlan) {
+      this.emit({ t: 'interaction.closed', id: this.openPlan, resolution: 'answered' });
+      this.openPlan = undefined;
+    }
+    this.nextTurnPlans = obj(params['collaborationMode'])?.['mode'] === 'plan';
+  }
+
+  /** Turn an item belongs to (for rewinding to a user message). */
+  turnOf(itemId: string): string | undefined {
+    return this.items.get(itemId)?.turnId;
   }
 
   private upsert(partial: ItemDraft): void {

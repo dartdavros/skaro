@@ -23,7 +23,7 @@ export class Recorder {
   readonly ctx: ProjectionContext;
   private readonly start = Date.now();
   private current = 0;
-  private readonly sanitize: (text: string) => string;
+  private readonly sanitize: (value: unknown) => unknown;
 
   readonly dir: string;
   private readonly quiet: boolean;
@@ -45,7 +45,7 @@ export class Recorder {
   /** Records a raw line and returns it sanitized, as the projector must see it. */
   raw(dir: Direction, line: unknown): unknown {
     this.current = Date.now() - this.start;
-    const clean = JSON.parse(this.sanitize(JSON.stringify(line))) as unknown;
+    const clean = this.sanitize(line);
     const entry: RawLine = { ts: this.current, dir, line: clean };
     appendFileSync(join(this.dir, 'raw.jsonl'), JSON.stringify(entry) + '\n');
     return clean;
@@ -73,18 +73,21 @@ export class Recorder {
   }
 }
 
-/** Replaces the workspace path, the home dir and e-mail addresses in serialized JSON. */
-export function createSanitizer(workspace?: string): (text: string) => string {
+/** Long runs of base64 characters: image data, left untouched. */
+const BASE64 = /^[A-Za-z0-9+/=\s]{256,}$/;
+
+/**
+ * Replaces the workspace path, the home dir, the user name and e-mail addresses in every string
+ * of a JSON value. Paths arrive split across streaming chunks (`"Users/<name>/A"`), so the user
+ * name is also replaced on its own as a word.
+ */
+export function createSanitizer(workspace?: string): (value: unknown) => unknown {
   const replacements = (workspace ? pathVariants(workspace, '<workspace>') : []).concat(
     pathVariants(homedir(), '<home>'),
   );
-  // The user name also shows up on its own (e.g. `ls -l` owner column). Match it only outside
-  // base64-like runs so image data stays intact.
-  const user = new RegExp(
-    `(?<![A-Za-z0-9+/=])${escapeRegExp(userInfo().username)}(?![A-Za-z0-9+/=])`,
-    'g',
-  );
-  return (text) => {
+  const user = new RegExp(`\\b${escapeRegExp(userInfo().username)}\\b`, 'g');
+  const clean = (text: string): string => {
+    if (BASE64.test(text)) return text;
     let out = text;
     for (const [from, to] of replacements) out = out.split(from).join(to);
     out = out.replace(user, '<user>');
@@ -92,10 +95,27 @@ export function createSanitizer(workspace?: string): (text: string) => string {
       email.endsWith('skaro.dev') ? email : '<email>',
     );
   };
+  const walk = (value: unknown): unknown => {
+    if (typeof value === 'string') return clean(value);
+    if (Array.isArray(value)) return value.map(walk);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [clean(k), walk(v)]));
+    }
+    return value;
+  };
+  return walk;
+}
+
+/** Sanitizes a JSONL file's text line by line. */
+export function sanitizeJsonl(text: string, sanitize: (value: unknown) => unknown): string {
+  return text
+    .split('\n')
+    .map((line) => (line.trim() ? JSON.stringify(sanitize(JSON.parse(line))) : line))
+    .join('\n');
 }
 
 /**
- * A path as it may appear in serialized JSON: native or with forward slashes, escaped once to
+ * A path as it may appear in a string: native or with forward slashes, as is or escaped once to
  * three times (paths inside command strings are escaped again), with a lower-case drive letter,
  * and as the slug Claude Code uses for project directories (C--Users-name-...).
  */
@@ -104,6 +124,7 @@ function pathVariants(path: string, placeholder: string): [string, string][] {
   const variants = new Set<string>();
   for (const base of [path, path.replaceAll('\\', '/')]) {
     let text = base;
+    variants.add(text);
     for (let i = 0; i < 3; i++) {
       text = escape(text);
       variants.add(text);

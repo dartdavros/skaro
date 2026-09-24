@@ -1,23 +1,25 @@
 import { EventEmitter } from 'node:events';
-import type { Interaction, InteractionAnswer, TimelineEvent } from '@skaro/timeline';
+import { resolve } from 'node:path';
+import type {
+  AgentAdapter,
+  AgentSession,
+  Interaction,
+  InteractionAnswer,
+  PermissionMode,
+  TimelineEvent,
+} from '@skaro/timeline';
 import type { Recorder } from './recorder.ts';
 
-/** Skaro permission modes (docs/agent-output.md, 5.3) plus plan-first. */
-export type PermissionLevel = 'ask' | 'auto' | 'full' | 'plan';
+/** Skaro permission modes plus plan-first. */
+export type PermissionLevel = PermissionMode | 'plan';
 
-export interface SessionOptions {
+export interface ProbeOptions {
   workspace: string;
   permission: PermissionLevel;
   model?: string;
   effort?: string;
-  /** Run with an empty agent config dir to reproduce "not logged in". */
-  authMissing?: boolean;
-  /** Claude: enable the Bash sandbox with auto-allow. */
-  sandbox?: boolean;
-  /** Codex: opt into the experimental API (needed for plan mode and user-input questions). */
-  experimental?: boolean;
-  /** Codex: `-c key=value` config overrides for the app-server process. */
-  codexConfig?: string[];
+  sandboxVerified?: boolean;
+  sandboxMode?: string;
 }
 
 export type Responder = (interaction: Interaction) => InteractionAnswer;
@@ -34,20 +36,28 @@ export const allowAll: Responder = (interaction) => {
       };
     case 'plan_approval':
       return { kind: 'plan_approval', approve: true };
+    case 'form':
+      return { kind: 'form', action: 'decline' };
+    case 'login':
+      return { kind: 'login', action: 'cancel' };
     default:
       return { kind: 'approval', choice: 'allow_once' };
   }
 };
 
-/** Driver of one agent session, as the probe scenarios see it. */
-export abstract class ProbeSession {
+/** A real adapter session driven by a scenario: answers interactions, records everything. */
+export class ProbeSession {
   responder: Responder = allowAll;
   readonly events: TimelineEvent[] = [];
   private readonly bus = new EventEmitter();
-  protected readonly rec: Recorder;
-  protected readonly options: SessionOptions;
+  private readonly rec: Recorder;
+  private readonly adapter: AgentAdapter;
+  private readonly options: ProbeOptions;
+  private session: AgentSession | undefined;
+  private pump: Promise<void> | undefined;
 
-  constructor(rec: Recorder, options: SessionOptions) {
+  constructor(adapter: AgentAdapter, rec: Recorder, options: ProbeOptions) {
+    this.adapter = adapter;
     this.rec = rec;
     this.options = options;
     this.bus.setMaxListeners(100);
@@ -57,23 +67,83 @@ export abstract class ProbeSession {
     return this.options.workspace;
   }
 
-  abstract start(): Promise<void>;
-  /** Sends a user message without waiting for the turn to finish. */
-  abstract send(text: string, images?: string[]): Promise<void>;
-  abstract interrupt(): Promise<void>;
-  abstract compact(): Promise<void>;
-  /** Rewinds files and conversation to the state before the n-th sent message (1-based). */
-  abstract rewind(beforeMessage: number): Promise<void>;
-  abstract close(): Promise<void>;
+  async start(): Promise<void> {
+    const o = this.options;
+    this.rec.raw('meta', {
+      event: 'start',
+      agent: this.adapter.id,
+      adapterVersion: this.adapter.adapterVersion,
+      options: { ...o, workspace: undefined },
+    });
+    this.session = await this.adapter.start({
+      cwd: o.workspace,
+      permissionMode: o.permission === 'plan' ? 'ask' : o.permission,
+      planFirst: o.permission === 'plan',
+      ...(o.model ? { model: o.model } : {}),
+      ...(o.effort ? { effort: o.effort } : {}),
+      ...(o.sandboxVerified ? { sandboxVerified: true } : {}),
+      ...(o.sandboxMode ? { sandboxMode: o.sandboxMode } : {}),
+      raw: (line) => void this.rec.raw(line.dir, line.line),
+      context: this.rec.ctx,
+    });
+    const session = this.session;
+    this.pump = (async () => {
+      for await (const event of session.events) {
+        this.events.push(event);
+        this.rec.canonical(event);
+        this.bus.emit('event', event);
+        if (event.t === 'interaction.opened' && event.interaction.kind !== 'merge') {
+          const answer = this.responder(event.interaction);
+          session.respond(event.interaction.id, answer).catch((error: unknown) => {
+            this.rec.raw('meta', { event: 'respond-error', error: String(error) });
+          });
+        }
+      }
+    })();
+  }
 
-  /** Approves a plan the agent proposed without asking (Codex). Claude asks via ExitPlanMode. */
-  async approvePlan(): Promise<void> {}
+  send(text: string, images: string[] = []): Promise<void> {
+    return this.require().send({ text, images: images.map((p) => resolve(this.workspace, p)) });
+  }
 
   /** Sends a message and waits for the turn to complete. */
   async turn(text: string, images?: string[]): Promise<TimelineEvent> {
     const done = this.waitFor((e) => e.t === 'turn.completed');
     await this.send(text, images);
     return done;
+  }
+
+  async compact(): Promise<void> {
+    const done = this.waitFor((e) => e.t === 'turn.completed', 5 * 60_000);
+    await this.require().compact();
+    await done;
+  }
+
+  interrupt(): Promise<void> {
+    return this.require().interrupt();
+  }
+
+  /** Rewinds to before the n-th user message (1-based). */
+  async rewind(beforeMessage: number): Promise<void> {
+    const userMessages: string[] = [];
+    for (const e of this.events) {
+      if (
+        e.t === 'item.upsert' &&
+        e.item.kind === 'message' &&
+        e.item.role === 'user' &&
+        !userMessages.includes(e.item.id)
+      ) {
+        userMessages.push(e.item.id);
+      }
+    }
+    const target = userMessages[beforeMessage - 1];
+    if (!target) throw new Error('nothing to rewind to');
+    await this.require().rewind(target);
+  }
+
+  async close(): Promise<void> {
+    await this.session?.close();
+    await this.pump;
   }
 
   waitFor(
@@ -95,31 +165,8 @@ export abstract class ProbeSession {
     });
   }
 
-  protected publish(event: TimelineEvent): void {
-    this.events.push(event);
-    this.rec.canonical(event);
-    this.bus.emit('event', event);
-  }
-}
-
-/** Splits a byte stream into lines. */
-export function lineSplitter(onLine: (line: string) => void): (chunk: Buffer | string) => void {
-  let buffer = '';
-  return (chunk) => {
-    buffer += chunk.toString();
-    let index: number;
-    while ((index = buffer.indexOf('\n')) >= 0) {
-      const line = buffer.slice(0, index).replace(/\r$/, '');
-      buffer = buffer.slice(index + 1);
-      if (line.trim()) onLine(line);
-    }
-  };
-}
-
-export function parseJson(line: string): unknown {
-  try {
-    return JSON.parse(line) as unknown;
-  } catch {
-    return line;
+  private require(): AgentSession {
+    if (!this.session) throw new Error('session not started');
+    return this.session;
   }
 }

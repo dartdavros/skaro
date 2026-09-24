@@ -3,6 +3,7 @@
 //
 //   pnpm probe <claude|codex> <scenario|all> [--model M] [--effort E] [--out DIR] [--codex-config k=v]
 //   pnpm probe replay <claude|codex> <scenario|all> [--update]
+//   pnpm probe adapters             (status, models, commands, sandbox check; no model calls)
 //   pnpm probe sanitize
 //   pnpm probe list
 
@@ -14,15 +15,13 @@ import { parseArgs } from 'node:util';
 import { ClaudeProjector, CLAUDE_ADAPTER_VERSION } from '@skaro/adapter-claude';
 import { CodexProjector, CODEX_ADAPTER_VERSION } from '@skaro/adapter-codex';
 import { replayRawLog } from '@skaro/timeline';
-import { ClaudeSession } from './claude.ts';
-import { CodexSession } from './codex.ts';
+import { rebuildGolden } from '@skaro/timeline/golden';
+import { checkAdapters, createAdapter, type Agent } from './adapters.ts';
 import { describe } from './describe.ts';
-import { createSanitizer, Recorder } from './recorder.ts';
+import { createSanitizer, Recorder, sanitizeJsonl } from './recorder.ts';
 import { scenarios, type Scenario } from './scenarios.ts';
-import type { ProbeSession } from './session.ts';
+import { ProbeSession } from './session.ts';
 import { createWorkspace } from './workspace.ts';
-
-type Agent = 'claude' | 'codex';
 
 const GOLDEN = resolve(dirname(fileURLToPath(import.meta.url)), '../../../fixtures/golden');
 
@@ -43,18 +42,17 @@ async function record(agent: Agent, scenario: Scenario): Promise<void> {
   const rec = new Recorder(dir, workspace);
   console.log(`\n=== ${agent} / ${scenario.id}: ${scenario.title}\n    workspace ${workspace}`);
 
-  const options = {
+  const adapter = createAdapter(agent, {
+    authMissing: scenario.authMissing,
+    codexConfig: values['codex-config'],
+  });
+  const session = new ProbeSession(adapter, rec, {
     workspace,
     permission: scenario.permission,
-    model: values.model,
-    effort: values.effort,
-    authMissing: scenario.authMissing,
-    sandbox: scenario.sandbox,
-    experimental: agent === 'codex' && scenario.experimental,
-    codexConfig: values['codex-config'],
-  };
-  const session: ProbeSession =
-    agent === 'claude' ? new ClaudeSession(rec, options) : new CodexSession(rec, options);
+    ...(values.model ? { model: values.model } : {}),
+    ...(values.effort ? { effort: values.effort } : {}),
+    ...(scenario.sandbox ? { sandboxVerified: true } : {}),
+  });
   if (scenario.responder) session.responder = scenario.responder;
 
   const started = Date.now();
@@ -68,6 +66,10 @@ async function record(agent: Agent, scenario: Scenario): Promise<void> {
   } finally {
     await session.close();
   }
+  // The raw log is sanitized as it is written; the projection is rebuilt from it (principle P2).
+  rebuildGolden(dir, (ctx, emit) =>
+    agent === 'claude' ? new ClaudeProjector(ctx, emit) : new CodexProjector(ctx, emit),
+  );
   writeFileSync(
     join(dir, 'meta.json'),
     JSON.stringify(
@@ -120,6 +122,10 @@ async function main(): Promise<void> {
       console.log(`${s.id.padEnd(20)} ${s.permission.padEnd(5)} ${s.title}`);
     return;
   }
+  if (command === 'adapters') {
+    await checkAdapters();
+    return;
+  }
   if (command === 'sanitize') {
     // Re-applies the sanitizer to already recorded fixtures.
     const sanitize = createSanitizer();
@@ -127,7 +133,8 @@ async function main(): Promise<void> {
       for (const s of scenarios) {
         for (const file of ['raw.jsonl', 'canonical.jsonl']) {
           const path = join(GOLDEN, agent, s.id, file);
-          if (existsSync(path)) writeFileSync(path, sanitize(readFileSync(path, 'utf8')));
+          if (existsSync(path))
+            writeFileSync(path, sanitizeJsonl(readFileSync(path, 'utf8'), sanitize));
         }
       }
     }

@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./golden": "./src/golden.ts"
+    "./golden": "./src/golden.ts",
+    "./tolerance": "./src/tolerance.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."

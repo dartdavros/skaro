@@ -9,3 +9,4 @@ export * from './git/git.ts';
 export * from './queue/run-queue.ts';
 export * from './agents/pins.ts';
 export * from './agents/installer.ts';
+export * from './attachments.ts';

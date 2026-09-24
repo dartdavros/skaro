@@ -226,6 +226,7 @@ interface AgentSession {
   setModel(model: string, effort?: string): Promise<void>;
   setPermissionMode(mode: 'ask' | 'auto' | 'full'): Promise<void>; // на лету
   rewind(toItemId: string): Promise<void>;      // откат к сообщению (файлы + история); повтор и редактирование — rewind + send
+  compact(): Promise<void>;                     // сжать контекст сейчас
   interrupt(): Promise<void>;
   stopBackground(taskId: string): Promise<void>;
   close(): Promise<void>;
@@ -515,3 +516,15 @@ interface AgentCommand { name: string; description: string; kind: 'command' | 's
 ### 9.3 Записанные сценарии
 
 Оба агента: `read`, `edit`, `failing-command`, `background-command`, `agent-plan`, `question`, `question-plan`, `permission`, `subagent`, `interrupt`, `auth-error`, `compaction`, `image`, `plan-first`, `rewind`, `sandbox` (у Claude нет `question-plan`: вопросы работают в любом режиме). Codex записан с `--effort low` и `windows.sandbox="unelevated"`.
+
+### 9.4 Адаптеры в полном объёме (этап 3)
+
+Сессии живут в пакетах адаптеров (`ClaudeSession`, `CodexSession`) и реализуют `AgentSession`; стенд `apps/agent-probe` записывает golden-сессии через них же. Лента собирается из событий (`packages/timeline`, `Timeline`), у каждой golden-сессии есть снимок итоговой ленты (`timeline.json`).
+
+- **Самопроверка песочницы (D-28) без вызова модели.** Claude: инициализация CLI с `sandbox.failIfUnavailable` — на Windows отказ «feature gate off» за ~3 с. Codex: `command/exec` в песочнице `workspaceWrite` пишет внутри рабочей папки и уровнем выше; на Windows сначала `elevated`, при неудаче — `unelevated` (команды запускаются, но подтверждаются).
+- **Результат проверки меняется со временем.** Утром `elevated` у Codex не запускал команды (ошибка 1909 — блокировка служебной учётки), вечером держал границу. Проверку нужно повторять при запуске Skaro и после сбоя запуска команды, а не один раз.
+- **Инструменты пользователя в песочнице `elevated`.** Команды выполняются от служебной учётки Windows: встроенный `rg.exe` из каталога пакета Codex не запускается («отказ в доступе»), `node` из профиля пользователя «не найден». Агент обходится PowerShell, но тесты и сборки проекта, которым нужны инструменты пользователя, в такой песочнице не работают. Установщик должен класть бинарники Codex туда, где у учётки песочницы есть чтение и запуск; для инструментов проекта нужно решение — какие каталоги открывать песочнице (этап 8).
+- **Одобрение плана у Codex** адаптер открывает сам: после хода в режиме плана с элементом `plan` — карточка `plan_approval`; ответ — следующий ход (`default`, с правом записи) или доработка плана.
+- **Заполненность контекста у Claude** считается из потока: токены последнего ответа модели (`message.usage`: вход, кэш, выход) к `contextWindow` модели из `result.modelUsage`.
+- **Ответ раньше запроса.** Пользователь может ответить на карточку раньше, чем SDK вызовет `canUseTool`; сессия Claude держит такие ответы до вызова.
+- **Устойчивость (П3)** проверяется тестами: синтетический мусор и golden-сессии с повреждёнными строками разбираются без исключений, неизвестные типы становятся элементами `unknown`.

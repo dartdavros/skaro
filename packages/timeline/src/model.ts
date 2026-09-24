@@ -238,7 +238,21 @@ export interface PlanApprovalAnswer {
   message?: string;
 }
 
-export type InteractionAnswer = ApprovalAnswer | QuestionAnswer | PlanApprovalAnswer;
+/** MCP form: submitted values by field id, or declined. */
+export interface FormAnswer {
+  kind: 'form';
+  action: 'accept' | 'decline';
+  values?: Record<string, string | number | boolean>;
+}
+
+/** MCP sign-in in the browser finished or was cancelled. */
+export interface LoginAnswer {
+  kind: 'login';
+  action: 'done' | 'cancel';
+}
+
+export type InteractionAnswer =
+  ApprovalAnswer | QuestionAnswer | PlanApprovalAnswer | FormAnswer | LoginAnswer;
 
 /** Item as an adapter builds it: turn and start time default to the current ones. */
 export type ItemDraft = Item extends infer I

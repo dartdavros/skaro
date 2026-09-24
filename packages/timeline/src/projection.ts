@@ -1,4 +1,4 @@
-import type { ImageRef, TimelineEvent } from './model.ts';
+import type { ImageRef, Interaction, TimelineEvent } from './model.ts';
 
 /** Environment an adapter projector runs in. Injected so replays of raw logs are deterministic. */
 export interface ProjectionContext {
@@ -52,4 +52,35 @@ export function countDiff(diff: string): { added: number; removed: number } {
     else if (line.startsWith('-')) removed++;
   }
   return { added, removed };
+}
+
+type FormField = Extract<Interaction, { kind: 'form' }>['fields'][number];
+
+/** Fields of an MCP elicitation form from its JSON schema (flat object of primitives). */
+export function formFields(schema: unknown): FormField[] {
+  const root = obj(schema);
+  const properties = obj(root?.['properties']) ?? {};
+  const required = new Set(
+    arr(root?.['required']).filter((r): r is string => typeof r === 'string'),
+  );
+  return Object.entries(properties).map(([id, raw]) => {
+    const prop = obj(raw) ?? {};
+    const options = arr(prop['enum'] ?? arr(prop['oneOf']).map((o) => obj(o)?.['const']))
+      .filter((o) => o !== undefined)
+      .map(String);
+    const type = str(prop['type']);
+    return {
+      id,
+      label: str(prop['title']) ?? str(prop['description']) ?? id,
+      type: options.length
+        ? 'select'
+        : type === 'number' || type === 'integer'
+          ? 'number'
+          : type === 'boolean'
+            ? 'boolean'
+            : 'text',
+      ...(options.length ? { options } : {}),
+      ...(required.has(id) ? { required: true } : {}),
+    };
+  });
 }

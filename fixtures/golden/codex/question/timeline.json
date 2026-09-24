@@ -1,0 +1,268 @@
+{
+  "turns": [
+    {
+      "id": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "outcome": "done"
+    }
+  ],
+  "items": [
+    {
+      "id": "01a0d507-60dc-7f02-9382-41174fd5751d",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "message",
+      "role": "user",
+      "text": "Before doing anything, ask me which approach I prefer, using your tool for asking the user a question with options: \"Fix in place\" (change the operator in add) or \"Rewrite\" (rewrite src/math.js). After I answer, just tell me what I chose. Do not modify files.",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "userMessage",
+        "ref": "01a0d507-60dc-7f02-9382-41174fd5751d"
+      },
+      "startedAt": 3731
+    },
+    {
+      "id": "call_0xNxFMaR2jvaSxuEBpuHjLdz",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "message",
+      "role": "agent",
+      "text": "Which approach do you prefer?\n- Fix in place\n- Rewrite",
+      "phase": "final",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "agentMessage",
+        "ref": "call_0xNxFMaR2jvaSxuEBpuHjLdz"
+      },
+      "startedAt": 6014
+    },
+    {
+      "id": "rs_02b459e6d6e3983b016ab582ed769487d29621d1f6664086f9",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "reasoning",
+      "text": "",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "reasoning",
+        "ref": "rs_02b459e6d6e3983b016ab582ed769487d29621d1f6664086f9"
+      },
+      "startedAt": 7336
+    },
+    {
+      "id": "call_z2vEOiscnaz64ruAiN4x18jg",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_z2vEOiscnaz64ruAiN4x18jg"
+      },
+      "startedAt": 8107
+    },
+    {
+      "id": "call_AYzLI5iQKzk9159JWJaW701T",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_AYzLI5iQKzk9159JWJaW701T"
+      },
+      "startedAt": 40006
+    },
+    {
+      "id": "call_cfdSz6PlPXnbh65dFlAf1szJ",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_cfdSz6PlPXnbh65dFlAf1szJ"
+      },
+      "startedAt": 71774
+    },
+    {
+      "id": "rs_02b459e6d6e3983b016ab5834d801087d2bbc5fcdce93668f8",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "reasoning",
+      "text": "",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "reasoning",
+        "ref": "rs_02b459e6d6e3983b016ab5834d801087d2bbc5fcdce93668f8"
+      },
+      "startedAt": 103355
+    },
+    {
+      "id": "call_DnqcuF1S2e6Ovk8nXEsjsOYX",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_DnqcuF1S2e6Ovk8nXEsjsOYX"
+      },
+      "startedAt": 103903
+    },
+    {
+      "id": "call_Bdj3bj6mOw1vByGylrj0Ekq6",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_Bdj3bj6mOw1vByGylrj0Ekq6"
+      },
+      "startedAt": 135454
+    },
+    {
+      "id": "rs_02b459e6d6e3983b016ab5838dce0487d29f41ca8f270f95c3",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "reasoning",
+      "text": "",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "reasoning",
+        "ref": "rs_02b459e6d6e3983b016ab5838dce0487d29f41ca8f270f95c3"
+      },
+      "startedAt": 167659
+    },
+    {
+      "id": "call_rzhjjpQDWJYTsdPBy8kdDgcG",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_rzhjjpQDWJYTsdPBy8kdDgcG"
+      },
+      "startedAt": 168330
+    },
+    {
+      "id": "call_TtAWyGR9UV6unXUuHLginY80",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_TtAWyGR9UV6unXUuHLginY80"
+      },
+      "startedAt": 230231
+    },
+    {
+      "id": "call_lashUBOOTJJJ4I3qR45RUEzr",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_lashUBOOTJJJ4I3qR45RUEzr"
+      },
+      "startedAt": 291982
+    },
+    {
+      "id": "rs_02b459e6d6e3983b016ab58448af2c87d29bb01f4e22c6b18c",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "reasoning",
+      "text": "",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "reasoning",
+        "ref": "rs_02b459e6d6e3983b016ab58448af2c87d29bb01f4e22c6b18c"
+      },
+      "startedAt": 354556
+    },
+    {
+      "id": "call_tPrTvN88VUzYmXPSUofgykbW",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_tPrTvN88VUzYmXPSUofgykbW"
+      },
+      "startedAt": 355297
+    },
+    {
+      "id": "call_NqrwuKnyHY46ERIdkHd7QrmR",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "tool",
+      "name": "sleep",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "sleep",
+        "ref": "call_NqrwuKnyHY46ERIdkHd7QrmR"
+      },
+      "startedAt": 417091
+    },
+    {
+      "id": "rs_02b459e6d6e3983b016ab584c482a887d2ada3c78a7207e3b4",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "reasoning",
+      "text": "",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "reasoning",
+        "ref": "rs_02b459e6d6e3983b016ab584c482a887d2ada3c78a7207e3b4"
+      },
+      "startedAt": 478393
+    },
+    {
+      "id": "msg_02b459e6d6e3983b016ab584c5035c87d2920aa0a86a9a1871",
+      "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
+      "kind": "message",
+      "role": "agent",
+      "text": "Какой вариант выбираете: **Fix in place** или **Rewrite**? Файлы не изменял.",
+      "phase": "final",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "agentMessage",
+        "ref": "msg_02b459e6d6e3983b016ab584c5035c87d2920aa0a86a9a1871"
+      },
+      "startedAt": 478898
+    }
+  ],
+  "interactions": [],
+  "status": "idle",
+  "session": {
+    "nativeSessionId": "01a0d507-53c0-7cd2-b625-637fe58fc5bc",
+    "model": "gpt-6-sol",
+    "capabilities": {
+      "agentVersion": "0.156.1"
+    }
+  },
+  "usage": {
+    "inputTokens": 202899,
+    "outputTokens": 350,
+    "contextWindow": 258400,
+    "contextUsedPct": 6.7
+  },
+  "limits": {
+    "state": "ok",
+    "resetsAt": "2026-10-01T03:41:42.000Z"
+  }
+}

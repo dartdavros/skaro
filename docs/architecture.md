@@ -154,15 +154,18 @@ Skaro поддерживает в корне проекта блок в `AGENTS.
 
 ```ts
 interface AgentAdapter {
-  id: 'claude-code' | 'codex' | string;
-  detect(): Promise<{ installed: boolean; version?: string; authenticated?: boolean; account?: string }>;
-  install(onProgress: (done: number, total: number) => void): Promise<void>; // докачка закреплённой версии
-  login?(): Promise<void>;                     // вход из Skaro, если агент это позволяет
-  listModels(): Promise<AgentModel[]>;
-  listCommands(): Promise<AgentCommand[]>;     // «/»-команды и навыки
-  start(opts: RunOptions): AgentSession;       // cwd, input, model, effort, permissionMode, planFirst, mcp, resumeId?
+  id: 'claude-code' | 'codex';
+  adapterVersion: string;
+  status(): Promise<{ installed: boolean; version?: string; authenticated?: boolean; account?: string }>;
+  login(): Promise<void>;                       // вход через браузер средствами самого агента
+  listModels(cwd: string): Promise<AgentModel[]>;
+  listCommands(cwd: string): Promise<AgentCommand[]>; // «/»-команды и навыки
+  checkSandbox(scratchDir: string): Promise<SandboxCheck>; // самопроверка песочницы (D-28), без вызова модели
+  start(opts: SessionOptions): Promise<AgentSession>;     // cwd, model, effort, permissionMode, planFirst, readOnly, resume, instructions, mcp
 }
 ```
+
+Установка закреплённых версий — отдельный `AgentInstaller` в ядре; адаптер получает путь к установленному бинарнику. Контракт — `packages/timeline/src/agent.ts`.
 
 `AgentSession`, события ленты и модели данных — в [agent-output.md](agent-output.md), раздел 3.
 

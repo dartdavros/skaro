@@ -23,7 +23,7 @@
 {"t":"item.append","itemId":"msg_011CfMeHzduc5ZxsqXh6eSjs-1","field":"text","chunk":"rows or other diagram el"}
 {"t":"item.append","itemId":"msg_011CfMeHzduc5ZxsqXh6eSjs-1","field":"text","chunk":"ements."}
 {"t":"item.upsert","item":{"id":"msg_011CfMeHzduc5ZxsqXh6eSjs-1","kind":"message","role":"agent","text":"`diagram.png` is just a solid red circle on a white background. It has no labels, arrows or other diagram elements.","phase":"commentary","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfMeHzduc5ZxsqXh6eSjs-1"},"turnId":"turn-1","startedAt":5778}}
-{"t":"usage","inputTokens":62722,"outputTokens":145}
+{"t":"usage","inputTokens":62722,"outputTokens":145,"contextWindow":1000000,"contextUsedPct":3.2}
 {"t":"item.upsert","item":{"id":"msg_011CfMeHzduc5ZxsqXh6eSjs-1","kind":"message","role":"agent","text":"`diagram.png` is just a solid red circle on a white background. It has no labels, arrows or other diagram elements.","phase":"final","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfMeHzduc5ZxsqXh6eSjs-1"},"turnId":"turn-1","startedAt":5778}}
 {"t":"turn.completed","turnId":"turn-1","outcome":"done"}
 {"t":"turn.started","turnId":"turn-2"}
@@ -38,6 +38,6 @@
 {"t":"item.append","itemId":"msg_011CfMeJAkcJLvDQiLmhBam8-0","field":"text","chunk":"id red circle on a white background"}
 {"t":"item.append","itemId":"msg_011CfMeJAkcJLvDQiLmhBam8-0","field":"text","chunk":"."}
 {"t":"item.upsert","item":{"id":"msg_011CfMeJAkcJLvDQiLmhBam8-0","kind":"message","role":"agent","text":"The attached image shows a solid red circle on a white background.","phase":"commentary","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfMeJAkcJLvDQiLmhBam8-0"},"turnId":"turn-2","startedAt":7825}}
-{"t":"usage","inputTokens":32625,"outputTokens":19}
+{"t":"usage","inputTokens":32625,"outputTokens":19,"contextWindow":1000000,"contextUsedPct":3.3}
 {"t":"item.upsert","item":{"id":"msg_011CfMeJAkcJLvDQiLmhBam8-0","kind":"message","role":"agent","text":"The attached image shows a solid red circle on a white background.","phase":"final","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfMeJAkcJLvDQiLmhBam8-0"},"turnId":"turn-2","startedAt":7825}}
 {"t":"turn.completed","turnId":"turn-2","outcome":"done"}

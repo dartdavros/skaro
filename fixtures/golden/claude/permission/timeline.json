@@ -1,0 +1,170 @@
+{
+  "turns": [
+    {
+      "id": "turn-1",
+      "outcome": "done"
+    }
+  ],
+  "items": [
+    {
+      "id": "85765a23-ab32-4676-b265-70f537e59b2c",
+      "kind": "message",
+      "role": "user",
+      "text": "Create a file hello.txt containing \"hi\", then run `node --version` and tell me the version.",
+      "status": "done",
+      "native": {
+        "agent": "claude",
+        "type": "user",
+        "ref": "85765a23-ab32-4676-b265-70f537e59b2c"
+      },
+      "turnId": "turn-1",
+      "startedAt": 51
+    },
+    {
+      "id": "mcp-claude.ai Google Drive",
+      "kind": "notice",
+      "level": "warning",
+      "code": "mcp_failed",
+      "text": "claude.ai Google Drive: needs-auth",
+      "status": "done",
+      "native": {
+        "agent": "claude",
+        "type": "notice",
+        "ref": "mcp-claude.ai Google Drive"
+      },
+      "turnId": "turn-1",
+      "startedAt": 2360
+    },
+    {
+      "id": "toolu_01T5V8vDBcNyMwftq8F5saxV",
+      "kind": "file_change",
+      "files": [
+        {
+          "path": "<workspace>\\hello.txt",
+          "change": "update"
+        }
+      ],
+      "status": "declined",
+      "native": {
+        "agent": "claude",
+        "type": "tool_use.Write",
+        "ref": "toolu_01T5V8vDBcNyMwftq8F5saxV"
+      },
+      "turnId": "turn-1",
+      "startedAt": 5491,
+      "endedAt": 5583
+    },
+    {
+      "id": "toolu_01TxTH6XHzXqxnTzjcWGTZPt",
+      "kind": "command",
+      "command": "node --version",
+      "description": "Show Node.js version",
+      "output": "v24.9.0",
+      "outputLive": false,
+      "status": "done",
+      "native": {
+        "agent": "claude",
+        "type": "tool_use.PowerShell",
+        "ref": "toolu_01TxTH6XHzXqxnTzjcWGTZPt"
+      },
+      "turnId": "turn-1",
+      "startedAt": 5503,
+      "endedAt": 9327,
+      "exitCode": 0
+    },
+    {
+      "id": "msg_011CfNsMDRh3pFB28bSXtALh-0",
+      "kind": "reasoning",
+      "text": "",
+      "redacted": false,
+      "status": "done",
+      "native": {
+        "agent": "claude",
+        "type": "assistant.thinking",
+        "ref": "msg_011CfNsMDRh3pFB28bSXtALh-0"
+      },
+      "turnId": "turn-1",
+      "startedAt": 10759
+    },
+    {
+      "id": "msg_011CfNsMDRh3pFB28bSXtALh-1",
+      "kind": "message",
+      "role": "agent",
+      "text": "Node.js is **v24.9.0**.\n\nI didn't create `hello.txt`, because the file write was declined with the message \"Not this one, try running the command instead.\" I took that to mean you wanted to skip the file and only run the version check, so I didn't make the file another way. If you still want it, tell me and I'll create it.\n\nThe Google Drive connector also needs authorizing in your claude.ai connector settings before I can use it. This task didn't need it.",
+      "phase": "final",
+      "status": "done",
+      "native": {
+        "agent": "claude",
+        "type": "assistant.text",
+        "ref": "msg_011CfNsMDRh3pFB28bSXtALh-1"
+      },
+      "turnId": "turn-1",
+      "startedAt": 12203
+    }
+  ],
+  "interactions": [],
+  "status": "idle",
+  "session": {
+    "nativeSessionId": "2167a95a-b031-4866-94c9-b301c789fc98",
+    "model": "claude-opus-5-5",
+    "capabilities": {
+      "tools": [
+        "Task",
+        "Artifact",
+        "ArtifactComments",
+        "ArtifactData",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "Glob",
+        "Grep",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PowerShell",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "Skill",
+        "TaskCreate",
+        "TaskGet",
+        "TaskList",
+        "TaskStop",
+        "TaskUpdate",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Write"
+      ],
+      "flags": [
+        "interrupt_receipt_v1",
+        "interrupt_cancel_queued_v1",
+        "msg_lifecycle_v1",
+        "mcp_read_resource_v1",
+        "mcp_tool_ui_meta_v1"
+      ],
+      "agentVersion": "2.1.281"
+    }
+  },
+  "limits": {
+    "state": "ok",
+    "resetsAt": "2026-09-24T23:20:00.000Z"
+  },
+  "usage": {
+    "inputTokens": 62870,
+    "outputTokens": 380,
+    "contextWindow": 1000000,
+    "contextUsedPct": 3.3
+  }
+}

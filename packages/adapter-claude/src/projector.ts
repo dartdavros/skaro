@@ -6,6 +6,7 @@ import {
   arr,
   bool,
   countDiff,
+  formFields,
   num,
   obj,
   str,
@@ -80,10 +81,14 @@ export class ClaudeProjector {
   private readonly pendingTaskCreate = new Map<string, { subject: string; activeForm?: string }>();
   /** Open canUseTool requests: request_id → interaction. */
   private readonly openRequests = new Map<string, Interaction>();
+  /** tool_use_id → interaction id, for answering canUseTool. */
+  private readonly toolUseInteractions = new Map<string, string>();
   /** Background task id → item id. */
   private readonly backgroundItems = new Map<string, string>();
   private retryNoticeId: string | undefined;
   private compactionNoticeId: string | undefined;
+  /** Tokens in context at the latest main-thread reply. */
+  private contextTokens = 0;
 
   private readonly ctx: ProjectionContext;
   private readonly emit: Emit;
@@ -446,6 +451,15 @@ export class ClaudeProjector {
         contextUsedPct: num(usage['percentage']),
       });
     }
+    // Context fill: what the model saw for the latest main-thread reply.
+    const messageUsage = obj(message?.['usage']);
+    if (messageUsage && !parentId) {
+      this.contextTokens =
+        (num(messageUsage['input_tokens']) ?? 0) +
+        (num(messageUsage['cache_read_input_tokens']) ?? 0) +
+        (num(messageUsage['cache_creation_input_tokens']) ?? 0) +
+        (num(messageUsage['output_tokens']) ?? 0);
+    }
 
     for (const raw of arr(message?.['content'])) {
       const block = obj(raw);
@@ -709,7 +723,9 @@ export class ClaudeProjector {
   private onControlRequest(msg: Obj): void {
     const requestId = str(msg['request_id']);
     const request = obj(msg['request']);
-    if (!requestId || request?.['subtype'] !== 'can_use_tool') return;
+    if (!requestId || !request) return;
+    if (request['subtype'] === 'elicitation') return this.onElicitation(requestId, request);
+    if (request['subtype'] !== 'can_use_tool') return;
     const toolName = str(request['tool_name']) ?? '';
     const input = obj(request['input']) ?? {};
     const toolUseId = str(request['tool_use_id']);
@@ -751,7 +767,32 @@ export class ClaudeProjector {
       };
     }
     this.openRequests.set(requestId, interaction);
+    if (toolUseId) this.toolUseInteractions.set(toolUseId, interaction.id);
     this.emit({ t: 'interaction.opened', interaction });
+  }
+
+  /** MCP server asks for input (form) or a browser sign-in (url). */
+  private onElicitation(requestId: string, request: Obj): void {
+    const server = str(request['mcp_server_name']) ?? 'mcp';
+    const id = `elicit-${requestId}`;
+    const url = str(request['url']);
+    const interaction: Interaction =
+      request['mode'] === 'url' && url
+        ? { kind: 'login', id, server, url }
+        : {
+            kind: 'form',
+            id,
+            server,
+            title: str(request['title']) ?? str(request['message']) ?? server,
+            fields: formFields(request['requested_schema']),
+          };
+    this.openRequests.set(requestId, interaction);
+    this.emit({ t: 'interaction.opened', interaction });
+  }
+
+  /** Interaction opened for a tool call (canUseTool is keyed by tool use id). */
+  interactionForToolUse(toolUseId: string): string | undefined {
+    return this.toolUseInteractions.get(toolUseId);
   }
 
   private onTaskStarted(msg: Obj): void {
@@ -803,6 +844,13 @@ export class ClaudeProjector {
   private onResult(msg: Obj): void {
     const usage = obj(msg['usage']);
     if (usage) {
+      // The largest context window among the models of the turn is the main model's.
+      const window = Math.max(
+        0,
+        ...Object.values(obj(msg['modelUsage']) ?? {}).map(
+          (m) => num(obj(m)?.['contextWindow']) ?? 0,
+        ),
+      );
       this.emit({
         t: 'usage',
         inputTokens:
@@ -810,6 +858,10 @@ export class ClaudeProjector {
           (num(usage['cache_read_input_tokens']) ?? 0) +
           (num(usage['cache_creation_input_tokens']) ?? 0),
         outputTokens: num(usage['output_tokens']) ?? 0,
+        ...(window > 0 ? { contextWindow: window } : {}),
+        ...(window > 0 && this.contextTokens > 0
+          ? { contextUsedPct: Math.round((this.contextTokens / window) * 1000) / 10 }
+          : {}),
       });
     }
 
