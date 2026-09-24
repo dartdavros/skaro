@@ -1,0 +1,9 @@
+{
+  "agent": "codex",
+  "scenario": "question-plan",
+  "title": "Question to the user while planning",
+  "permission": "plan",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T19:03:23.989Z",
+  "durationMs": 18011
+}

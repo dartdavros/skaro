@@ -9,5 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@skaro/timeline": "workspace:*"
   }
 }

@@ -23,10 +23,11 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # The agent probe pulls pinned agent binaries (~300 MB); CI does not need it.
+      - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
       - run: pnpm lint
       - run: pnpm format:check
-      - run: pnpm typecheck
+      - run: pnpm -r --parallel --filter '!@skaro/agent-probe' typecheck
       # Unit tests and adapter golden tests (fixtures/golden) run as Vitest projects.
       - run: pnpm test
 
@@ -48,7 +49,8 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # The agent probe pulls pinned agent binaries (~300 MB); CI does not need it.
+      - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
       - name: Package (unpacked)
         run: pnpm --filter @skaro/desktop run package
       # Ubuntu 24.04 restricts unprivileged user namespaces, which the Chromium sandbox needs.

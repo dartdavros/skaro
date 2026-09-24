@@ -1,0 +1,119 @@
+{"t":"session.started","nativeSessionId":"01a0d18b-41e9-7821-b8c1-329c485b37dd","model":"gpt-6-astra","capabilities":{"agentVersion":"0.156.1"}}
+{"t":"status","state":"working"}
+{"t":"turn.started","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028"}
+{"t":"item.upsert","item":{"id":"01a0d18b-4f0e-7b42-ab13-d33afe76bca0","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028","kind":"message","role":"user","text":"Create notes.txt containing exactly one line: one. Reply \"ok\" only.","status":"done","native":{"agent":"codex","type":"userMessage","ref":"01a0d18b-4f0e-7b42-ab13-d33afe76bca0"},"startedAt":3984}}
+{"t":"item.upsert","item":{"id":"01a0d18b-4f0e-7b42-ab13-d33afe76bca0","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028","kind":"message","role":"user","text":"Create notes.txt containing exactly one line: one. Reply \"ok\" only.","status":"done","native":{"agent":"codex","type":"userMessage","ref":"01a0d18b-4f0e-7b42-ab13-d33afe76bca0"},"startedAt":3984}}
+{"t":"item.upsert","item":{"id":"exec-79168e46-1c9f-489d-bfb4-eebbd29d1bbb","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028","kind":"file_change","files":[{"path":"<workspace>\\notes.txt","change":"add","diff":"one\n","added":1,"removed":0}],"status":"running","native":{"agent":"codex","type":"fileChange","ref":"exec-79168e46-1c9f-489d-bfb4-eebbd29d1bbb"},"startedAt":8121}}
+{"t":"item.upsert","item":{"id":"exec-79168e46-1c9f-489d-bfb4-eebbd29d1bbb","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028","kind":"file_change","files":[{"path":"<workspace>\\notes.txt","change":"add","diff":"one\n","added":1,"removed":0}],"status":"done","native":{"agent":"codex","type":"fileChange","ref":"exec-79168e46-1c9f-489d-bfb4-eebbd29d1bbb"},"startedAt":8121,"endedAt":8150}}
+{"t":"usage","inputTokens":16797,"outputTokens":58,"contextWindow":258400,"contextUsedPct":6.5}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T08:41:42.000Z"}
+{"t":"item.upsert","item":{"id":"msg_0b753a51ce93ee92016ab49e90acac87d291ef60b282e169c1","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028","kind":"message","role":"agent","text":"","phase":"final","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0b753a51ce93ee92016ab49e90acac87d291ef60b282e169c1"},"startedAt":9582}}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e90acac87d291ef60b282e169c1","field":"text","chunk":"ok"}
+{"t":"item.upsert","item":{"id":"msg_0b753a51ce93ee92016ab49e90acac87d291ef60b282e169c1","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028","kind":"message","role":"agent","text":"ok","phase":"final","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0b753a51ce93ee92016ab49e90acac87d291ef60b282e169c1"},"startedAt":9582}}
+{"t":"usage","inputTokens":33676,"outputTokens":63,"contextWindow":258400,"contextUsedPct":6.5}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T08:41:42.000Z"}
+{"t":"status","state":"idle"}
+{"t":"turn.completed","turnId":"01a0d18b-43a8-74a2-b522-069577d8c028","outcome":"done"}
+{"t":"status","state":"working"}
+{"t":"turn.started","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f"}
+{"t":"item.upsert","item":{"id":"01a0d18b-6836-7c73-a563-baeb13030276","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"message","role":"user","text":"Append a second line \"two\" to notes.txt. Reply \"ok\" only.","status":"done","native":{"agent":"codex","type":"userMessage","ref":"01a0d18b-6836-7c73-a563-baeb13030276"},"startedAt":10268}}
+{"t":"item.upsert","item":{"id":"01a0d18b-6836-7c73-a563-baeb13030276","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"message","role":"user","text":"Append a second line \"two\" to notes.txt. Reply \"ok\" only.","status":"done","native":{"agent":"codex","type":"userMessage","ref":"01a0d18b-6836-7c73-a563-baeb13030276"},"startedAt":10268}}
+{"t":"item.upsert","item":{"id":"rs_0b753a51ce93ee92016ab49e94f23087d29e2cd41ae0b80fdf","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"reasoning","text":"","status":"done","native":{"agent":"codex","type":"reasoning","ref":"rs_0b753a51ce93ee92016ab49e94f23087d29e2cd41ae0b80fdf"},"startedAt":13875}}
+{"t":"item.upsert","item":{"id":"rs_0b753a51ce93ee92016ab49e94f23087d29e2cd41ae0b80fdf","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"reasoning","text":"","status":"done","native":{"agent":"codex","type":"reasoning","ref":"rs_0b753a51ce93ee92016ab49e94f23087d29e2cd41ae0b80fdf"},"startedAt":13875}}
+{"t":"item.upsert","item":{"id":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"message","role":"agent","text":"","phase":"commentary","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590"},"startedAt":17746}}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","field":"text","chunk":"I"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","field":"text","chunk":"’ll"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","field":"text","chunk":" append"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","field":"text","chunk":" the"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","field":"text","chunk":" second"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","field":"text","chunk":" line"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","field":"text","chunk":".\n"}
+{"t":"item.upsert","item":{"id":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"message","role":"agent","text":"I’ll append the second line.\n","phase":"commentary","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0b753a51ce93ee92016ab49e98cbf487d289b1479527420590"},"startedAt":17746}}
+{"t":"item.upsert","item":{"id":"exec-1ad7983b-2eb5-4cc7-9259-a6cca49164c9","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"file_change","files":[{"path":"<workspace>\\notes.txt","change":"update","diff":"@@ -1 +1,2 @@\n one\n+two\n","added":1,"removed":0}],"status":"running","native":{"agent":"codex","type":"fileChange","ref":"exec-1ad7983b-2eb5-4cc7-9259-a6cca49164c9"},"startedAt":19981}}
+{"t":"item.upsert","item":{"id":"exec-1ad7983b-2eb5-4cc7-9259-a6cca49164c9","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"file_change","files":[{"path":"<workspace>\\notes.txt","change":"update","diff":"@@ -1 +1,2 @@\n one\n+two\n","added":1,"removed":0}],"status":"done","native":{"agent":"codex","type":"fileChange","ref":"exec-1ad7983b-2eb5-4cc7-9259-a6cca49164c9"},"startedAt":19981,"endedAt":20005}}
+{"t":"usage","inputTokens":53620,"outputTokens":267,"contextWindow":258400,"contextUsedPct":7.8}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T08:41:42.000Z"}
+{"t":"item.upsert","item":{"id":"msg_0b753a51ce93ee92016ab49e9cb64887d29cc4f1a3ef3aee1a","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"message","role":"agent","text":"","phase":"final","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0b753a51ce93ee92016ab49e9cb64887d29cc4f1a3ef3aee1a"},"startedAt":21625}}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0b753a51ce93ee92016ab49e9cb64887d29cc4f1a3ef3aee1a","field":"text","chunk":"ok"}
+{"t":"item.upsert","item":{"id":"msg_0b753a51ce93ee92016ab49e9cb64887d29cc4f1a3ef3aee1a","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","kind":"message","role":"agent","text":"ok","phase":"final","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0b753a51ce93ee92016ab49e9cb64887d29cc4f1a3ef3aee1a"},"startedAt":21625}}
+{"t":"usage","inputTokens":73792,"outputTokens":272,"contextWindow":258400,"contextUsedPct":7.8}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T08:41:42.000Z"}
+{"t":"status","state":"idle"}
+{"t":"turn.completed","turnId":"01a0d18b-66cc-7582-a5dc-06de315ab97f","outcome":"done"}
+{"t":"status","state":"idle"}
+{"t":"rewound","toItemId":""}
+{"t":"status","state":"working"}
+{"t":"turn.started","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141"}
+{"t":"item.upsert","item":{"id":"01a0d18b-a31b-7db1-b77b-388df8a64b5b","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141","kind":"message","role":"user","text":"What does notes.txt contain now, and what was the last thing I asked you before this message? Two lines.","status":"done","native":{"agent":"codex","type":"userMessage","ref":"01a0d18b-a31b-7db1-b77b-388df8a64b5b"},"startedAt":25339}}
+{"t":"item.upsert","item":{"id":"01a0d18b-a31b-7db1-b77b-388df8a64b5b","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141","kind":"message","role":"user","text":"What does notes.txt contain now, and what was the last thing I asked you before this message? Two lines.","status":"done","native":{"agent":"codex","type":"userMessage","ref":"01a0d18b-a31b-7db1-b77b-388df8a64b5b"},"startedAt":25339}}
+{"t":"item.upsert","item":{"id":"rs_0614b2156321e356016ab49ea1e4a487d2beb606d5b8fb1269","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141","kind":"reasoning","text":"","status":"done","native":{"agent":"codex","type":"reasoning","ref":"rs_0614b2156321e356016ab49ea1e4a487d2beb606d5b8fb1269"},"startedAt":26796}}
+{"t":"item.upsert","item":{"id":"rs_0614b2156321e356016ab49ea1e4a487d2beb606d5b8fb1269","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141","kind":"reasoning","text":"","status":"done","native":{"agent":"codex","type":"reasoning","ref":"rs_0614b2156321e356016ab49ea1e4a487d2beb606d5b8fb1269"},"startedAt":26796}}
+{"t":"item.upsert","item":{"id":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141","kind":"message","role":"agent","text":"","phase":"final","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e"},"startedAt":30915}}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":"notes"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":".txt"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" contains"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":":"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" one"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":"\n"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":"Your"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" last"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" request"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" was"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":":"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" Create"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" notes"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":".txt"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" containing"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" exactly"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" one"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" line"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":":"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" one"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":"."}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" Reply"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" \""}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":"ok"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":"\""}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":" only"}
+{"t":"activity","state":"writing"}
+{"t":"item.append","itemId":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","field":"text","chunk":"."}
+{"t":"item.upsert","item":{"id":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141","kind":"message","role":"agent","text":"notes.txt contains: one\nYour last request was: Create notes.txt containing exactly one line: one. Reply \"ok\" only.","phase":"final","status":"done","native":{"agent":"codex","type":"agentMessage","ref":"msg_0614b2156321e356016ab49ea5f5c487d2949b086590435b4e"},"startedAt":30915}}
+{"t":"usage","inputTokens":53626,"outputTokens":230,"contextWindow":258400,"contextUsedPct":7.8}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T08:41:42.000Z"}
+{"t":"status","state":"idle"}
+{"t":"turn.completed","turnId":"01a0d18b-97a4-71d1-98ee-3a20bcfd1141","outcome":"done"}

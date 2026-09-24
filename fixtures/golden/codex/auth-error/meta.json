@@ -1,0 +1,9 @@
+{
+  "agent": "codex",
+  "scenario": "auth-error",
+  "title": "Not logged in",
+  "permission": "ask",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T03:51:38.823Z",
+  "durationMs": 22679
+}

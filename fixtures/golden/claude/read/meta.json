@@ -1,0 +1,9 @@
+{
+  "agent": "claude",
+  "scenario": "read",
+  "title": "Reading and search",
+  "permission": "ask",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T04:34:33.242Z",
+  "durationMs": 10649
+}

@@ -1,2 +1,2 @@
 // Claude Code adapter (Agent SDK).
-export {};
+export * from './projector.ts';

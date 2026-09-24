@@ -1,2 +1,2 @@
 // Codex adapter (codex app-server, JSON-RPC v2).
-export {};
+export * from './projector.ts';

@@ -1,0 +1,9 @@
+{
+  "agent": "claude",
+  "scenario": "image",
+  "title": "Images: agent views a file, user attaches one",
+  "permission": "ask",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T04:36:25.914Z",
+  "durationMs": 9491
+}

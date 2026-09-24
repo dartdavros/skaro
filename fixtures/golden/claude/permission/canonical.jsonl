@@ -1,0 +1,48 @@
+{"t":"turn.started","turnId":"turn-1"}
+{"t":"item.upsert","item":{"id":"a1f24bcc-ddb1-4ef3-b2bb-ae887d41bc51","kind":"message","role":"user","text":"Create a file hello.txt containing \"hi\", then run `node --version` and tell me the version.","status":"queued","native":{"agent":"claude","type":"user","ref":"a1f24bcc-ddb1-4ef3-b2bb-ae887d41bc51"},"turnId":"turn-1","startedAt":15}}
+{"t":"item.upsert","item":{"id":"a1f24bcc-ddb1-4ef3-b2bb-ae887d41bc51","kind":"message","role":"user","text":"Create a file hello.txt containing \"hi\", then run `node --version` and tell me the version.","status":"done","native":{"agent":"claude","type":"user","ref":"a1f24bcc-ddb1-4ef3-b2bb-ae887d41bc51"},"turnId":"turn-1","startedAt":15}}
+{"t":"session.started","nativeSessionId":"e179309d-18da-480c-b2d5-6500cf5181c4","model":"claude-opus-5-5","capabilities":{"tools":["Task","Artifact","ArtifactComments","ArtifactData","AskUserQuestion","Bash","CronCreate","CronDelete","CronList","DesignSync","Edit","EnterPlanMode","EnterWorktree","ExitPlanMode","ExitWorktree","Glob","Grep","ListAgents","Monitor","NotebookEdit","PowerShell","PushNotification","Read","RemoteTrigger","ReportFindings","ScheduleWakeup","SendMessage","Skill","TaskCreate","TaskGet","TaskList","TaskStop","TaskUpdate","ToolSearch","WebFetch","WebSearch","Write"],"flags":["interrupt_receipt_v1","interrupt_cancel_queued_v1","msg_lifecycle_v1","mcp_read_resource_v1","mcp_tool_ui_meta_v1"],"agentVersion":"2.1.281"}}
+{"t":"item.upsert","item":{"id":"mcp-claude.ai Google Drive","kind":"notice","level":"warning","code":"mcp_failed","text":"claude.ai Google Drive: needs-auth","status":"done","native":{"agent":"claude","type":"notice","ref":"mcp-claude.ai Google Drive"},"turnId":"turn-1","startedAt":2216}}
+{"t":"activity","state":"preparing_edit"}
+{"t":"item.upsert","item":{"id":"toolu_01LvTfCFxhQdXBvo6jcEzor1","kind":"file_change","files":[{"path":"<workspace>\\hello.txt","change":"update"}],"status":"running","native":{"agent":"claude","type":"tool_use.Write","ref":"toolu_01LvTfCFxhQdXBvo6jcEzor1"},"turnId":"turn-1","startedAt":4917}}
+{"t":"activity","state":"waiting_model"}
+{"t":"item.upsert","item":{"id":"toolu_01Y1pqTmraGKaiNgpfJik3LH","kind":"command","command":"node --version","description":"Show Node.js version","output":"","outputLive":false,"status":"running","native":{"agent":"claude","type":"tool_use.PowerShell","ref":"toolu_01Y1pqTmraGKaiNgpfJik3LH"},"turnId":"turn-1","startedAt":4929}}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T08:20:00.000Z"}
+{"t":"interaction.opened","interaction":{"kind":"approval","id":"perm-faab27a7-81d1-449d-bcfb-5d889056793b","itemId":"toolu_01LvTfCFxhQdXBvo6jcEzor1","action":{"type":"file_write","title":"Write","paths":["<workspace>\\hello.txt"],"reason":"hello.txt"},"choices":["allow_once","allow_session","deny"]}}
+{"t":"interaction.closed","id":"perm-faab27a7-81d1-449d-bcfb-5d889056793b","resolution":"answered"}
+{"t":"item.upsert","item":{"id":"toolu_01LvTfCFxhQdXBvo6jcEzor1","kind":"file_change","files":[{"path":"<workspace>\\hello.txt","change":"update"}],"status":"declined","native":{"agent":"claude","type":"tool_use.Write","ref":"toolu_01LvTfCFxhQdXBvo6jcEzor1"},"turnId":"turn-1","startedAt":4917,"endedAt":4979}}
+{"t":"item.upsert","item":{"id":"toolu_01LvTfCFxhQdXBvo6jcEzor1","kind":"file_change","files":[{"path":"<workspace>\\hello.txt","change":"update"}],"status":"declined","native":{"agent":"claude","type":"tool_use.Write","ref":"toolu_01LvTfCFxhQdXBvo6jcEzor1"},"turnId":"turn-1","startedAt":4917,"endedAt":5002}}
+{"t":"interaction.opened","interaction":{"kind":"approval","id":"perm-b6932d26-da4c-4639-ad6f-1c5743bf7918","itemId":"toolu_01Y1pqTmraGKaiNgpfJik3LH","action":{"type":"command","title":"PowerShell","command":"node --version","reason":"Show Node.js version"},"choices":["allow_once","allow_session","deny"]}}
+{"t":"interaction.closed","id":"perm-b6932d26-da4c-4639-ad6f-1c5743bf7918","resolution":"answered"}
+{"t":"item.upsert","item":{"id":"toolu_01Y1pqTmraGKaiNgpfJik3LH","kind":"command","command":"node --version","description":"Show Node.js version","output":"v24.9.0","outputLive":false,"status":"done","native":{"agent":"claude","type":"tool_use.PowerShell","ref":"toolu_01Y1pqTmraGKaiNgpfJik3LH"},"turnId":"turn-1","startedAt":4929,"endedAt":8459,"exitCode":0}}
+{"t":"activity","state":"thinking"}
+{"t":"item.upsert","item":{"id":"msg_011CfMeDpgGEN6wooKbAbsSr-0","kind":"reasoning","text":"","redacted":false,"status":"running","native":{"agent":"claude","type":"stream.thinking","ref":"msg_011CfMeDpgGEN6wooKbAbsSr-0"},"turnId":"turn-1","startedAt":9780}}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-0","field":"text","chunk":""}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-0","field":"text","chunk":""}
+{"t":"item.upsert","item":{"id":"msg_011CfMeDpgGEN6wooKbAbsSr-0","kind":"reasoning","text":"","redacted":false,"status":"done","native":{"agent":"claude","type":"assistant.thinking","ref":"msg_011CfMeDpgGEN6wooKbAbsSr-0"},"turnId":"turn-1","startedAt":9780}}
+{"t":"activity","state":"writing"}
+{"t":"item.upsert","item":{"id":"msg_011CfMeDpgGEN6wooKbAbsSr-1","kind":"message","role":"agent","text":"","phase":"commentary","status":"running","native":{"agent":"claude","type":"stream.text","ref":"msg_011CfMeDpgGEN6wooKbAbsSr-1"},"turnId":"turn-1","startedAt":11110}}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":"Node"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":"."}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":"js is **v24.9."}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":"0**.\n\nI didn't"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" create `hello.txt`"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":". The file"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" write was decl"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":"ined with"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" the note"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" \""}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":"Not this one, try running the command"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" instead,\" so I only ran"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" the command"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":". If"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" you still"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" want the file, I can create"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" it another"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" way,"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" for"}
+{"t":"item.append","itemId":"msg_011CfMeDpgGEN6wooKbAbsSr-1","field":"text","chunk":" example through the shell."}
+{"t":"item.upsert","item":{"id":"msg_011CfMeDpgGEN6wooKbAbsSr-1","kind":"message","role":"agent","text":"Node.js is **v24.9.0**.\n\nI didn't create `hello.txt`. The file write was declined with the note \"Not this one, try running the command instead,\" so I only ran the command. If you still want the file, I can create it another way, for example through the shell.","phase":"commentary","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfMeDpgGEN6wooKbAbsSr-1"},"turnId":"turn-1","startedAt":11110}}
+{"t":"usage","inputTokens":62872,"outputTokens":369}
+{"t":"item.upsert","item":{"id":"msg_011CfMeDpgGEN6wooKbAbsSr-1","kind":"message","role":"agent","text":"Node.js is **v24.9.0**.\n\nI didn't create `hello.txt`. The file write was declined with the note \"Not this one, try running the command instead,\" so I only ran the command. If you still want the file, I can create it another way, for example through the shell.","phase":"final","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfMeDpgGEN6wooKbAbsSr-1"},"turnId":"turn-1","startedAt":11110}}
+{"t":"turn.completed","turnId":"turn-1","outcome":"done"}

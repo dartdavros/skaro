@@ -5,7 +5,8 @@
   "description": "Canonical agent timeline model and projection from the raw agent stream.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./golden": "./src/golden.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."
