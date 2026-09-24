@@ -205,7 +205,12 @@ export type Interaction =
       files: number;
       added: number;
       removed: number;
-      blockers: ('dirty_base' | 'base_moved' | 'conflicts' | 'skaro_changes')[];
+      /** Hard reasons the merge cannot happen now (core GitService.checkMerge). */
+      blockers: ('dirty_base' | 'not_on_base' | 'conflicts' | 'no_changes')[];
+      /** Warnings: base commits the branch lacks, and .skaro/ changes that will be dropped. */
+      baseAhead: number;
+      skaroChanges: string[];
+      conflicts: string[];
     };
 
 export type AgentErrorCategory =

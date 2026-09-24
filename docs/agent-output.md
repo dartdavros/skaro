@@ -215,7 +215,8 @@ type Interaction =
   | { kind: 'login'; id: string; server: string; url: string }           // MCP-сервер просит войти
   | { kind: 'merge'; id: string; from: string; to: string;             // слияние из чата задачи (merge_task)
       files: number; added: number; removed: number;
-      blockers: ('dirty_base' | 'base_moved' | 'conflicts' | 'skaro_changes')[] };
+      blockers: ('dirty_base' | 'not_on_base' | 'conflicts' | 'no_changes')[];
+      baseAhead: number; skaroChanges: string[]; conflicts: string[] };  // предупреждения и список конфликтов
 
 interface AgentSession {
   events: AsyncIterable<TimelineEvent>;
