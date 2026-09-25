@@ -29,7 +29,6 @@ export { default as Modal } from './components/Modal.svelte';
 export { default as ConfirmDialog } from './components/ConfirmDialog.svelte';
 export { default as Progress } from './components/Progress.svelte';
 export { default as AgentLogo } from './components/AgentLogo.svelte';
-export { default as SkaroMark } from './components/SkaroMark.svelte';
 export { default as TaskCard } from './components/TaskCard.svelte';
 export { default as ProjectTabs, type ProjectTab } from './components/ProjectTabs.svelte';
 export { default as NavPanel, type NavItem } from './components/NavPanel.svelte';

@@ -1,13 +1,5 @@
 <script lang="ts">
-  import {
-    IconButton,
-    Icon,
-    ProjectTabs,
-    SkaroMark,
-    t,
-    WindowControls,
-    type ProjectTab,
-  } from '@skaro/ui';
+  import { IconButton, Icon, ProjectTabs, t, WindowControls, type ProjectTab } from '@skaro/ui';
 
   /** The top bar is the window title bar: home, project tabs, settings, window buttons. */
   let {
@@ -50,7 +42,6 @@
     aria-label={t('tabs.home')}
     onclick={onhome}
   >
-    <SkaroMark size={16} />
     <span>skaro</span>
   </button>
   <div class="tabs">
