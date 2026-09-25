@@ -37,14 +37,29 @@ const CODEX_TRIPLES: Record<string, string> = {
   'linux-arm64': 'aarch64-unknown-linux-musl',
 };
 
+let musl: boolean | undefined;
+
+/** Linux without glibc: the process report names the glibc version only where it runs. */
+function isMusl(): boolean {
+  if (process.platform !== 'linux') return false;
+  if (musl === undefined) {
+    // A full report resolves the peer of every open socket, which blocks the main thread
+    // for tens of seconds where reverse DNS hangs (macOS CI runners); sockets are not needed.
+    const report = process.report as NodeJS.ProcessReport & { excludeNetwork?: boolean };
+    const excludeNetwork = report.excludeNetwork;
+    report.excludeNetwork = true;
+    try {
+      const header = (report.getReport() as { header?: { glibcVersionRuntime?: string } }).header;
+      musl = !header?.glibcVersionRuntime;
+    } finally {
+      report.excludeNetwork = excludeNetwork;
+    }
+  }
+  return musl;
+}
+
 export function currentPlatform(): Platform {
-  const report = process.report?.getReport() as
-    { header?: { glibcVersionRuntime?: string } } | undefined;
-  return {
-    os: process.platform,
-    arch: process.arch,
-    musl: process.platform === 'linux' && !report?.header?.glibcVersionRuntime,
-  };
+  return { os: process.platform, arch: process.arch, musl: isMusl() };
 }
 
 export function agentPackage(agent: AgentId, platform: Platform = currentPlatform()): AgentPackage {

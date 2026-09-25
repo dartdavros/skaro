@@ -6,9 +6,9 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { create } from 'tar';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentInstaller } from './installer.ts';
-import { agentPackage } from './pins.ts';
+import { agentPackage, currentPlatform } from './pins.ts';
 
 const WIN = { os: 'win32' as const, arch: 'x64' };
 const LINUX = { os: 'linux' as const, arch: 'x64' };
@@ -132,5 +132,26 @@ describe('AgentInstaller', () => {
     await mkdir(join(dir, 'agents', 'claude-code', '0.3.200'), { recursive: true });
     expect(await installer.removeOldVersions('claude-code')).toEqual(['0.3.200']);
     expect(await installer.installed('claude-code')).toBeDefined();
+  });
+});
+
+describe('currentPlatform', () => {
+  it('reads the process report at most once and without network handles', () => {
+    const report = process.report as NodeJS.ProcessReport & { excludeNetwork?: boolean };
+    const seen: (boolean | undefined)[] = [];
+    const spy = vi.spyOn(report, 'getReport').mockImplementation(() => {
+      seen.push(report.excludeNetwork);
+      return { header: { glibcVersionRuntime: '2.39' } } as unknown as object;
+    });
+    try {
+      currentPlatform();
+      const platform = currentPlatform();
+      expect(platform).toMatchObject({ os: process.platform, arch: process.arch });
+      expect(seen.length).toBeLessThanOrEqual(1);
+      expect(seen.every((excluded) => excluded === true)).toBe(true);
+      if (process.platform !== 'linux') expect(seen).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

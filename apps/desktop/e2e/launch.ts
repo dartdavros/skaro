@@ -27,35 +27,6 @@ export function tempUserData(): string {
   return mkdtempSync(join(tmpdir(), 'skaro-e2e-'));
 }
 
-/** Leftover app processes and the busiest processes on a macOS runner (diagnostics). */
-function processSnapshot(label: string): void {
-  if (!ci || process.platform !== 'darwin') return;
-  try {
-    const ps = execFileSync('ps', ['-axro', 'pid,ppid,stat,etime,%cpu,command'], {
-      encoding: 'utf8',
-    }).split('\n');
-    const lines = [...ps.slice(0, 8), ...ps.slice(8).filter((l) => /Skaro/.test(l))];
-    process.stdout.write(`[ps ${label}]\n${lines.map((l) => l.slice(0, 200)).join('\n')}\n`);
-  } catch (error) {
-    process.stdout.write(`[ps ${label}] ${String(error)}\n`);
-  }
-}
-
-/** Keychain items of the app (attributes only, no secrets) on a macOS runner (diagnostics). */
-function keychainSnapshot(label: string): void {
-  if (!ci || process.platform !== 'darwin') return;
-  try {
-    const out = execFileSync('security', ['find-generic-password', '-s', 'Skaro Safe Storage'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 10_000,
-    });
-    process.stdout.write(`[keychain ${label}] item present\n${out}`);
-  } catch (error) {
-    process.stdout.write(`[keychain ${label}] ${String(error).split('\n')[0]}\n`);
-  }
-}
-
 /** Native stack of a launch that stalls on a macOS runner (diagnostics). */
 function sampleStalledLaunch(started: number): () => void {
   if (!ci || process.platform !== 'darwin') return () => {};
@@ -90,8 +61,6 @@ function sampleStalledLaunch(started: number): () => void {
 export async function launchApp(userData: string = tempUserData()): Promise<ElectronApplication> {
   const env = { ...process.env, SKARO_USER_DATA: userData } as Record<string, string>;
   if (ci) env['SKARO_TRACE'] = '1';
-  processSnapshot('before launch');
-  keychainSnapshot('before launch');
   const started = Date.now();
   const stopSampling = sampleStalledLaunch(started);
   // A launch that hangs fails with Playwright's call log instead of the bare test timeout.
@@ -109,7 +78,6 @@ export async function launchApp(userData: string = tempUserData()): Promise<Elec
     app.process().stderr?.on('data', (d: Buffer) => process.stdout.write(`[main!] ${String(d)}`));
     app.process().on('exit', (code, signal) => {
       process.stdout.write(`[launch] pid ${pid} exited: ${code ?? signal}\n`);
-      processSnapshot('after exit');
     });
   }
   return app;
