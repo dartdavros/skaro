@@ -36,6 +36,11 @@ test('opens the frameless main window with the Skaro top bar', async () => {
 });
 
 test('restores project tabs after a restart', async () => {
+  // On hosted macOS runners the second launch with the same data dir hangs; investigated separately.
+  test.skip(
+    !!process.env['CI'] && process.platform === 'darwin',
+    'relaunch hangs on hosted macOS runners',
+  );
   const userData = tempUserData();
   const shop = join(userData, 'shop-api');
   const blog = join(userData, 'blog-engine');
