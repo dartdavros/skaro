@@ -75,6 +75,7 @@ function savedBounds(): Bounds {
 
 function createMainWindow(): void {
   const bounds = savedBounds();
+  trace('bounds read');
   const mac = process.platform === 'darwin';
   win = new BrowserWindow({
     ...bounds,
@@ -191,6 +192,7 @@ if (!locked) {
       Number(appState.getSetting('runs.slots')) || 3,
     );
     void agents.refresh();
+    trace('task runs created');
 
     // Files the user attached may be shown even outside projects.
     const picked = new Set<string>();
@@ -318,6 +320,7 @@ if (!locked) {
       },
       (sender) => sender === win?.webContents,
     );
+    trace('handlers registered');
 
     createMainWindow();
 
