@@ -20,7 +20,11 @@ import { AppState } from './state';
 import { TaskRuns } from './tasks';
 
 // Tests run against their own data dir.
-if (process.env['SKARO_USER_DATA']) app.setPath('userData', process.env['SKARO_USER_DATA']);
+if (process.env['SKARO_USER_DATA']) {
+  app.setPath('userData', process.env['SKARO_USER_DATA']);
+  // An unsigned test build asking the macOS keychain for access blocks a headless runner.
+  if (process.platform === 'darwin') app.commandLine.appendSwitch('use-mock-keychain');
+}
 app.setName('Skaro');
 
 // Images in the feed: attachments and project images, never arbitrary files.
