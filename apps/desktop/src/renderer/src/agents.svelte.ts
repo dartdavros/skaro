@@ -9,6 +9,9 @@ class Agents {
 export const agents = new Agents();
 
 export function watchAgents(): void {
-  void window.skaro.invoke('agents.list').then((list) => (agents.list = list));
-  window.skaro.on('agents.changed', (list) => (agents.list = list));
+  const update = (list: AgentInfo[]): void => {
+    agents.list = list;
+  };
+  void window.skaro.invoke('agents.list').then(update);
+  window.skaro.on('agents.changed', update);
 }
