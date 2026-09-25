@@ -1,35 +1,28 @@
-# ── Python ──────────────────────────────────────────────
-__pycache__/
-*.py[cod]
-*.egg-info/
-*.egg
+# ── Node ───────────────────────────────────────────────
+node_modules/
+out/
 dist/
-build/
-*.whl
-.venv/
-venv/
+release/
+*.tsbuildinfo
+.eslintcache
 
-# ── Frontend (SvelteKit) ───────────────────────────────
-frontend/node_modules/
-frontend/.svelte-kit/
-src/skaro_web/static/_app/
+# ── Tests ──────────────────────────────────────────────
+coverage/
+test-results/
+playwright-report/
 
 # ── IDE / OS ───────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
-*.swo
 *~
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ── Testing / Coverage ─────────────────────────────────
+# ── v1 leftovers in old checkouts ──────────────────────
+__pycache__/
 .pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-.ruff_cache/
-
-pack.bat
+.venv/
 *.zip
+pack.bat

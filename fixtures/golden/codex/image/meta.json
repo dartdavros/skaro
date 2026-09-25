@@ -1,0 +1,9 @@
+{
+  "agent": "codex",
+  "scenario": "image",
+  "title": "Images: agent views a file, user attaches one",
+  "permission": "ask",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:17:14.455Z",
+  "durationMs": 29459
+}

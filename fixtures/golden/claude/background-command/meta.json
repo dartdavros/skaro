@@ -1,0 +1,9 @@
+{
+  "agent": "claude",
+  "scenario": "background-command",
+  "title": "Background command",
+  "permission": "full",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:03:43.776Z",
+  "durationMs": 21303
+}

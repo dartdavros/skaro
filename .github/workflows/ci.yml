@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, types, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      # The agent probe pulls pinned agent binaries (~300 MB); CI does not need it.
+      - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm -r --parallel --filter '!@skaro/agent-probe' typecheck
+      # Unit tests and adapter golden tests (fixtures/golden) run as Vitest projects.
+      - run: pnpm test
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      SKARO_E2E_PACKAGED: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      # The agent probe pulls pinned agent binaries (~300 MB); CI does not need it.
+      - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
+      - name: Package (unpacked)
+        run: pnpm --filter @skaro/desktop run package
+      # Ubuntu 24.04 restricts unprivileged user namespaces, which the Chromium sandbox needs.
+      - name: Allow Chromium sandbox
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Launch packaged app
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum pnpm test:e2e
+      - name: Launch packaged app
+        if: runner.os != 'Linux'
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-${{ matrix.os }}
+          path: apps/desktop/test-results/
+          if-no-files-found: ignore

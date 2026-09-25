@@ -1,0 +1,152 @@
+{
+  "turns": [
+    {
+      "id": "01a0d50f-dff8-7d42-9f59-de0a481a852f",
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 33348,
+        "outputTokens": 121
+      }
+    },
+    {
+      "id": "01a0d510-15ee-7760-ac8c-1909755aa59c",
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 33348,
+        "outputTokens": 121
+      }
+    },
+    {
+      "id": "01a0d510-2ad9-7a92-923e-8470c5268771",
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 51899,
+        "outputTokens": 132
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "01a0d50f-eab1-7111-ab93-fc4770fec5e5",
+      "turnId": "01a0d50f-dff8-7d42-9f59-de0a481a852f",
+      "kind": "message",
+      "role": "user",
+      "text": "Read src/math.js and tell me what add() does, in one sentence.",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "userMessage",
+        "ref": "01a0d50f-eab1-7111-ab93-fc4770fec5e5"
+      },
+      "startedAt": 3414
+    },
+    {
+      "id": "msg_08c541aa47ade945016ab5851bbcc487d2b79eb15760b6b9ae",
+      "turnId": "01a0d50f-dff8-7d42-9f59-de0a481a852f",
+      "kind": "message",
+      "role": "agent",
+      "text": "Прочитаю `src/math.js` и отвечу одним предложением.",
+      "phase": "commentary",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "agentMessage",
+        "ref": "msg_08c541aa47ade945016ab5851bbcc487d2b79eb15760b6b9ae"
+      },
+      "startedAt": 5712
+    },
+    {
+      "id": "exec-ee979bfa-2573-4307-b5d4-f4c6a5a8a19c",
+      "turnId": "01a0d50f-dff8-7d42-9f59-de0a481a852f",
+      "kind": "explore",
+      "op": "read",
+      "target": "<workspace>\\src\\math.js",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "commandExecution",
+        "ref": "exec-ee979bfa-2573-4307-b5d4-f4c6a5a8a19c"
+      },
+      "startedAt": 7825,
+      "endedAt": 11890
+    },
+    {
+      "id": "msg_08c541aa47ade945016ab58523b65087d2ac92b57e20434b40",
+      "turnId": "01a0d50f-dff8-7d42-9f59-de0a481a852f",
+      "kind": "message",
+      "role": "agent",
+      "text": "`add(a, b)` возвращает разность `a - b`, несмотря на название функции.",
+      "phase": "final",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "agentMessage",
+        "ref": "msg_08c541aa47ade945016ab58523b65087d2ac92b57e20434b40"
+      },
+      "startedAt": 13671
+    },
+    {
+      "id": "01a0d510-167b-7192-bbb9-65f899b310a2",
+      "turnId": "01a0d510-15ee-7760-ac8c-1909755aa59c",
+      "kind": "notice",
+      "level": "info",
+      "code": "compaction",
+      "text": "compacted",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "contextCompaction",
+        "ref": "01a0d510-167b-7192-bbb9-65f899b310a2"
+      },
+      "startedAt": 14609
+    },
+    {
+      "id": "01a0d510-2c6e-7451-8fd8-4be5a269f451",
+      "turnId": "01a0d510-2ad9-7a92-923e-8470c5268771",
+      "kind": "message",
+      "role": "user",
+      "text": "What file did you read before? One line.",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "userMessage",
+        "ref": "01a0d510-2c6e-7451-8fd8-4be5a269f451"
+      },
+      "startedAt": 20243
+    },
+    {
+      "id": "msg_08c541aa47ade945016ab5852be21c87d29c8babfa0ecfed81",
+      "turnId": "01a0d510-2ad9-7a92-923e-8470c5268771",
+      "kind": "message",
+      "role": "agent",
+      "text": "I read `src/math.js`.",
+      "phase": "final",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "agentMessage",
+        "ref": "msg_08c541aa47ade945016ab5852be21c87d29c8babfa0ecfed81"
+      },
+      "startedAt": 21844
+    }
+  ],
+  "interactions": [],
+  "status": "idle",
+  "session": {
+    "nativeSessionId": "01a0d50f-ded9-73c3-834f-1c4b3ec1602f",
+    "model": "gpt-6-sol",
+    "capabilities": {
+      "agentVersion": "0.156.1"
+    }
+  },
+  "usage": {
+    "inputTokens": 51899,
+    "outputTokens": 132,
+    "contextWindow": 258400,
+    "contextUsedPct": 7.2
+  },
+  "limits": {
+    "state": "ok",
+    "resetsAt": "2026-10-01T03:41:42.000Z"
+  }
+}

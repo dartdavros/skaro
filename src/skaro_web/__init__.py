@@ -1,1 +1,0 @@
-"""Skaro Web Dashboard package."""

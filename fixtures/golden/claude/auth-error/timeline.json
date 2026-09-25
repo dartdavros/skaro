@@ -1,0 +1,101 @@
+{
+  "turns": [
+    {
+      "id": "turn-1",
+      "outcome": "failed",
+      "error": {
+        "category": "auth",
+        "message": "Not logged in · Please run /login"
+      },
+      "usage": {
+        "inputTokens": 0,
+        "outputTokens": 0
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "35907dcd-ba61-42d5-adaf-21af7253c75f",
+      "kind": "message",
+      "role": "user",
+      "text": "Say hi.",
+      "status": "done",
+      "native": {
+        "agent": "claude",
+        "type": "user",
+        "ref": "35907dcd-ba61-42d5-adaf-21af7253c75f"
+      },
+      "turnId": "turn-1",
+      "startedAt": 25
+    },
+    {
+      "id": "85480833-9e58-4f5f-b390-4083c6ff3f57-0",
+      "kind": "notice",
+      "level": "error",
+      "code": "auth",
+      "text": "Not logged in · Please run /login",
+      "status": "done",
+      "native": {
+        "agent": "claude",
+        "type": "notice",
+        "ref": "85480833-9e58-4f5f-b390-4083c6ff3f57-0"
+      },
+      "turnId": "turn-1",
+      "startedAt": 1668
+    }
+  ],
+  "interactions": [],
+  "status": "idle",
+  "session": {
+    "nativeSessionId": "7ccd39d4-5e4a-4d95-bdba-c2baa3349a27",
+    "model": "claude-opus-5-5[1m]",
+    "capabilities": {
+      "tools": [
+        "Task",
+        "Artifact",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "Glob",
+        "Grep",
+        "ListAgents",
+        "NotebookEdit",
+        "Read",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "Skill",
+        "TaskCreate",
+        "TaskGet",
+        "TaskList",
+        "TaskStop",
+        "TaskUpdate",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "flags": [
+        "interrupt_receipt_v1",
+        "interrupt_cancel_queued_v1",
+        "msg_lifecycle_v1",
+        "mcp_read_resource_v1",
+        "mcp_tool_ui_meta_v1"
+      ],
+      "agentVersion": "2.1.281"
+    }
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0
+  }
+}

@@ -1,0 +1,20 @@
+appId: dev.skaro.app
+productName: Skaro
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - package.json
+win:
+  target: nsis
+mac:
+  target: dmg
+  category: public.app-category.developer-tools
+  # Ad-hoc signing until real signing and notarization (stage 8).
+  identity: '-'
+linux:
+  target: AppImage
+  category: Development
+  executableName: skaro
+publish: null

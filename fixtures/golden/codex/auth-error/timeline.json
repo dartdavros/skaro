@@ -1,0 +1,82 @@
+{
+  "turns": [
+    {
+      "id": "01a0d50f-8493-7993-850a-9e921c112787",
+      "outcome": "failed",
+      "error": {
+        "category": "auth",
+        "message": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a40477603ce28048-CDG, request id: req_5137544660ba400494d4f26470001b7a"
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "01a0d50f-870b-7541-9a5e-25c4f5626fd9",
+      "turnId": "01a0d50f-8493-7993-850a-9e921c112787",
+      "kind": "message",
+      "role": "user",
+      "text": "Say hi.",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "userMessage",
+        "ref": "01a0d50f-870b-7541-9a5e-25c4f5626fd9"
+      },
+      "startedAt": 1330
+    },
+    {
+      "id": "retry-01a0d50f-8493-7993-850a-9e921c112787",
+      "kind": "notice",
+      "level": "warning",
+      "code": "retry",
+      "text": "Reconnecting... 5/5",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "notice",
+        "ref": "retry-01a0d50f-8493-7993-850a-9e921c112787"
+      },
+      "turnId": "01a0d50f-8493-7993-850a-9e921c112787",
+      "startedAt": 2360
+    },
+    {
+      "id": "warn-2",
+      "kind": "notice",
+      "level": "warning",
+      "code": "other",
+      "text": "Falling back from WebSockets to HTTPS transport. unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: a40477177b3c0c52-CDG",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "notice",
+        "ref": "warn-2"
+      },
+      "turnId": "01a0d50f-8493-7993-850a-9e921c112787",
+      "startedAt": 10264
+    },
+    {
+      "id": "error-01a0d50f-8493-7993-850a-9e921c112787-3",
+      "kind": "notice",
+      "level": "error",
+      "code": "auth",
+      "text": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a40477603ce28048-CDG, request id: req_5137544660ba400494d4f26470001b7a",
+      "status": "done",
+      "native": {
+        "agent": "codex",
+        "type": "notice",
+        "ref": "error-01a0d50f-8493-7993-850a-9e921c112787-3"
+      },
+      "turnId": "01a0d50f-8493-7993-850a-9e921c112787",
+      "startedAt": 22211
+    }
+  ],
+  "interactions": [],
+  "status": "idle",
+  "session": {
+    "nativeSessionId": "01a0d50f-83e2-76b3-a291-ed69c97ddfe0",
+    "model": "gpt-6-astra",
+    "capabilities": {
+      "agentVersion": "0.156.1"
+    }
+  }
+}

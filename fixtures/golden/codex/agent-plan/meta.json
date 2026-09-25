@@ -1,0 +1,9 @@
+{
+  "agent": "codex",
+  "scenario": "agent-plan",
+  "title": "Multi-step task with the agent plan",
+  "permission": "full",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:07:01.151Z",
+  "durationMs": 40458
+}

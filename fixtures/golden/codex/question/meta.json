@@ -1,0 +1,9 @@
+{
+  "agent": "codex",
+  "scenario": "question",
+  "title": "Question to the user",
+  "permission": "ask",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:15:01.551Z",
+  "durationMs": 479568
+}

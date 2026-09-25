@@ -1,0 +1,9 @@
+{
+  "agent": "codex",
+  "scenario": "interrupt",
+  "title": "Interrupt a running command",
+  "permission": "full",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:15:57.672Z",
+  "durationMs": 10811
+}

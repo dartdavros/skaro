@@ -1,0 +1,38 @@
+{"t":"turn.started","turnId":"turn-1"}
+{"t":"item.upsert","item":{"id":"e1c5e1e7-0554-4279-9cc7-48ae5273588b","kind":"message","role":"user","text":"Run `node test.js` once and report the result in one sentence. Do not fix anything.","status":"queued","native":{"agent":"claude","type":"user","ref":"e1c5e1e7-0554-4279-9cc7-48ae5273588b"},"turnId":"turn-1","startedAt":25}}
+{"t":"item.upsert","item":{"id":"e1c5e1e7-0554-4279-9cc7-48ae5273588b","kind":"message","role":"user","text":"Run `node test.js` once and report the result in one sentence. Do not fix anything.","status":"done","native":{"agent":"claude","type":"user","ref":"e1c5e1e7-0554-4279-9cc7-48ae5273588b"},"turnId":"turn-1","startedAt":25}}
+{"t":"session.started","nativeSessionId":"06951625-55e1-4a35-86b7-d8f117d6dfb4","model":"claude-opus-5-5","capabilities":{"tools":["Task","Artifact","ArtifactComments","ArtifactData","AskUserQuestion","Bash","CronCreate","CronDelete","CronList","DesignSync","Edit","EnterPlanMode","EnterWorktree","ExitPlanMode","ExitWorktree","Glob","Grep","ListAgents","Monitor","NotebookEdit","PowerShell","PushNotification","Read","RemoteTrigger","ReportFindings","ScheduleWakeup","SendMessage","Skill","TaskCreate","TaskGet","TaskList","TaskStop","TaskUpdate","ToolSearch","WebFetch","WebSearch","Write"],"flags":["interrupt_receipt_v1","interrupt_cancel_queued_v1","msg_lifecycle_v1","mcp_read_resource_v1","mcp_tool_ui_meta_v1"],"agentVersion":"2.1.281"}}
+{"t":"item.upsert","item":{"id":"mcp-claude.ai Google Drive","kind":"notice","level":"warning","code":"mcp_failed","text":"claude.ai Google Drive: needs-auth","status":"done","native":{"agent":"claude","type":"notice","ref":"mcp-claude.ai Google Drive"},"turnId":"turn-1","startedAt":2437}}
+{"t":"activity","state":"waiting_model"}
+{"t":"item.upsert","item":{"id":"toolu_01XMY64FibbXrGyRhKCesimy","kind":"command","command":"node test.js; \"EXIT=$LASTEXITCODE\"","description":"Run test script once","output":"","outputLive":false,"status":"running","native":{"agent":"claude","type":"tool_use.PowerShell","ref":"toolu_01XMY64FibbXrGyRhKCesimy"},"turnId":"turn-1","startedAt":5042}}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T23:20:00.000Z"}
+{"t":"item.upsert","item":{"id":"toolu_01XMY64FibbXrGyRhKCesimy","kind":"command","command":"node test.js; \"EXIT=$LASTEXITCODE\"","description":"Run test script once","output":"Exit code 1\nnode:internal/modules/run_main:107\r\n    triggerUncaughtException(\r\n    ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\r\n\r\n-1 !== 5\r\n\r\n    at file:///<workspace>/test.js:5:8\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:377:25)\r\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:689:26)\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: -1,\r\n  expected: 5,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.9.0\r\nEXIT=1","outputLive":false,"status":"failed","native":{"agent":"claude","type":"tool_use.PowerShell","ref":"toolu_01XMY64FibbXrGyRhKCesimy"},"turnId":"turn-1","startedAt":5042,"endedAt":9182,"exitCode":1}}
+{"t":"activity","state":"thinking"}
+{"t":"item.upsert","item":{"id":"msg_011CfNryn4syoRFEnuBxuUPC-0","kind":"reasoning","text":"","redacted":false,"status":"running","native":{"agent":"claude","type":"stream.thinking","ref":"msg_011CfNryn4syoRFEnuBxuUPC-0"},"turnId":"turn-1","startedAt":10712}}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-0","field":"text","chunk":""}
+{"t":"item.upsert","item":{"id":"msg_011CfNryn4syoRFEnuBxuUPC-0","kind":"reasoning","text":"","redacted":false,"status":"done","native":{"agent":"claude","type":"assistant.thinking","ref":"msg_011CfNryn4syoRFEnuBxuUPC-0"},"turnId":"turn-1","startedAt":10712}}
+{"t":"activity","state":"writing"}
+{"t":"item.upsert","item":{"id":"msg_011CfNryn4syoRFEnuBxuUPC-1","kind":"message","role":"agent","text":"","phase":"commentary","status":"running","native":{"agent":"claude","type":"stream.text","ref":"msg_011CfNryn4syoRFEnuBxuUPC-1"},"turnId":"turn-1","startedAt":11742}}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"`"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"node test.js` failed with"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":" exit code 1: the `"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"strictEqual` assert"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"ion on line 5 of `"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"test.js` expected `"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"5` but got `-1`"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":".\n\nThe"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":" Google Drive connector is"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"n't auth"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"orized, so it"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":" won"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"'t work until you conn"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"ect it in your claude."}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":"ai connector settings."}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":" This test"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":" run"}
+{"t":"item.append","itemId":"msg_011CfNryn4syoRFEnuBxuUPC-1","field":"text","chunk":" didn't need it."}
+{"t":"item.upsert","item":{"id":"msg_011CfNryn4syoRFEnuBxuUPC-1","kind":"message","role":"agent","text":"`node test.js` failed with exit code 1: the `strictEqual` assertion on line 5 of `test.js` expected `5` but got `-1`.\n\nThe Google Drive connector isn't authorized, so it won't work until you connect it in your claude.ai connector settings. This test run didn't need it.","phase":"commentary","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfNryn4syoRFEnuBxuUPC-1"},"turnId":"turn-1","startedAt":11742}}
+{"t":"limits","state":"ok","resetsAt":"2026-09-24T23:20:00.000Z"}
+{"t":"usage","inputTokens":63135,"outputTokens":237,"contextWindow":1000000,"contextUsedPct":3.3}
+{"t":"item.upsert","item":{"id":"msg_011CfNryn4syoRFEnuBxuUPC-1","kind":"message","role":"agent","text":"`node test.js` failed with exit code 1: the `strictEqual` assertion on line 5 of `test.js` expected `5` but got `-1`.\n\nThe Google Drive connector isn't authorized, so it won't work until you connect it in your claude.ai connector settings. This test run didn't need it.","phase":"final","status":"done","native":{"agent":"claude","type":"assistant.text","ref":"msg_011CfNryn4syoRFEnuBxuUPC-1"},"turnId":"turn-1","startedAt":11742}}
+{"t":"turn.completed","turnId":"turn-1","outcome":"done"}

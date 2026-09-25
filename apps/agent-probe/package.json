@@ -1,0 +1,22 @@
+{
+  "name": "@skaro/agent-probe",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Stage 1 console probe: runs Claude Code / Codex and prints canonical timeline events.",
+  "type": "module",
+  "scripts": {
+    "probe": "node src/cli.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.281",
+    "@openai/codex": "0.156.1",
+    "@skaro/adapter-claude": "workspace:*",
+    "@skaro/adapter-codex": "workspace:*",
+    "@skaro/timeline": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~6.0.3"
+  }
+}

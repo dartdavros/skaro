@@ -1,0 +1,9 @@
+{
+  "agent": "claude",
+  "scenario": "interrupt",
+  "title": "Interrupt a running command",
+  "permission": "full",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T04:35:57.359Z",
+  "durationMs": 9044
+}

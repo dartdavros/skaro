@@ -1,0 +1,9 @@
+{
+  "agent": "claude",
+  "scenario": "failing-command",
+  "title": "Failing command",
+  "permission": "full",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:03:22.197Z",
+  "durationMs": 13419
+}

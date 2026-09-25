@@ -1,0 +1,9 @@
+{
+  "agent": "codex",
+  "scenario": "subagent",
+  "title": "Subagent",
+  "permission": "full",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:15:46.043Z",
+  "durationMs": 28092
+}

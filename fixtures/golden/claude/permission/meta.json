@@ -1,0 +1,9 @@
+{
+  "agent": "claude",
+  "scenario": "permission",
+  "title": "Permission requests: deny, then allow",
+  "permission": "ask",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T20:08:13.203Z",
+  "durationMs": 13791
+}

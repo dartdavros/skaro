@@ -1,0 +1,9 @@
+{
+  "agent": "claude",
+  "scenario": "auth-error",
+  "title": "Not logged in",
+  "permission": "ask",
+  "adapterVersion": "0.1.0",
+  "recordedAt": "2026-09-24T04:35:59.363Z",
+  "durationMs": 1705
+}

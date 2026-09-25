@@ -1,0 +1,15 @@
+{
+  "name": "@skaro/timeline",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Canonical agent timeline model and projection from the raw agent stream.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./golden": "./src/golden.ts",
+    "./tolerance": "./src/tolerance.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
+}
