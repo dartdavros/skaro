@@ -38,4 +38,6 @@ class Clock {
 }
 
 export const clock = new Clock();
-setInterval(() => (clock.now = Date.now()), 1000);
+setInterval(() => {
+  clock.now = Date.now();
+}, 1000);
