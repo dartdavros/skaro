@@ -14,6 +14,7 @@ import {
   within,
 } from './files';
 import { registerHandlers, sendEvent } from './ipc';
+import { createFolder, inspectFolder } from './new-project';
 import { Projects } from './projects';
 import { AppState } from './state';
 import { TaskRuns } from './tasks';
@@ -206,12 +207,28 @@ if (!app.requestSingleInstanceLock()) {
         'app.getSetting': (key) => appState.getSetting(key),
         'app.setSetting': (key, value) => appState.setSetting(key, value),
         'projects.list': () => appState.listProjects(),
-        'projects.add': async () => {
+        'projects.pickFolder': async (defaultPath) => {
+          const options: Electron.OpenDialogOptions = {
+            properties: ['openDirectory', 'createDirectory'],
+            ...(defaultPath ? { defaultPath } : {}),
+          };
           const result = win
-            ? await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] })
-            : await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] });
-          const path = result.filePaths[0];
-          return result.canceled || !path ? undefined : appState.addProject(path);
+            ? await dialog.showOpenDialog(win, options)
+            : await dialog.showOpenDialog(options);
+          return result.canceled ? undefined : result.filePaths[0];
+        },
+        'projects.inspect': (path) => inspectFolder(path),
+        'projects.defaultParent': () =>
+          (appState.getSetting('projects.parent') as string | null) ?? app.getPath('home'),
+        'projects.add': async (path) => {
+          const folder = await inspectFolder(path);
+          if (!folder.exists) throw new Error('folder not found');
+          return appState.addProject(path);
+        },
+        'projects.create': async (parent, name) => {
+          const path = await createFolder(parent, name);
+          appState.setSetting('projects.parent', parent);
+          return appState.addProject(path);
         },
         'projects.remove': (id) => appState.removeProject(id),
         'tabs.get': () => appState.getTabs(),

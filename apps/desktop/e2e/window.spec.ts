@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppDb } from '@skaro/core';
 import type { SkaroApi } from '../src/shared/ipc';
@@ -67,5 +68,33 @@ test('restores project tabs after a restart', async () => {
   page = await app.firstWindow();
   await expect(page.getByRole('tab')).toHaveText(['Shop API']);
   await expect(page.getByRole('tab', { selected: true })).toHaveText('Shop API');
+  await app.close();
+});
+
+test('creates a new project folder as a git repository from the "Новый проект" modal', async () => {
+  const userData = tempUserData();
+  const parent = join(userData, 'code');
+  mkdirSync(parent);
+  const db = AppDb.open(join(userData, 'skaro.db'));
+  db.setSetting('ui.locale', 'ru');
+  db.setSetting('projects.parent', parent);
+  db.close();
+
+  const app = await launchApp(userData);
+  const page = await app.firstWindow();
+  await page.getByRole('button', { name: 'Новый проект' }).click();
+  const modal = page.getByRole('dialog', { name: 'Новый проект' });
+  await expect(modal.getByRole('button', { name: 'Подключить' })).toBeDisabled();
+  await modal.getByRole('button', { name: /Новая папка/ }).click();
+  await expect(modal).toContainText(parent);
+  await modal.getByPlaceholder('shop-api').fill('calc');
+  await modal.getByRole('button', { name: 'Создать проект' }).click();
+
+  await expect(page.getByRole('tab', { selected: true })).toHaveText('calc');
+  const repo = join(parent, 'calc');
+  expect(readFileSync(join(repo, '.skaro', 'config.yaml'), 'utf8')).toContain('base_branch: main');
+  expect(execFileSync('git', ['log', '--format=%s'], { cwd: repo, encoding: 'utf8' }).trim()).toBe(
+    'Skaro: new project',
+  );
   await app.close();
 });

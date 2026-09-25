@@ -16,7 +16,7 @@
       <h1 class="sk-title">{t('app.home')}</h1>
       <span class="sk-secondary">{t('home.subtitle')}</span>
     </div>
-    <Button variant="primary" onclick={onadd}
+    <Button variant="primary" data-tip={t('home.add.tip')} onclick={onadd}
       ><Icon name="plus" size={15} stroke={2.6} />{t('home.add')}</Button
     >
   </div>

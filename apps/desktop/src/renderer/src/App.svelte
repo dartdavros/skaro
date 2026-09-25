@@ -3,6 +3,7 @@
   import type { ProjectInfo, TabsState } from '../../shared/ipc';
   import { watchAgents } from './agents.svelte';
   import Home from './screens/Home.svelte';
+  import NewProjectModal from './screens/NewProjectModal.svelte';
   import Inventory from './screens/Inventory.svelte';
   import Project from './screens/Project.svelte';
   import Settings from './screens/Settings.svelte';
@@ -77,15 +78,20 @@
     view = 'home';
   }
 
-  async function addProject(): Promise<void> {
-    const project = await window.skaro.invoke('projects.add');
-    if (!project) return;
+  let newProject = $state(false);
+
+  function addProject(): void {
+    newProject = true;
+  }
+
+  async function projectAdded(project: ProjectInfo): Promise<void> {
     projects = await window.skaro.invoke('projects.list');
     openProject(project.id);
   }
 </script>
 
 <TooltipHost />
+<NewProjectModal bind:open={newProject} oncreated={(p) => void projectAdded(p)} />
 
 <div class="app">
   <TitleBar

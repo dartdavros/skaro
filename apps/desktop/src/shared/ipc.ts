@@ -133,6 +133,15 @@ export interface ProjectInfo {
   missing: boolean;
 }
 
+/** A folder picked in the "Новый проект" modal. */
+export interface FolderInfo {
+  path: string;
+  name: string;
+  exists: boolean;
+  git: boolean;
+  branch?: string;
+}
+
 export interface TabsState {
   /** Open project tabs in order. */
   projects: string[];
@@ -151,8 +160,15 @@ export interface Methods {
   'app.getSetting': (key: string) => unknown;
   'app.setSetting': (key: string, value: unknown) => void;
   'projects.list': () => ProjectInfo[];
-  /** Opens a folder picker and registers the project; undefined if cancelled. */
-  'projects.add': () => ProjectInfo | undefined;
+  /** Folder picker; undefined if cancelled. */
+  'projects.pickFolder': (defaultPath?: string) => string | undefined;
+  'projects.inspect': (path: string) => FolderInfo;
+  /** Where new project folders go by default (the last used place). */
+  'projects.defaultParent': () => string;
+  /** Connects an existing folder. */
+  'projects.add': (path: string) => ProjectInfo;
+  /** Creates <parent>/<name> as an empty git repository and connects it. */
+  'projects.create': (parent: string, name: string) => ProjectInfo;
   'projects.remove': (id: string) => void;
   'tabs.get': () => TabsState;
   'tabs.set': (state: TabsState) => void;
@@ -225,7 +241,11 @@ export const METHODS = [
   'app.getSetting',
   'app.setSetting',
   'projects.list',
+  'projects.pickFolder',
+  'projects.inspect',
+  'projects.defaultParent',
   'projects.add',
+  'projects.create',
   'projects.remove',
   'tabs.get',
   'tabs.set',

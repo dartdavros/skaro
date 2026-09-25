@@ -82,6 +82,13 @@ function detail(id: string): TaskDetail {
   };
 }
 
+function addMock(path: string): ProjectInfo {
+  counter++;
+  const project = { id: `p${counter}`, name: path.split('/').pop() ?? path, path, missing: false };
+  projects.push(project);
+  return project;
+}
+
 const handlers: {
   [M in keyof Methods]: (...args: Parameters<Methods[M]>) => ReturnType<Methods[M]>;
 } = {
@@ -94,17 +101,17 @@ const handlers: {
   'app.getSetting': (key) => settings.get(key) ?? null,
   'app.setSetting': (key, value) => void settings.set(key, value),
   'projects.list': () => projects,
-  'projects.add': () => {
-    counter++;
-    const project = {
-      id: `p${counter}`,
-      name: `Project ${counter}`,
-      path: `/Users/dev/code/project-${counter}`,
-      missing: false,
-    };
-    projects.push(project);
-    return project;
-  },
+  'projects.pickFolder': () => '/Users/dev/code/shop-api',
+  'projects.inspect': (path) => ({
+    path,
+    name: path.split('/').pop() ?? path,
+    exists: true,
+    git: true,
+    branch: 'main',
+  }),
+  'projects.defaultParent': () => '/Users/dev/code',
+  'projects.add': (path) => addMock(path),
+  'projects.create': (parent, name) => addMock(`${parent}/${name}`),
   'projects.remove': (id) =>
     void projects.splice(
       projects.findIndex((p) => p.id === id),
