@@ -357,3 +357,25 @@ describe('revert', () => {
     await expect(service.revert(sha)).rejects.toThrow('uncommitted');
   });
 });
+
+describe('snapshots', () => {
+  it('puts a worktree back: commits, edits and new files after the snapshot go away', async () => {
+    const worktree = await taskWithChange({ 'a.txt': 'a\n' });
+    await write(worktree, 'draft.txt', 'untracked before\n');
+    await write(worktree, 'a.txt', 'edited before\n');
+    const snap = await service.snapshot(worktree);
+    expect((await git(worktree, ['status', '--porcelain'])).stdout).toContain('draft.txt');
+
+    await commit(worktree, 'agent went on', { 'b.txt': 'b\n', 'a.txt': 'later\n' });
+    await write(worktree, 'c.txt', 'c\n');
+    await service.restoreSnapshot(worktree, snap);
+
+    expect(await readFile(join(worktree, 'a.txt'), 'utf8')).toBe('edited before\n');
+    expect(await readFile(join(worktree, 'draft.txt'), 'utf8')).toBe('untracked before\n');
+    expect(existsSync(join(worktree, 'b.txt'))).toBe(false);
+    expect(existsSync(join(worktree, 'c.txt'))).toBe(false);
+    expect(await log(worktree)).toEqual(['agent work', 'init']);
+    // Edits come back uncommitted, as they were.
+    expect((await git(worktree, ['diff', '--cached', '--name-only'])).stdout.trim()).toBe('');
+  });
+});

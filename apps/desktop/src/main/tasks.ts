@@ -23,6 +23,7 @@ import {
   type RunRecord,
   type Task,
   type TaskRuntime,
+  type WorktreeSnapshot,
 } from '@skaro/core';
 import type {
   Grant,
@@ -32,6 +33,7 @@ import type {
   ToolResult,
 } from '@skaro/mcp-server';
 import {
+  isRunLogMeta,
   replayRunLog,
   Timeline,
   type AgentSession,
@@ -95,6 +97,10 @@ class ActiveRun {
   mergeSummary: string | undefined;
   /** Serializes session start and resume. */
   attaching: Promise<AgentSession> | undefined;
+  /** Worktree snapshots taken before sending, waiting for their user message to show up. */
+  pendingSnapshots: WorktreeSnapshot[] = [];
+  /** User message id → worktree state before it (rewind puts the files back). */
+  readonly snapshots = new Map<string, WorktreeSnapshot>();
   /** Work that waits for the running turn to end (cleanup after a merge). */
   afterTurn: (() => Promise<void>) | undefined;
 
@@ -226,9 +232,25 @@ export class TaskRuns {
     const k = key(projectId, taskId);
     const active = this.active.get(k) ?? (await this.restore(projectId, taskId));
     if (!active) return this.start(projectId, taskId, input);
+    await this.deliver(active, input);
+  }
+
+  /** Sends a message to the run's agent; the worktree is snapshotted first (rewind). */
+  private async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
     const session = await this.attach(active);
+    await this.snapshotBeforeMessage(active);
     if (active.timeline.state.status === 'idle') await session.send(input);
     else await session.steer(input);
+  }
+
+  private async snapshotBeforeMessage(active: ActiveRun): Promise<void> {
+    const worktree = active.run.worktree;
+    if (!worktree || !existsSync(worktree)) return;
+    try {
+      active.pendingSnapshots.push(await this.project(active.projectId).git.snapshot(worktree));
+    } catch {
+      // No snapshot: rewinding to this message takes back the conversation only.
+    }
   }
 
   async respond(
@@ -277,7 +299,13 @@ export class TaskRuns {
     const active = this.requireActive(projectId, taskId);
     const session = await this.attach(active);
     await session.rewind(itemId);
-    if (resend) await session.send(resend);
+    // Codex takes back only the conversation; the files come back from Skaro's snapshot.
+    const snapshot = active.snapshots.get(itemId);
+    const worktree = active.run.worktree;
+    if (snapshot && worktree && existsSync(worktree)) {
+      await this.project(projectId).git.restoreSnapshot(worktree, snapshot);
+    }
+    if (resend) await this.deliver(active, resend);
   }
 
   async stopBackground(projectId: string, taskId: string, backgroundId: string): Promise<void> {
@@ -351,9 +379,8 @@ export class TaskRuns {
       }
       case 'resolve_with_agent': {
         this.skaroEvent(active, { t: 'interaction.closed', id: card.id, resolution: 'cancelled' });
-        const session = await this.attach(active);
         const files = card.conflicts.map((f) => `- ${f}`).join('\n');
-        await session.send({
+        await this.deliver(active, {
           text:
             `Слияние ветки ${branch} в ${base} даёт конфликты:\n${files}\n\n` +
             `Перенеси ветку на свежую ${base} (git rebase ${base}), разреши конфликты, закоммить ` +
@@ -516,8 +543,7 @@ export class TaskRuns {
 
     const done = new Promise<void>((resolve) => (active.release = resolve));
     try {
-      const session = await this.attach(active);
-      await session.send(input);
+      await this.deliver(active, input);
     } catch (error) {
       active.release = undefined;
       this.failTurn(active, error);
@@ -616,6 +642,23 @@ export class TaskRuns {
     active.pending.push(event);
     active.flushTimer ??= setTimeout(() => this.flush(active), FLUSH_MS);
     const { projectId, taskId } = active;
+    if (
+      event.t === 'item.upsert' &&
+      event.item.kind === 'message' &&
+      event.item.role === 'user' &&
+      !event.item.parentId &&
+      !active.snapshots.has(event.item.id)
+    ) {
+      const snapshot = active.pendingSnapshots.shift();
+      if (snapshot) {
+        active.snapshots.set(event.item.id, snapshot);
+        this.writeLine(active, {
+          ts: Date.now() - active.run.startedAt,
+          dir: 'meta',
+          line: { skaro: 'snapshot', itemId: event.item.id, ...snapshot },
+        });
+      }
+    }
     switch (event.t) {
       case 'session.started':
         if (event.nativeSessionId && event.nativeSessionId !== active.run.nativeSessionId) {
@@ -717,6 +760,11 @@ export class TaskRuns {
     );
     const active = new ActiveRun(projectId, taskId, run, Timeline.from(events));
     active.seq = events.length;
+    for (const line of lines) {
+      if (line.dir === 'meta' && isRunLogMeta(line.line) && line.line.skaro === 'snapshot') {
+        active.snapshots.set(line.line.itemId, { head: line.line.head, tree: line.line.tree });
+      }
+    }
     this.active.set(k, active);
     // Nothing survives a restart: an open turn ends as interrupted, its questions expire.
     const turn = active.timeline.state.turns.at(-1);

@@ -2,7 +2,9 @@
 // per task, merge checks, squash or merge, revert. Uses the system git (2.38+ for merge-tree).
 
 import { execFile } from 'node:child_process';
-import { readFile, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SKARO_DIR } from '../artifacts/store.ts';
 
@@ -31,7 +33,7 @@ export class GitError extends Error {
 export function git(
   cwd: string,
   args: string[],
-  options: { allowFail?: boolean } = {},
+  options: { allowFail?: boolean; env?: Record<string, string> } = {},
 ): Promise<GitResult> {
   return new Promise((resolve, reject) => {
     execFile(
@@ -41,7 +43,7 @@ export function git(
         cwd,
         maxBuffer: 64 * 1024 * 1024,
         windowsHide: true,
-        env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', ...options.env },
       },
       (error, stdout, stderr) => {
         const code = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
@@ -65,6 +67,12 @@ export interface MergeCheck {
   /** Changes to .skaro/ in the task branch; dropped on merge (D-17). */
   skaroChanges: string[];
   stats: DiffStats;
+}
+
+/** A worktree state to come back to (rewind): commit and the full tree of its files. */
+export interface WorktreeSnapshot {
+  head: string;
+  tree: string;
 }
 
 export interface DiffStats {
@@ -149,6 +157,31 @@ export class GitService {
     if (options.deleteBranch && (await this.branchExists(options.deleteBranch))) {
       await git(this.repo, ['branch', '-D', options.deleteBranch]);
     }
+  }
+
+  /**
+   * The state of a worktree without touching it: HEAD plus a tree of every file, untracked ones
+   * included (ignored ones are not). Rewinding to a user message puts the files back from it.
+   */
+  async snapshot(worktree: string): Promise<WorktreeSnapshot> {
+    const index = join(tmpdir(), `skaro-snapshot-${randomUUID()}`);
+    try {
+      const env = { GIT_INDEX_FILE: index };
+      await git(worktree, ['read-tree', 'HEAD'], { env });
+      await git(worktree, ['add', '-A'], { env });
+      const tree = (await git(worktree, ['write-tree'], { env })).stdout.trim();
+      return { head: await this.head('HEAD', worktree), tree };
+    } finally {
+      await rm(index, { force: true });
+    }
+  }
+
+  /** Back to a snapshot: the branch to its HEAD, the files to its tree, uncommitted as they were. */
+  async restoreSnapshot(worktree: string, snapshot: WorktreeSnapshot): Promise<void> {
+    await git(worktree, ['reset', '-q', '--hard', snapshot.head]);
+    await git(worktree, ['clean', '-fdq']);
+    await git(worktree, ['checkout', snapshot.tree, '--', '.']);
+    await git(worktree, ['reset', '-q']);
   }
 
   /**

@@ -22,7 +22,9 @@ export interface RawLine {
  */
 export type RunLogMeta =
   | { skaro: 'segment'; agent: string; adapterVersion: string }
-  | { skaro: 'event'; event: TimelineEvent };
+  | { skaro: 'event'; event: TimelineEvent }
+  /** Worktree state before a user message: rewinding to it puts the files back. */
+  | { skaro: 'snapshot'; itemId: string; head: string; tree: string };
 
 export function isRunLogMeta(line: unknown): line is RunLogMeta {
   return typeof line === 'object' && line !== null && 'skaro' in line;
@@ -47,7 +49,7 @@ export function replayRunLog(
     now = startedAt + raw.ts;
     if (raw.dir === 'meta' && isRunLogMeta(raw.line)) {
       if (raw.line.skaro === 'segment') projector = createProjector(ctx, emit);
-      else events.push(raw.line.event);
+      else if (raw.line.skaro === 'event') events.push(raw.line.event);
       continue;
     }
     projector ??= createProjector(ctx, emit);
