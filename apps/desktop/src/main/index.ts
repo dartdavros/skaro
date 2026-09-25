@@ -19,6 +19,12 @@ import { Projects } from './projects';
 import { AppState } from './state';
 import { TaskRuns } from './tasks';
 
+/** Startup and shutdown milestones on stdout, for slow launches on CI runners. */
+const trace = process.env['SKARO_TRACE']
+  ? (step: string) => console.log(`[trace ${process.uptime().toFixed(2)}s] ${step}`)
+  : () => {};
+trace(`main loaded, pid ${process.pid}`);
+
 // Tests run against their own data dir.
 if (process.env['SKARO_USER_DATA']) {
   app.setPath('userData', process.env['SKARO_USER_DATA']);
@@ -91,10 +97,17 @@ function createMainWindow(): void {
   });
 
   const current = win;
+  trace('window created');
   current.once('ready-to-show', () => {
+    trace('window ready to show');
     if (bounds.maximized) current.maximize();
     current.show();
   });
+  current.webContents.once('did-finish-load', () => trace('renderer loaded'));
+  current.webContents.on('render-process-gone', (_e, details) =>
+    trace(`renderer gone: ${details.reason}`),
+  );
+  current.on('unresponsive', () => trace('window unresponsive'));
 
   const saveBounds = () => {
     if (current.isDestroyed() || current.isMinimized()) return;
@@ -126,12 +139,19 @@ function focusWindow(): void {
   win.focus();
 }
 
-if (!app.requestSingleInstanceLock()) {
+const locked = app.requestSingleInstanceLock();
+trace(`single instance lock: ${locked}`);
+if (!locked) {
   app.quit();
 } else {
   app.on('second-instance', focusWindow);
+  app.on('will-finish-launching', () => trace('will finish launching'));
+  app.on('child-process-gone', (_e, details) =>
+    trace(`child process gone: ${details.type} ${details.reason}`),
+  );
 
   void app.whenReady().then(async () => {
+    trace('app ready');
     const dataDir = app.getPath('userData');
     const appState = new AppState(join(dataDir, 'skaro.db'));
     state = appState;
@@ -156,6 +176,7 @@ if (!app.requestSingleInstanceLock()) {
       ],
     });
     await mcp.listen();
+    trace('mcp server listening');
     const runs: TaskRuns = new TaskRuns(
       {
         db,
@@ -308,9 +329,11 @@ if (!app.requestSingleInstanceLock()) {
     app.on('before-quit', (event) => {
       if (quitting) return;
       quitting = true;
+      trace('before quit');
       event.preventDefault();
       // Agent processes and the MCP server stop before the app does.
       void Promise.allSettled([runs.close(), mcp.close()]).then(() => {
+        trace('runs and mcp server closed');
         projects.close();
         app.quit();
       });
@@ -321,5 +344,9 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform !== 'darwin') app.quit();
   });
 
-  app.on('will-quit', () => state?.close());
+  app.on('will-quit', () => {
+    trace('will quit');
+    state?.close();
+  });
+  app.on('quit', (_e, code) => trace(`quit, exit code ${code}`));
 }
