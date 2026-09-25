@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d505-48d8-7053-a3d8-c4498d4e7e11",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 33064,
+        "outputTokens": 98
+      }
     }
   ],
   "items": [
@@ -24,7 +28,7 @@
       "id": "exec-08d0e40c-a931-4262-b9e8-deac5f9cb4c5",
       "turnId": "01a0d505-48d8-7053-a3d8-c4498d4e7e11",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'node test.js'",
+      "command": "node test.js",
       "output": "node:internal/modules/run_main:107\r\n    triggerUncaughtException(\r\n    ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\r\n\r\n-1 !== 5\r\n\r\n    at file:///<workspace>/test.js:5:8\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:377:25)\r\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:689:26)\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: -1,\r\n  expected: 5,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.9.0\r\n",
       "outputLive": true,
       "exitCode": 1,

@@ -579,7 +579,7 @@ export class CodexProjector {
         }
         return {
           kind: 'command',
-          command: str(item['command']) ?? '',
+          command: displayCommand(str(item['command']) ?? '', actions),
           output: str(item['aggregatedOutput']) ?? '',
           outputLive: true,
           exitCode: num(item['exitCode']),
@@ -875,4 +875,24 @@ function noticeCode(error: Obj | undefined): Extract<ItemBody, { kind: 'notice' 
     default:
       return 'other';
   }
+}
+
+const SHELL_WRAPPER =
+  /^\s*"?[^"\s]*?(?:pwsh|powershell|bash|zsh|sh|cmd)(?:\.exe)?"?\s+(?:-NoProfile\s+)?(?:-Command|-lc|-c|\/c)\s+([\s\S]+)$/i;
+
+/**
+ * The command as the agent wrote it. Codex runs it through a shell (`pwsh -Command "…"`,
+ * `bash -lc '…'`); the single parsed action or the unwrapped argument is what the user reads.
+ */
+export function displayCommand(command: string, actions: Obj[]): string {
+  const inner = actions.map((a) => str(a['command'])).filter((c): c is string => !!c);
+  if (inner.length === 1) return inner[0]!;
+  const wrapped = SHELL_WRAPPER.exec(command);
+  if (!wrapped) return command;
+  const arg = wrapped[1]!.trim();
+  const quote = arg[0];
+  if ((quote === '"' || quote === "'") && arg.length > 1 && arg.endsWith(quote)) {
+    return quote === '"' ? arg.slice(1, -1).replace(/\\"/g, '"') : arg.slice(1, -1);
+  }
+  return arg;
 }

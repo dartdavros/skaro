@@ -107,6 +107,12 @@ describe('merge checks', () => {
     expect((await service.checkMerge('main', 'skaro/T-001-a')).blockers).toEqual(['dirty_base']);
   });
 
+  it('ignores uncommitted .skaro changes in the main working copy', async () => {
+    await taskWithChange({ 'a.txt': 'a\n' });
+    await write(repo, '.skaro/tasks/T-001-a.md', '---\nid: T-001\nstatus: review\n---\n');
+    expect((await service.checkMerge('main', 'skaro/T-001-a')).blockers).toEqual([]);
+  });
+
   it('ignores untracked files in the main working copy', async () => {
     await taskWithChange({ 'a.txt': 'a\n' });
     await write(repo, 'notes.txt', 'scratch');
@@ -181,6 +187,50 @@ describe('merge', () => {
       .split('\n')
       .sort();
     expect(changed).toEqual(['.skaro/tasks/T-001-a.md', 'docs.md', 'src/math.js']);
+  });
+
+  it('keeps uncommitted .skaro edits of other tasks, after a merge and after a failed one', async () => {
+    await commit(repo, 'second task', {
+      '.skaro/tasks/T-002-b.md': '---\nid: T-002\nstatus: todo\n---\n',
+    });
+    const worktree = await taskWithChange({ 'a.txt': 'a\n' });
+    const other = '---\nid: T-002\nstatus: in_progress\n---\n';
+    await write(repo, '.skaro/tasks/T-002-b.md', other);
+
+    await expect(
+      service.merge({
+        base: 'main',
+        branch: 'skaro/T-001-a',
+        strategy: 'squash',
+        message: 'm',
+        beforeCommit: () => Promise.reject(new Error('task file write failed')),
+      }),
+    ).rejects.toThrow('task file write failed');
+    expect(await readFile(join(repo, '.skaro/tasks/T-002-b.md'), 'utf8')).toBe(other);
+
+    await commit(worktree, 'agent work 2', { 'c.txt': 'c\n' });
+    const { commit: sha } = await service.merge({
+      base: 'main',
+      branch: 'skaro/T-001-a',
+      strategy: 'squash',
+      message: 'T-001',
+    });
+    expect(await readFile(join(repo, '.skaro/tasks/T-002-b.md'), 'utf8')).toBe(other);
+    const changed = (await git(repo, ['show', '--name-only', '--format=', sha])).stdout
+      .trim()
+      .split('\n')
+      .sort();
+    expect(changed).toEqual(['a.txt', 'c.txt']);
+  });
+
+  it('commits everything left in a worktree', async () => {
+    const worktree = await taskWithChange({ 'a.txt': 'a\n' });
+    expect(await service.commitAll(worktree, 'T-001: rest')).toBe(false);
+    await write(worktree, 'new.txt', 'untracked\n');
+    await write(worktree, 'a.txt', 'changed\n');
+    expect(await service.commitAll(worktree, 'T-001: rest')).toBe(true);
+    expect(await log(worktree)).toEqual(['T-001: rest', 'agent work', 'init']);
+    expect((await git(worktree, ['status', '--porcelain'])).stdout.trim()).toBe('');
   });
 
   it('creates a merge commit with the merge strategy', async () => {

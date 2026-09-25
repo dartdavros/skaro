@@ -2,15 +2,27 @@
   "turns": [
     {
       "id": "01a0d50f-dff8-7d42-9f59-de0a481a852f",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 33348,
+        "outputTokens": 121
+      }
     },
     {
       "id": "01a0d510-15ee-7760-ac8c-1909755aa59c",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 33348,
+        "outputTokens": 121
+      }
     },
     {
       "id": "01a0d510-2ad9-7a92-923e-8470c5268771",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 51899,
+        "outputTokens": 132
+      }
     }
   ],
   "items": [

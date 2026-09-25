@@ -16,6 +16,48 @@ export interface RawLine {
 }
 
 /**
+ * Skaro's own lines in a run log (`dir: 'meta'`): a new agent process starts (after a restart the
+ * adapter begins with a fresh projector), or an event Skaro itself adds to the feed (merge card,
+ * restored session).
+ */
+export type RunLogMeta =
+  | { skaro: 'segment'; agent: string; adapterVersion: string }
+  | { skaro: 'event'; event: TimelineEvent };
+
+export function isRunLogMeta(line: unknown): line is RunLogMeta {
+  return typeof line === 'object' && line !== null && 'skaro' in line;
+}
+
+/**
+ * Rebuilds the events of an app run log: `ts` is milliseconds since `startedAt`, every segment
+ * gets a new projector, Skaro events go in where they were written.
+ */
+export function replayRunLog(
+  lines: Iterable<RawLine>,
+  startedAt: number,
+  createProjector: (ctx: ProjectionContext, emit: Emit) => Projector,
+  attachImage: ProjectionContext['attachImage'],
+): TimelineEvent[] {
+  const events: TimelineEvent[] = [];
+  let now = startedAt;
+  const ctx: ProjectionContext = { now: () => now, attachImage };
+  const emit: Emit = (event) => events.push(event);
+  let projector: Projector | undefined;
+  for (const raw of lines) {
+    now = startedAt + raw.ts;
+    if (raw.dir === 'meta' && isRunLogMeta(raw.line)) {
+      if (raw.line.skaro === 'segment') projector = createProjector(ctx, emit);
+      else events.push(raw.line.event);
+      continue;
+    }
+    projector ??= createProjector(ctx, emit);
+    if (raw.dir === 'in') projector.input(raw.line);
+    else if (raw.dir === 'out') projector.output(raw.line);
+  }
+  return events;
+}
+
+/**
  * Rebuilds the canonical timeline from a raw log (principle P2). Image ids come from `hashImage`
  * so replays match what the recorder stored in attachments/.
  */

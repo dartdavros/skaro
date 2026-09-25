@@ -2,11 +2,19 @@
   "turns": [
     {
       "id": "01a0d510-3a24-7391-ada0-c05ff95feea4",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 67638,
+        "outputTokens": 256
+      }
     },
     {
       "id": "01a0d510-a001-7910-b26a-a969e5e8f918",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 87879,
+        "outputTokens": 267
+      }
     }
   ],
   "items": [
@@ -56,7 +64,7 @@
       "id": "exec-fe294826-1691-43e8-827d-b71e66f9fdef",
       "turnId": "01a0d510-3a24-7391-ada0-c05ff95feea4",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'rg --files -g diagram.png'",
+      "command": "rg --files -g diagram.png",
       "output": "ResourceUnavailable: \r\nLine |\r\n   2 |  rg --files -g diagram.png\r\n     |  ~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Program 'rg.exe' failed to run: An error occurred trying to start process '<home>\\MyProjects\\Skaro\\skaro\\node_modules\\.pnpm\\@<email>\\node_modules\\@openai\\codex\\vendor\\x86_64-pc-windows-msvc\\codex-path\\rg.exe' with working directory '<workspace>'. Отказано в доступе.At line:2 char:1\r\n+ rg --files -g diagram.png\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~.\r\n",
       "outputLive": true,
       "exitCode": 1,
@@ -74,7 +82,7 @@
       "id": "exec-a0b63e1e-6644-4992-9ac2-bc863e52a9e4",
       "turnId": "01a0d510-3a24-7391-ada0-c05ff95feea4",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'Get-ChildItem -Path . -Filter diagram.png -Recurse -File | Select-Object -ExpandProperty FullName'",
+      "command": "Get-ChildItem -Path . -Filter diagram.png -Recurse -File | Select-Object -ExpandProperty FullName",
       "output": "<workspace>\\diagram.png\r\n",
       "outputLive": true,
       "exitCode": 0,

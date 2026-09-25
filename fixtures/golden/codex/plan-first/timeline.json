@@ -2,11 +2,19 @@
   "turns": [
     {
       "id": "01a0d512-ebbe-7e92-a76c-0ccab706ff18",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 74752,
+        "outputTokens": 453
+      }
     },
     {
       "id": "01a0d513-6727-7e11-9134-2bbef345a02d",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 165620,
+        "outputTokens": 849
+      }
     }
   ],
   "items": [
@@ -56,7 +64,7 @@
       "id": "exec-01e9dff9-9595-4019-b4e4-4e27bfb32056",
       "turnId": "01a0d512-ebbe-7e92-a76c-0ccab706ff18",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command \"rg --files -g 'AGENTS.md' -g 'src/math.js' -g '*test*' -g 'package.json'\"",
+      "command": "rg --files -g 'AGENTS.md' -g 'src/math.js' -g '*test*' -g 'package.json'",
       "output": "ResourceUnavailable: \r\nLine |\r\n   2 |  rg --files -g 'AGENTS.md' -g 'src/math.js' -g '*test*' -g 'package.js …\r\n     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Program 'rg.exe' failed to run: An error occurred trying to start process '<home>\\MyProjects\\Skaro\\skaro\\node_modules\\.pnpm\\@<email>\\node_modules\\@openai\\codex\\vendor\\x86_64-pc-windows-msvc\\codex-path\\rg.exe' with working directory '<workspace>'. Отказано в доступе.At line:2 char:1\r\n+ rg --files -g 'AGENTS.md' -g 'src/math.js' -g '*test*' -g 'package.js …\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.\r\n",
       "outputLive": true,
       "exitCode": 1,
@@ -87,7 +95,7 @@
       "id": "exec-7ee93c45-be3a-47e8-aefb-b9b945f61e4a",
       "turnId": "01a0d512-ebbe-7e92-a76c-0ccab706ff18",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'Get-ChildItem -Recurse -File | Where-Object { $_.Name -eq '\"'AGENTS.md' -or \"'$_.Name -eq '\"'math.js' -or \"'$_.Name -eq '\"'package.json' -or \"'$_.Name -match '\"'test' } | Select-Object -ExpandProperty FullName\"",
+      "command": "Get-ChildItem -Recurse -File | Where-Object { $_.Name -eq 'AGENTS.md' -or $_.Name -eq 'math.js' -or $_.Name -eq 'package.json' -or $_.Name -match 'test' } | Select-Object -ExpandProperty FullName",
       "output": "<workspace>\\package.json\r\n<workspace>\\test.js\r\n<workspace>\\src\\math.js\r\n",
       "outputLive": true,
       "exitCode": 0,
@@ -105,7 +113,7 @@
       "id": "exec-ad1810b0-14a4-4e16-8f81-8d6883d110be",
       "turnId": "01a0d512-ebbe-7e92-a76c-0ccab706ff18",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'Get-Content src/math.js, test.js, package.json; git status --short'",
+      "command": "Get-Content src/math.js, test.js, package.json; git status --short",
       "output": "export function add(a, b) {\r\n  return a - b;\r\n}\r\n\r\nexport function mul(a, b) {\r\n  return a * b;\r\n}\r\nimport assert from 'node:assert/strict';\r\nimport { add, mul } from './src/math.js';\r\n\r\nassert.equal(mul(2, 3), 6);\r\nassert.equal(add(2, 3), 5);\r\nconsole.log('all tests passed');\r\n{\r\n  \"name\": \"calc\",\r\n  \"type\": \"module\",\r\n  \"scripts\": {\r\n    \"test\": \"node test.js\"\r\n  }\r\n}\r\nwarning: unable to access '<home>/.config/git/ignore': Permission denied\nwarning: unable to access '<home>/.config/git/ignore': Permission denied\n",
       "outputLive": true,
       "exitCode": 0,
@@ -202,7 +210,7 @@
       "id": "exec-08cc706f-30ee-4cd6-9358-e9a4114b9e76",
       "turnId": "01a0d513-6727-7e11-9134-2bbef345a02d",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'npm test'",
+      "command": "npm test",
       "output": "npm: \r\nLine |\r\n   2 |  npm test\r\n     |  ~~~\r\n     | The term 'npm' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\r\n",
       "outputLive": true,
       "exitCode": 1,
@@ -233,7 +241,7 @@
       "id": "exec-34bfe57b-3805-4506-85c5-3cf3fad9a44a",
       "turnId": "01a0d513-6727-7e11-9134-2bbef345a02d",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'Get-Command node,docker -ErrorAction SilentlyContinue | Select-Object Name,Source; Get-ChildItem -Name; git diff -- src/math.js'",
+      "command": "Get-Command node,docker -ErrorAction SilentlyContinue | Select-Object Name,Source; Get-ChildItem -Name; git diff -- src/math.js",
       "output": "\r\nwarning: in the working copy of 'src/math.js', LF will be replaced by CRLF the next time Git touches it\ndiff --git a/src/math.js b/src/math.js\nindex 1052289..4e6419d 100644\n--- a/src/math.js\n+++ b/src/math.js\n@@ -1,5 +1,5 @@\n export function add(a, b) {\n-  return a - b;\n+  return a + b;\n }\n \n export function mul(a, b) {\nName       Source\r\n----       ------\r\ndocker.exe C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\r\nsrc\r\ndiagram.png\r\npackage.json\r\nREADME.md\r\ntest.js\r\n\r\n",
       "outputLive": true,
       "exitCode": 0,

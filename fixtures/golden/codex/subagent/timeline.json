@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d50e-e5d1-7c30-a8cf-db1fb561f21d",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 49417,
+        "outputTokens": 149
+      }
     }
   ],
   "items": [
@@ -53,7 +57,7 @@
       "turnId": "01a0d50e-e5d1-7c30-a8cf-db1fb561f21d",
       "parentId": "agent-01a0d50f-007e-7881-9bf0-911ddd7e2b84",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'rg --files src'",
+      "command": "rg --files src",
       "output": "src\\math.js\n",
       "outputLive": true,
       "exitCode": 0,
@@ -88,7 +92,7 @@
       "turnId": "01a0d50e-e5d1-7c30-a8cf-db1fb561f21d",
       "parentId": "agent-01a0d50f-007e-7881-9bf0-911ddd7e2b84",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command '$i=0; Get-Content src/math.js | ForEach-Object { $i++; '\"'{0}: {1}' -f \"'$i, $_ }'",
+      "command": "$i=0; Get-Content src/math.js | ForEach-Object { $i++; '{0}: {1}' -f $i, $_ }",
       "output": "1: export function add(a, b) {\r\n2:   return a - b;\r\n3: }\r\n4: \r\n5: export function mul(a, b) {\r\n6:   return a * b;\r\n7: }\r\n",
       "outputLive": true,
       "exitCode": 0,

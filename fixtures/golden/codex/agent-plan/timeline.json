@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d506-b3b1-7603-b50b-4812ce3b3331",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 188552,
+        "outputTokens": 808
+      }
     }
   ],
   "items": [
@@ -65,7 +69,7 @@
       "id": "exec-4ef05b62-b10a-4435-840f-8d7f4cb6cb63",
       "turnId": "01a0d506-b3b1-7603-b50b-4812ce3b3331",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'rg --files -g AGENTS.md -g src/math.js -g test.js -g README.md -g package.json'",
+      "command": "rg --files -g AGENTS.md -g src/math.js -g test.js -g README.md -g package.json",
       "output": "test.js\npackage.json\nREADME.md\nsrc\\math.js\n",
       "outputLive": true,
       "exitCode": 0,
@@ -98,7 +102,7 @@
       "id": "exec-c6bcd61b-72d7-4fa0-bca6-85fee3c165cb",
       "turnId": "01a0d506-b3b1-7603-b50b-4812ce3b3331",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'git status --short'",
+      "command": "git status --short",
       "output": "",
       "outputLive": true,
       "exitCode": 0,
@@ -298,7 +302,7 @@
       "id": "exec-238cb72d-56cf-4f9e-a154-c96f1c2f96cd",
       "turnId": "01a0d506-b3b1-7603-b50b-4812ce3b3331",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'git diff --check'",
+      "command": "git diff --check",
       "output": "warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'src/math.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test.js', LF will be replaced by CRLF the next time Git touches it\n",
       "outputLive": true,
       "exitCode": 0,
@@ -316,7 +320,7 @@
       "id": "exec-49d09ee5-4718-442a-9346-d14490a1a9d9",
       "turnId": "01a0d506-b3b1-7603-b50b-4812ce3b3331",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'git diff -- src/math.js test.js README.md'",
+      "command": "git diff -- src/math.js test.js README.md",
       "output": "warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'src/math.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test.js', LF will be replaced by CRLF the next time Git touches it\ndiff --git a/README.md b/README.md\nindex 2b58a61..d893319 100644\n--- a/README.md\n+++ b/README.md\n@@ -1,3 +1,12 @@\n # calc\n \n Tiny calculator library used by the Skaro agent probe.\n+\n+## Usage\n+\n+```js\n+import { add, mul } from './src/math.js';\n+\n+add(2, 3); // 5\n+mul(2, 3); // 6\n+```\ndiff --git a/src/math.js b/src/math.js\nindex 1052289..4e6419d 100644\n--- a/src/math.js\n+++ b/src/math.js\n@@ -1,5 +1,5 @@\n export function add(a, b) {\n-  return a - b;\n+  return a + b;\n }\n \n export function mul(a, b) {\ndiff --git a/test.js b/test.js\nindex 42d22cc..17f390a 100644\n--- a/test.js\n+++ b/test.js\n@@ -2,5 +2,6 @@ import assert from 'node:assert/strict';\n import { add, mul } from './src/math.js';\n \n assert.equal(mul(2, 3), 6);\n+assert.equal(mul(0, 5), 0);\n assert.equal(add(2, 3), 5);\n console.log('all tests passed');\n",
       "outputLive": true,
       "exitCode": 0,
@@ -349,7 +353,7 @@
       "id": "exec-240eebb0-8a26-45a3-94d8-c0268cd130d6",
       "turnId": "01a0d506-b3b1-7603-b50b-4812ce3b3331",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'node test.js'",
+      "command": "node test.js",
       "output": "all tests passed\n",
       "outputLive": true,
       "exitCode": 0,

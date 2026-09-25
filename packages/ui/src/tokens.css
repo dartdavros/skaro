@@ -1,0 +1,189 @@
+/* Skaro design tokens (docs/mockups/UI Inventory: 01 · Цвета, 02 · Типографика). */
+@import '@fontsource-variable/nunito-sans';
+@import '@fontsource-variable/jetbrains-mono';
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --sk-topbar: #0f0f0f; /* top bar, side panel */
+  --sk-bg: #121212; /* main background */
+  --sk-surface: #1a1a1a; /* cards */
+  --sk-surface-hover: #222222;
+  --sk-surface-2: #242424; /* secondary buttons, open menus */
+  --sk-surface-2-hover: #2d2d2d;
+  --sk-modal: #1a1a1a;
+  --sk-composer: #2b2b2b; /* chat input */
+  --sk-seg-track: #060606; /* segmented switch track */
+  --sk-field: #0f0f0f; /* fields and selects, darker than any surface */
+  --sk-field-hover: #0b0b0b;
+  --sk-field-ring: #2a2a2a;
+  --sk-field-ring-hover: #363636;
+  --sk-line: #1f1f1f;
+  --sk-line-strong: #2b2b2b;
+  --sk-menu: #242424;
+  --sk-menu-hover: #2d2d2d;
+  --sk-menu-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
+
+  /* Accents */
+  --sk-accent: #2a52be; /* clickable and "needs attention" only */
+  --sk-accent-hover: #3461d6;
+  --sk-user-message: #1c2a4d;
+  --sk-link: #7d9ce8;
+  --sk-link-hover: #9bb4ee;
+  --sk-code: #e8875b; /* non-clickable highlights: code, commands */
+  --sk-error: #ef6a63;
+  --sk-warn: #e0a33c;
+  --sk-diff-add: #4caf50;
+
+  /* Text: pure white is never used, #ededed at most */
+  --sk-text-bright: #ededed;
+  --sk-text: #d5d5d5;
+  --sk-text-body: #b1b1b1;
+  --sk-text-secondary: #a6a6a6;
+  --sk-text-muted: #7d7d7d;
+  --sk-text-label: #6f6f6f;
+  --sk-icon: #989898;
+
+  /* Type */
+  --sk-font:
+    'Nunito Sans Variable', 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --sk-mono: 'JetBrains Mono Variable', 'JetBrains Mono', Consolas, monospace;
+
+  --sk-radius-sm: 6px;
+  --sk-radius: 8px;
+  --sk-radius-card: 10px;
+  --sk-radius-modal: 14px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--sk-bg);
+  color: var(--sk-text-body);
+  font-family: var(--sk-font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  /* Code shows what is typed: no "===" or "->" ligatures of the mono font. */
+  font-variant-ligatures: none;
+}
+
+input,
+button,
+textarea,
+select {
+  font-family: inherit;
+}
+
+a {
+  color: var(--sk-link);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--sk-link-hover);
+  text-decoration: underline;
+}
+
+code {
+  font-family: var(--sk-mono);
+  color: var(--sk-code);
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #282828;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b3b3b;
+}
+
+@keyframes skPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes skPulseRing {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+@keyframes skIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Type scale (02 · Типографика) */
+.sk-title {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 700;
+  color: #d8d8d8;
+  letter-spacing: -0.01em;
+}
+
+.sk-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--sk-text);
+}
+
+.sk-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--sk-text-body);
+}
+
+.sk-secondary {
+  font-size: 12px;
+  color: var(--sk-text-muted);
+}
+
+.sk-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sk-text-label);
+}
+
+.sk-mono {
+  font-family: var(--sk-mono);
+  font-size: 12px;
+}

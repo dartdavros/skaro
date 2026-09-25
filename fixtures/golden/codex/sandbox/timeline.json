@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d511-cf6b-7420-8a7a-55c19e3cb3ee",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 38524,
+        "outputTokens": 159
+      }
     }
   ],
   "items": [
@@ -52,7 +56,7 @@
       "id": "exec-3912b71f-4ab6-42bd-a42f-3ed0048a3e88",
       "turnId": "01a0d511-cf6b-7420-8a7a-55c19e3cb3ee",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'node --version'",
+      "command": "node --version",
       "output": "node: \r\nLine |\r\n   2 |  node --version\r\n     |  ~~~~\r\n     | The term 'node' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\r\n",
       "outputLive": true,
       "exitCode": 1,
@@ -70,7 +74,7 @@
       "id": "exec-6be21f09-6d4f-4072-8f01-be66f699fe0b",
       "turnId": "01a0d511-cf6b-7420-8a7a-55c19e3cb3ee",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command \"Set-Content -LiteralPath ..\\\\skaro-probe-outside.txt -Value 'probe'\"",
+      "command": "Set-Content -LiteralPath ..\\skaro-probe-outside.txt -Value 'probe'",
       "output": "",
       "outputLive": true,
       "exitCode": 0,

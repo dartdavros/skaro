@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d50e-ae1b-74a3-9c49-0ffa3177c3b2",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 36891,
+        "outputTokens": 189
+      }
     }
   ],
   "items": [
@@ -39,7 +43,7 @@
       "id": "exec-f9210eb9-2d40-4591-a2c4-40ac156f6dae",
       "turnId": "01a0d50e-ae1b-74a3-9c49-0ffa3177c3b2",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command \"Set-Content -LiteralPath 'hello.txt' -Value 'hi' -NoNewline; node --version\"",
+      "command": "Set-Content -LiteralPath 'hello.txt' -Value 'hi' -NoNewline; node --version",
       "output": "",
       "outputLive": true,
       "status": "declined",

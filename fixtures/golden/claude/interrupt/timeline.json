@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "turn-1",
-      "outcome": "interrupted"
+      "outcome": "interrupted",
+      "usage": {
+        "inputTokens": 30370,
+        "outputTokens": 124
+      }
     }
   ],
   "items": [

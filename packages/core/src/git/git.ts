@@ -2,6 +2,8 @@
 // per task, merge checks, squash or merge, revert. Uses the system git (2.38+ for merge-tree).
 
 import { execFile } from 'node:child_process';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { SKARO_DIR } from '../artifacts/store.ts';
 
 export interface GitResult {
@@ -149,6 +151,19 @@ export class GitService {
     }
   }
 
+  /**
+   * Commits everything left in a task worktree, untracked files included, so the branch holds
+   * all of the agent's work before a merge. Returns false when there was nothing to commit.
+   */
+  async commitAll(worktree: string, message: string): Promise<boolean> {
+    await git(worktree, ['add', '-A']);
+    if ((await git(worktree, ['diff', '--cached', '--quiet'], { allowFail: true })).code === 0) {
+      return false;
+    }
+    await git(worktree, ['commit', '--no-verify', '-q', '-m', message]);
+    return true;
+  }
+
   // ── merge ────────────────────────────────────────────────────────────────
 
   async diffStats(base: string, branch: string): Promise<DiffStats> {
@@ -169,7 +184,18 @@ export class GitService {
   /** Checks shown in the merge confirmation card (docs/architecture.md, section 8). */
   async checkMerge(base: string, branch: string): Promise<MergeCheck> {
     const blockers: MergeBlocker[] = [];
-    if (!(await this.isClean())) blockers.push('dirty_base');
+    // Skaro keeps task statuses in .skaro/ uncommitted until the merge; they do not block it.
+    const dirty = (
+      await git(this.repo, [
+        'status',
+        '--porcelain',
+        '--untracked-files=no',
+        '--',
+        '.',
+        `:(exclude)${SKARO_DIR}`,
+      ])
+    ).stdout.trim();
+    if (dirty) blockers.push('dirty_base');
     if ((await this.currentBranch()) !== base) blockers.push('not_on_base');
 
     const baseAhead = Number(
@@ -211,6 +237,7 @@ export class GitService {
     if (check.blockers.length) throw new MergeBlockedError(check);
 
     const before = await this.head();
+    const pending = await this.pendingSkaroFiles();
     try {
       if (options.strategy === 'squash') {
         await git(this.repo, ['merge', '--squash', '--no-commit', options.branch]);
@@ -224,7 +251,7 @@ export class GitService {
           '--staged',
           '--worktree',
           '--',
-          SKARO_DIR,
+          ...check.skaroChanges,
         ]);
       }
       const extra = (await options.beforeCommit?.()) ?? [];
@@ -233,8 +260,24 @@ export class GitService {
       return { commit: await this.head(), check };
     } catch (error) {
       await this.restore(before);
+      // The reset also dropped Skaro's uncommitted .skaro/ edits: put them back.
+      for (const [path, content] of pending) await writeFile(join(this.repo, path), content);
       throw error;
     }
+  }
+
+  /** Uncommitted edits of tracked .skaro/ files in the main working copy, by path. */
+  private async pendingSkaroFiles(): Promise<Map<string, Buffer>> {
+    const out = (await git(this.repo, ['diff', '--name-only', 'HEAD', '--', SKARO_DIR])).stdout;
+    const files = new Map<string, Buffer>();
+    for (const path of out.split('\n').filter(Boolean)) {
+      try {
+        files.set(path, await readFile(join(this.repo, path)));
+      } catch {
+        // deleted locally: nothing to put back
+      }
+    }
+    return files;
   }
 
   /** Brings the task branch up to date with the base ("Обновить ветку задачи"). */

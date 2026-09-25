@@ -126,7 +126,8 @@ export class ClaudeSession implements AgentSession {
       allowDangerouslySkipPermissions: true,
       includePartialMessages: true,
       enableFileCheckpointing: true,
-      allowedTools: PLAN_TOOLS,
+      // Skaro's own tools confirm through their cards (merge_task), never through a permission prompt.
+      allowedTools: [...PLAN_TOOLS, ...(o.mcpServers?.['skaro'] ? ['mcp__skaro'] : [])],
       ...(o.readOnly ? { disallowedTools: EDIT_TOOLS } : {}),
       canUseTool: this.canUseTool,
       onElicitation: this.onElicitation,

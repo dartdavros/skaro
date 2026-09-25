@@ -2,12 +2,16 @@
   "name": "@skaro/mcp-server",
   "version": "0.0.0",
   "private": true,
-  "description": "Skaro MCP server: document, ADR, milestone and task proposals.",
+  "description": "Skaro MCP server: tools agents use to work with the project.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.30.1",
+    "zod": "4.6.5"
   }
 }

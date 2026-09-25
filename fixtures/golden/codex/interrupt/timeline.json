@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d50f-56ce-74a3-815b-e68b0f85ebb5",
-      "outcome": "interrupted"
+      "outcome": "interrupted",
+      "usage": {
+        "inputTokens": 16356,
+        "outputTokens": 97
+      }
     }
   ],
   "items": [
@@ -39,7 +43,7 @@
       "id": "exec-bc5d2e78-9e1f-4084-9761-04ac517c1392",
       "turnId": "01a0d50f-56ce-74a3-815b-e68b0f85ebb5",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'node -e \"setTimeout(() => {}, 120000)\"'",
+      "command": "node -e \"setTimeout(() => {}, 120000)\"",
       "output": "",
       "outputLive": true,
       "status": "interrupted",

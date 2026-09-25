@@ -6,6 +6,10 @@
       "error": {
         "category": "other",
         "message": "Sandbox required but unavailable: sandbox is enabled but the Windows sandbox is not active on this session (feature gate off). Set sandbox.failIfUnavailable=false to allow unsandboxed execution."
+      },
+      "usage": {
+        "inputTokens": 0,
+        "outputTokens": 0
       }
     }
   ],

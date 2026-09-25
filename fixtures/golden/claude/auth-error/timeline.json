@@ -6,6 +6,10 @@
       "error": {
         "category": "auth",
         "message": "Not logged in · Please run /login"
+      },
+      "usage": {
+        "inputTokens": 0,
+        "outputTokens": 0
       }
     }
   ],

@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d505-7a22-7191-bfbf-49189fbf4cb9",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 32883,
+        "outputTokens": 101
+      }
     }
   ],
   "items": [
@@ -39,7 +43,7 @@
       "id": "exec-dc8c97f8-73fb-4dad-89d4-e950b9965c91",
       "turnId": "01a0d505-7a22-7191-bfbf-49189fbf4cb9",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command \"node -e \\\"setTimeout(() => console.log('tick done'), 8000)\\\"\"",
+      "command": "node -e \"setTimeout(() => console.log('tick done'), 8000)\"",
       "output": "tick done\n",
       "outputLive": true,
       "exitCode": 0,

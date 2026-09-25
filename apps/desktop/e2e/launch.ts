@@ -1,4 +1,6 @@
 import { _electron as electron, type ElectronApplication } from '@playwright/test';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const appDir = join(__dirname, '..');
@@ -18,13 +20,19 @@ function packagedExecutable(): string {
   }
 }
 
+/** A fresh app data dir for one test. */
+export function tempUserData(): string {
+  return mkdtempSync(join(tmpdir(), 'skaro-e2e-'));
+}
+
 /**
- * Launches the built app from `out/` or, with SKARO_E2E_PACKAGED=1,
- * the packaged app from `release/`.
+ * Launches the built app from `out/` or, with SKARO_E2E_PACKAGED=1, the packaged app from
+ * `release/`. Each test gets its own data dir.
  */
-export function launchApp(): Promise<ElectronApplication> {
+export function launchApp(userData: string = tempUserData()): Promise<ElectronApplication> {
+  const env = { ...process.env, SKARO_USER_DATA: userData } as Record<string, string>;
   if (process.env['SKARO_E2E_PACKAGED'] === '1') {
-    return electron.launch({ executablePath: packagedExecutable() });
+    return electron.launch({ executablePath: packagedExecutable(), env });
   }
-  return electron.launch({ args: [appDir] });
+  return electron.launch({ args: [appDir], env });
 }

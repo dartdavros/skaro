@@ -34,7 +34,7 @@ export default ts.config(
     },
   },
   {
-    files: ['apps/desktop/src/renderer/**'],
+    files: ['apps/desktop/src/renderer/**', 'packages/ui/src/**'],
     languageOptions: {
       globals: { ...globals.browser },
     },

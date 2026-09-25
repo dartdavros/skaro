@@ -117,7 +117,9 @@ export type ItemBody =
       text: string;
       retry?: { attempt: number; max: number; inMs: number };
     }
-  | { kind: 'unknown'; raw: unknown };
+  | { kind: 'unknown'; raw: unknown }
+  /** The user's answer to an interaction, added by Skaro (not by adapters) so the feed keeps it. */
+  | { kind: 'decision'; interaction: Interaction; answer: InteractionAnswer };
 
 export type NoticeCode =
   | 'auth'
@@ -130,6 +132,8 @@ export type NoticeCode =
   | 'mcp_failed'
   | 'session_restored'
   | 'session_lost'
+  /** Skaro merged the task branch (text: target branch, native.ref: commit). */
+  | 'merged'
   | 'other';
 
 export type Item = ItemBase & ItemBody;

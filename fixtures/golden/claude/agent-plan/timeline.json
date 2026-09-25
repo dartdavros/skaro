@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "turn-1",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 247999,
+        "outputTokens": 1448
+      }
     }
   ],
   "items": [
@@ -34,22 +38,6 @@
       },
       "turnId": "turn-1",
       "startedAt": 2623
-    },
-    {
-      "id": "toolu_01BTz8EF33JaqCdatpenjqjK",
-      "kind": "tool",
-      "name": "ToolSearch",
-      "input": "{\"query\":\"select:TaskCreate,TaskUpdate\",\"max_results\":2}",
-      "status": "done",
-      "native": {
-        "agent": "claude",
-        "type": "tool_use.ToolSearch",
-        "ref": "toolu_01BTz8EF33JaqCdatpenjqjK"
-      },
-      "turnId": "turn-1",
-      "startedAt": 5769,
-      "endedAt": 5804,
-      "output": ""
     },
     {
       "id": "toolu_01M8hqQ2Mb7PvWcQn2717m17",

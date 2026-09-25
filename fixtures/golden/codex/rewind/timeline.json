@@ -2,11 +2,19 @@
   "turns": [
     {
       "id": "01a0d511-6163-7101-98bc-1f481edf820f",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 32819,
+        "outputTokens": 97
+      }
     },
     {
       "id": "01a0d511-a2d4-7bc2-b1d5-72483b3d0248",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 72022,
+        "outputTokens": 237
+      }
     }
   ],
   "items": [
@@ -28,7 +36,7 @@
       "id": "exec-b6d099cd-c25e-49e7-97f5-c6a0f26a73ba",
       "turnId": "01a0d511-6163-7101-98bc-1f481edf820f",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command \"Set-Content -LiteralPath 'notes.txt' -Value 'one' -NoNewline; Add-Content -LiteralPath 'notes.txt' -Value ''\"",
+      "command": "Set-Content -LiteralPath 'notes.txt' -Value 'one' -NoNewline; Add-Content -LiteralPath 'notes.txt' -Value ''",
       "output": "",
       "outputLive": true,
       "exitCode": 0,

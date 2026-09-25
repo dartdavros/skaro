@@ -1,4 +1,5 @@
-import type { SkaroApi } from '../../preload/api';
+/// <reference types="vite/client" />
+import type { SkaroApi } from '../../shared/ipc';
 
 declare global {
   interface Window {

@@ -14,6 +14,8 @@ export interface TurnState {
   id: string;
   outcome?: 'done' | 'interrupted' | 'failed';
   error?: AgentError;
+  /** Usage reported by the time the turn ended. */
+  usage?: { inputTokens: number; outputTokens: number };
 }
 
 export interface TimelineState {
@@ -52,6 +54,14 @@ export class Timeline {
     return timeline;
   }
 
+  /** Continues a timeline from a snapshot (the renderer gets one, then live events). */
+  static restore(state: TimelineState): Timeline {
+    const timeline = new Timeline();
+    Object.assign(timeline.state, state);
+    state.items.forEach((item, i) => timeline.index.set(item.id, i));
+    return timeline;
+  }
+
   apply(event: TimelineEvent): void {
     const s = this.state;
     switch (event.t) {
@@ -77,6 +87,10 @@ export class Timeline {
             outcome: event.outcome,
             ...(event.error ? { error: event.error } : {}),
           });
+        }
+        const done = s.turns.find((t) => t.id === event.turnId);
+        if (done && s.usage) {
+          done.usage = { inputTokens: s.usage.inputTokens, outputTokens: s.usage.outputTokens };
         }
         delete s.activity;
         // Questions and approvals do not outlive the turn that asked them.

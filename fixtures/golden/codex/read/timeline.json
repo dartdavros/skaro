@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d503-705c-79d2-ad1f-e7257e0a697c",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 51493,
+        "outputTokens": 448
+      }
     }
   ],
   "items": [
@@ -54,7 +58,7 @@
       "id": "exec-35c6a897-d53f-4d22-b519-e0358a65957b",
       "turnId": "01a0d503-705c-79d2-ad1f-e7257e0a697c",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command \"rg -n --hidden --glob '\"'!.git/**'\"' assert .\"",
+      "command": "rg -n --hidden --glob '!.git/**' assert .",
       "output": "ResourceUnavailable: \r\nLine |\r\n   2 |  rg -n --hidden --glob '!.git/**' assert .\r\n     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Program 'rg.exe' failed to run: An error occurred trying to start process '<home>\\MyProjects\\Skaro\\skaro\\node_modules\\.pnpm\\@<email>\\node_modules\\@openai\\codex\\vendor\\x86_64-pc-windows-msvc\\codex-path\\rg.exe' with working directory '<workspace>'. Отказано в доступе.At line:2 char:1\r\n+ rg -n --hidden --glob '!.git/**' assert .\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.\r\n",
       "outputLive": true,
       "exitCode": 1,
@@ -115,7 +119,7 @@
       "id": "exec-5a3cca16-8801-46de-bb95-c6a36a552bac",
       "turnId": "01a0d503-705c-79d2-ad1f-e7257e0a697c",
       "kind": "command",
-      "command": "\"<home>\\\\.dotnet\\\\tools\\\\pwsh.exe\" -Command 'Get-ChildItem -LiteralPath . -Recurse -Force -File | Where-Object { $_.FullName -notmatch '\"'[\\\\\\\\/]\\\\.git[\\\\\\\\/]' } | Select-String -Pattern 'assert' -CaseSensitive:\"'$false | ForEach-Object { '\"'{0}:{1}:{2}' -f \"'$_.Path,$_.LineNumber,$_.Line.Trim() }'",
+      "command": "Get-ChildItem -LiteralPath . -Recurse -Force -File | Where-Object { $_.FullName -notmatch '[\\\\/]\\.git[\\\\/]' } | Select-String -Pattern 'assert' -CaseSensitive:$false | ForEach-Object { '{0}:{1}:{2}' -f $_.Path,$_.LineNumber,$_.Line.Trim() }",
       "output": "<workspace>\\test.js:1:import assert from 'node:assert/strict';\r\n<workspace>\\test.js:4:assert.equal(mul(2, 3), 6);\r\n<workspace>\\test.js:5:assert.equal(add(2, 3), 5);\r\n",
       "outputLive": true,
       "exitCode": 0,

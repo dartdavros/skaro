@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "01a0d511-261e-7a72-8fc6-5ad5189529df",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 55060,
+        "outputTokens": 216
+      }
     }
   ],
   "items": [

@@ -4,5 +4,5 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["svelte", "vite/client"]
   },
-  "include": ["src/renderer/src", "src/preload/api.ts"]
+  "include": ["src/renderer/src", "src/shared"]
 }

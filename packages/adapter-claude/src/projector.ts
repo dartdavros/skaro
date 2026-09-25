@@ -530,6 +530,7 @@ export class ClaudeProjector {
       return;
     }
     if (name === 'AskUserQuestion') return; // shown as a question interaction
+    if (name === 'ToolSearch') return; // loads deferred tools: housekeeping, raw log only
     if (name === 'ExitPlanMode') {
       const plan = str(input['plan']);
       if (plan)

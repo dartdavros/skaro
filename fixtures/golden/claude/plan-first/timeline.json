@@ -2,7 +2,11 @@
   "turns": [
     {
       "id": "turn-1",
-      "outcome": "done"
+      "outcome": "done",
+      "usage": {
+        "inputTokens": 245530,
+        "outputTokens": 981
+      }
     }
   ],
   "items": [
@@ -70,22 +74,6 @@
       "turnId": "turn-1",
       "startedAt": 8186,
       "endedAt": 8333
-    },
-    {
-      "id": "toolu_01L4XNv657QJWMFGXjT3kKuf",
-      "kind": "tool",
-      "name": "ToolSearch",
-      "input": "{\"query\":\"select:ExitPlanMode\",\"max_results\":1}",
-      "status": "done",
-      "native": {
-        "agent": "claude",
-        "type": "tool_use.ToolSearch",
-        "ref": "toolu_01L4XNv657QJWMFGXjT3kKuf"
-      },
-      "turnId": "turn-1",
-      "startedAt": 8494,
-      "endedAt": 8517,
-      "output": ""
     },
     {
       "id": "toolu_013HKfqF6trDYdxJCie9vJMx",
