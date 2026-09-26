@@ -2,7 +2,7 @@
 
 import type { InteractionAnswer } from '@skaro/timeline';
 import { getContext, setContext } from 'svelte';
-import type { MergeAction, MessageInput } from '../../../shared/ipc';
+import type { MergeAction, MessageInput, ProposalAction } from '../../../shared/ipc';
 
 export interface FeedActions {
   /** Working folder of the agent: paths are shown relative to it. */
@@ -20,6 +20,10 @@ export interface FeedActions {
   rewind(itemId: string, resend?: MessageInput): Promise<void>;
   /** Starts the run again from where it stopped. */
   restart(): void;
+  /** Decides on a chat proposal card (project chat only). */
+  proposal?(itemId: string, action: ProposalAction): Promise<void>;
+  /** Opens a section of the project: the created milestone, the ADR. */
+  openSection?(section: 'plan' | 'docs' | 'tasks'): void;
 }
 
 const KEY = Symbol('feed');

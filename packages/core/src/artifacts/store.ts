@@ -21,6 +21,8 @@ import {
   type ProjectConfig,
   type Task,
   type TaskStatus,
+  type ConfigDefaults,
+  type InheritableSetting,
 } from './model.ts';
 import { slugify } from './slug.ts';
 
@@ -72,9 +74,12 @@ export class ArtifactStore {
   /** Content Skaro wrote last, per absolute path, so the watcher ignores our own writes. */
   private readonly ownWrites = new Map<string, string>();
 
-  constructor(projectRoot: string) {
+  private readonly defaults: () => ConfigDefaults;
+
+  constructor(projectRoot: string, defaults: () => ConfigDefaults = () => ({})) {
     this.root = projectRoot;
     this.dir = join(projectRoot, SKARO_DIR);
+    this.defaults = defaults;
   }
 
   // ── reading ──────────────────────────────────────────────────────────────
@@ -256,6 +261,14 @@ export class ArtifactStore {
     return (await this.findFile('adr', id, toAdr)).item;
   }
 
+  /** Replaces the text of an ADR; its frontmatter (status, date, links) stays. */
+  async writeAdr(id: string, body: string): Promise<Adr> {
+    const { file, path } = await this.findFile('adr', id, toAdr);
+    file.body = body;
+    await this.writeFile(path, serializeMarkdown(file));
+    return (await this.findFile('adr', id, toAdr)).item;
+  }
+
   /** Writes brief.md, architecture.md or docs/<name>.md, keeping existing frontmatter. */
   async writeDoc(path: string, body: string): Promise<Doc> {
     if (!/^(brief\.md|architecture\.md|docs\/[^/]+\.md)$/.test(path))
@@ -276,15 +289,35 @@ export class ArtifactStore {
     return doc;
   }
 
-  async writeConfig(config: ProjectConfig): Promise<void> {
+  /** Removes brief.md, architecture.md or docs/<name>.md (undoing a document Skaro created). */
+  async deleteDoc(path: string): Promise<void> {
+    if (!/^(brief\.md|architecture\.md|docs\/[^/]+\.md)$/.test(path))
+      throw new Error(`not a document path: ${path}`);
+    const abs = join(this.dir, path);
+    await rm(abs, { force: true });
+    this.ownWrites.delete(abs);
+  }
+
+  /** Writes config.yaml; `inherited` settings are left out, so the app-wide defaults apply. */
+  async writeConfig(config: ProjectConfig, inherited: InheritableSetting[] = []): Promise<void> {
+    const own = <T>(key: InheritableSetting, value: T): T | undefined =>
+      inherited.includes(key) ? undefined : value;
+    const merge = {
+      strategy: own('mergeStrategy', config.merge.strategy),
+      delete_branch: own('deleteBranch', config.merge.deleteBranch),
+    };
+    const autoAccept = own('autoAcceptDocs', config.chat.autoAcceptDocs);
     const yaml = stringifyYaml({
       default_agent: config.defaultAgent,
       default_model: config.defaultModel,
-      base_branch: config.baseBranch,
-      branch_template: config.branchTemplate,
-      isolation: config.isolation,
-      merge: { strategy: config.merge.strategy, delete_branch: config.merge.deleteBranch },
-      chat: { auto_accept_docs: config.chat.autoAcceptDocs },
+      default_effort: config.defaultEffort,
+      permission_mode: config.permissionMode,
+      base_branch: own('baseBranch', config.baseBranch),
+      branch_template: own('branchTemplate', config.branchTemplate),
+      isolation: own('isolation', config.isolation),
+      merge: merge.strategy === undefined && merge.delete_branch === undefined ? undefined : merge,
+      chat: autoAccept === undefined ? undefined : { auto_accept_docs: autoAccept },
+      agent_files: own('agentFiles', config.agentFiles),
       agent_instructions: config.agentInstructions,
     });
     await this.writeFile('config.yaml', yaml);
@@ -440,22 +473,33 @@ export class ArtifactStore {
     const merge = obj(raw['merge']);
     const chat = obj(raw['chat']);
     const strategy = str(merge['strategy']);
-    const isolation = str(raw['isolation']);
+    const isolation = str(raw['isolation']) ?? this.defaults().isolation;
+    const permission = str(raw['permission_mode']);
+    const app = this.defaults();
+    const bool = (value: unknown, fallback: boolean | undefined, base: boolean): boolean =>
+      typeof value === 'boolean' ? value : (fallback ?? base);
     return {
       defaultAgent: str(raw['default_agent']) ?? DEFAULT_CONFIG.defaultAgent,
       defaultModel: str(raw['default_model']),
-      baseBranch: str(raw['base_branch']) ?? DEFAULT_CONFIG.baseBranch,
-      branchTemplate: str(raw['branch_template']) ?? DEFAULT_CONFIG.branchTemplate,
+      defaultEffort: str(raw['default_effort']),
+      permissionMode: permission === 'ask' || permission === 'full' ? permission : 'auto',
+      baseBranch: str(raw['base_branch']) ?? app.baseBranch ?? DEFAULT_CONFIG.baseBranch,
+      branchTemplate:
+        str(raw['branch_template']) ?? app.branchTemplate ?? DEFAULT_CONFIG.branchTemplate,
       isolation: isolation === 'in-place' ? 'in-place' : 'worktree',
       merge: {
-        strategy: strategy === 'merge' ? 'merge' : 'squash',
-        deleteBranch: typeof merge['delete_branch'] === 'boolean' ? merge['delete_branch'] : true,
+        strategy:
+          strategy === 'merge' || strategy === 'rebase' || strategy === 'squash'
+            ? strategy
+            : (app.mergeStrategy ?? 'squash'),
+        deleteBranch: bool(merge['delete_branch'], app.deleteBranch, true),
       },
-      chat: {
-        autoAcceptDocs:
-          typeof chat['auto_accept_docs'] === 'boolean' ? chat['auto_accept_docs'] : true,
-      },
+      chat: { autoAcceptDocs: bool(chat['auto_accept_docs'], app.autoAcceptDocs, true) },
+      agentFiles: bool(raw['agent_files'], app.agentFiles, false),
       agentInstructions: str(raw['agent_instructions']),
+      ...(app.agentInstructions?.trim()
+        ? { globalInstructions: app.agentInstructions.trim() }
+        : {}),
     };
   }
 

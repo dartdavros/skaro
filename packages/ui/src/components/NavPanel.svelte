@@ -8,6 +8,8 @@
     tip?: string;
     count?: number;
     countTip?: string;
+    /** Tooltip of the collapsed rail item when the count is shown. */
+    railTip?: string;
     separated?: boolean;
   }
 </script>
@@ -83,7 +85,7 @@
         type="button"
         class="rail-item"
         class:active={item.id === active}
-        data-tip={item.count && item.countTip ? `${item.label} · ${item.countTip}` : item.label}
+        data-tip={item.count && item.railTip ? item.railTip : item.label}
         aria-label={item.label}
         onclick={() => onselect(item.id)}
       >
@@ -116,11 +118,11 @@
   .title {
     flex: 1;
     min-width: 0;
-    font-size: 11px;
+    font-size: var(--sk-fs-2);
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #5f5f5f;
+    color: var(--sk-text-26);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -142,14 +144,14 @@
   }
 
   .toggle:hover {
-    background: #1c1c1c;
+    background: var(--sk-fill-13);
     color: var(--sk-text-bright);
   }
 
   .sep {
     height: 1px;
     margin: 9px 10px;
-    background: #222222;
+    background: var(--sk-fill-18);
   }
 
   .item {
@@ -162,7 +164,7 @@
     border-radius: 6px;
     background: transparent;
     color: var(--sk-text-secondary);
-    font-size: 14px;
+    font-size: var(--sk-fs-8);
     text-align: left;
     cursor: pointer;
   }
@@ -197,7 +199,7 @@
   .count {
     flex: none;
     font-family: var(--sk-mono);
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     color: var(--sk-text-muted);
   }
 
@@ -223,7 +225,7 @@
     padding: 0;
     border: none;
     border-radius: 7px;
-    background: #1c1c1c;
+    background: var(--sk-fill-13);
     color: var(--sk-text-body);
     cursor: pointer;
   }
@@ -236,7 +238,7 @@
     width: 20px;
     height: 1px;
     margin: 7px 0;
-    background: #222222;
+    background: var(--sk-fill-18);
   }
 
   .rail-item {
@@ -255,7 +257,7 @@
   }
 
   .rail-item:hover {
-    background: #1c1c1c;
+    background: var(--sk-fill-13);
     color: var(--sk-text-bright);
   }
 

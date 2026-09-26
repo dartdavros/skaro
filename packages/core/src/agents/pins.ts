@@ -8,6 +8,12 @@ export const AGENT_PINS: Record<AgentId, string> = {
   codex: '0.156.1', // @openai/codex
 };
 
+/** The agent's own version, shown to the user ("Claude Code 2.1.281"): moves with the pins. */
+const SHOWN_VERSIONS: Record<AgentId, string> = {
+  'claude-code': '2.1.281',
+  codex: '0.156.1',
+};
+
 export interface Platform {
   os: NodeJS.Platform;
   arch: string;
@@ -17,8 +23,10 @@ export interface Platform {
 
 export interface AgentPackage {
   agent: AgentId;
-  /** Version shown to the user. */
+  /** Pinned version: the install folder and the sandbox check are keyed by it. */
   version: string;
+  /** The agent's own version, shown to the user. */
+  shownVersion: string;
   /** npm package and version that carry the binary for this platform. */
   name: string;
   npmVersion: string;
@@ -66,6 +74,7 @@ export function agentPackage(agent: AgentId, platform: Platform = currentPlatfor
   const key = `${platform.os}-${platform.arch}`;
   const exe = platform.os === 'win32' ? '.exe' : '';
   const version = AGENT_PINS[agent];
+  const shownVersion = SHOWN_VERSIONS[agent];
   if (agent === 'claude-code') {
     if (
       !['win32', 'darwin', 'linux'].includes(platform.os) ||
@@ -78,6 +87,7 @@ export function agentPackage(agent: AgentId, platform: Platform = currentPlatfor
       version,
       name: `@anthropic-ai/claude-agent-sdk-${key}${platform.musl ? '-musl' : ''}`,
       npmVersion: version,
+      shownVersion,
       binary: `claude${exe}`,
       pathDirs: [],
     };
@@ -89,6 +99,7 @@ export function agentPackage(agent: AgentId, platform: Platform = currentPlatfor
     version,
     name: '@openai/codex',
     npmVersion: `${version}-${key}`,
+    shownVersion,
     binary: `vendor/${triple}/bin/codex${exe}`,
     pathDirs: [`vendor/${triple}/codex-path`],
   };

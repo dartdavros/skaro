@@ -122,7 +122,12 @@ export class CodexSession implements AgentSession {
     const mcp = Object.fromEntries(
       Object.entries(o.mcpServers ?? {}).map(([name, s]) => [
         `mcp_servers.${name}`,
-        { url: s.url, ...(s.headers ? { http_headers: s.headers } : {}) },
+        {
+          url: s.url,
+          ...(s.headers ? { http_headers: s.headers } : {}),
+          // Codex asks before every MCP tool call otherwise, and the turn waits for the answer.
+          ...(s.trusted ? { default_tools_approval_mode: 'approve' } : {}),
+        },
       ]),
     );
     const params = {

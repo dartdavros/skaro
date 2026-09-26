@@ -39,7 +39,7 @@
         height="11"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#ededed"
+        stroke="var(--sk-text-3)"
         stroke-width="3.2"
         stroke-linecap="round"
         stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg
@@ -72,7 +72,7 @@
     align-items: center;
     justify-content: center;
     background: var(--sk-surface);
-    box-shadow: inset 0 0 0 1px #353535;
+    box-shadow: inset 0 0 0 1px var(--sk-fill-30);
     transition:
       background 0.12s,
       box-shadow 0.12s;
@@ -80,11 +80,11 @@
 
   .box.on {
     background: var(--sk-field-hover);
-    box-shadow: inset 0 0 0 1px #5a5a5a;
+    box-shadow: inset 0 0 0 1px var(--sk-fill-37);
   }
 
   .label {
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     color: var(--sk-text-secondary);
   }
 

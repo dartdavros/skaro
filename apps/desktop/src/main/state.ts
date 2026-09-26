@@ -33,6 +33,14 @@ export class AppState {
     };
   }
 
+  /** "Найти заново": the same project, now in `path`. */
+  relocateProject(id: string, path: string): ProjectInfo {
+    const project = this.db.getProject(id);
+    if (!project) throw new Error('unknown project');
+    this.db.moveProject(id, path);
+    return { id, name: project.name, path, missing: !existsSync(path) };
+  }
+
   removeProject(id: string): void {
     this.db.removeProject(id);
   }

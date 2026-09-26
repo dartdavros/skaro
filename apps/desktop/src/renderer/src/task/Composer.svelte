@@ -13,6 +13,7 @@
     running,
     agent,
     model,
+    modelTip,
     contextPct,
     permissionMode,
     planFirst,
@@ -28,6 +29,8 @@
     running: boolean;
     agent: AgentId;
     model: string;
+    /** Tip of the model button; the chat says the agent is fixed. */
+    modelTip?: string;
     contextPct?: number;
     permissionMode?: PermissionMode;
     planFirst: boolean;
@@ -119,7 +122,17 @@
     textarea?.focus();
   }
 
-  async function attach(kind: 'files' | 'folder'): Promise<void> {
+  /** Puts text into the field and focuses it (chat start chips). */
+  export function prefill(value: string): void {
+    text = value;
+    textarea?.focus();
+    queueMicrotask(() => {
+      autosize();
+      textarea?.setSelectionRange(text.length, text.length);
+    });
+  }
+
+  export async function attach(kind: 'files' | 'folder'): Promise<void> {
     menu = undefined;
     const picked = await window.skaro.invoke('files.pick', kind);
     attachments = [
@@ -182,7 +195,7 @@
     return () => document.removeEventListener('pointerdown', outside);
   });
 
-  const ctxColor = $derived((contextPct ?? 0) >= 85 ? '#e0a33c' : '#2a52be');
+  const ctxColor = $derived((contextPct ?? 0) >= 85 ? 'var(--sk-warn)' : 'var(--sk-accent)');
   const ctxDash = $derived(`${((37.7 * (contextPct ?? 0)) / 100).toFixed(1)} 37.7`);
 </script>
 
@@ -207,7 +220,7 @@
   {:else if menu === 'at'}
     <div class="menu at">
       <div class="search">
-        <Icon name="search" size={14} stroke={2} color="#989898" />
+        <Icon name="search" size={14} stroke={2} color="var(--sk-text-18)" />
         <!-- svelte-ignore a11y_autofocus -->
         <input
           type="text"
@@ -234,7 +247,7 @@
               name={row.kind === 'folder' ? 'folderOpen' : 'file'}
               size={13}
               stroke={1.9}
-              color="#8a8a8a"
+              color="var(--sk-text-20)"
             />
             <span>{row.path}</span>
           </button>
@@ -278,7 +291,7 @@
             name={file.kind === 'folder' ? 'folderOpen' : 'file'}
             size={13}
             stroke={1.9}
-            color="#8a8a8a"
+            color="var(--sk-text-20)"
           />
           <span class="chip-label"
             >{file.path.split(/[\\/]/).filter(Boolean).pop()}{file.kind === 'folder'
@@ -322,10 +335,12 @@
       {#if menu === 'attach'}
         <div class="pop attach">
           <button type="button" class="pop-row" onclick={() => void attach('files')}>
-            <Icon name="file" size={14} stroke={1.8} color="#8a8a8a" />{t('composer.attach.file')}
+            <Icon name="file" size={14} stroke={1.8} color="var(--sk-text-20)" />{t(
+              'composer.attach.file',
+            )}
           </button>
           <button type="button" class="pop-row" onclick={() => void attach('folder')}>
-            <Icon name="folderOpen" size={14} stroke={1.8} color="#8a8a8a" />{t(
+            <Icon name="folderOpen" size={14} stroke={1.8} color="var(--sk-text-20)" />{t(
               'composer.attach.folder',
             )}
           </button>
@@ -362,7 +377,11 @@
               >
                 <span
                   class="check"
-                  style="color: {on ? (p.warn ? '#e0a33c' : '#2a52be') : 'transparent'}"
+                  style="color: {on
+                    ? p.warn
+                      ? 'var(--sk-warn)'
+                      : 'var(--sk-accent)'
+                    : 'transparent'}"
                 >
                   <Icon name="check" size={13} stroke={2.6} />
                 </span>
@@ -388,7 +407,7 @@
     {#if contextPct !== undefined}
       <span class="ctx" data-tip={t('composer.ctx.tip', { n: Math.round(contextPct) })}>
         <svg width="16" height="16" viewBox="0 0 16 16" style="transform: rotate(-90deg)">
-          <circle cx="8" cy="8" r="6" fill="none" stroke="#454545" stroke-width="2.2" />
+          <circle cx="8" cy="8" r="6" fill="none" stroke="var(--sk-fill-35)" stroke-width="2.2" />
           <circle
             cx="8"
             cy="8"
@@ -403,7 +422,12 @@
       </span>
     {/if}
 
-    <button type="button" class="model" data-tip={t('composer.model.tip')} onclick={onmodel}>
+    <button
+      type="button"
+      class="model"
+      data-tip={modelTip ?? t('composer.model.tip')}
+      onclick={onmodel}
+    >
       <AgentLogo {agent} size={15} />
       {model}
       <Icon name="chevronDown" size={11} stroke={2.4} />
@@ -448,7 +472,7 @@
     gap: 2px;
     padding: 10px 8px 8px;
     border-radius: 14px;
-    background: #2b2b2b;
+    background: var(--sk-fill-26);
   }
 
   textarea {
@@ -459,16 +483,16 @@
     padding: 0 6px;
     border: none;
     background: transparent;
-    color: #d5d5d5;
+    color: var(--sk-text-6);
     font: inherit;
-    font-size: 14px;
+    font-size: var(--sk-fs-8);
     line-height: 1.5;
     resize: none;
     outline: none;
   }
 
   textarea::placeholder {
-    color: #7d7d7d;
+    color: var(--sk-text-21);
   }
 
   .bar {
@@ -495,15 +519,15 @@
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
     cursor: pointer;
     padding: 0;
   }
 
   .round:hover,
   .round.on {
-    background: #383838;
-    color: #e2e2e2;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-4);
   }
 
   .pill {
@@ -516,26 +540,26 @@
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: #b1b1b1;
+    color: var(--sk-text-10);
     font: inherit;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     cursor: pointer;
   }
 
   .pill:hover,
   .pill.on {
-    background: #383838;
+    background: var(--sk-fill-32);
   }
 
   .pill.warn {
-    background: rgba(224, 163, 60, 0.1);
-    color: #e0a33c;
+    background: var(--sk-warn-a10);
+    color: var(--sk-warn);
   }
 
   .pill.static {
-    background: #383838;
-    color: #d5d5d5;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-6);
     cursor: default;
   }
 
@@ -550,7 +574,7 @@
   }
 
   .ctx:hover {
-    background: #383838;
+    background: var(--sk-fill-32);
   }
 
   .model {
@@ -563,16 +587,16 @@
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: #b1b1b1;
+    color: var(--sk-text-10);
     font: inherit;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     cursor: pointer;
   }
 
   .model:hover {
-    background: #383838;
-    color: #e2e2e2;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-4);
   }
 
   .send {
@@ -584,20 +608,20 @@
     justify-content: center;
     border: none;
     border-radius: 50%;
-    background: #383838;
-    color: #7d7d7d;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-21);
     cursor: default;
     padding: 0;
   }
 
   .send.ready {
-    background: #2a52be;
-    color: #fff;
+    background: var(--sk-accent);
+    color: var(--sk-text-1);
     cursor: pointer;
   }
 
   .send.ready:hover {
-    background: #3461d6;
+    background: var(--sk-accent-hover);
   }
 
   .stop {
@@ -610,14 +634,14 @@
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: #d5d5d5;
+    color: var(--sk-text-6);
     cursor: pointer;
     padding: 0;
   }
 
   .stop:hover {
-    background: #383838;
-    color: #fff;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-1);
   }
 
   .menu {
@@ -630,8 +654,8 @@
     overflow: auto;
     padding: 5px;
     border-radius: 10px;
-    background: #242424;
-    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
+    background: var(--sk-fill-20);
+    box-shadow: 0 16px 38px var(--sk-black-a55);
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -658,21 +682,21 @@
 
   .slash-row.hl,
   .at-row.hl {
-    background: #2d2d2d;
+    background: var(--sk-fill-27);
   }
 
   .slash-row .cmd {
     flex: none;
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #e8875b;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-code);
   }
 
   .slash-row .note {
     flex: 1;
     min-width: 0;
-    font-size: 12px;
-    color: #8a8a8a;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-19);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -695,15 +719,15 @@
     padding: 0 10px 0 31px;
     border: none;
     border-radius: 8px;
-    background: #121212;
-    color: #ededed;
+    background: var(--sk-fill-5);
+    color: var(--sk-text-2);
     font-family: var(--sk-mono);
-    font-size: 12px;
+    font-size: var(--sk-fs-4);
     outline: none;
   }
 
   .search input:focus {
-    box-shadow: inset 0 0 0 1px #2a52be;
+    box-shadow: inset 0 0 0 1px var(--sk-accent);
   }
 
   .at-rows {
@@ -725,8 +749,8 @@
     cursor: pointer;
     text-align: left;
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #c8c8c8;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-7);
   }
 
   .at-row span {
@@ -739,8 +763,8 @@
 
   .empty {
     padding: 8px 9px;
-    font-size: 12px;
-    color: #7d7d7d;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-21);
   }
 
   .pop {
@@ -750,8 +774,8 @@
     z-index: 40;
     padding: 5px;
     border-radius: 10px;
-    background: #242424;
-    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
+    background: var(--sk-fill-20);
+    box-shadow: 0 16px 38px var(--sk-black-a55);
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -775,15 +799,15 @@
     border-radius: 7px;
     background: transparent;
     font: inherit;
-    font-size: 12.5px;
-    color: #c8c8c8;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-7);
     cursor: pointer;
     text-align: left;
   }
 
   .pop-row:hover,
   .perm-row:hover {
-    background: #2d2d2d;
+    background: var(--sk-fill-27);
   }
 
   .perm-row {
@@ -800,7 +824,7 @@
   }
 
   .perm-row.on {
-    background: #2b2b2b;
+    background: var(--sk-fill-26);
   }
 
   .perm-row .check {
@@ -819,19 +843,19 @@
   }
 
   .perm-row .label {
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
-    color: #d5d5d5;
+    color: var(--sk-text-6);
   }
 
   .perm-row .label.warn {
-    color: #e0a33c;
+    color: var(--sk-warn);
   }
 
   .perm-row .note {
-    font-size: 11px;
+    font-size: var(--sk-fs-2);
     line-height: 1.4;
-    color: #7d7d7d;
+    color: var(--sk-text-21);
   }
 
   .attachments {
@@ -848,7 +872,7 @@
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    background: #383838;
+    background: var(--sk-fill-32);
   }
 
   .thumb img {
@@ -866,11 +890,11 @@
     width: 17px;
     height: 17px;
     border-radius: 50%;
-    background: #121212;
+    background: var(--sk-fill-5);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #e0a33c;
+    color: var(--sk-warn);
   }
 
   .remove-thumb {
@@ -885,13 +909,13 @@
     justify-content: center;
     border: none;
     border-radius: 50%;
-    background: #121212;
-    color: #a6a6a6;
+    background: var(--sk-fill-5);
+    color: var(--sk-text-13);
     cursor: pointer;
   }
 
   .remove-thumb:hover {
-    color: #ededed;
+    color: var(--sk-text-2);
   }
 
   .chip {
@@ -902,13 +926,13 @@
     height: 28px;
     padding: 0 5px 0 10px;
     border-radius: 999px;
-    background: #383838;
-    color: #c8c8c8;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-7);
   }
 
   .chip-label {
     font-family: var(--sk-mono);
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     white-space: nowrap;
   }
 
@@ -923,12 +947,12 @@
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
     cursor: pointer;
   }
 
   .chip-remove:hover {
-    background: #454545;
-    color: #ededed;
+    background: var(--sk-fill-35);
+    color: var(--sk-text-2);
   }
 </style>

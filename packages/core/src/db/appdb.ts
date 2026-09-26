@@ -51,9 +51,18 @@ export interface MergeRecord {
   taskId: string;
   branch: string;
   commit: string;
-  strategy: 'squash' | 'merge';
+  strategy: 'squash' | 'merge' | 'rebase';
   mergedAt: number;
   revertCommit?: string;
+}
+
+/** Something that happened in a project: a merge, a finished run, an accepted proposal. */
+export interface EventRecord {
+  id: number;
+  projectId: string;
+  kind: string;
+  data: Record<string, unknown>;
+  at: number;
 }
 
 export interface InteractionRecord {
@@ -146,6 +155,17 @@ const MIGRATIONS: string[] = [
     resolution TEXT
   );
   `,
+  // 2: what happened in a project, for "Недавние события" of the overview.
+  `
+  CREATE TABLE events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    data TEXT NOT NULL,
+    at INTEGER NOT NULL
+  );
+  CREATE INDEX events_project ON events(project_id, at);
+  `,
 ];
 
 type Row = Record<string, SQLInputValue>;
@@ -226,6 +246,11 @@ export class AppDb {
 
   renameProject(id: string, name: string): void {
     this.db.prepare('UPDATE projects SET name = ? WHERE id = ?').run(name, id);
+  }
+
+  /** The project folder moved: "Найти заново". */
+  moveProject(id: string, path: string): void {
+    this.db.prepare('UPDATE projects SET path = ? WHERE id = ?').run(path, id);
   }
 
   /** Forgets the project in Skaro; files on disk are untouched. */
@@ -489,6 +514,28 @@ export class AppDb {
       strategy: r['strategy'] as MergeRecord['strategy'],
       mergedAt: Number(r['merged_at']),
       revertCommit: opt(r['revert_commit']),
+    }));
+  }
+
+  // ── events ───────────────────────────────────────────────────────────────
+
+  addEvent(projectId: string, kind: string, data: Record<string, unknown> = {}): void {
+    this.db
+      .prepare('INSERT INTO events (project_id, kind, data, at) VALUES (?, ?, ?, ?)')
+      .run(projectId, kind, JSON.stringify(data), this.now());
+  }
+
+  /** Latest events first. */
+  listEvents(projectId: string, limit = 20): EventRecord[] {
+    const rows = this.db
+      .prepare('SELECT * FROM events WHERE project_id = ? ORDER BY at DESC, id DESC LIMIT ?')
+      .all(projectId, limit) as Row[];
+    return rows.map((r) => ({
+      id: Number(r['id']),
+      projectId: String(r['project_id']),
+      kind: String(r['kind']),
+      data: JSON.parse(String(r['data'])) as Record<string, unknown>,
+      at: Number(r['at']),
     }));
   }
 

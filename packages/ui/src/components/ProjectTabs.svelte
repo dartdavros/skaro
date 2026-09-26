@@ -89,15 +89,15 @@
     height: 32px;
     padding: 0 9px 0 11px;
     border-radius: 11px 11px 0 0;
-    color: #9e9e9e;
-    font-size: 13px;
+    color: var(--sk-text-16);
+    font-size: var(--sk-fs-6);
     cursor: pointer;
     outline: none;
     -webkit-app-region: no-drag;
   }
 
   .tab:hover {
-    background: #161616;
+    background: var(--sk-fill-7);
     color: var(--sk-text-bright);
   }
 
@@ -161,7 +161,7 @@
   }
 
   .close:hover {
-    background: #262626;
+    background: var(--sk-fill-22);
     color: var(--sk-text-bright);
   }
 
@@ -183,7 +183,7 @@
   }
 
   .add:hover {
-    background: #161616;
+    background: var(--sk-fill-7);
     color: var(--sk-text-bright);
   }
 </style>

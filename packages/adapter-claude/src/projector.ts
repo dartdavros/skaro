@@ -906,9 +906,12 @@ export class ClaudeProjector {
     const info = obj(msg['rate_limit_info']);
     const status = str(info?.['status']);
     const resetsAt = num(info?.['resetsAt']);
+    // "allowed_warning" also comes far below any limit (a weekly window at 44%); only a
+    // surpassed threshold means the limit is really close.
+    const close = status === 'allowed_warning' && num(info?.['surpassedThreshold']) !== undefined;
     this.emit({
       t: 'limits',
-      state: status === 'rejected' ? 'exhausted' : status === 'allowed_warning' ? 'warning' : 'ok',
+      state: status === 'rejected' ? 'exhausted' : close ? 'warning' : 'ok',
       resetsAt: resetsAt ? new Date(resetsAt * 1000).toISOString() : undefined,
     });
   }

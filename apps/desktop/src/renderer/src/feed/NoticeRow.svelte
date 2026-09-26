@@ -49,7 +49,7 @@
   </div>
 {:else if item.code === 'session_lost'}
   <div class="fd-bar warning">
-    <Icon name="warning" size={13} stroke={2.2} color="#e0a33c" />
+    <Icon name="warning" size={13} stroke={2.2} color="var(--sk-warn)" />
     <span class="text">{t('feed.notice.lost')}</span>
     {#if feed.interactive}
       <button type="button" class="action" onclick={() => feed.restart()}

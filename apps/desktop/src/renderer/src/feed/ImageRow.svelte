@@ -33,11 +33,11 @@
     width: 360px;
     height: 120px;
     border-radius: 10px;
-    background: #1a1a1a;
+    background: var(--sk-fill-11);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #7d7d7d;
-    font-size: 12px;
+    color: var(--sk-text-21);
+    font-size: var(--sk-fs-4);
   }
 </style>

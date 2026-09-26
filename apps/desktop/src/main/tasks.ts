@@ -4,15 +4,15 @@
 
 import { randomUUID } from 'node:crypto';
 import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { ClaudeProjector } from '@skaro/adapter-claude';
-import { CodexProjector } from '@skaro/adapter-codex';
 import {
   displayStatus,
   indexTasks,
   isBlocked,
   MergeBlockedError,
+  pendingDependencies,
+  startBlocker,
   newlyUnblocked,
   RunQueue,
   taskBranch,
@@ -29,19 +29,19 @@ import type {
   Grant,
   McpHttpServer,
   MergeTaskArgs,
+  SubmitResultArgs,
   SkaroScope,
   ToolResult,
 } from '@skaro/mcp-server';
 import {
   isRunLogMeta,
+  countSegments,
   replayRunLog,
+  segmentTurns,
   Timeline,
   type AgentSession,
-  type Emit,
   type Interaction,
   type InteractionAnswer,
-  type ProjectionContext,
-  type Projector,
   type RawLine,
   type TimelineEvent,
 } from '@skaro/timeline';
@@ -53,15 +53,20 @@ import type {
   MergeAction,
   MessageInput,
   RunInfo,
+  RunSlots,
+  TaskAssignment,
   TaskDetail,
   TaskRef,
   TaskSummary,
   TaskView,
 } from '../shared/ipc';
+import { AUTO_MERGE_KEY } from '../shared/ipc';
 import type { AgentManager } from './agents';
 import type { ProjectContext, Projects } from './projects';
+import type { NotifyKind } from './notifier';
 import { taskInstructions } from './prompt';
-import { taskSections, toggleCriterion, withSummary } from './task-body';
+import { errorText, projectorFor, readRunLog, withoutSecrets } from './session-log';
+import { setCriteria, taskSections, toggleCriterion, withSummary } from './task-body';
 
 type MergeInteraction = Extract<Interaction, { kind: 'merge' }>;
 
@@ -75,6 +80,8 @@ interface Deps {
   mcp: McpHttpServer<SkaroScope>;
   emit: <E extends EventName>(event: E, payload: Events[E]) => void;
   locale: () => string;
+  /** A system notification ("Настройки" → "Уведомления"). */
+  notify?: (kind: NotifyKind, text: string) => void;
 }
 
 /** A task's latest run, with or without an agent process attached. */
@@ -90,11 +97,17 @@ class ActiveRun {
   pending: TimelineEvent[] = [];
   /** Events applied to the timeline so far. */
   seq = 0;
+  /** Agent processes the run log holds so far ("segment" lines); turns are numbered per segment. */
+  segments = 0;
   flushTimer: NodeJS.Timeout | undefined;
   /** Resolves the queue slot when the first turn ends. */
   release: (() => void) | undefined;
   /** Summary the agent gave to merge_task. */
   mergeSummary: string | undefined;
+  /** Commit message the agent proposed for the merge (submit_result, merge_task). */
+  commitMessage: string | undefined;
+  /** The automatic merge that just happened (the agent is told about it). */
+  merged: { commit: string; base: string } | undefined;
   /** Serializes session start and resume. */
   attaching: Promise<AgentSession> | undefined;
   /** Worktree snapshots taken before sending, waiting for their user message to show up. */
@@ -140,12 +153,127 @@ export class TaskRuns {
   // ── views ────────────────────────────────────────────────────────────────
 
   async list(projectId: string): Promise<TaskSummary[]> {
-    const artifacts = await this.project(projectId).load();
+    const context = this.project(projectId);
+    const artifacts = await context.load();
     const runtime = this.deps.db.getTaskRuntime(projectId);
     const index = indexTasks(artifacts.tasks);
-    return artifacts.tasks.map((task) =>
-      summary(task, artifacts, index, runtime.get(task.id)?.state),
+    const runs = this.deps.db.listRuns(projectId);
+    return Promise.all(
+      artifacts.tasks.map(async (task) => {
+        const run = runs.find((r) => r.taskId === task.id);
+        const file = await stat(join(context.root, task.path)).catch(() => undefined);
+        const updatedAt = Math.max(file?.mtimeMs ?? 0, run?.endedAt ?? run?.startedAt ?? 0);
+        return summary(task, artifacts, index, runtime.get(task.id)?.state, {
+          ...this.assigned(projectId, task, run),
+          updatedAt,
+        });
+      }),
     );
+  }
+
+  /** The agent a task is given to: the saved choice, its last run, else the task file. */
+  private assigned(
+    projectId: string,
+    task: Task,
+    run: RunRecord | undefined,
+  ): { agent?: AgentId; model?: string } {
+    const saved = this.deps.db.getSetting<Partial<AgentSettings> | null>(
+      settingsKey(projectId, task.id),
+      null,
+    );
+    const agent = saved?.agent ?? run?.agent ?? task.agent;
+    if (agent !== 'claude-code' && agent !== 'codex') return {};
+    const model = saved?.model ?? run?.model ?? task.model;
+    return { agent, ...(model ? { model } : {}) };
+  }
+
+  // ── task board (Tasks mockup) ────────────────────────────────────────────
+
+  slots(): RunSlots {
+    const { slots, running } = this.queue.state();
+    return { total: slots, free: Math.max(0, slots - running.length) };
+  }
+
+  setSlots(slots: number): void {
+    this.queue.setSlots(slots);
+  }
+
+  /** Mass launch: runnable tasks start or wait for a slot, in the given order. */
+  async launch(
+    projectId: string,
+    taskIds: string[],
+    message: string,
+    assignment?: TaskAssignment,
+  ): Promise<void> {
+    const artifacts = await this.project(projectId).load();
+    const index = indexTasks(artifacts.tasks);
+    const awaiting = this.awaiting(projectId);
+    for (const id of taskIds) {
+      const task = findTask(artifacts, id);
+      const blocker = startBlocker(task, index);
+      // A blocked task starts on its own once its dependencies are merged.
+      if (blocker === 'blocked') awaiting[id] = { message, ...(assignment ? { assignment } : {}) };
+      if (this.active.has(key(projectId, id)) || blocker) continue;
+      if (assignment) await this.assign(projectId, id, assignment);
+      await this.send(projectId, id, { text: message });
+    }
+    this.deps.db.setSetting(awaitingKey(projectId), awaiting);
+  }
+
+  /** Blocked tasks of a mass launch, waiting for their dependencies to be merged. */
+  private awaiting(
+    projectId: string,
+  ): Record<string, { message: string; assignment?: TaskAssignment }> {
+    return this.deps.db.getSetting(awaitingKey(projectId), {}) ?? {};
+  }
+
+  /** After a merge: tasks it unblocked that were launched while blocked start now. */
+  private async launchUnblocked(projectId: string, unblocked: string[]): Promise<void> {
+    const awaiting = this.awaiting(projectId);
+    const ready = unblocked.filter((id) => awaiting[id]);
+    if (!ready.length) return;
+    for (const id of ready) {
+      const { message, assignment } = awaiting[id]!;
+      delete awaiting[id];
+      this.deps.db.setSetting(awaitingKey(projectId), awaiting);
+      await this.launch(projectId, [id], message, assignment).catch(() => undefined);
+    }
+  }
+
+  /** "Назначить агента": the agent, model and effort the task starts with. */
+  async assign(projectId: string, taskId: string, assignment: TaskAssignment): Promise<void> {
+    if (this.active.has(key(projectId, taskId))) return;
+    const artifacts = await this.project(projectId).load();
+    const current = this.settings(projectId, findTask(artifacts, taskId), artifacts);
+    const { model: _model, effort: _effort, ...rest } = current;
+    this.deps.db.setSetting(settingsKey(projectId, taskId), {
+      ...rest,
+      agent: assignment.agent,
+      ...(assignment.model ? { model: assignment.model } : {}),
+      ...(assignment.effort ? { effort: assignment.effort } : {}),
+    });
+    this.changed(projectId, taskId);
+  }
+
+  /** Before a task is deleted: its run stops, its worktrees and branches go away. */
+  async forget(projectId: string, taskId: string): Promise<void> {
+    const k = key(projectId, taskId);
+    this.queue.cancel(k);
+    this.firstInputs.delete(k);
+    const active = this.active.get(k);
+    if (active) {
+      await this.detach(active);
+      active.log?.end();
+      this.active.delete(k);
+    }
+    const git = this.project(projectId).git;
+    for (const run of this.deps.db.listRuns(projectId, taskId)) {
+      if (!run.endedAt) this.deps.db.finishRun(run.id, 'interrupted');
+      if (run.worktree) await git.removeWorktree(run.worktree);
+      if (run.branch) await git.deleteBranch(run.branch);
+    }
+    this.deps.db.setSetting(settingsKey(projectId, taskId), null);
+    this.setRuntime(projectId, taskId, 'idle');
   }
 
   async open(projectId: string, taskId: string): Promise<TaskView> {
@@ -182,6 +310,7 @@ export class TaskRuns {
     const task = await context.store.readTask(taskId);
     await context.store.updateTask(taskId, { body: toggleCriterion(task.body, index) });
     this.changed(projectId, taskId);
+    await this.criteriaChanged(projectId, taskId);
   }
 
   // ── settings ─────────────────────────────────────────────────────────────
@@ -191,13 +320,22 @@ export class TaskRuns {
       settingsKey(projectId, task.id),
       null,
     );
-    const agent = (saved?.agent ?? task.agent ?? artifacts.config.defaultAgent) as AgentId;
+    const configured = (saved?.agent ?? task.agent ?? artifacts.config.defaultAgent) as AgentId;
+    // A started task keeps its agent; a new one goes to a ready agent if its own is absent.
+    const started = this.active.has(key(projectId, task.id));
+    const agent = saved?.agent || started ? configured : this.deps.agents.readyAgent(configured);
     const model = saved?.model ?? task.model ?? artifacts.config.defaultModel;
+    // The project's default effort goes with the project's default model.
+    const effort =
+      saved?.effort ??
+      (model && model === artifacts.config.defaultModel
+        ? artifacts.config.defaultEffort
+        : undefined);
     return {
       agent: agent === 'codex' ? 'codex' : 'claude-code',
       ...(model ? { model } : {}),
-      ...(saved?.effort ? { effort: saved.effort } : {}),
-      permissionMode: saved?.permissionMode ?? 'auto',
+      ...(effort ? { effort } : {}),
+      permissionMode: saved?.permissionMode ?? artifacts.config.permissionMode,
       planFirst: saved?.planFirst ?? false,
       isolation: saved?.isolation ?? artifacts.config.isolation,
     };
@@ -331,21 +469,168 @@ export class TaskRuns {
     const context = this.project(active.projectId);
     const artifacts = await context.load();
     const task = findTask(artifacts, active.taskId);
+    // A task is merged only when every acceptance criterion is ticked (submit_result or the user).
+    const open = taskSections(task.body).criteria.flatMap((c, i) => (c.done ? [] : [i + 1]));
+    if (open.length) return { text: unmetReply(task, open, 'merge'), isError: true };
+    if (args.summary) active.mergeSummary = args.summary;
+    if (args.commitMessage) active.commitMessage = args.commitMessage;
+    const interaction = await this.showMergeCard(active, context, artifacts, task);
+    return { text: mergeToolReply(interaction) };
+  }
+
+  /** Commits leftovers in the worktree, checks the merge and (re)opens the merge card. */
+  private async showMergeCard(
+    active: ActiveRun,
+    context: ProjectContext,
+    artifacts: ProjectArtifacts,
+    task: Task,
+  ): Promise<MergeInteraction> {
+    const worktree = active.run.worktree!;
+    const branch = active.run.branch!;
     await context.git.commitAll(worktree, `${task.id}: ${task.title}`);
     const check = await context.git.checkMerge(artifacts.config.baseBranch, branch);
-    if (args.summary) active.mergeSummary = args.summary;
-
-    const previous = active.timeline.state.interactions.find((i) => i.kind === 'merge');
-    if (previous)
-      this.skaroEvent(active, {
-        t: 'interaction.closed',
-        id: previous.id,
-        resolution: 'cancelled',
-      });
+    this.closeMergeCard(active);
     const interaction = mergeInteraction(randomUUID(), branch, artifacts.config.baseBranch, check);
+    if (active.commitMessage) interaction.message = active.commitMessage;
     this.skaroEvent(active, { t: 'interaction.opened', interaction });
-    this.setRuntime(active.projectId, active.taskId, 'waiting');
-    return { text: mergeToolReply(interaction) };
+    this.settleRuntime(active);
+    return interaction;
+  }
+
+  private closeMergeCard(active: ActiveRun): void {
+    const open = active.timeline.state.interactions.find((i) => i.kind === 'merge');
+    if (open)
+      this.skaroEvent(active, { t: 'interaction.closed', id: open.id, resolution: 'cancelled' });
+  }
+
+  /**
+   * Criteria were ticked or unticked (submit_result, the user). All ticked: "На ревью" and the
+   * merge card, so the user merges with one click; in the main working copy there is nothing to
+   * merge and the task is done. Not all: the task is back in work and the card goes away.
+   */
+  private async criteriaChanged(
+    projectId: string,
+    taskId: string,
+  ): Promise<'merge' | 'merged' | 'done' | 'open' | 'none'> {
+    const context = this.project(projectId);
+    context.invalidate();
+    const artifacts = await context.load();
+    const task = findTask(artifacts, taskId);
+    const criteria = taskSections(task.body).criteria;
+    const active =
+      this.active.get(key(projectId, taskId)) ?? (await this.restore(projectId, taskId));
+    if (!criteria.length || !active || task.status === 'done') return 'none';
+
+    if (!criteria.every((c) => c.done)) {
+      if (task.status === 'review')
+        await context.store.updateTask(taskId, { status: 'in_progress' });
+      this.closeMergeCard(active);
+      this.settleRuntime(active);
+      this.statusChanged(projectId, taskId);
+      return 'open';
+    }
+
+    if (!active.run.worktree || !active.run.branch) {
+      const before = artifacts.tasks;
+      await context.store.updateTask(taskId, { status: 'done' });
+      context.invalidate();
+      const after = (await context.load()).tasks;
+      this.statusChanged(projectId, taskId);
+      const unblocked = newlyUnblocked(before, after);
+      for (const id of unblocked) this.changed(projectId, id);
+      void this.launchUnblocked(projectId, unblocked);
+      return 'done';
+    }
+
+    // "Вливать автоматически": commit and merge now; a blocked merge falls back to the card.
+    if (this.deps.db.getSetting<boolean | null>(AUTO_MERGE_KEY, null) === true) {
+      const card = active.timeline.state.interactions.find(
+        (i): i is MergeInteraction => i.kind === 'merge',
+      );
+      try {
+        active.merged = await this.confirmMerge(active, context, card, active.commitMessage ?? '');
+        return 'merged';
+      } catch (error) {
+        if (!(error instanceof MergeBlockedError))
+          this.notice(active, 'other', 'error', errorText(error));
+        context.invalidate();
+      }
+    }
+
+    if (task.status !== 'review') {
+      await context.store.updateTask(taskId, { status: 'review' });
+      this.deps.db.addEvent(projectId, 'task_review', { task: taskId });
+      this.deps.notify?.('review', `${task.id} · ${task.title}`);
+    }
+    // A card is shown once; a new commit message from the agent refreshes it.
+    const card = active.timeline.state.interactions.find(
+      (i): i is MergeInteraction => i.kind === 'merge',
+    );
+    if (!card || (active.commitMessage && card.message !== active.commitMessage)) {
+      await this.showMergeCard(active, context, artifacts, task);
+    }
+    this.statusChanged(projectId, taskId);
+    return 'merge';
+  }
+
+  private statusChanged(projectId: string, taskId: string): void {
+    this.project(projectId).invalidate();
+    this.changed(projectId, taskId);
+    this.deps.emit('project.changed', { projectId });
+  }
+
+  /** `submit_result`: the agent's verdict on each criterion; Skaro ticks the task from it. */
+  async submitResult(args: SubmitResultArgs, scope: SkaroScope): Promise<ToolResult> {
+    if (!scope.taskId)
+      return { text: 'submit_result works only in a task session.', isError: true };
+    const active = this.active.get(key(scope.projectId, scope.taskId));
+    if (!active || active.run.id !== scope.runId) {
+      return { text: 'This session is no longer the current run of the task.', isError: true };
+    }
+    const context = this.project(active.projectId);
+    const task = await context.store.readTask(active.taskId);
+    const criteria = taskSections(task.body).criteria;
+    const verdicts = new Map(args.criteria.map((v) => [v.number, v]));
+    const wrong = [...verdicts.keys()].filter((n) => n > criteria.length);
+    const missing = criteria.map((_, i) => i + 1).filter((n) => !verdicts.has(n));
+    if (wrong.length || missing.length) {
+      return {
+        text:
+          `The task has ${criteria.length} acceptance criteria, numbered 1–${criteria.length}. ` +
+          (missing.length ? `No verdict for: ${missing.join(', ')}. ` : '') +
+          (wrong.length ? `No such criteria: ${wrong.join(', ')}. ` : '') +
+          'Give a verdict for every criterion and call submit_result again.',
+        isError: true,
+      };
+    }
+    const met = criteria.map((_, i) => verdicts.get(i + 1)!.met);
+    await context.store.updateTask(task.id, { body: setCriteria(task.body, met) });
+    active.mergeSummary = args.summary;
+    if (args.commitMessage) active.commitMessage = args.commitMessage;
+    const state = await this.criteriaChanged(active.projectId, active.taskId);
+    const open = met.flatMap((ok, i) => (ok ? [] : [i + 1]));
+    if (open.length) return { text: unmetReply(task, open, 'result') };
+    const done = `All ${criteria.length} acceptance criteria are ticked in the task. `;
+    if (state === 'merged' && active.merged) {
+      return {
+        text:
+          done +
+          `Skaro committed the work and merged the task branch into ${active.merged.base} ` +
+          `(commit ${active.merged.commit.slice(0, 7)}): the project merges finished tasks ` +
+          'automatically. Do not change files anymore. Tell the user the task is done and ' +
+          'merged, with a short summary and how each criterion was checked.',
+      };
+    }
+    return {
+      text:
+        state === 'merge'
+          ? done +
+            'Skaro showed the user a card to merge the task branch; the merge happens when the ' +
+            'user confirms it. Do not call merge_task. Tell the user the task is done and ready ' +
+            'to merge, with a short summary and how each criterion was checked.'
+          : done +
+            'Tell the user the task is done, with a short summary and how each criterion was checked.',
+    };
   }
 
   async merge(
@@ -373,6 +658,7 @@ export class TaskRuns {
         const result = await context.git.rebase(active.run.worktree!, base);
         const check = await context.git.checkMerge(base, branch);
         const next = mergeInteraction(card.id, branch, base, check);
+        if (card.message) next.message = card.message;
         if (!result.ok) next.conflicts = result.conflicts;
         this.skaroEvent(active, { t: 'interaction.opened', interaction: next });
         return;
@@ -393,23 +679,28 @@ export class TaskRuns {
     }
   }
 
+  /** The merge itself: after "Влить" on the card, or on its own when the project merges automatically. */
   private async confirmMerge(
     active: ActiveRun,
     context: ProjectContext,
-    card: MergeInteraction,
+    card: MergeInteraction | undefined,
     message: string,
-  ): Promise<void> {
+  ): Promise<{ commit: string; base: string }> {
     const artifacts = await context.load();
     const task = findTask(artifacts, active.taskId);
     const base = artifacts.config.baseBranch;
     const branch = active.run.branch!;
     const summaryText = active.mergeSummary ?? lastAgentText(active);
+    // Whatever the agent wrote after the card was shown goes into the merge too.
+    if (active.run.worktree)
+      await context.git.commitAll(active.run.worktree, `${task.id}: ${task.title}`);
     let result: { commit: string; check: MergeCheck };
     try {
       result = await context.git.merge({
         base,
         branch,
         strategy: artifacts.config.merge.strategy,
+        worktree: active.run.worktree,
         message: message.trim() || `${task.id}: ${task.title}`,
         beforeCommit: async () => {
           const updated = await context.store.updateTask(task.id, {
@@ -420,7 +711,7 @@ export class TaskRuns {
         },
       });
     } catch (error) {
-      if (error instanceof MergeBlockedError) {
+      if (card && error instanceof MergeBlockedError) {
         this.skaroEvent(active, {
           t: 'interaction.opened',
           interaction: mergeInteraction(card.id, branch, base, error.check),
@@ -439,12 +730,15 @@ export class TaskRuns {
       commit: result.commit,
       strategy: artifacts.config.merge.strategy,
     });
-    this.skaroEvent(active, { t: 'interaction.closed', id: card.id, resolution: 'answered' });
+    this.deps.db.addEvent(active.projectId, 'merged', { task: task.id, base });
+    this.deps.notify?.('merged', `${task.id} · ${task.title}`);
+    if (card)
+      this.skaroEvent(active, { t: 'interaction.closed', id: card.id, resolution: 'answered' });
     const unblocked = newlyUnblocked(artifacts.tasks, after.tasks);
     this.skaroEvent(active, {
       t: 'item.upsert',
       item: {
-        id: `skaro-merged-${card.id}`,
+        id: `skaro-merged-${card?.id ?? result.commit}`,
         turnId: active.timeline.state.turns.at(-1)?.id ?? '',
         kind: 'notice',
         level: 'info',
@@ -458,6 +752,7 @@ export class TaskRuns {
 
     for (const id of unblocked) this.changed(active.projectId, id);
     this.deps.emit('project.changed', { projectId: active.projectId });
+    void this.launchUnblocked(active.projectId, unblocked);
 
     // The task is done: the agent session, the worktree and (by config) the branch go away —
     // after the agent finishes its reply, so the turn is not cut off and the folder is free.
@@ -472,6 +767,7 @@ export class TaskRuns {
     };
     if (active.session && active.timeline.state.status !== 'idle') active.afterTurn = cleanup;
     else await cleanup();
+    return { commit: result.commit, base };
   }
 
   // ── lifecycle ────────────────────────────────────────────────────────────
@@ -574,8 +870,11 @@ export class TaskRuns {
     const sandbox =
       settings.permissionMode === 'auto' ? await this.deps.agents.sandbox(agent) : undefined;
     const resume = run.nativeSessionId;
-    const cwd = run.worktree ?? context.root;
+    // After the merge the worktree is gone: the conversation goes on in the main working copy.
+    const inWorktree = run.worktree !== undefined && existsSync(run.worktree);
+    const cwd = inWorktree ? run.worktree! : context.root;
 
+    const segment = active.segments++;
     this.writeLine(active, {
       ts: Date.now() - run.startedAt,
       dir: 'meta',
@@ -593,12 +892,18 @@ export class TaskRuns {
         instructions: taskInstructions({
           task,
           artifacts,
+          root: context.root,
           cwd,
-          ...(run.branch ? { branch: run.branch } : {}),
+          ...(inWorktree && run.branch ? { branch: run.branch } : {}),
           locale: this.deps.locale(),
         }),
         mcpServers: {
-          skaro: { type: 'http', url: active.grant.url, headers: active.grant.headers },
+          skaro: {
+            type: 'http',
+            url: active.grant.url,
+            headers: active.grant.headers,
+            trusted: true,
+          },
         },
         ...(sandbox ? { sandboxVerified: sandbox.holds } : {}),
         ...(sandbox?.mode ? { sandboxMode: sandbox.mode } : {}),
@@ -614,14 +919,16 @@ export class TaskRuns {
     }
     active.session = session;
     if (resume) this.notice(active, 'session_restored', 'info', '');
-    void this.pump(active, session);
+    void this.pump(active, session, segment);
     this.changed(projectId, taskId);
     return session;
   }
 
-  private async pump(active: ActiveRun, session: AgentSession): Promise<void> {
+  private async pump(active: ActiveRun, session: AgentSession, segment: number): Promise<void> {
     try {
-      for await (const event of session.events) this.onEvent(active, event);
+      for await (const event of session.events) {
+        this.onEvent(active, segmentTurns(segment, event));
+      }
     } catch (error) {
       this.failTurn(active, error);
     }
@@ -670,12 +977,21 @@ export class TaskRuns {
         this.setRuntime(projectId, taskId, 'running', active.run.id);
         return;
       case 'interaction.opened':
-        this.setRuntime(projectId, taskId, 'waiting', active.run.id);
+        // The merge card is "На ревью", not a question: it does not make the task wait.
+        if (event.interaction.kind !== 'merge') {
+          this.setRuntime(projectId, taskId, 'waiting', active.run.id);
+          this.deps.db.addEvent(projectId, 'waiting', {
+            task: taskId,
+            what: event.interaction.kind,
+            ...(event.interaction.kind === 'approval'
+              ? { detail: event.interaction.action.title }
+              : {}),
+          });
+          void this.notifyTask('need', projectId, taskId);
+        }
         return;
       case 'interaction.closed':
-        if (!active.timeline.state.interactions.length) {
-          this.setRuntime(projectId, taskId, 'running', active.run.id);
-        }
+        this.settleRuntime(active);
         return;
       case 'turn.completed':
         void this.onTurnCompleted(active, event.outcome);
@@ -698,25 +1014,40 @@ export class TaskRuns {
       );
       return;
     }
-    const context = this.project(active.projectId);
+    const { projectId, taskId } = active;
+    const context = this.project(projectId);
     try {
-      const task = await context.store.readTask(active.taskId);
-      const status = outcome === 'failed' ? 'failed' : 'review';
-      if (task.status !== 'done' && task.status !== status) {
-        await context.store.updateTask(active.taskId, { status });
-        context.invalidate();
-        this.deps.emit('project.changed', { projectId: active.projectId });
+      const task = await context.store.readTask(taskId);
+      if (task.status === 'done') return;
+      const label = `${task.id} · ${task.title}`;
+      if (outcome === 'failed') {
+        if (task.status !== 'failed') {
+          this.deps.db.addEvent(projectId, 'task_failed', { task: taskId });
+          await context.store.updateTask(taskId, { status: 'failed' });
+          this.deps.notify?.('error', label);
+          this.statusChanged(projectId, taskId);
+        }
+        return;
+      }
+      // The turn ended: "На ревью" only when every criterion is ticked, else the agent waits
+      // for the user ("Нужен ответ", derived from "В работе" with no agent working).
+      if (task.status === 'failed')
+        await context.store.updateTask(taskId, { status: 'in_progress' });
+      const state = await this.criteriaChanged(projectId, taskId);
+      if (state === 'open' || state === 'none') {
+        this.deps.notify?.('need', label);
+        this.statusChanged(projectId, taskId);
       }
     } catch {
       // The task file is gone or broken: the feed still works.
     }
-    this.changed(active.projectId, active.taskId);
+    this.changed(projectId, taskId);
   }
 
-  /** Runtime after a turn: waiting while a merge card is open, idle otherwise. */
+  /** Runtime: waiting while a question or permission is open, idle or running otherwise. */
   private settleRuntime(active: ActiveRun): void {
     const s = active.timeline.state;
-    const state: TaskRuntime = s.interactions.length
+    const state: TaskRuntime = s.interactions.some((i) => i.kind !== 'merge')
       ? 'waiting'
       : s.status === 'idle'
         ? 'idle'
@@ -760,6 +1091,7 @@ export class TaskRuns {
     );
     const active = new ActiveRun(projectId, taskId, run, Timeline.from(events));
     active.seq = events.length;
+    active.segments = countSegments(lines);
     for (const line of lines) {
       if (line.dir === 'meta' && isRunLogMeta(line.line) && line.line.skaro === 'snapshot') {
         active.snapshots.set(line.line.itemId, { head: line.line.head, tree: line.line.tree });
@@ -804,6 +1136,15 @@ export class TaskRuns {
     cwd: string,
     settings: AgentSettings,
   ): Promise<AgentSettings> {
+    // Defaults from Settings → Agents come first, then the agent's own default.
+    const preset = this.deps.agents.defaults(agent);
+    if (!settings.model && preset.model) {
+      settings = {
+        ...settings,
+        model: preset.model,
+        ...(preset.effort && !settings.effort ? { effort: preset.effort } : {}),
+      };
+    }
     if (settings.model && settings.effort) return settings;
     const models = await this.deps.agents.listModels(agent, cwd).catch(() => []);
     const model =
@@ -816,15 +1157,9 @@ export class TaskRuns {
     return { ...settings, model: model.id, ...(effort ? { effort } : {}) };
   }
 
+  /** An absent agent is inactive: nothing starts until it is downloaded and signed in. */
   private async ensureAgent(agent: AgentId): Promise<void> {
-    let info = this.deps.agents.list().find((a) => a.id === agent);
-    if (!info?.installed) {
-      await this.deps.agents.install(agent);
-      info = await this.deps.agents.refreshOne(agent);
-    }
-    if (info.authenticated === false) {
-      throw new Error(`${agent === 'codex' ? 'Codex' : 'Claude Code'} is not signed in`);
-    }
+    await this.deps.agents.requireReady(agent);
   }
 
   /** An event Skaro itself adds to the feed; written to the log so replays keep it. */
@@ -894,6 +1229,14 @@ export class TaskRuns {
     this.deps.emit('project.changed', { projectId });
   }
 
+  private async notifyTask(kind: NotifyKind, projectId: string, taskId: string): Promise<void> {
+    if (!this.deps.notify) return;
+    const task = await this.project(projectId)
+      .store.readTask(taskId)
+      .catch(() => undefined);
+    this.deps.notify(kind, task ? `${task.id} · ${task.title}` : taskId);
+  }
+
   private changed(projectId: string, taskId: string): void {
     this.deps.emit('task.changed', { projectId, taskId });
   }
@@ -915,6 +1258,10 @@ function key(projectId: string, taskId: string): string {
   return `${projectId}\n${taskId}`;
 }
 
+function awaitingKey(projectId: string): string {
+  return `tasks.${projectId}.awaitingStart`;
+}
+
 function settingsKey(projectId: string, taskId: string): string {
   return `task.${projectId}.${taskId}.agent`;
 }
@@ -923,31 +1270,6 @@ function findTask(artifacts: ProjectArtifacts, taskId: string): Task {
   const task = artifacts.tasks.find((t) => t.id === taskId);
   if (!task) throw new Error(`unknown task ${taskId}`);
   return task;
-}
-
-function projectorFor(agent: string): (ctx: ProjectionContext, emit: Emit) => Projector {
-  return agent === 'codex'
-    ? (ctx, emit) => new CodexProjector(ctx, emit)
-    : (ctx, emit) => new ClaudeProjector(ctx, emit);
-}
-
-async function readRunLog(path: string): Promise<RawLine[]> {
-  let text: string;
-  try {
-    text = await readFile(path, 'utf8');
-  } catch {
-    return [];
-  }
-  const lines: RawLine[] = [];
-  for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      lines.push(JSON.parse(line) as RawLine);
-    } catch {
-      // A line cut by a crash: the rest of the log still counts.
-    }
-  }
-  return lines;
 }
 
 function runInfo(active: ActiveRun): RunInfo {
@@ -969,13 +1291,18 @@ function summary(
   task: Task,
   artifacts: ProjectArtifacts,
   index: ReturnType<typeof indexTasks>,
-  runtime?: TaskRuntime,
+  runtime: TaskRuntime | undefined,
+  extra: { agent?: AgentId; model?: string; updatedAt: number },
 ): TaskSummary {
   const milestone = artifacts.milestones.find((m) => m.id === task.milestone);
   return {
     ...ref(task, index, runtime),
     ...(milestone ? { milestone: { id: milestone.id, title: milestone.title } } : {}),
     archived: task.archived,
+    ...extra,
+    deps: task.dependsOn,
+    ...(task.order !== undefined ? { order: task.order } : {}),
+    waitsFor: isBlocked(task, index) ? pendingDependencies(task, index) : [],
   };
 }
 
@@ -987,7 +1314,7 @@ function detail(
   const index = indexTasks(artifacts.tasks);
   const refOf = (t: Task) => ref(t, index, runtime.get(t.id)?.state);
   return {
-    ...summary(task, artifacts, index, runtime.get(task.id)?.state),
+    ...summary(task, artifacts, index, runtime.get(task.id)?.state, { updatedAt: 0 }),
     dependsOn: task.dependsOn.map(
       (id) => (index.get(id) && refOf(index.get(id)!)) ?? { id, title: id, status: 'todo' },
     ),
@@ -1016,6 +1343,21 @@ function mergeInteraction(
     skaroChanges: check.skaroChanges,
     conflicts: check.conflicts,
   };
+}
+
+/** Criteria not ticked: what the agent must tell the user instead of "done". */
+function unmetReply(task: Task, open: number[], after: 'result' | 'merge'): string {
+  const criteria = taskSections(task.body).criteria;
+  const list = open.map((n) => `${n}. ${criteria[n - 1]?.text ?? ''}`).join('\n');
+  const head =
+    after === 'merge'
+      ? 'Skaro did not start the merge: these acceptance criteria are not ticked:'
+      : 'Skaro ticked the criteria you reported as met. These are not met:';
+  return (
+    `${head}\n${list}\n` +
+    'The task is not done. Tell the user plainly which criteria are not met and why. Finish ' +
+    'them and call submit_result again, or the user ticks a criterion by hand if they accept it.'
+  );
 }
 
 /** What the agent learns from merge_task. */
@@ -1063,21 +1405,4 @@ function lastAgentText(active: ActiveRun): string | undefined {
     }
   }
   return undefined;
-}
-
-/** Secret answers (keys, passwords) never reach the log. */
-function withoutSecrets(interaction: Interaction, answer: InteractionAnswer): InteractionAnswer {
-  if (interaction.kind !== 'question' || answer.kind !== 'question') return answer;
-  const secret = new Set(interaction.questions.filter((q) => q.secret).map((q) => q.id));
-  if (!secret.size) return answer;
-  return {
-    kind: 'question',
-    answers: Object.fromEntries(
-      Object.entries(answer.answers).map(([id, values]) => [id, secret.has(id) ? ['•••'] : values]),
-    ),
-  };
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

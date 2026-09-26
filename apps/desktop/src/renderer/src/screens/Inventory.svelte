@@ -35,11 +35,11 @@
     ['Поверхность', '#1a1a1a'],
     ['Поверхность +', '#242424'],
     ['Поле ввода', '#2b2b2b'],
-    ['Подложка переключателя', '#060606'],
+    ['Подложка переключателя', '#0b0b0b'],
     ['Акцент', '#2a52be'],
     ['Сообщение пользователя', '#1c2a4d'],
     ['Ссылка', '#7d9ce8'],
-    ['Коралл · код', '#e8875b'],
+    ['Коралл · код', '#ef8f3d'],
     ['Ошибка', '#ef6a63'],
     ['Предупреждение', '#e0a33c'],
     ['Текст яркий', '#ededed'],
@@ -100,7 +100,8 @@
       tip: 'Доска и список',
       icon: 'tasks',
       count: 2,
-      countTip: '2 требуют внимания',
+      countTip: 'Нужен ответ + на ревью',
+      railTip: 'Задачи · 2 требуют внимания',
     },
     { id: 'chat', label: 'Чат', tip: 'Работа с агентом', icon: 'chat', separated: true },
     { id: 'params', label: 'Параметры', tip: 'Параметры проекта', icon: 'params' },
@@ -622,9 +623,9 @@
   .lead {
     margin: 0;
     max-width: 640px;
-    font-size: 13.5px;
+    font-size: var(--sk-fs-7);
     line-height: 1.6;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
   }
 
   section {
@@ -641,14 +642,14 @@
 
   h2 {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--sk-fs-10);
     font-weight: 700;
     color: var(--sk-text);
   }
 
   .head p {
     margin: 0;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     line-height: 1.55;
     color: var(--sk-text-muted);
     text-wrap: pretty;
@@ -684,7 +685,7 @@
 
   .swatch-name {
     padding: 0 2px;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     color: var(--sk-text);
   }
@@ -693,7 +694,7 @@
     margin-top: -7px;
     padding: 0 2px;
     font-family: var(--sk-mono);
-    font-size: 11px;
+    font-size: var(--sk-fs-2);
     color: var(--sk-text-muted);
   }
 
@@ -711,7 +712,7 @@
     gap: 16px;
     align-items: baseline;
     padding: 12px 16px;
-    border-bottom: 1px solid #141414;
+    border-bottom: 1px solid var(--sk-fill-6);
   }
 
   .type-row.last {
@@ -720,7 +721,7 @@
 
   .spec {
     font-family: var(--sk-mono);
-    font-size: 11px;
+    font-size: var(--sk-fs-2);
     color: var(--sk-text-label);
   }
 
@@ -747,7 +748,7 @@
     padding: 12px 16px;
     border-radius: var(--sk-radius-card);
     background: var(--sk-surface);
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     color: var(--sk-text-secondary);
   }
 
@@ -760,7 +761,7 @@
     align-items: center;
     gap: 6px;
     font-family: var(--sk-mono);
-    font-size: 12px;
+    font-size: var(--sk-fs-4);
   }
 
   .panel {
@@ -791,7 +792,7 @@
   }
 
   .note {
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     line-height: 1.5;
     color: var(--sk-text-muted);
   }
@@ -804,7 +805,7 @@
 
   .log {
     font-family: var(--sk-mono);
-    font-size: 11px;
+    font-size: var(--sk-fs-2);
     color: var(--sk-text-label);
   }
 
@@ -853,8 +854,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12.5px;
-    color: #5f5f5f;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-26);
   }
 
   .cards {
@@ -870,8 +871,8 @@
     padding: 0 11px;
     border-radius: 7px;
     background: var(--sk-surface-2);
-    font-size: 12.5px;
-    color: #c8c8c8;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-7);
     cursor: default;
   }
 
@@ -895,14 +896,14 @@
     border-radius: var(--sk-radius-card);
     background: var(--sk-surface-2);
     color: var(--sk-text-secondary);
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     font-weight: 600;
     cursor: pointer;
   }
 
   .agent:hover,
   .agent.on {
-    background: #0d0d0d;
+    background: var(--sk-fill-2);
   }
 
   .agent.on {

@@ -194,8 +194,8 @@
 
   .step {
     font-family: var(--sk-mono);
-    font-size: 11.5px;
-    color: #8a8a8a;
+    font-size: var(--sk-fs-3);
+    color: var(--sk-text-19);
   }
 
   .nav {
@@ -207,17 +207,17 @@
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: #a6a6a6;
+    color: var(--sk-text-13);
     cursor: pointer;
     padding: 0;
   }
 
   .nav:hover:not(:disabled) {
-    background: #242424;
+    background: var(--sk-fill-20);
   }
 
   .nav:disabled {
-    color: #3b3b3b;
+    color: var(--sk-text-29);
     cursor: default;
   }
 
@@ -236,7 +236,7 @@
   }
 
   .custom.on {
-    background: #1c1c1c;
+    background: var(--sk-fill-13);
   }
 
   .custom-mark {
@@ -276,25 +276,25 @@
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: #7d7d7d;
+    color: var(--sk-text-21);
     cursor: pointer;
     padding: 0;
   }
 
   .eye:hover {
-    background: #1e1e1e;
-    color: #d5d5d5;
+    background: var(--sk-fill-15);
+    color: var(--sk-text-6);
   }
 
   .preview {
     margin: 0;
     padding: 10px 12px;
     border-radius: 8px;
-    background: #0f0f0f;
+    background: var(--sk-fill-3);
     font-family: var(--sk-mono);
-    font-size: 12px;
-    line-height: 1.6;
-    color: #a6a6a6;
+    font-size: var(--sk-fs-4);
+    line-height: 1.5;
+    color: var(--sk-text-13);
     white-space: pre-wrap;
     max-height: 220px;
     overflow: auto;

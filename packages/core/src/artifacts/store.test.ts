@@ -141,6 +141,33 @@ describe('ArtifactStore', () => {
     );
   });
 
+  it('falls back to the app-wide defaults for what the project does not set', async () => {
+    let defaults: { baseBranch?: string; deleteBranch?: boolean; agentInstructions?: string } = {
+      baseBranch: 'develop',
+      deleteBranch: false,
+      agentInstructions: 'Commits in English.',
+    };
+    const inheriting = new ArtifactStore(root, () => defaults);
+    const config = (await inheriting.load()).config;
+    expect(config.baseBranch).toBe('develop');
+    expect(config.merge.deleteBranch).toBe(false);
+    expect(config.globalInstructions).toBe('Commits in English.');
+
+    // Inherited settings are not written: the project follows later changes of the defaults.
+    await inheriting.writeConfig({ ...config, branchTemplate: 'feature/{id}' }, [
+      'baseBranch',
+      'deleteBranch',
+    ]);
+    const yaml = await readFile(join(root, '.skaro', 'config.yaml'), 'utf8');
+    expect(yaml).not.toContain('base_branch');
+    expect(yaml).not.toContain('Commits in English');
+    defaults = { baseBranch: 'trunk' };
+    const reread = (await inheriting.load()).config;
+    expect(reread.baseBranch).toBe('trunk');
+    expect(reread.branchTemplate).toBe('feature/{id}');
+    expect(reread.merge.deleteBranch).toBe(true);
+  });
+
   it('reports manual edits but not its own writes', async () => {
     const task = await store.createTask({ title: 'Watched' });
     const changes: string[][] = [];

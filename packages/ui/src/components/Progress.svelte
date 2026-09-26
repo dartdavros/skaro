@@ -42,20 +42,20 @@
 
   .id {
     font-family: var(--sk-mono);
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     font-weight: 600;
-    color: #a1a1a1;
+    color: var(--sk-text-14);
   }
 
   .label {
     flex: 1;
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     color: var(--sk-text);
   }
 
   .count {
     font-family: var(--sk-mono);
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     color: var(--sk-icon);
   }
 

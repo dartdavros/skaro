@@ -119,7 +119,84 @@ export type ItemBody =
     }
   | { kind: 'unknown'; raw: unknown }
   /** The user's answer to an interaction, added by Skaro (not by adapters) so the feed keeps it. */
-  | { kind: 'decision'; interaction: Interaction; answer: InteractionAnswer };
+  | { kind: 'decision'; interaction: Interaction; answer: InteractionAnswer }
+  /**
+   * A change the chat agent proposed through Skaro's MCP tools (agent-output.md 5.4), added by
+   * Skaro. The tool does not hold the turn: the card stays in the feed and the user decides later.
+   */
+  | {
+      kind: 'proposal';
+      proposal: Proposal;
+      state: ProposalState;
+      /** What Skaro created when the proposal was accepted. */
+      result?: ProposalResult;
+    };
+
+export type ProposalState = 'pending' | 'applied' | 'rejected' | 'reverted';
+
+/** A task in a proposed plan; `ref` links tasks of the same proposal to each other. */
+export interface ProposedTask {
+  ref: string;
+  title: string;
+  /** Task file body: "Цель", "Критерии приёмки", "Заметки". */
+  body: string;
+  /** Refs of tasks in this chat's proposals or ids of existing tasks. */
+  dependsOn: string[];
+  /** Titles of those tasks, for "после «…»" on the card. */
+  dependsOnTitles: string[];
+}
+
+export type Proposal =
+  | {
+      /** brief.md, architecture.md or docs/<name>.md, written as a whole. */
+      type: 'doc';
+      /** Path inside .skaro/. */
+      path: string;
+      /** Undefined when the document is new. */
+      before?: string;
+      after: string;
+      /** What changed, in the agent's words. */
+      summary?: string;
+    }
+  | {
+      type: 'adr';
+      /** Number the ADR gets if accepted now, e.g. "0007". */
+      id: string;
+      title: string;
+      body: string;
+      /** ADR it replaces. */
+      replaces?: string;
+      /** A sentence or two for the card. */
+      summary?: string;
+    }
+  | {
+      /** A milestone with its tasks, or tasks for an existing milestone. */
+      type: 'plan';
+      milestone?: { id: string; title: string; body?: string; isNew: boolean };
+      tasks: ProposedTask[];
+    }
+  | {
+      /** Changes to an existing task. */
+      type: 'task';
+      id: string;
+      title: string;
+      /** Task as text before and after, for the diff. */
+      before: string;
+      after: string;
+      patch: {
+        title?: string;
+        body?: string;
+        dependsOn?: string[];
+        milestone?: string;
+      };
+    };
+
+export interface ProposalResult {
+  milestone?: { id: string; title: string };
+  /** Created tasks; `ref` links them to the proposal (later cards may depend on them). */
+  tasks?: { id: string; title: string; ref: string }[];
+  adr?: { id: string; title: string };
+}
 
 export type NoticeCode =
   | 'auth'
@@ -215,6 +292,8 @@ export type Interaction =
       baseAhead: number;
       skaroChanges: string[];
       conflicts: string[];
+      /** Commit message the agent proposed, in the repository's convention. */
+      message?: string;
     };
 
 export type AgentErrorCategory =

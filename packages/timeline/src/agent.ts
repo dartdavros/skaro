@@ -18,6 +18,8 @@ export interface McpServer {
   type: 'http';
   url: string;
   headers?: Record<string, string>;
+  /** Its tools run without asking the user: Skaro's own server, whose tools confirm in cards. */
+  trusted?: boolean;
 }
 
 export interface SessionOptions {
@@ -97,6 +99,26 @@ export interface SandboxCheck {
   detail: string;
 }
 
+/** An MCP server from the user's agent settings, as the agent sees it at start. */
+export interface AgentMcpServer {
+  name: string;
+  state: 'ok' | 'failed' | 'needs_auth' | 'disabled';
+  tools: number;
+  error?: string;
+}
+
+/**
+ * The user's own agent settings Skaro connects to every run (D-25): where they live, MCP servers
+ * with their state, skills and hooks ("Ваши настройки агента").
+ */
+export interface AgentUserConfig {
+  /** ~/.claude, ~/.codex, or the folder the environment points to. */
+  dir: string;
+  mcp: AgentMcpServer[];
+  skills: number;
+  hooks: number;
+}
+
 export interface AgentAdapter {
   readonly id: 'claude-code' | 'codex';
   readonly adapterVersion: string;
@@ -105,6 +127,8 @@ export interface AgentAdapter {
   login(): Promise<void>;
   listModels(cwd: string): Promise<AgentModel[]>;
   listCommands(cwd: string): Promise<AgentCommand[]>;
+  /** The user's agent settings: MCP servers (connected at start, no model call), skills, hooks. */
+  userConfig(cwd: string): Promise<AgentUserConfig>;
   /** D-28: does the sandbox hold the workspace boundary on this machine? */
   checkSandbox(scratchDir: string): Promise<SandboxCheck>;
   start(options: SessionOptions): Promise<AgentSession>;

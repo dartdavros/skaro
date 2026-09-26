@@ -104,7 +104,7 @@
       >
       <span class="current">{active ? (active.activeText ?? active.text) : ''}</span>
       <span class="chev" class:open={planOpen}
-        ><Icon name="chevronUp" size={12} stroke={2.2} color="#6f6f6f" /></span
+        ><Icon name="chevronUp" size={12} stroke={2.2} color="var(--sk-text-25)" /></span
       >
     </button>
   </div>
@@ -113,7 +113,7 @@
 <style>
   .plan {
     border-radius: 10px;
-    background: #202020;
+    background: var(--sk-fill-17);
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
@@ -139,11 +139,11 @@
     margin-top: 1px;
     width: 13px;
     display: inline-flex;
-    color: #a6a6a6;
+    color: var(--sk-text-13);
   }
 
   .step.done .mark {
-    color: #6f6f6f;
+    color: var(--sk-text-23);
   }
 
   .todo {
@@ -151,24 +151,24 @@
     height: 7px;
     margin: 3px;
     border-radius: 50%;
-    box-shadow: inset 0 0 0 1.5px #3b3b3b;
+    box-shadow: inset 0 0 0 1.5px var(--sk-fill-34);
   }
 
   .text {
     flex: 1;
     min-width: 0;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     line-height: 1.45;
-    color: #a6a6a6;
+    color: var(--sk-text-13);
     text-wrap: pretty;
   }
 
   .step.done .text {
-    color: #7d7d7d;
+    color: var(--sk-text-21);
   }
 
   .step.active .text {
-    color: #d5d5d5;
+    color: var(--sk-text-6);
   }
 
   .head {
@@ -186,11 +186,11 @@
 
   .label {
     flex: none;
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #7d7d7d;
+    color: var(--sk-text-21);
   }
 
   .count {
@@ -201,8 +201,8 @@
   .current {
     flex: 1;
     min-width: 0;
-    font-size: 12.5px;
-    color: #a6a6a6;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-13);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

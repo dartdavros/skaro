@@ -36,11 +36,11 @@
 
 <div class="fd-bar" class:error={outcome === 'failed'} data-tip={row.turn.error?.message}>
   {#if outcome === 'failed'}
-    <Icon name="error" size={13} stroke={2.2} color="#ef6a63" />
+    <Icon name="error" size={13} stroke={2.2} color="var(--sk-error)" />
   {:else if outcome === 'interrupted'}
-    <Icon name="stopSquare" size={13} stroke={2.2} color="#8a8a8a" />
+    <Icon name="stopSquare" size={13} stroke={2.2} color="var(--sk-text-20)" />
   {:else}
-    <Icon name="check" size={13} stroke={2.4} color="#8a8a8a" />
+    <Icon name="check" size={13} stroke={2.4} color="var(--sk-text-20)" />
   {/if}
   <span class="text">{text}</span>
   {#if outcome === 'failed' && last && feed.interactive}

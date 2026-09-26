@@ -148,9 +148,9 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     line-height: 1.45;
-    color: #7d7d7d;
+    color: var(--sk-text-21);
   }
 
   .input-note span {

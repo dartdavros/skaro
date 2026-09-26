@@ -118,8 +118,8 @@
     border: none;
     background: none;
     font: inherit;
-    font-size: 12.5px;
-    color: #c8c8c8;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-7);
     cursor: pointer;
     text-align: left;
   }

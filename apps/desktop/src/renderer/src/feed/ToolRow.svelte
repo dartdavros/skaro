@@ -136,10 +136,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--sk-black-a60);
     font-family: var(--sk-mono);
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     font-weight: 600;
-    color: #ededed;
+    color: var(--sk-text-2);
   }
 </style>

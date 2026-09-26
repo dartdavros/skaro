@@ -11,7 +11,7 @@
     value = $bindable(),
     label,
   }: {
-    options: { value: T; label: string; icon?: IconName }[];
+    options: { value: T; label: string; icon?: IconName; tip?: string }[];
     value: T;
     label?: string;
   } = $props();
@@ -26,7 +26,7 @@
       class="item"
       class:active={value === option.value}
       class:icon={!!option.icon}
-      data-tip={option.icon ? option.label : undefined}
+      data-tip={option.icon ? option.label : option.tip}
       aria-label={option.icon ? option.label : undefined}
       onclick={() => (value = option.value)}
     >
@@ -61,7 +61,7 @@
     border-radius: 6px;
     background: transparent;
     color: var(--sk-icon);
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
@@ -75,7 +75,7 @@
   .item.active {
     background: var(--sk-bg);
     color: var(--sk-text-bright);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 1px 2px var(--sk-black-a35);
   }
 
   .item.icon {

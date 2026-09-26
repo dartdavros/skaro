@@ -84,8 +84,10 @@ export interface DiffStats {
 export interface MergeOptions {
   base: string;
   branch: string;
-  strategy: 'squash' | 'merge';
+  strategy: 'squash' | 'merge' | 'rebase';
   message: string;
+  /** The task worktree: "rebase" moves the branch onto the base there first. */
+  worktree?: string;
   /** Called in the main working copy before the commit; returns paths to add to it (e.g. the task file). */
   beforeCommit?: () => Promise<string[]>;
 }
@@ -154,9 +156,12 @@ export class GitService {
   async removeWorktree(path: string, options: { deleteBranch?: string } = {}): Promise<void> {
     await git(this.repo, ['worktree', 'remove', '--force', path], { allowFail: true });
     await git(this.repo, ['worktree', 'prune']);
-    if (options.deleteBranch && (await this.branchExists(options.deleteBranch))) {
-      await git(this.repo, ['branch', '-D', options.deleteBranch]);
-    }
+    if (options.deleteBranch) await this.deleteBranch(options.deleteBranch);
+  }
+
+  /** Deletes a local branch; a missing one is fine. */
+  async deleteBranch(branch: string): Promise<void> {
+    if (await this.branchExists(branch)) await git(this.repo, ['branch', '-D', branch]);
   }
 
   /**
@@ -209,6 +214,29 @@ export class GitService {
       if (a === undefined || r === undefined) continue;
       files++;
       added += Number(a) || 0; // binary files show "-"
+      removed += Number(r) || 0;
+    }
+    return { files, added, removed };
+  }
+
+  /**
+   * What a task changed so far in its worktree: commits since it left the base branch plus
+   * uncommitted edits; new untracked files count as files.
+   */
+  async worktreeStats(worktree: string, base: string): Promise<DiffStats> {
+    const from = (await git(worktree, ['merge-base', base, 'HEAD'])).stdout.trim();
+    const out = (await git(worktree, ['diff', '--numstat', from])).stdout;
+    const untracked = (await git(worktree, ['ls-files', '--others', '--exclude-standard'])).stdout
+      .split('\n')
+      .filter((l) => l.trim() && !l.startsWith('.skaro/')).length;
+    let files = untracked;
+    let added = 0;
+    let removed = 0;
+    for (const line of out.split('\n')) {
+      const [a, r, path] = line.split('\t');
+      if (a === undefined || r === undefined || path?.startsWith('.skaro/')) continue;
+      files++;
+      added += Number(a) || 0;
       removed += Number(r) || 0;
     }
     return { files, added, removed };
@@ -274,13 +302,25 @@ export class GitService {
     try {
       if (options.strategy === 'squash') {
         await git(this.repo, ['merge', '--squash', '--no-commit', options.branch]);
+      } else if (options.strategy === 'rebase') {
+        // The branch commits land on the base as they are; Skaro's own edits get a commit after.
+        if (!options.worktree) throw new Error('a rebase merge needs the task worktree');
+        const rebased = await this.rebase(options.worktree, options.base);
+        if (!rebased.ok) {
+          throw new MergeBlockedError({
+            ...check,
+            blockers: ['conflicts'],
+            conflicts: rebased.conflicts,
+          });
+        }
+        await git(this.repo, ['merge', '--ff-only', options.branch]);
       } else {
         await git(this.repo, ['merge', '--no-ff', '--no-commit', options.branch]);
       }
       if (check.skaroChanges.length) {
         await git(this.repo, [
           'restore',
-          '--source=HEAD',
+          `--source=${options.strategy === 'rebase' ? before : 'HEAD'}`,
           '--staged',
           '--worktree',
           '--',
@@ -289,7 +329,10 @@ export class GitService {
       }
       const extra = (await options.beforeCommit?.()) ?? [];
       if (extra.length) await git(this.repo, ['add', '--', ...extra]);
-      await git(this.repo, ['commit', '--no-verify', '-m', options.message]);
+      const staged = await git(this.repo, ['diff', '--cached', '--quiet'], { allowFail: true });
+      if (options.strategy !== 'rebase' || staged.code !== 0) {
+        await git(this.repo, ['commit', '--no-verify', '-m', options.message]);
+      }
       return { commit: await this.head(), check };
     } catch (error) {
       await this.restore(before);

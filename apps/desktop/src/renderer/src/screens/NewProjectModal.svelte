@@ -59,7 +59,13 @@
   }
 </script>
 
-<Modal bind:open title={t('newProject.title')} subtitle={t('newProject.subtitle')} width={468}>
+<Modal
+  bind:open
+  title={t('newProject.title')}
+  subtitle={t('newProject.subtitle')}
+  width={468}
+  closable={false}
+>
   <div class="body">
     <div class="modes">
       <button
@@ -144,7 +150,7 @@
       </label>
     {:else if folder?.exists && folder.git}
       <div class="info">
-        <Icon name="branch" size={14} stroke={1.9} color="#a6a6a6" />
+        <Icon name="branch" size={14} stroke={1.9} color="var(--sk-text-15)" />
         <span
           >{folder.branch
             ? t('newProject.git', { branch: folder.branch })
@@ -193,7 +199,7 @@
     padding: 13px 14px;
     border: none;
     border-radius: 10px;
-    background: #1a1a1a;
+    background: var(--sk-fill-11);
     display: flex;
     flex-direction: column;
     gap: 7px;
@@ -203,32 +209,32 @@
   }
 
   .mode:hover {
-    background: #1e1e1e;
+    background: var(--sk-fill-15);
   }
 
   .mode.on {
-    background: #242424;
+    background: var(--sk-fill-20);
   }
 
   .icon {
     display: inline-flex;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
   }
 
   .mode.on .icon {
-    color: #2a52be;
+    color: var(--sk-accent);
   }
 
   .mode-title {
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     font-weight: 600;
-    color: #d5d5d5;
+    color: var(--sk-text-6);
   }
 
   .mode-note {
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     line-height: 1.45;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
     text-wrap: pretty;
   }
 
@@ -251,10 +257,10 @@
     height: 34px;
     padding: 0 11px;
     border-radius: 8px;
-    background: #0f0f0f;
+    background: var(--sk-fill-3);
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #b1b1b1;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-10);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -262,7 +268,7 @@
 
   .path.placeholder {
     font-family: var(--sk-font);
-    color: #6f6f6f;
+    color: var(--sk-text-23);
   }
 
   .browse {
@@ -271,16 +277,16 @@
     padding: 0 13px;
     border: none;
     border-radius: 8px;
-    background: #272727;
-    color: #d5d5d5;
+    background: var(--sk-fill-23);
+    color: var(--sk-text-6);
     font: inherit;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     cursor: pointer;
   }
 
   .browse:hover {
-    background: #303030;
+    background: var(--sk-fill-29);
   }
 
   .name {
@@ -288,27 +294,27 @@
     padding: 0 11px;
     border: none;
     border-radius: 8px;
-    background: #0f0f0f;
-    color: #d5d5d5;
+    background: var(--sk-fill-3);
+    color: var(--sk-text-6);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     outline: none;
-    box-shadow: inset 0 0 0 1px #2a2a2a;
+    box-shadow: inset 0 0 0 1px var(--sk-fill-25);
   }
 
   .name:hover {
-    background: #0b0b0b;
-    box-shadow: inset 0 0 0 1px #363636;
+    background: var(--sk-field-hover);
+    box-shadow: inset 0 0 0 1px var(--sk-fill-31);
   }
 
   .name:focus {
-    background: #0b0b0b;
-    box-shadow: inset 0 0 0 1px #2a52be;
+    background: var(--sk-field-hover);
+    box-shadow: inset 0 0 0 1px var(--sk-accent);
   }
 
   .hint {
-    font-size: 11.5px;
-    color: #7d7d7d;
+    font-size: var(--sk-fs-3);
+    color: var(--sk-text-21);
   }
 
   .info {
@@ -317,23 +323,23 @@
     gap: 9px;
     padding: 10px 12px;
     border-radius: 9px;
-    background: #0f0f0f;
-    font-size: 12px;
-    color: #a6a6a6;
+    background: var(--sk-fill-3);
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-13);
   }
 
   .info.warn {
-    color: #e0a33c;
+    color: var(--sk-warn);
   }
 
   .info.error {
-    color: #ef6a63;
+    color: var(--sk-error);
   }
 
   .note {
     flex: 1;
-    font-size: 11.5px;
-    color: #7d7d7d;
+    font-size: var(--sk-fs-3);
+    color: var(--sk-text-21);
     text-wrap: pretty;
   }
 </style>

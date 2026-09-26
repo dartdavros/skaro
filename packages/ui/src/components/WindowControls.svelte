@@ -100,12 +100,12 @@
   }
 
   button:hover {
-    background: #111111;
+    background: var(--sk-fill-4);
     color: var(--sk-text-bright);
   }
 
   .close:hover {
     background: var(--sk-accent);
-    color: #ffffff;
+    color: var(--sk-text-1);
   }
 </style>

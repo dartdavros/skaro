@@ -120,10 +120,10 @@
     width: 100%;
     border: none;
     background: transparent;
-    color: #dfe5f3;
+    color: var(--sk-blue-1);
     font: inherit;
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: var(--sk-fs-6);
+    line-height: 1.45;
     resize: none;
     outline: none;
     field-sizing: content;
@@ -142,15 +142,15 @@
     border: none;
     border-radius: 7px;
     background: transparent;
-    color: #b8c3dc;
+    color: var(--sk-blue-2);
     font: inherit;
-    font-size: 12px;
+    font-size: var(--sk-fs-4);
     font-weight: 600;
     cursor: pointer;
   }
 
   .cancel:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--sk-white-a6);
   }
 
   .thumb-btn {

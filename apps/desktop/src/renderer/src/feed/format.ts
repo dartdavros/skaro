@@ -49,6 +49,17 @@ export function agentName(agent: string): string {
   return agent === 'codex' ? 'Codex' : 'Claude Code';
 }
 
+/** Model id as people say it: claude-opus-5-1 → Opus 5.1. */
+export function prettyModel(id: string): string {
+  const claude = /^claude-(opus|sonnet|haiku|fable|mythos)-(\d+)(?:-(\d+))?/.exec(id);
+  if (claude) {
+    const name = claude[1]![0]!.toUpperCase() + claude[1]!.slice(1);
+    return `${name} ${claude[2]}${claude[3] && claude[3].length <= 2 ? `.${claude[3]}` : ''}`;
+  }
+  if (id === 'default') return 'Claude Code';
+  return id;
+}
+
 /** URL of an image for <img>: stored attachment or a file Skaro may show. */
 export function imageUrl(ref: { id: string; mime: string; path?: string }): string {
   if (/^[a-f0-9]{64}$/.test(ref.id)) {

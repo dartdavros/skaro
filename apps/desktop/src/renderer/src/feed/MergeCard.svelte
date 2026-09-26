@@ -135,8 +135,8 @@
     align-items: center;
     gap: 7px;
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #e8875b;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-code);
     min-width: 0;
   }
 
@@ -149,18 +149,18 @@
 
   .arrow {
     flex: none;
-    color: #6f6f6f;
+    color: var(--sk-text-23);
   }
 
   .base {
     flex: none;
-    color: #c8c8c8;
+    color: var(--sk-text-7);
   }
 
   .stats {
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #8a8a8a;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-19);
     display: flex;
     gap: 6px;
   }
@@ -169,7 +169,7 @@
     display: flex;
     align-items: flex-start;
     gap: 7px;
-    font-size: 12px;
+    font-size: var(--sk-fs-4);
     line-height: 1.45;
   }
 
@@ -178,11 +178,11 @@
   }
 
   .line.bad {
-    color: #ef6a63;
+    color: var(--sk-error);
   }
 
   .line.warn {
-    color: #e0a33c;
+    color: var(--sk-warn);
   }
 
   .files {
@@ -190,8 +190,8 @@
     display: flex;
     flex-direction: column;
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #a6a6a6;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-13);
   }
 
   .message {
@@ -203,7 +203,7 @@
   textarea.fd-input {
     height: auto;
     padding: 8px 11px;
-    line-height: 1.5;
+    line-height: 1.4;
     resize: vertical;
   }
 </style>

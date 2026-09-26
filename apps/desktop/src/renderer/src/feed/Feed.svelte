@@ -57,17 +57,50 @@
     activitySince = Date.now();
   });
 
+  /** Where the feed was last scrolled to: only the user moves it up. */
+  let lastTop = 0;
+  let content: HTMLDivElement | undefined = $state();
+
+  /** Follows the end while the user has not scrolled up to read. */
+  function stick(): void {
+    if (!scroller || !atBottom) return;
+    scroller.scrollTop = scroller.scrollHeight;
+    lastTop = scroller.scrollTop;
+  }
+
   $effect(() => {
     void rows;
     void timeline.interactions;
     void timeline.activity;
-    if (!atBottom) return;
-    void tick().then(() => scroller?.scrollTo({ top: scroller.scrollHeight }));
+    void tick().then(stick);
+  });
+
+  // Rows grow without new events too: Markdown and diagrams render, images load, cards open.
+  $effect(() => {
+    if (!content || !scroller) return;
+    const observer = new ResizeObserver(stick);
+    observer.observe(content);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  });
+
+  // The user's own new message brings the feed back to the end.
+  const lastUser = $derived(rows.findLast((r) => r.type === 'user')?.id);
+  let seenUser: string | undefined;
+  $effect(() => {
+    const id = lastUser;
+    if (seenUser !== undefined && id !== seenUser) atBottom = true;
+    seenUser = id;
   });
 
   function onscroll(): void {
     if (!scroller) return;
-    atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 40;
+    const top = scroller.scrollTop;
+    const distance = scroller.scrollHeight - top - scroller.clientHeight;
+    // Scrolling the feed to the end also fires "scroll"; only moving up means the user left it.
+    if (top < lastTop - 1 && distance > 2) atBottom = false;
+    else if (distance < 40) atBottom = true;
+    lastTop = top;
   }
 
   function toBottom(): void {
@@ -78,7 +111,7 @@
 <div class="wrap">
   <div class="fade"></div>
   <div class="scroller" bind:this={scroller} {onscroll}>
-    <div class="fd-feed">
+    <div class="fd-feed" bind:this={content}>
       <FeedRows {rows} {waiting} />
       {#if showLive && timeline.activity}
         <LiveLine activity={timeline.activity} since={activitySince} {cwd} />
@@ -100,7 +133,7 @@
         {:else if interaction.kind === 'login'}
           <LoginCard {interaction} />
         {:else if interaction.kind === 'merge'}
-          <MergeCard {interaction} defaultMessage={mergeMessage} />
+          <MergeCard {interaction} defaultMessage={interaction.message ?? mergeMessage} />
         {/if}
       {/each}
     </div>
@@ -137,9 +170,9 @@
     pointer-events: none;
     background: linear-gradient(
       180deg,
-      #121212 0%,
-      rgba(18, 18, 18, 0.85) 35%,
-      rgba(18, 18, 18, 0) 100%
+      var(--sk-fill-5) 0%,
+      var(--sk-bg-a85) 35%,
+      var(--sk-bg-a0) 100%
     );
   }
 
@@ -149,11 +182,6 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 34px 26px 30px;
-  }
-
-  .fd-feed {
-    max-width: 860px;
-    margin: 0 auto;
   }
 
   .down {
@@ -169,17 +197,17 @@
     justify-content: center;
     border: none;
     border-radius: 50%;
-    background: rgba(12, 12, 12, 0.72);
+    background: var(--sk-float-a72);
     backdrop-filter: blur(8px);
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.06),
-      0 8px 20px rgba(0, 0, 0, 0.45);
-    color: #d5d5d5;
+      0 0 0 1px var(--sk-white-a6),
+      0 8px 20px var(--sk-black-a45);
+    color: var(--sk-text-6);
     cursor: pointer;
   }
 
   .down:hover {
-    background: rgba(30, 30, 30, 0.9);
-    color: #fff;
+    background: var(--sk-float-hover-a90);
+    color: var(--sk-text-1);
   }
 </style>

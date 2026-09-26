@@ -1,0 +1,100 @@
+<script lang="ts">
+  import { t, Toggle } from '@skaro/ui';
+  import { AUTO_MERGE_KEY } from '../../../shared/ipc';
+  import Card from './Card.svelte';
+  import { Setting } from './setting.svelte';
+
+  /**
+   * "Выполнение": how many tasks run at once (1–8), the rest wait in the queue; whether a task
+   * whose criteria are all ticked is merged on its own or with the card.
+   */
+  const slots = new Setting<number>('runs.slots', 3);
+  const autoMerge = new Setting<boolean>(AUTO_MERGE_KEY, false);
+</script>
+
+<Card label={t('settings.runs')}>
+  <div class="row">
+    <div class="texts">
+      <span class="title">{t('settings.runs.slots')}</span>
+      <span class="note">{t('settings.runs.note')}</span>
+    </div>
+    <div class="stepper">
+      <button
+        type="button"
+        data-tip={t('settings.runs.less')}
+        onclick={() => slots.set(Math.max(1, slots.value - 1))}>−</button
+      >
+      <span class="value">{slots.value}</span>
+      <button
+        type="button"
+        data-tip={t('settings.runs.more')}
+        onclick={() => slots.set(Math.min(8, slots.value + 1))}>+</button
+      >
+    </div>
+  </div>
+  <div class="row">
+    <div class="texts">
+      <span class="title">{t('settings.autoMerge')}</span>
+      <span class="note">{t('settings.autoMerge.note')}</span>
+    </div>
+    <Toggle bind:checked={() => autoMerge.value, (on) => autoMerge.set(on)} />
+  </div>
+</Card>
+
+<style>
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .texts {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .title {
+    font-size: var(--sk-fs-6);
+    color: var(--sk-text-7);
+  }
+
+  .note {
+    font-size: var(--sk-fs-3);
+    color: var(--sk-text-21);
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--sk-deep);
+  }
+
+  button {
+    width: 28px;
+    height: 27px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--sk-text-17);
+    font-size: var(--sk-fs-10);
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: var(--sk-fill-11);
+    color: var(--sk-text-6);
+  }
+
+  .value {
+    min-width: 30px;
+    text-align: center;
+    font-family: var(--sk-mono);
+    font-size: var(--sk-fs-6);
+    color: var(--sk-text-2);
+  }
+</style>

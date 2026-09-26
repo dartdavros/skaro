@@ -34,6 +34,8 @@ export type FeedRow =
   | { type: 'unknown'; id: string; item: Of<'unknown'> }
   /** A decision without a row of its own (questions, plans, forms): a summary line. */
   | { type: 'decision'; id: string; item: Of<'decision'> }
+  /** A chat agent's proposal: a card between the replies (agent-output.md 5.4). */
+  | { type: 'proposal'; id: string; item: Of<'proposal'> }
   | {
       type: 'turn_end';
       id: string;
@@ -47,6 +49,20 @@ export type FeedRow =
 /** Skaro's own MCP tools are shown as cards, never as tool rows (agent-output.md 5.4). */
 function hidden(item: Item): boolean {
   return item.kind === 'tool' && item.server === 'skaro';
+}
+
+/**
+ * Skaro puts the user's decisions on proposals in front of the next message for the agent
+ * (agent-output.md 5.4); the feed shows the message as the user wrote it.
+ */
+const SKARO_NOTE = /^<skaro-note>[\s\S]*?<\/skaro-note>\s*/;
+
+export function withSkaroNote(note: string, text: string): string {
+  return note.trim() ? `<skaro-note>\n${note.trim()}\n</skaro-note>\n\n${text}` : text;
+}
+
+export function withoutSkaroNote(text: string): string {
+  return text.replace(SKARO_NOTE, '');
 }
 
 function isUserImage(item: Item): item is Of<'image'> {
@@ -66,8 +82,15 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
     const prev = rows.at(-1);
     switch (item.kind) {
       case 'message':
-        if (item.role === 'user') rows.push({ type: 'user', id: item.id, item, images: [] });
-        else rows.push({ type: 'agent', id: item.id, item, final: item.phase === 'final' });
+        if (item.role === 'user') {
+          const text = withoutSkaroNote(item.text);
+          rows.push({
+            type: 'user',
+            id: item.id,
+            item: text === item.text ? item : { ...item, text },
+            images: [],
+          });
+        } else rows.push({ type: 'agent', id: item.id, item, final: item.phase === 'final' });
         break;
       case 'image':
         if (isUserImage(item) && prev?.type === 'user') prev.images.push(item);
@@ -113,6 +136,9 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
         break;
       case 'unknown':
         rows.push({ type: 'unknown', id: item.id, item });
+        break;
+      case 'proposal':
+        rows.push({ type: 'proposal', id: item.id, item });
         break;
       case 'decision':
         // Permissions show on the row they were about; the rest get a summary line.

@@ -98,7 +98,12 @@
         {#each task.criteria as criterion, i (i)}
           <button type="button" class="criterion" onclick={() => ontoggle(i)}>
             <span class="box" class:done={criterion.done}>
-              {#if criterion.done}<Icon name="check" size={11} stroke={3.2} color="#ededed" />{/if}
+              {#if criterion.done}<Icon
+                  name="check"
+                  size={11}
+                  stroke={3.2}
+                  color="var(--sk-text-3)"
+                />{/if}
             </span>
             <span class="text" class:done={criterion.done}>{criterion.text}</span>
           </button>
@@ -134,8 +139,8 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 12px;
-    color: #7d7d7d;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-21);
     min-width: 0;
   }
 
@@ -150,7 +155,7 @@
   }
 
   .crumb:hover {
-    color: #d5d5d5;
+    color: var(--sk-text-6);
   }
 
   .crumb.static {
@@ -164,12 +169,12 @@
   }
 
   .slash {
-    color: #4a4a4a;
+    color: var(--sk-text-28);
   }
 
   .id {
     font-family: var(--sk-mono);
-    color: #a6a6a6;
+    color: var(--sk-text-13);
   }
 
   .title-row {
@@ -181,10 +186,10 @@
   h1 {
     flex: 1;
     margin: 0;
-    font-size: 17px;
+    font-size: var(--sk-fs-13);
     font-weight: 700;
     line-height: 1.35;
-    color: #d8d8d8;
+    color: var(--sk-text-5);
     text-wrap: pretty;
   }
 
@@ -198,22 +203,22 @@
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: #6f6f6f;
+    color: var(--sk-text-23);
     cursor: pointer;
     padding: 0;
   }
 
   .collapse:hover {
-    background: #1c1c1c;
-    color: #d5d5d5;
+    background: var(--sk-fill-13);
+    color: var(--sk-text-6);
   }
 
   .meta {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    font-size: 12px;
-    color: #8a8a8a;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-19);
   }
 
   .line {
@@ -228,7 +233,7 @@
     align-items: center;
     gap: 4px;
     font-family: var(--sk-mono);
-    color: #a6a6a6;
+    color: var(--sk-text-13);
   }
 
   .branch {
@@ -236,7 +241,7 @@
     align-items: center;
     gap: 7px;
     font-family: var(--sk-mono);
-    color: #e8875b;
+    color: var(--sk-code);
     min-width: 0;
   }
 
@@ -249,7 +254,7 @@
 
   .sep {
     height: 1px;
-    background: #191919;
+    background: var(--sk-fill-10);
   }
 
   .section {
@@ -260,18 +265,18 @@
 
   .goal {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     line-height: 1.6;
-    color: #b1b1b1;
+    color: var(--sk-text-10);
     text-wrap: pretty;
     white-space: pre-wrap;
   }
 
   .notes {
     margin: 0;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     line-height: 1.6;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
     text-wrap: pretty;
     white-space: pre-wrap;
   }
@@ -300,28 +305,28 @@
     width: 16px;
     height: 16px;
     border-radius: 5px;
-    background: #1a1a1a;
-    box-shadow: inset 0 0 0 1px #353535;
+    background: var(--sk-fill-11);
+    box-shadow: inset 0 0 0 1px var(--sk-fill-30);
     display: inline-flex;
     align-items: center;
     justify-content: center;
   }
 
   .box.done {
-    background: #0b0b0b;
-    box-shadow: inset 0 0 0 1px #5a5a5a;
+    background: var(--sk-field-hover);
+    box-shadow: inset 0 0 0 1px var(--sk-fill-37);
   }
 
   .criterion .text {
     flex: 1;
     min-width: 0;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     line-height: 1.5;
-    color: #a6a6a6;
+    color: var(--sk-text-13);
     text-wrap: pretty;
   }
 
   .criterion .text.done {
-    color: #7d7d7d;
+    color: var(--sk-text-21);
   }
 </style>

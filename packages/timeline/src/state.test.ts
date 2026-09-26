@@ -74,7 +74,8 @@ describe('replayRunLog', () => {
     expect(events).toEqual([
       message('p0-0', 'a @1010'),
       { t: 'status', state: 'idle' },
-      message('p1-0', 'b @1050'),
+      // The second agent process numbers its turns again: they get the segment in their id.
+      message('p1-0', 'b @1050', 's1.t1'),
     ]);
   });
 });

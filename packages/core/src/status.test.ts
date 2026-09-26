@@ -69,6 +69,14 @@ describe('display status and start', () => {
     expect(displayStatus(t, index)).toBe('todo');
   });
 
+  it('shows a started task nobody works on as waiting for the user', () => {
+    const started = task('T-2', { status: 'in_progress' });
+    const idx = indexTasks([started]);
+    expect(displayStatus(started, idx)).toBe('needs_answer');
+    expect(displayStatus(started, idx, 'running')).toBe('in_progress');
+    expect(displayStatus(task('T-3', { status: 'review' }), idx)).toBe('review');
+  });
+
   it('refuses to start archived, done or running tasks', () => {
     expect(startBlocker(task('A', { archived: true }), index)).toBe('archived');
     expect(startBlocker(task('B', { status: 'done' }), index)).toBe('already_done');

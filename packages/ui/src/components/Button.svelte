@@ -30,7 +30,7 @@
     padding: 0 14px;
     border: none;
     border-radius: var(--sk-radius);
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
@@ -49,13 +49,13 @@
     height: 28px;
     padding: 0 12px;
     border-radius: 7px;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
   }
 
   .primary {
     padding: 0 15px;
     background: var(--sk-accent);
-    color: #ffffff;
+    color: var(--sk-text-1);
     font-weight: 700;
   }
 
@@ -74,29 +74,29 @@
   }
 
   .danger {
-    background: rgba(239, 106, 99, 0.16);
-    color: #f08b85;
+    background: var(--sk-error-a16);
+    color: var(--sk-red-2);
   }
 
   .danger:hover:not(:disabled) {
-    background: rgba(239, 106, 99, 0.26);
-    color: #ffb3ae;
+    background: var(--sk-error-a26);
+    color: var(--sk-red-1);
   }
 
   .dangerSolid {
     padding: 0 15px;
-    background: #d9534d;
-    color: #ffffff;
+    background: var(--sk-red-6);
+    color: var(--sk-text-1);
     font-weight: 700;
   }
 
   .dangerSolid:hover:not(:disabled) {
-    background: #e5625c;
+    background: var(--sk-red-5);
   }
 
   .ghost {
     background: transparent;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
   }
 
   .ghost:hover:not(:disabled) {

@@ -1,0 +1,98 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { AppDb, ArtifactStore } from '@skaro/core';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { projectCards, projectOverview } from './overview';
+import { Projects } from './projects';
+
+let root: string;
+let db: AppDb;
+let projects: Projects;
+
+beforeEach(async () => {
+  root = await mkdtemp(join(tmpdir(), 'skaro-overview-'));
+  db = AppDb.open(':memory:');
+  projects = new Projects(db, () => undefined);
+});
+
+afterEach(async () => {
+  projects.close();
+  db.close();
+  await rm(root, { recursive: true, force: true });
+});
+
+describe('projectCards', () => {
+  it('shows the first unfinished milestone, task statuses and running tasks', async () => {
+    const store = new ArtifactStore(root);
+    const m1 = await store.createMilestone({ title: 'API' });
+    const m2 = await store.createMilestone({ title: 'Платежи' });
+    const a = await store.createTask({ title: 'A', milestone: m1.id });
+    await store.updateTask(a.id, { status: 'done' });
+    const b = await store.createTask({ title: 'B', milestone: m2.id });
+    await store.updateTask(b.id, { status: 'review' });
+    const c = await store.createTask({ title: 'C', milestone: m2.id, dependsOn: [b.id] });
+    const d = await store.createTask({ title: 'D', milestone: m2.id });
+    const project = db.addProject({ name: 'Shop', path: root });
+    db.createRun({
+      projectId: project.id,
+      taskId: d.id,
+      agent: 'codex',
+      model: 'gpt-6-astra',
+      logPath: 'x.jsonl',
+      adapterVersion: '1',
+    });
+    db.setTaskRuntime(project.id, d.id, 'running');
+
+    const [card] = await projectCards(db, projects);
+    expect(card).toMatchObject({
+      name: 'Shop',
+      missing: false,
+      milestone: { id: m2.id, title: 'Платежи', done: 0, total: 3 },
+      counts: { working: 1, needs: 0, review: 1, failed: 0, blocked: 1 },
+      running: [{ id: d.id, title: 'D', agent: 'codex', model: 'gpt-6-astra' }],
+      agent: 'claude-code',
+    });
+    expect(c.dependsOn).toEqual([b.id]);
+  });
+
+  it('builds the overview: attention, milestones, the start checklist and events', async () => {
+    const store = new ArtifactStore(root);
+    await store.writeDoc('brief.md', '# Бриф');
+    await store.writeDoc(
+      'architecture.md',
+      '# Архитектура\n\n## Правила и ограничения\n\n- Только TypeScript\n- Без any\n',
+    );
+    await store.createAdr({ title: 'TS', status: 'accepted' });
+    const m1 = await store.createMilestone({ title: 'API' });
+    const m2 = await store.createMilestone({ title: 'Админка' });
+    const a = await store.createTask({ title: 'A', milestone: m1.id });
+    await store.updateTask(a.id, { status: 'review' });
+    const project = db.addProject({ name: 'Shop', path: root });
+    db.addEvent(project.id, 'merged', { task: a.id, base: 'main' });
+
+    const view = await projectOverview(db, projects, project.id);
+    expect(view.attention.map((t) => [t.id, t.status])).toEqual([[a.id, 'review']]);
+    expect(view.running).toEqual([]);
+    expect(view.milestones.map((m) => [m.id, m.done, m.total])).toEqual([
+      [m1.id, 0, 1],
+      [m2.id, 0, 0],
+    ]);
+    expect(view.start).toMatchObject({
+      architecture: { adrs: 1, rules: 2 },
+      milestones: 2,
+      tasks: 1,
+      emptyMilestone: { id: m2.id, title: 'Админка' },
+      hidden: false,
+    });
+    expect(view.start.brief?.updatedAt).toBeGreaterThan(0);
+    expect(view.events).toMatchObject([{ kind: 'merged', taskTitle: 'A' }]);
+  });
+
+  it('marks a project whose folder is gone', async () => {
+    db.addProject({ name: 'Old', path: join(root, 'gone') });
+    const [card] = await projectCards(db, projects);
+    expect(card).toMatchObject({ name: 'Old', missing: true, running: [] });
+    expect(card?.milestone).toBeUndefined();
+  });
+});

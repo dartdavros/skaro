@@ -46,10 +46,10 @@
     max-width: 260px;
     padding: 6px 9px;
     border-radius: 7px;
-    background: #000000;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+    background: var(--sk-fill-1);
+    box-shadow: 0 10px 26px var(--sk-black-a60);
     color: var(--sk-text);
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     line-height: 1.4;
     text-wrap: pretty;
     pointer-events: none;

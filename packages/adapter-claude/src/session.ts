@@ -35,6 +35,8 @@ import { ClaudeProjector } from './projector.ts';
 /** Task tools are off by default on new models; Skaro enables them so the agent plan exists. */
 const PLAN_TOOLS = ['TaskCreate', 'TaskUpdate', 'TaskGet', 'TaskList'];
 const EDIT_TOOLS = ['Edit', 'Write', 'NotebookEdit'];
+/** Shell tools: in a read-only chat only commands the CLI itself treats as read-only run. */
+const SHELL_TOOLS = ['Bash', 'PowerShell'];
 
 /** Skaro mode → Claude mode (architecture.md 5.4, D-28). */
 export function nativeMode(mode: PermissionMode, planFirst = false): NativeMode {
@@ -284,8 +286,13 @@ export class ClaudeSession implements AgentSession {
     // The projector saw the control_request first and opened the interaction.
     const interactionId = this.projector.interactionForToolUse(toolUseID);
     if (!interactionId) return { behavior: 'allow', updatedInput: input, toolUseID };
-    if (this.options.readOnly && EDIT_TOOLS.includes(toolName)) {
-      return { behavior: 'deny', message: 'This chat is read-only.', toolUseID };
+    // A command that needs permission is not read-only (agent-output.md 5.4).
+    if (this.options.readOnly && [...EDIT_TOOLS, ...SHELL_TOOLS].includes(toolName)) {
+      return {
+        behavior: 'deny',
+        message: 'This chat is read-only: only read-only commands can run here.',
+        toolUseID,
+      };
     }
     const answer = await this.waitForAnswer(interactionId);
     const interaction = this.interactions.get(interactionId);

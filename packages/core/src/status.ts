@@ -33,7 +33,9 @@ export function displayStatus(
   if (runtime === 'waiting') return 'needs_answer';
   if (runtime === 'queued') return 'queued';
   if (runtime === 'running') return 'in_progress';
-  return isBlocked(task, index) ? 'blocked' : task.status;
+  if (isBlocked(task, index)) return 'blocked';
+  // Started, but no agent works on it now: it waits for the user (a reply, unmet criteria).
+  return task.status === 'in_progress' ? 'needs_answer' : task.status;
 }
 
 /** Why a task cannot be started now, or undefined if it can. */

@@ -7,6 +7,7 @@
   import FileRow from './FileRow.svelte';
   import ImageRow from './ImageRow.svelte';
   import NoticeRow from './NoticeRow.svelte';
+  import ProposalCard from './ProposalCard.svelte';
   import Reasoning from './Reasoning.svelte';
   import TaskRow from './TaskRow.svelte';
   import ToolRow from './ToolRow.svelte';
@@ -35,6 +36,13 @@
     }
     return map;
   });
+  /** The row before `i`, skipping proposal cards (they sit between the reply and its end). */
+  function before(i: number): FeedRow | undefined {
+    let j = i - 1;
+    while (rows[j]?.type === 'proposal') j--;
+    return rows[j];
+  }
+
   /** Final answers directly followed by the turn summary: the summary carries their actions. */
   const replyBeforeEnd = $derived.by(() => {
     const map: Record<
@@ -42,7 +50,7 @@
       { text: string; retryOf?: { id: string; text: string } | undefined }
     > = {};
     rows.forEach((row, i) => {
-      const prev = rows[i - 1];
+      const prev = before(i);
       if (row.type === 'turn_end' && prev?.type === 'agent' && prev.final) {
         map[row.id] = {
           text: prev.item.text,
@@ -54,9 +62,11 @@
   });
   const endsAfter = $derived(
     new Set(
-      rows
-        .filter((r, i) => r.type === 'agent' && rows[i + 1]?.type === 'turn_end')
-        .map((r) => r.id),
+      rows.flatMap((row, i) => {
+        if (row.type !== 'turn_end') return [];
+        const prev = before(i);
+        return prev?.type === 'agent' ? [prev.id] : [];
+      }),
     ),
   );
   const lastTurnEnd = $derived(rows.findLast((r) => r.type === 'turn_end')?.id);
@@ -103,6 +113,8 @@
     <TurnEnd {row} last={row.id === lastTurnEnd} reply={replyBeforeEnd[row.id]} />
   {:else if row.type === 'decision'}
     <DecisionRow {row} />
+  {:else if row.type === 'proposal'}
+    <ProposalCard {row} />
   {/if}
 {/snippet}
 

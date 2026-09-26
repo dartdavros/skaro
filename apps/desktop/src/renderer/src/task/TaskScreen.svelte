@@ -4,6 +4,7 @@
   import { onDestroy } from 'svelte';
   import type { AgentInfo, AgentSettings, MergeAction, MessageInput } from '../../../shared/ipc';
   import { provideFeed } from '../feed/context.svelte';
+  import { prettyModel } from '../feed/format';
   import Feed from '../feed/Feed.svelte';
   import ImageViewer from '../feed/ImageViewer.svelte';
   import PinnedZone from '../feed/PinnedZone.svelte';
@@ -51,7 +52,6 @@
   const running = $derived(timeline !== undefined && timeline.status !== 'idle');
   const agentInfo = $derived(agents.find((a) => a.id === (view?.run?.agent ?? settings?.agent)));
   const cwd = $derived(view?.run?.worktree);
-  const done = $derived(view?.task.status === 'done');
   const openQuestion = $derived(timeline?.interactions.find((i) => i.kind === 'question'));
   const openApproval = $derived(timeline?.interactions.find((i) => i.kind === 'approval'));
 
@@ -60,16 +60,6 @@
     if (!id) return agentInfo?.id === 'codex' ? 'Codex' : 'Claude Code';
     return prettyModel(id);
   });
-
-  function prettyModel(id: string): string {
-    const claude = /^claude-(opus|sonnet|haiku|fable|mythos)-(\d+)(?:-(\d+))?/.exec(id);
-    if (claude) {
-      const name = claude[1]![0]!.toUpperCase() + claude[1]!.slice(1);
-      return `${name} ${claude[2]}${claude[3] && claude[3].length <= 2 ? `.${claude[3]}` : ''}`;
-    }
-    if (id === 'default') return 'Claude Code';
-    return id;
-  }
 
   const placeholder = $derived(
     openQuestion || openApproval
@@ -128,7 +118,7 @@
       return cwd;
     },
     get interactive() {
-      return !done;
+      return true;
     },
     openPath: (path) =>
       void guard(() => window.skaro.invoke('files.open', projectId, taskId, path)).catch(
@@ -248,14 +238,14 @@
         <Feed {timeline} {cwd} {mergeMessage} />
       {:else if view.queued}
         <div class="empty">
-          <Icon name="clock" size={30} stroke={1.5} color="#3b3b3b" />
+          <Icon name="clock" size={30} stroke={1.5} color="var(--sk-text-29)" />
           <span class="empty-text">{t('task.queued')}</span>
         </div>
       {:else if running}
         <div class="empty"><span class="fd-pulse"></span></div>
       {:else}
         <div class="empty">
-          <Icon name="message" size={30} stroke={1.5} color="#3b3b3b" />
+          <Icon name="message" size={30} stroke={1.5} color="var(--sk-text-29)" />
           <span class="empty-title">{t('task.empty.title')}</span>
           <span class="empty-text">{t('task.empty.text')}</span>
           <button
@@ -270,7 +260,8 @@
         </div>
       {/if}
 
-      {#if !done}
+      <!-- The chat stays after the task is done: follow-up questions go on in it. -->
+      {#if view}
         <div class="bottom">
           {#if timeline}<PinnedZone {timeline} />{/if}
           {#if settings}
@@ -334,7 +325,7 @@
     flex: none;
     position: relative;
     width: 1px;
-    background: #1a1a1a;
+    background: var(--sk-fill-11);
     z-index: 5;
   }
 
@@ -348,7 +339,13 @@
   }
 
   .grip:hover {
-    background: linear-gradient(90deg, transparent 3px, #2a52be 3px, #2a52be 6px, transparent 6px);
+    background: linear-gradient(
+      90deg,
+      transparent 3px,
+      var(--sk-accent) 3px,
+      var(--sk-accent) 6px,
+      transparent 6px
+    );
   }
 
   .main {
@@ -357,7 +354,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: #121212;
+    background: var(--sk-fill-5);
   }
 
   .head {
@@ -377,22 +374,22 @@
     justify-content: center;
     border: none;
     border-radius: 6px;
-    background: #1c1c1c;
-    color: #b1b1b1;
+    background: var(--sk-fill-13);
+    color: var(--sk-text-10);
     cursor: pointer;
     padding: 0;
   }
 
   .expand:hover {
-    color: #ededed;
+    color: var(--sk-text-2);
   }
 
   .crumbs {
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 12px;
-    color: #7d7d7d;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-21);
     min-width: 0;
   }
 
@@ -406,20 +403,20 @@
   }
 
   .crumb:hover {
-    color: #d5d5d5;
+    color: var(--sk-text-6);
   }
 
   .slash {
-    color: #4a4a4a;
+    color: var(--sk-text-28);
   }
 
   .id {
     font-family: var(--sk-mono);
-    color: #a6a6a6;
+    color: var(--sk-text-13);
   }
 
   .name {
-    color: #a6a6a6;
+    color: var(--sk-text-13);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -449,16 +446,16 @@
   }
 
   .empty-title {
-    font-size: 14px;
+    font-size: var(--sk-fs-8);
     font-weight: 600;
-    color: #a6a6a6;
+    color: var(--sk-text-13);
   }
 
   .empty-text {
     max-width: 320px;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     line-height: 1.5;
-    color: #7d7d7d;
+    color: var(--sk-text-21);
     text-align: center;
     text-wrap: pretty;
   }
@@ -472,16 +469,16 @@
     padding: 0 15px;
     border: none;
     border-radius: 8px;
-    background: #2a52be;
-    color: #fff;
+    background: var(--sk-accent);
+    color: var(--sk-text-1);
     font: inherit;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 700;
     cursor: pointer;
   }
 
   .start:hover {
-    background: #3461d6;
+    background: var(--sk-accent-hover);
   }
 
   .bottom {

@@ -59,9 +59,9 @@
     padding: 0 9px;
     align-self: flex-start;
     border-radius: 6px;
-    background: #222;
-    color: #a6a6a6;
-    font-size: 12px;
+    background: var(--sk-fill-18);
+    color: var(--sk-text-13);
+    font-size: var(--sk-fs-4);
     font-weight: 600;
   }
 
@@ -72,15 +72,15 @@
   }
 
   .dot.working {
-    background: #a6a6a6;
+    background: var(--sk-fill-41);
     animation: skPulse 1.6s ease-in-out infinite;
   }
 
   .dot.blue {
-    background: #2a52be;
+    background: var(--sk-accent);
   }
 
   .dot.red {
-    background: #ef6a63;
+    background: var(--sk-error);
   }
 </style>

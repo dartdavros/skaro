@@ -67,21 +67,48 @@ export interface Doc {
 export interface ProjectConfig {
   defaultAgent: string;
   defaultModel?: string;
+  defaultEffort?: string;
+  /** How new tasks start: ask, auto within the task, full access. */
+  permissionMode: 'ask' | 'auto' | 'full';
   baseBranch: string;
   branchTemplate: string;
   isolation: 'worktree' | 'in-place';
-  merge: { strategy: 'squash' | 'merge'; deleteBranch: boolean };
+  merge: { strategy: 'squash' | 'merge' | 'rebase'; deleteBranch: boolean };
   chat: { autoAcceptDocs: boolean };
+  /** Skaro keeps its block in AGENTS.md and CLAUDE.md (architecture.md 3). */
+  agentFiles: boolean;
+  agentInstructions?: string;
+  /** App-wide instructions ("Настройки"): the agent gets them before the project's own. */
+  globalInstructions?: string;
+}
+
+/**
+ * App-wide defaults ("Настройки"): a project takes them for whatever its config.yaml does not
+ * set; the project's own values win.
+ */
+export interface ConfigDefaults {
+  baseBranch?: string;
+  branchTemplate?: string;
+  isolation?: 'worktree' | 'in-place';
+  mergeStrategy?: 'squash' | 'merge' | 'rebase';
+  deleteBranch?: boolean;
+  autoAcceptDocs?: boolean;
+  agentFiles?: boolean;
   agentInstructions?: string;
 }
 
+/** Settings a project may leave to the app-wide defaults. */
+export type InheritableSetting = Exclude<keyof ConfigDefaults, 'agentInstructions'>;
+
 export const DEFAULT_CONFIG: ProjectConfig = {
   defaultAgent: 'claude-code',
+  permissionMode: 'auto',
   baseBranch: 'main',
   branchTemplate: 'skaro/{id}-{slug}',
   isolation: 'worktree',
   merge: { strategy: 'squash', deleteBranch: true },
   chat: { autoAcceptDocs: true },
+  agentFiles: false,
 };
 
 /** A file in .skaro/ that could not be read; shown to the user instead of crashing. */

@@ -28,7 +28,7 @@
     justify-content: center;
     padding: 40px;
     border: none;
-    background: rgba(0, 0, 0, 0.78);
+    background: var(--sk-black-a78);
     backdrop-filter: blur(6px);
     cursor: zoom-out;
     animation: skIn 0.14s ease-out;
@@ -38,7 +38,7 @@
     max-width: 100%;
     max-height: 100%;
     border-radius: 8px;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 30px 70px var(--sk-black-a60);
     object-fit: contain;
   }
 </style>

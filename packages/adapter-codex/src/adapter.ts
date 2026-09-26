@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import {
   arr,
@@ -14,6 +15,7 @@ import {
   type AgentModel,
   type AgentSession,
   type AgentStatus,
+  type AgentUserConfig,
   type SandboxCheck,
   type SessionOptions,
 } from '@skaro/timeline';
@@ -117,6 +119,37 @@ export class CodexAdapter implements AgentAdapter {
           description: str(s['description']) ?? '',
           kind: 'skill' as const,
         }));
+    });
+  }
+
+  /** MCP servers with their tools and sign-in, enabled skills and hooks, from the app-server. */
+  async userConfig(cwd: string): Promise<AgentUserConfig> {
+    const dir = this.config.codexHome ?? process.env['CODEX_HOME'] ?? join(homedir(), '.codex');
+    return this.withServer(cwd, async (server) => {
+      const mcp = arr(obj(await server.request('mcpServerStatus/list', {}))?.['data'])
+        .map(obj)
+        .filter((s): s is Record<string, unknown> => s !== undefined)
+        .map((s) => {
+          const error = str(s['toolsError']) ?? str(obj(s['toolsError'])?.['message']);
+          const tools = obj(s['tools']);
+          return {
+            name: str(s['name']) ?? '',
+            state: error
+              ? ('failed' as const)
+              : s['authStatus'] === 'notLoggedIn'
+                ? ('needs_auth' as const)
+                : ('ok' as const),
+            tools: tools ? Object.keys(tools).length : 0,
+            ...(error ? { error } : {}),
+          };
+        });
+      const skills = arr(obj(await server.request('skills/list', { cwds: [cwd] }))?.['data'])
+        .flatMap((entry) => arr(obj(entry)?.['skills']))
+        .filter((s) => obj(s)?.['enabled'] !== false).length;
+      const hooks = arr(
+        obj(await server.request('hooks/list', { cwds: [cwd] }))?.['data'],
+      ).reduce<number>((n, entry) => n + arr(obj(entry)?.['hooks']).length, 0);
+      return { dir, mcp, skills, hooks };
     });
   }
 

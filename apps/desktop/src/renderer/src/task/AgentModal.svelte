@@ -1,15 +1,33 @@
 <script lang="ts">
   import type { AgentModel, PermissionMode } from '@skaro/timeline';
-  import { AgentLogo, Button, EffortSlider, Modal, RadioCards, Select, t, Toggle } from '@skaro/ui';
-  import type { AgentId, AgentInfo, AgentSettings } from '../../../shared/ipc';
+  import {
+    AgentLogo,
+    Button,
+    EffortSlider,
+    Icon,
+    Modal,
+    RadioCards,
+    Select,
+    t,
+    Toggle,
+  } from '@skaro/ui';
+  import {
+    agentReady,
+    type AgentId,
+    type AgentInfo,
+    type AgentSettings,
+  } from '../../../shared/ipc';
+  import { untrack } from 'svelte';
   import { agentName } from '../feed/format';
 
   /**
    * "Агент задачи" (mockup 7a): agent, model and effort from the agent, permission mode,
-   * isolation, plan first. Applies to the next request.
+   * isolation, plan first. Applies to the next request. "Агент чата" (AgentChat mockup): agent,
+   * model and effort only.
    */
   let {
     open = $bindable(false),
+    kind = 'task',
     projectId,
     settings,
     agents,
@@ -19,6 +37,7 @@
     onsave,
   }: {
     open?: boolean;
+    kind?: 'task' | 'chat';
     projectId: string;
     settings: AgentSettings;
     agents: AgentInfo[];
@@ -36,9 +55,24 @@
   let modelsError = $state(false);
   let saving = $state(false);
 
+  // The draft is taken when the modal opens; later updates (agent status) do not reset choices.
   $effect(() => {
-    if (open) draft = structuredClone($state.snapshot(settings));
+    if (!open) return;
+    untrack(() => reset());
   });
+
+  function reset(): void {
+    const next = structuredClone($state.snapshot(settings));
+    // An absent agent is inactive: a new task or chat opens on a ready one.
+    const current = agents.find((a) => a.id === next.agent);
+    const ready = agents.find(agentReady);
+    if (!locked && current && !current.installed && ready) {
+      next.agent = ready.id;
+      delete next.model;
+      delete next.effort;
+    }
+    draft = next;
+  }
 
   const info = $derived(agents.find((a) => a.id === draft.agent));
 
@@ -83,19 +117,19 @@
           a: mb(a.download.received),
           b: mb(a.download.total ?? a.sizeBytes),
         }),
-        color: '#8a8a8a',
+        color: 'var(--sk-text-20)',
       };
     }
-    if (a.checking) return { text: t('agent.state.checking'), color: '#7d7d7d' };
+    if (a.checking) return { text: t('agent.state.checking'), color: 'var(--sk-text-22)' };
     if (!a.installed)
       return {
         text: t('agent.state.download', { mb: Math.round(a.sizeBytes / 1e6) }),
-        color: '#7d7d7d',
+        color: 'var(--sk-text-22)',
       };
     if (a.authenticated === false)
-      return { text: t('agent.state.signin'), color: '#e0a33c', link: 'login' };
-    if (a.error) return { text: t('agent.state.error'), color: '#7d7d7d' };
-    return { text: t('agent.state.ready'), color: '#7d7d7d' };
+      return { text: t('agent.state.signin'), color: 'var(--sk-warn)', link: 'login' };
+    if (a.error) return { text: t('agent.state.error'), color: 'var(--sk-text-22)' };
+    return { text: t('agent.state.ready'), color: 'var(--sk-text-22)' };
   }
 
   async function save(): Promise<void> {
@@ -137,15 +171,21 @@
 
 <Modal
   bind:open
-  title={t('agent.modal.title')}
-  subtitle={locked ? t('agent.modal.locked') : t('agent.modal.subtitle')}
+  title={kind === 'chat' ? t('chat.agent.title') : t('agent.modal.title')}
+  subtitle={kind === 'chat'
+    ? locked
+      ? t('chat.agent.locked')
+      : t('chat.agent.subtitle')
+    : locked
+      ? t('agent.modal.locked')
+      : t('agent.modal.subtitle')}
 >
   <div class="body">
     <div class="agents">
       {#each agents as a (a.id)}
         {@const s = agentState(a)}
         {@const on = draft.agent === a.id}
-        {@const disabled = locked && !on}
+        {@const disabled = (locked && !on) || (!a.installed && !on)}
         <button
           type="button"
           class="agent"
@@ -197,6 +237,7 @@
       {#if models && models.length}
         <div data-tip={t('agent.model.tip')}>
           <Select
+            variant="model"
             width="100%"
             menuWidth="100%"
             label={t('agent.model')}
@@ -209,19 +250,29 @@
             }))}
           />
         </div>
-      {:else if modelsError}
-        <div class="note error">
-          {t('agent.model.error')}
+      {:else if modelsError || (info && !info.installed && !info.download && info.error)}
+        <div class="models-error">
+          <Icon name="error" size={14} stroke={2} color="var(--sk-error)" />
+          <span class="models-error-text">{t('agent.model.error')}</span>
           <button
             type="button"
-            class="fd-link-btn"
-            onclick={() => void loadModels(draft.agent, true)}>{t('agent.model.retry')}</button
+            class="models-retry"
+            onclick={() => {
+              if (info?.installed) void loadModels(draft.agent, true);
+              else if (info)
+                void window.skaro.invoke('agents.install', info.id).catch(() => undefined);
+            }}>{t('agent.model.retry')}</button
           >
         </div>
-      {:else if info?.installed}
-        <div class="note">{t('agent.model.loading')}</div>
       {:else}
-        <div class="note">{t('agent.model.notInstalled')}</div>
+        <div class="models-loading" aria-label={t('agent.model.loading')}>
+          {#each [42, 55, 36] as width (width)}
+            <div class="skeleton">
+              <span class="bar" style="width: {width}%"></span>
+              <span class="bar thin"></span>
+            </div>
+          {/each}
+        </div>
       {/if}
     </div>
 
@@ -238,23 +289,29 @@
       </div>
     {/if}
 
-    <div class="section">
-      <span class="sk-label">{t('agent.perm')}</span>
-      <RadioCards options={permOptions} bind:value={draft.permissionMode} label={t('agent.perm')} />
-    </div>
+    {#if kind === 'task'}
+      <div class="section">
+        <span class="sk-label">{t('agent.perm')}</span>
+        <RadioCards
+          options={permOptions}
+          bind:value={draft.permissionMode}
+          label={t('agent.perm')}
+        />
+      </div>
 
-    <div class="section">
-      <span class="sk-label">{t('agent.iso')}</span>
-      <RadioCards options={isoOptions} bind:value={draft.isolation} label={t('agent.iso')} />
-    </div>
+      <div class="section">
+        <span class="sk-label">{t('agent.iso')}</span>
+        <RadioCards options={isoOptions} bind:value={draft.isolation} label={t('agent.iso')} />
+      </div>
 
-    <div class="plan-first">
-      <span class="texts">
-        <span class="name">{t('agent.planFirst')}</span>
-        <span class="note-line">{t('agent.planFirst.note')}</span>
-      </span>
-      <Toggle bind:checked={draft.planFirst} />
-    </div>
+      <div class="plan-first">
+        <span class="texts">
+          <span class="name">{t('agent.planFirst')}</span>
+          <span class="note-line">{t('agent.planFirst.note')}</span>
+        </span>
+        <Toggle bind:checked={draft.planFirst} />
+      </div>
+    {/if}
   </div>
   {#snippet footer()}
     <Button onclick={() => (open = false)}>{t('agent.cancel')}</Button>
@@ -265,6 +322,69 @@
 </Modal>
 
 <style>
+  /* Model list loading and error (mockup 7c). */
+  .models-loading {
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+    border-radius: 10px;
+    background: var(--sk-fill-23);
+  }
+
+  .skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px 9px 9px 31px;
+  }
+
+  .bar {
+    height: 9px;
+    border-radius: 4px;
+    background: var(--sk-fill-32);
+    animation: skPulse 1.6s ease-in-out infinite;
+  }
+
+  .bar.thin {
+    width: 70%;
+    height: 7px;
+    background: var(--sk-fill-27);
+  }
+
+  .models-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 10px;
+    background: var(--sk-fill-23);
+  }
+
+  .models-error-text {
+    flex: 1;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-7);
+  }
+
+  .models-retry {
+    flex: none;
+    height: 28px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 7px;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-6);
+    font: inherit;
+    font-size: var(--sk-fs-4);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .models-retry:hover {
+    background: var(--sk-fill-35);
+    color: var(--sk-text-2);
+  }
+
   .body {
     display: flex;
     flex-direction: column;
@@ -295,11 +415,11 @@
   }
 
   .agent:hover:not(:disabled) {
-    background: #242424;
+    background: var(--sk-fill-20);
   }
 
   .agent.on {
-    background: #0d0d0d;
+    background: var(--sk-fill-2);
     cursor: default;
   }
 
@@ -317,20 +437,20 @@
   }
 
   .name {
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     font-weight: 600;
-    color: #d5d5d5;
+    color: var(--sk-text-6);
   }
 
   .agent:not(.on) .name {
-    color: #a6a6a6;
+    color: var(--sk-text-13);
   }
 
   .state {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
   }
 
   .link {
@@ -340,14 +460,14 @@
   }
 
   .link:hover {
-    color: #2bb3a6;
+    color: var(--sk-teal-1);
     text-decoration: underline;
   }
 
   .progress {
     height: 4px;
     border-radius: 3px;
-    background: #242424;
+    background: var(--sk-fill-20);
     overflow: hidden;
   }
 
@@ -355,7 +475,7 @@
     display: block;
     height: 100%;
     border-radius: 3px;
-    background: #8a8a8a;
+    background: var(--sk-fill-40);
     transition: width 0.6s ease;
   }
 
@@ -365,29 +485,17 @@
     gap: 8px;
   }
 
-  .note {
-    font-size: 12px;
-    color: #7d7d7d;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .note.error {
-    color: #ef6a63;
-  }
-
   .plan-first {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
     border-radius: 10px;
-    background: #242424;
+    background: var(--sk-fill-20);
   }
 
   .note-line {
-    font-size: 11.5px;
-    color: #7d7d7d;
+    font-size: var(--sk-fs-3);
+    color: var(--sk-text-21);
   }
 </style>

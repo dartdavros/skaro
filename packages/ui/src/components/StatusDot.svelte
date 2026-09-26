@@ -22,7 +22,8 @@
 </script>
 
 {#if state === 'blocked'}
-  <span class="lock" data-tip={text}><Icon name="lock" size={13} stroke={2} color="#8a8a8a" /></span
+  <span class="lock" data-tip={text}
+    ><Icon name="lock" size={13} stroke={2} color="var(--sk-text-20)" /></span
   >
 {:else if state === 'working'}
   <span class="pulse" data-tip={text}>
@@ -79,7 +80,7 @@
   }
 
   .idle {
-    background: #4a4a4a;
+    background: var(--sk-fill-36);
   }
 
   .done {

@@ -5,3 +5,4 @@ export * from './replay.ts';
 export * from './state.ts';
 export * from './agent.ts';
 export * from './feed.ts';
+export * from './diff.ts';

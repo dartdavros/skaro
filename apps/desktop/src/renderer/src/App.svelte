@@ -1,12 +1,14 @@
 <script lang="ts">
   import { TooltipHost, type ProjectTab } from '@skaro/ui';
   import type { ProjectInfo, TabsState } from '../../shared/ipc';
-  import { watchAgents } from './agents.svelte';
+  import { agents, watchAgents } from './agents.svelte';
   import Home from './screens/Home.svelte';
   import NewProjectModal from './screens/NewProjectModal.svelte';
   import Inventory from './screens/Inventory.svelte';
   import Project from './screens/Project.svelte';
   import Settings from './screens/Settings.svelte';
+  import { applyFeedFont } from './settings/setting.svelte';
+  import { tabStates, watchTabStates } from './tab-states.svelte';
   import TitleBar from './TitleBar.svelte';
 
   type View = 'home' | 'project' | 'settings' | 'inventory';
@@ -19,25 +21,39 @@
   let sections = $state<Record<string, string>>({});
   /** Open task per project ("Задачи" section). */
   let openTasks = $state<Record<string, string | undefined>>({});
+  /** Open chat per project ("Чат" section). */
+  let openChats = $state<Record<string, string | undefined>>({});
   let panelCollapsed = $state(false);
 
   const projectTabs = $derived<ProjectTab[]>(
     tabs.projects
       .map((id) => projects.find((p) => p.id === id))
       .filter((p): p is ProjectInfo => p !== undefined)
-      .map((p) => ({ id: p.id, label: p.name })),
+      .map((p) => ({ id: p.id, label: p.name, state: tabStates.byProject[p.id] ?? 'none' })),
   );
   const activeProject = $derived(
     view === 'project' ? projects.find((p) => p.id === tabs.active) : undefined,
   );
 
   watchAgents();
+  watchTabStates();
+
+  // Without a ready agent there is nothing Skaro can do: only "Настройки" → "Агенты" is open.
+  $effect(() => {
+    if (agents.none && view !== 'settings' && view !== 'inventory') view = 'settings';
+  });
 
   $effect(() => {
     void (async () => {
       projects = await window.skaro.invoke('projects.list');
       tabs = await window.skaro.invoke('tabs.get');
-      view = tabs.active ? 'project' : 'home';
+      // The UI inventory (all elements for checking against the mockups) opens with ?inventory.
+      view = new URLSearchParams(location.search).has('inventory')
+        ? 'inventory'
+        : tabs.active
+          ? 'project'
+          : 'home';
+      applyFeedFont((await window.skaro.invoke('app.getSetting', 'ui.feedFont')) as string | null);
       panelCollapsed = (await window.skaro.invoke('app.getSetting', 'ui.navCollapsed')) === true;
       loaded = true;
     })();
@@ -84,6 +100,11 @@
     newProject = true;
   }
 
+  async function projectRemoved(id: string): Promise<void> {
+    closeTab(id);
+    projects = await window.skaro.invoke('projects.list');
+  }
+
   async function projectAdded(project: ProjectInfo): Promise<void> {
     projects = await window.skaro.invoke('projects.list');
     openProject(project.id);
@@ -95,6 +116,7 @@
 
 <div class="app">
   <TitleBar
+    locked={agents.none}
     tabs={projectTabs}
     active={view === 'project' ? tabs.active : undefined}
     home={view === 'home'}
@@ -114,17 +136,26 @@
             () => sections[activeProject.id] ?? 'overview', (v) => (sections[activeProject.id] = v)
           }
           bind:task={() => openTasks[activeProject.id], (v) => (openTasks[activeProject.id] = v)}
+          bind:chat={() => openChats[activeProject.id], (v) => (openChats[activeProject.id] = v)}
           bind:collapsed={panelCollapsed}
+          onremove={() => void projectRemoved(activeProject.id)}
         />
       {/key}
+    {:else if view === 'settings'}
+      <Settings noAgents={agents.none} />
     {:else}
       <main class="page">
-        {#if view === 'settings'}
-          <Settings oninventory={() => (view = 'inventory')} />
-        {:else if view === 'inventory'}
+        {#if view === 'inventory'}
           <Inventory />
         {:else}
-          <Home {projects} onopen={openProject} onadd={addProject} />
+          <Home
+            {projects}
+            onopen={openProject}
+            onadd={addProject}
+            onsettings={() => (view = 'settings')}
+            onchanged={() =>
+              void window.skaro.invoke('projects.list').then((list) => (projects = list))}
+          />
         {/if}
       </main>
     {/if}

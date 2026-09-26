@@ -4,6 +4,8 @@
   /**
    * Single select (model select): field background #0f0f0f without a ring, darker than any
    * surface; options may carry an explanation. Not placed directly on the page background.
+   * `variant="model"` is the model field of the agent modal (mockup 7a/7b): 34px field, the menu
+   * as wide as the field, up to 300px with scrolling, the chosen model marked with a blue check.
    */
   let {
     options,
@@ -11,20 +13,30 @@
     width = 236,
     menuWidth = 264,
     label,
+    variant = 'default',
   }: {
     options: { value: T; label: string; description?: string; tag?: string }[];
     value: T;
     width?: number | string;
     menuWidth?: number | string;
     label?: string;
+    variant?: 'default' | 'model';
   } = $props();
 
   let open = $state(false);
   const current = $derived(options.find((o) => o.value === value));
 </script>
 
-<div style="width: {typeof width === 'number' ? `${width}px` : width}">
-  <Popover bind:open width={menuWidth} offset={36}>
+<div
+  class:model={variant === 'model'}
+  style="width: {typeof width === 'number' ? `${width}px` : width}"
+>
+  <Popover
+    bind:open
+    width={variant === 'model' ? '100%' : menuWidth}
+    offset={variant === 'model' ? 38 : 36}
+    {...variant === 'model' ? { maxHeight: 300 } : {}}
+  >
     {#snippet trigger({ toggle })}
       <button
         type="button"
@@ -39,7 +51,7 @@
           height="12"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#7d7d7d"
+          stroke="var(--sk-text-22)"
           stroke-width="2.2"
           stroke-linecap="round"
           stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg
@@ -101,7 +113,7 @@
     border-radius: var(--sk-radius);
     background: var(--sk-field);
     color: var(--sk-text);
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     cursor: pointer;
   }
@@ -133,7 +145,37 @@
   }
 
   .option.selected {
-    background: #2b2b2b;
+    background: var(--sk-fill-26);
+  }
+
+  /* Model field of the agent modal (mockup 7a/7b). */
+  .model .field {
+    height: 34px;
+    padding: 0 12px;
+  }
+
+  .model :global(.menu.menu) {
+    background: var(--sk-fill-23);
+  }
+
+  .model .option:hover {
+    background: var(--sk-fill-29);
+  }
+
+  .model .option.selected {
+    background: var(--sk-fill-24);
+  }
+
+  .model .selected .check {
+    color: var(--sk-accent);
+  }
+
+  .model .name {
+    color: var(--sk-text-7);
+  }
+
+  .model .selected .name {
+    color: var(--sk-text-2);
   }
 
   .check {
@@ -158,19 +200,19 @@
 
   .tag {
     margin-left: 8px;
-    font-size: 11px;
+    font-size: var(--sk-fs-2);
     font-weight: 600;
     color: var(--sk-text-muted);
   }
 
   .name {
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     color: var(--sk-text);
   }
 
   .description {
-    font-size: 11px;
+    font-size: var(--sk-fs-2);
     line-height: 1.4;
     color: var(--sk-text-muted);
   }

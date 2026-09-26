@@ -119,10 +119,10 @@
         class="dot"
         data-tip={level.label}
         style="left: {pos(k)}; background: {k < index
-          ? 'rgba(255,255,255,.55)'
+          ? 'var(--sk-white-a55)'
           : k === index
             ? 'transparent'
-            : '#4a4a4a'}"
+            : 'var(--sk-fill-36)'}"
       ></span>
     {/each}
     <span class="knob" style="left: {pos(index)}"></span>
@@ -136,7 +136,7 @@
     gap: 12px;
     padding: 12px 14px 14px;
     border-radius: 12px;
-    background: #171717;
+    background: var(--sk-fill-8);
     user-select: none;
   }
 
@@ -161,7 +161,7 @@
     min-width: 0;
     display: flex;
     justify-content: center;
-    font-size: 14px;
+    font-size: var(--sk-fs-8);
     font-weight: 700;
     color: var(--sk-link);
     cursor: default;
@@ -240,7 +240,7 @@
     height: 22px;
     margin: -11px 0 0 -11px;
     border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+    background: var(--sk-fill-42);
+    box-shadow: 0 2px 6px var(--sk-black-a45);
   }
 </style>

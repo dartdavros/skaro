@@ -76,8 +76,8 @@
   }
 
   .card.selected {
-    background: #1e1e1e;
-    box-shadow: inset 0 0 0 1px #3b3b3b;
+    background: var(--sk-fill-15);
+    box-shadow: inset 0 0 0 1px var(--sk-fill-34);
   }
 
   .top {
@@ -103,7 +103,7 @@
   .title {
     flex: 1;
     min-width: 0;
-    font-size: 13.5px;
+    font-size: var(--sk-fs-7);
     font-weight: 600;
     line-height: 1.4;
     color: var(--sk-text);
@@ -122,7 +122,7 @@
   }
 
   .stage {
-    font-size: 12px;
+    font-size: var(--sk-fs-4);
     color: var(--sk-text-muted);
   }
 
@@ -133,7 +133,7 @@
   }
 
   .time {
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     color: var(--sk-text-label);
   }
 </style>

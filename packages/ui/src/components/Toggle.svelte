@@ -44,8 +44,8 @@
 
   .label {
     flex: 1;
-    font-size: 13px;
-    color: #c8c8c8;
+    font-size: var(--sk-fs-6);
+    color: var(--sk-text-7);
   }
 
   .switch {
@@ -54,7 +54,7 @@
     width: 32px;
     height: 18px;
     border-radius: 999px;
-    background: #383838;
+    background: var(--sk-fill-32);
     transition: background 0.15s;
   }
 

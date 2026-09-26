@@ -21,7 +21,8 @@
   </label>
 {:else}
   <div class="wrap">
-    {#if search}<span class="icon"><Icon name="search" size={15} stroke={2} color="#989898" /></span
+    {#if search}<span class="icon"
+        ><Icon name="search" size={15} stroke={2} color="var(--sk-text-18)" /></span
       >{/if}
     <input class="field" class:search bind:value {...rest} />
   </div>
@@ -54,7 +55,7 @@
     border-radius: var(--sk-radius);
     background: var(--sk-field);
     color: var(--sk-text-bright);
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     outline: none;
     box-shadow: inset 0 0 0 1px var(--sk-field-ring);
   }
@@ -65,7 +66,7 @@
   }
 
   .field::placeholder {
-    color: #6a6a6a;
+    color: var(--sk-text-24);
   }
 
   .field:hover {
