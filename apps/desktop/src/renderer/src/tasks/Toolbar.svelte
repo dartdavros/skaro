@@ -17,14 +17,21 @@
     view: 'board' | 'list';
   } = $props();
 
-  const msOptions = $derived(
-    milestones.map((m) => ({
+  const msOptions = $derived([
+    ...milestones.map((m) => ({
       value: m.id,
       label: m.title,
       short: m.id,
       count: tasks.filter((x) => x.milestone?.id === m.id).length,
     })),
-  );
+    // "Без этапа": tasks without a milestone.
+    {
+      value: '',
+      label: t('board.loose'),
+      short: '',
+      count: tasks.filter((x) => !x.milestone).length,
+    },
+  ]);
   const stOptions = $derived(
     STATUS_ORDER.map((s) => ({
       value: s,

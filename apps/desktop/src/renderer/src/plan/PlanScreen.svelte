@@ -30,7 +30,7 @@
   let modal = $state<{ kind: 'new' } | { kind: 'edit' | 'delete'; milestone: MilestoneInfo }>();
   let now = $state(Date.now());
 
-  const list = $derived(stages(data.milestones, data.tasks));
+  const list = $derived(stages(data.milestones, data.tasks, t('plan.loose')));
   const byId = $derived(new Map(data.tasks.map((x) => [x.id, x])));
   const rel = $derived(relations(hovered ? byId.get(hovered) : undefined, data.tasks));
   const anyOpen = $derived(list.some((s) => openMap?.[s.milestone.id]));
@@ -61,7 +61,8 @@
     over = undefined;
     if (!d || !o) return;
     if (d.kind === 'stage' && o.kind === 'stage') {
-      const ids = list.map((s) => s.milestone.id);
+      // "Без этапа" always closes the plan; only milestones are reordered.
+      const ids = list.filter((s) => !s.loose).map((s) => s.milestone.id);
       const from = ids.indexOf(d.id);
       ids.splice(from, 1);
       ids.splice(from < o.index ? o.index - 1 : o.index, 0, d.id);

@@ -1,5 +1,6 @@
 // Project chats (architecture.md 9, agent-output.md 5.4): an agent session per chat in the
-// project's main working copy, read-only, with Skaro's tools for documents, ADRs, milestones and
+// project's main working copy, in the "ask" mode (the user confirms edits and commands in cards)
+// or with full access, with Skaro's tools for documents, ADRs, milestones and
 // tasks. The agent's proposals are items of the chat timeline; the user decides on them in cards,
 // and the decisions reach the agent with the user's next message.
 
@@ -19,7 +20,10 @@ import type {
   Grant,
   McpHttpServer,
   ProjectToolHandlers,
+  FinishImportArgs,
   ProposeAdrArgs,
+  ProposeSpecArgs,
+  StageArtifactArgs,
   ProposedTaskArgs,
   ProposeMilestonesArgs,
   ProposeTasksArgs,
@@ -50,14 +54,34 @@ import type {
   ChatView,
   EventName,
   Events,
+  ImportReview,
+  ImportSource,
   MessageInput,
   ProposalAction,
 } from '../shared/ipc';
+import {
+  applyImport,
+  ChangedOnDisk,
+  currentText,
+  docName,
+  importGroups,
+  loadManifest,
+  loadState,
+  removeImport,
+  saveState,
+  scanSource,
+  snapshot,
+  type ImportState,
+  type Manifest,
+  type StagedArtifact,
+} from './imports';
+import { hasCode } from './new-project';
+import { milestoneBody, milestoneSections } from './plan';
 import type { AgentManager } from './agents';
 import type { ProjectContext, Projects } from './projects';
-import { chatInstructions } from './prompt';
+import { chatInstructions, importInstructions } from './prompt';
 import { errorText, projectorFor, readRunLog, withoutSecrets } from './session-log';
-import { headings, taskBody, withSections } from './task-body';
+import { headings, taskBody, taskSections, withSections } from './task-body';
 
 type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 type PlanProposal = Extract<Proposal, { type: 'plan' }>;
@@ -165,11 +189,8 @@ export class ChatSessions implements ProjectToolHandlers {
       title: titleOf(input.text),
       logPath: join('chats', projectId, `${Date.now()}-${randomUUID().slice(0, 8)}.jsonl`),
     });
-    this.deps.db.setSetting(settingsKey(chat.id), {
-      ...(settings.model ? { model: settings.model } : {}),
-      ...(settings.effort ? { effort: settings.effort } : {}),
-    });
-    this.deps.db.setSetting(lastKey(projectId), settings);
+    this.deps.db.setSetting(settingsKey(chat.id), saved(settings));
+    this.deps.db.setSetting(lastKey(projectId), lastOf(settings));
     const live = new LiveChat(projectId, chat, new Timeline());
     this.live.set(chat.id, live);
     this.listChanged(projectId, chat.id);
@@ -242,24 +263,24 @@ export class ChatSessions implements ProjectToolHandlers {
     if (resend) await this.deliver(live, resend);
   }
 
-  /** Model and effort change in a live session; the agent itself never changes. */
+  /** Model, effort and permission mode change in a live session; the agent itself never changes. */
   async setSettings(projectId: string, chatId: string, next: ChatSettings): Promise<void> {
     const live = await this.restore(projectId, chatId);
     if (next.agent !== live.chat.agent) {
       throw new Error('The agent of a started chat cannot be changed');
     }
     const before = this.settings(live.chat);
-    this.deps.db.setSetting(settingsKey(chatId), {
-      ...(next.model ? { model: next.model } : {}),
-      ...(next.effort ? { effort: next.effort } : {}),
-    });
-    this.deps.db.setSetting(lastKey(projectId), next);
+    this.deps.db.setSetting(settingsKey(chatId), saved(next));
+    this.deps.db.setSetting(lastKey(projectId), lastOf(next));
     if (
       live.session &&
       next.model &&
       (next.model !== before.model || next.effort !== before.effort)
     )
       await live.session.setModel(next.model, next.effort);
+    const mode = next.permissionMode ?? 'ask';
+    if (live.session && mode !== (before.permissionMode ?? 'ask'))
+      await live.session.setPermissionMode(mode);
     this.listChanged(projectId, chatId);
   }
 
@@ -291,6 +312,10 @@ export class ChatSessions implements ProjectToolHandlers {
     try {
       if (action.action === 'reject') {
         if (item.state !== 'pending') throw new Error('The proposal is already decided');
+        if (item.proposal.type === 'import') {
+          const record = this.importRecord(chatId);
+          if (record) await removeImport(record.dir);
+        }
         next = { ...item, state: 'rejected' };
         note = `The user rejected ${describe(item.proposal)}.`;
       } else if (action.action === 'revert') {
@@ -352,6 +377,40 @@ export class ChatSessions implements ProjectToolHandlers {
             (edited ? ' after editing it (read it in .skaro/adr/).' : '.'),
         };
       }
+      case 'spec': {
+        const title = action.adr?.title.trim() || proposal.title;
+        const body = action.adr?.body ?? proposal.body;
+        const spec = await store.createSpec({
+          title,
+          body,
+          status: 'accepted',
+          ...(proposal.replaces ? { replaces: proposal.replaces } : {}),
+        });
+        this.deps.db.addEvent(live.projectId, 'spec_accepted', { id: spec.id, title: spec.title });
+        const edited =
+          action.adr !== undefined && (title !== proposal.title || body !== proposal.body);
+        return {
+          result: { spec: { id: spec.id, title: spec.title } },
+          note:
+            `The user accepted SPEC-${spec.id} "${spec.title}"` +
+            (edited ? ' after editing it (read it in .skaro/specs/).' : '.'),
+        };
+      }
+      case 'spec_change': {
+        const current = (await context.load()).specs.find((s) => s.id === proposal.id);
+        if (!current) throw new Error(`SPEC-${proposal.id} no longer exists`);
+        if (!sameText(current.body, proposal.before)) {
+          throw new Error(`SPEC-${proposal.id} changed after the proposal; ask the agent again`);
+        }
+        await store.writeSpec(proposal.id, proposal.after);
+        this.deps.db.addEvent(live.projectId, 'spec_updated', { id: proposal.id });
+        return {
+          result: { spec: { id: proposal.id, title: proposal.title } },
+          note: `The user accepted the change to SPEC-${proposal.id} "${proposal.title}".`,
+        };
+      }
+      case 'import':
+        return this.applyImportProposal(live, context, action.import);
       case 'plan':
         return this.applyPlan(live, context, proposal, action.tasks);
       case 'task': {
@@ -395,6 +454,7 @@ export class ChatSessions implements ProjectToolHandlers {
         for (const t of item.result?.tasks ?? []) known.set(t.ref, t.id);
     }
     const existing = new Set(artifacts.tasks.map((t) => t.id));
+    const specs = new Set(artifacts.specs.map((s) => s.id));
     let order =
       Math.max(
         0,
@@ -407,6 +467,7 @@ export class ChatSessions implements ProjectToolHandlers {
         body: task.body,
         order: order++,
         ...(milestone ? { milestone } : {}),
+        ...(task.spec && specs.has(task.spec) ? { spec: task.spec } : {}),
       });
       known.set(task.ref, t.id);
       created.push({ id: t.id, title: t.title, ref: task.ref });
@@ -453,6 +514,351 @@ export class ChatSessions implements ProjectToolHandlers {
     }
     if (proposal.before === undefined) await context.store.deleteDoc(proposal.path);
     else await context.store.writeDoc(proposal.path, proposal.before);
+  }
+
+  // ── import of documentation (architecture.md 12) ─────────────────────────
+
+  /** What the import modal says about the picked sources. */
+  scanImport(paths: string[]): Promise<ImportSource[]> {
+    return Promise.all(paths.map((p) => scanSource(p)));
+  }
+
+  /** Creates the import chat at once; copying the sources and the agent go on in the background. */
+  async startImport(
+    projectId: string,
+    paths: string[],
+    settings: ChatSettings,
+  ): Promise<ChatSummary> {
+    this.project(projectId);
+    await this.ensureAgent(settings.agent);
+    const sources = await this.scanImport(paths);
+    const missing = sources.find((s) => s.missing);
+    if (missing) throw new Error(`${missing.display} is not available`);
+    if (!sources.some((s) => s.readable > 0)) throw new Error('Nothing to import');
+    const id = `${Date.now()}-${randomUUID().slice(0, 8)}`;
+    const dir = join(this.deps.dataDir, 'imports', projectId, id);
+    const chat = this.deps.db.createChat({
+      projectId,
+      agent: settings.agent,
+      title: this.importText().title,
+      logPath: join('chats', projectId, `${Date.now()}-${randomUUID().slice(0, 8)}.jsonl`),
+    });
+    this.deps.db.setSetting(settingsKey(chat.id), saved(settings));
+    this.deps.db.setSetting(importKey(chat.id), { id, dir });
+    const state: ImportState = { id, dir, sources, staged: [] };
+    await saveState(state);
+    const live = new LiveChat(projectId, chat, new Timeline());
+    this.live.set(chat.id, live);
+    this.listChanged(projectId, chat.id);
+    void this.runImport(live, state).catch((error: unknown) => this.failTurn(live, error));
+    return this.summary(chat);
+  }
+
+  /** The copy of the sources, then the first message with them, then the "prepared" line. */
+  private async runImport(live: LiveChat, state: ImportState): Promise<void> {
+    const manifest = await snapshot(state.sources, state.dir);
+    const words = this.importText();
+    const text = [
+      words.title,
+      ...state.sources.map((s) => `${s.display} · ${words.files(s.files)}`),
+    ].join('\n');
+    const before = live.timeline.state.items.length;
+    await this.deliver(live, { text });
+    // The line goes under the user's message: wait for the agent to echo it.
+    for (let i = 0; i < 100; i++) {
+      if (
+        live.timeline.state.items
+          .slice(before)
+          .some((it) => it.kind === 'message' && it.role === 'user')
+      )
+        break;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    this.skaroEvent(live, {
+      t: 'item.upsert',
+      item: {
+        id: `skaro-import-prep-${state.id}`,
+        turnId: currentTurn(live),
+        kind: 'import_prep',
+        prepared: manifest.files.filter((f) => f.action !== 'skipped').length,
+        skipped: manifest.files.filter((f) => f.action === 'skipped').length,
+        files: prepFiles(manifest, words),
+        status: 'done',
+        startedAt: Date.now(),
+        native: { agent: 'skaro', type: 'import_prep', ref: state.id },
+      },
+    });
+  }
+
+  async stageArtifact(args: StageArtifactArgs, scope: SkaroScope): Promise<ToolResult> {
+    const live = this.caller(scope);
+    const state = await this.importOf(live.chat.id);
+    const artifacts = await this.project(live.projectId).load();
+    const locale = this.deps.locale();
+    const words = this.importText();
+    let staged: StagedArtifact;
+    const base = {
+      key: args.key,
+      type: args.type,
+      sources: args.sources,
+      ...(args.status ? { status: args.status } : {}),
+    };
+    switch (args.type) {
+      case 'brief':
+      case 'architecture': {
+        const exists =
+          (args.type === 'brief' ? artifacts.brief : artifacts.architecture) !== undefined;
+        staged = {
+          ...base,
+          title: args.type === 'brief' ? words.brief : words.architecture,
+          body: args.body ?? '',
+          ...(exists ? { updates: `${args.type}.md` } : {}),
+        };
+        break;
+      }
+      case 'doc': {
+        const name = docName({
+          ...base,
+          title: args.name ?? args.updates ?? args.title ?? '',
+          body: '',
+        });
+        const exists = artifacts.docs.some((d) => d.path === `.skaro/docs/${name}`);
+        staged = {
+          ...base,
+          title: name,
+          name,
+          body: args.body ?? '',
+          ...(exists ? { updates: name } : {}),
+        };
+        break;
+      }
+      case 'adr':
+      case 'spec': {
+        let updates: string | undefined;
+        if (args.updates) {
+          updates = adrId(args.updates);
+          const list = args.type === 'adr' ? artifacts.adrs : artifacts.specs;
+          if (!list.some((x) => x.id === updates)) {
+            return {
+              text: `There is no ${args.type === 'adr' ? 'ADR' : 'specification'} ${args.updates} to update.`,
+              isError: true,
+            };
+          }
+        }
+        staged = {
+          ...base,
+          title: args.title ?? '',
+          body: args.body ?? '',
+          ...(updates ? { updates } : {}),
+        };
+        break;
+      }
+      case 'milestone':
+        staged = {
+          ...base,
+          title: args.title ?? '',
+          body: milestoneBody(
+            { title: args.title ?? '', goal: args.goal ?? '', criteria: args.doneWhen ?? '' },
+            locale,
+          ),
+        };
+        break;
+      case 'task':
+        staged = {
+          ...base,
+          title: args.title ?? '',
+          body: taskBody(
+            {
+              goal: args.goal ?? '',
+              criteria: args.criteria ?? [],
+              ...(args.notes ? { notes: args.notes } : {}),
+            },
+            locale,
+          ),
+          ...(args.milestone ? { milestone: args.milestone } : {}),
+          ...(args.dependsOn?.length ? { dependsOn: args.dependsOn } : {}),
+          ...(args.spec ? { spec: args.spec } : {}),
+        };
+        break;
+    }
+    const before = currentText(artifacts, staged);
+    if (staged.updates && before !== undefined) staged.before = before;
+    const replaced = state.staged.some((s) => s.key === args.key);
+    state.staged = [...state.staged.filter((s) => s.key !== args.key), staged];
+    await saveState(state);
+    return {
+      text:
+        `${replaced ? 'Replaced' : 'Staged'} ${args.type} "${staged.title}" as ${args.key}` +
+        `${staged.updates ? ` (changes ${staged.updates})` : ''}. ${state.staged.length} staged.`,
+    };
+  }
+
+  async finishImport(args: FinishImportArgs, scope: SkaroScope): Promise<ToolResult> {
+    const live = this.caller(scope);
+    const state = await this.importOf(live.chat.id);
+    if (!state.staged.length) {
+      return { text: 'Nothing is staged yet; stage the artifacts first.', isError: true };
+    }
+    const artifacts = await this.project(live.projectId).load();
+    const problems = importLinks(state.staged, artifacts);
+    if (problems.length) return { text: problems.join('\n'), isError: true };
+    const manifest = await loadManifest(state.dir);
+    const skipped = [
+      ...(manifest?.files ?? [])
+        .filter((f) => f.action === 'skipped')
+        .map((f) => ({ path: f.source, reason: f.reason ?? '' })),
+      ...args.skipped,
+    ];
+    state.report = { skipped, notes: args.notes };
+    await saveState(state);
+    this.skaroEvent(live, {
+      t: 'item.upsert',
+      item: {
+        id: `skaro-import-${state.id}`,
+        turnId: currentTurn(live),
+        kind: 'proposal',
+        proposal: {
+          type: 'import',
+          id: state.id,
+          groups: importGroups(state.staged),
+          total: state.staged.length,
+          skipped: skipped.length,
+          notes: args.notes.length,
+        },
+        state: 'pending',
+        status: 'done',
+        startedAt: Date.now(),
+        native: { agent: 'skaro', type: 'proposal', ref: 'import' },
+      },
+    });
+    return {
+      text:
+        `The import is shown to the user as the "Import is ready" card with ${state.staged.length} ` +
+        'artifacts; the user reviews and applies what they pick. The decision comes with their ' +
+        'next message. Tell the user in one or two sentences what you carried over.',
+    };
+  }
+
+  /** What the import agent staged, for the review screen. */
+  async importReview(projectId: string, chatId: string): Promise<ImportReview> {
+    await this.restore(projectId, chatId);
+    const state = await this.importOf(chatId);
+    const keys = new Set(state.staged.map((s) => s.key));
+    const artifacts = await this.project(projectId).load();
+    let next =
+      Math.max(0, ...artifacts.milestones.map((m) => Number(/^M(\d+)$/.exec(m.id)?.[1] ?? 0))) + 1;
+    const milestones: Record<string, string> = {};
+    for (const s of state.staged.filter((x) => x.type === 'milestone')) {
+      milestones[s.key] = `M${String(next++).padStart(2, '0')}`;
+    }
+    return {
+      milestones,
+      items: state.staged.map((s) => ({
+        key: s.key,
+        type: s.type,
+        title: s.title,
+        update: !!s.updates,
+        sources: s.sources,
+        body: s.body,
+        ...(s.before !== undefined ? { before: s.before } : {}),
+        ...(s.milestone ? { milestone: s.milestone } : {}),
+        dependsOn: s.dependsOn ?? [],
+        ...(s.spec ? { spec: s.spec } : {}),
+        ...(s.type === 'task' || s.type === 'milestone' ? { fields: fieldsOf(s) } : {}),
+        refs: [
+          ...new Set(
+            [
+              ...[...s.body.matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)].map((m) => m[1]!),
+              s.milestone ?? '',
+              s.spec ?? '',
+              ...(s.dependsOn ?? []),
+            ].filter((k) => keys.has(k) && k !== s.key),
+          ),
+        ],
+      })),
+      skipped: state.report?.skipped ?? [],
+      notes: state.report?.notes ?? [],
+    };
+  }
+
+  private async applyImportProposal(
+    live: LiveChat,
+    context: ProjectContext,
+    picked: string[] | undefined,
+  ): Promise<{ result: ProposalResult; note: string }> {
+    const state = await this.importOf(live.chat.id);
+    const keys = picked ?? state.staged.map((s) => s.key);
+    if (!keys.length) throw new Error('Nothing is selected');
+    let applied;
+    try {
+      applied = await applyImport(
+        context.store,
+        await context.load(),
+        state.staged,
+        keys,
+        (done, total) =>
+          this.deps.emit('import.progress', {
+            projectId: live.projectId,
+            chatId: live.chat.id,
+            done,
+            total,
+          }),
+      );
+    } catch (error) {
+      if (error instanceof ChangedOnDisk)
+        throw new Error(`changed-on-disk:${error.path}`, { cause: error });
+      throw error;
+    }
+    this.deps.db.addEvent(live.projectId, 'import_applied', {
+      count: keys.length,
+      total: state.staged.length,
+    });
+    await removeImport(state.dir);
+    const skipped = state.staged.filter((s) => !keys.includes(s.key));
+    const note = [
+      `The user imported ${keys.length} of ${state.staged.length}: ` +
+        applied.imported
+          .map((i) => (i.code ? `${i.code} "${i.title}"` : `"${i.title}"`))
+          .join(', ') +
+        '.',
+      skipped.length ? `Not taken: ${skipped.map((s) => `"${s.title}"`).join(', ')}.` : '',
+      applied.dropped.length ? `Links left out: ${applied.dropped.join('; ')}.` : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return { result: { imported: applied.imported, applied: keys.length }, note };
+  }
+
+  /** "Открыть исходный файл": the source on disk; a file inside an archive opens the archive. */
+  async openImportSource(projectId: string, chatId: string, source: string): Promise<string> {
+    await this.restore(projectId, chatId);
+    const state = await this.importOf(chatId);
+    const manifest = await loadManifest(state.dir);
+    const file = manifest?.files.find((f) => f.source === source);
+    if (file?.origin) return file.origin;
+    const root = manifest?.sources.find(
+      (s) => source === s.display || source.startsWith(`${s.display}/`),
+    );
+    if (!root) throw new Error(`unknown source ${source}`);
+    return root.path;
+  }
+
+  private importRecord(chatId: string): { id: string; dir: string } | undefined {
+    return (
+      this.deps.db.getSetting<{ id: string; dir: string } | null>(importKey(chatId), null) ??
+      undefined
+    );
+  }
+
+  private async importOf(chatId: string): Promise<ImportState> {
+    const record = this.importRecord(chatId);
+    const state = record ? await loadState(record.dir) : undefined;
+    if (!state) throw new Error('The import is no longer available');
+    return state;
+  }
+
+  private importText(): ImportWords {
+    return this.deps.locale() === 'ru' ? IMPORT_RU : IMPORT_EN;
   }
 
   // ── MCP tools of the chat agent ──────────────────────────────────────────
@@ -545,6 +951,79 @@ export class ChatSessions implements ProjectToolHandlers {
       text:
         `ADR "${args.title}" is shown to the user as a card (it becomes ADR-${id} if accepted ` +
         'now). The decision comes with their next message; continue.',
+    };
+  }
+
+  async proposeSpec(args: ProposeSpecArgs, scope: SkaroScope): Promise<ToolResult> {
+    const live = this.caller(scope);
+    const context = this.project(live.projectId);
+    const artifacts = await context.load();
+    const content = `${args.content.replace(/\s+$/, '')}\n`;
+    if (args.id) {
+      const id = adrId(args.id);
+      const spec = artifacts.specs.find((s) => s.id === id);
+      if (!spec) return { text: `There is no specification ${args.id}.`, isError: true };
+      if (sameText(spec.body, content)) {
+        return { text: `SPEC-${id} already has this text; nothing changed.` };
+      }
+      const auto = artifacts.config.chat.autoAcceptDocs;
+      if (auto) {
+        await context.store.writeSpec(id, content);
+        this.deps.db.addEvent(live.projectId, 'spec_updated', { id });
+        context.invalidate();
+        this.deps.emit('project.changed', { projectId: live.projectId });
+      }
+      this.addProposal(
+        live,
+        {
+          type: 'spec_change',
+          id,
+          title: spec.title,
+          before: spec.body,
+          after: content,
+          ...(args.summary ? { summary: args.summary } : {}),
+        },
+        auto ? 'applied' : 'pending',
+      );
+      return {
+        text: auto
+          ? `Skaro updated SPEC-${id} (documents from the chat apply at once in this project).`
+          : `The change to SPEC-${id} is shown to the user as a card and is applied only if the ` +
+            'user accepts it. The decision comes with their next message; continue.',
+      };
+    }
+    let replaces: string | undefined;
+    if (args.replaces) {
+      replaces = adrId(args.replaces);
+      if (!artifacts.specs.some((s) => s.id === replaces)) {
+        return { text: `There is no specification ${args.replaces} to replace.`, isError: true };
+      }
+    }
+    const pending = this.proposals(live).filter((p) => p.proposal.type === 'spec').length;
+    const id = String(
+      nextNumber(
+        artifacts.specs.map((s) => s.id),
+        /^(\d+)$/,
+      ) + pending,
+    ).padStart(4, '0');
+    const title = args.title ?? '';
+    this.addProposal(
+      live,
+      {
+        type: 'spec',
+        id,
+        title,
+        body: content,
+        ...(replaces ? { replaces } : {}),
+        ...(args.summary ? { summary: args.summary } : {}),
+      },
+      'pending',
+    );
+    return {
+      text:
+        `Specification "${title}" is shown to the user as a card (it becomes SPEC-${id} if ` +
+        'accepted now). The decision comes with their next message; continue. Cut its tasks ' +
+        'after it is accepted and link them with "spec".',
     };
   }
 
@@ -717,6 +1196,14 @@ export class ChatSessions implements ProjectToolHandlers {
         'call or of earlier cards, or ids of existing tasks.'
       );
     }
+    const specs = new Set(artifacts.specs.map((s) => s.id));
+    const noSpec = tasks.filter((t) => t.spec && !specs.has(adrId(t.spec)));
+    if (noSpec.length) {
+      return (
+        `Unknown specifications: ${[...new Set(noSpec.map((t) => t.spec))].join(', ')}. ` +
+        'Link tasks only to accepted specifications (get_project_context lists them).'
+      );
+    }
     const self = tasks.filter((t) => t.dependsOn.includes(t.ref));
     if (self.length) return `A task cannot depend on itself: ${self.map((t) => t.ref).join(', ')}.`;
     const cycle = findCycle(tasks);
@@ -753,6 +1240,7 @@ export class ChatSessions implements ProjectToolHandlers {
       ),
       dependsOn,
       dependsOnTitles: dependsOn.map((d) => titles.get(d) ?? d),
+      ...(task.spec ? { spec: adrId(task.spec) } : {}),
     };
   }
 
@@ -801,7 +1289,7 @@ export class ChatSessions implements ProjectToolHandlers {
     const agent = chat.agent as AgentId;
     await this.ensureAgent(agent);
     const settings = await this.withDefaults(agent, context.root, this.settings(chat));
-    // Codex runs its read-only sandbox in the mode the self-check chose (D-28).
+    // Codex runs its sandbox in the mode the self-check chose (D-28).
     const sandbox =
       agent === 'codex' ? await this.deps.agents.sandbox(agent).catch(() => undefined) : undefined;
     const adapter = this.deps.agents.adapter(agent);
@@ -813,22 +1301,38 @@ export class ChatSessions implements ProjectToolHandlers {
       dir: 'meta',
       line: { skaro: 'segment', agent, adapterVersion: adapter.adapterVersion },
     });
-    live.grant = this.deps.mcp.grant({ kind: 'project_chat', projectId, chatId: chat.id });
+    const imported = this.importRecord(chat.id);
+    live.grant = this.deps.mcp.grant({
+      kind: 'project_chat',
+      projectId,
+      chatId: chat.id,
+      ...(imported ? { importId: imported.id } : {}),
+    });
+    const instructions = imported
+      ? importInstructions({
+          projectName: this.deps.db.getProject(projectId)?.name ?? '',
+          root: context.root,
+          artifacts,
+          locale: this.deps.locale(),
+          dir: imported.dir,
+          hasCode: await hasCode(context.root),
+        })
+      : chatInstructions({
+          projectName: this.deps.db.getProject(projectId)?.name ?? '',
+          root: context.root,
+          artifacts,
+          locale: this.deps.locale(),
+        });
     let session: AgentSession;
     try {
       session = await adapter.start({
         cwd: context.root,
         ...(settings.model ? { model: settings.model } : {}),
         ...(settings.effort ? { effort: settings.effort } : {}),
-        permissionMode: 'ask',
+        permissionMode: settings.permissionMode ?? 'ask',
         planFirst: false,
-        readOnly: true,
-        instructions: chatInstructions({
-          projectName: this.deps.db.getProject(projectId)?.name ?? '',
-          root: context.root,
-          artifacts,
-          locale: this.deps.locale(),
-        }),
+        instructions,
+        ...(imported ? { readDirs: [imported.dir] } : {}),
         mcpServers: {
           skaro: {
             type: 'http',
@@ -953,14 +1457,13 @@ export class ChatSessions implements ProjectToolHandlers {
   // ── plumbing ─────────────────────────────────────────────────────────────
 
   private settings(chat: ChatRecord): ChatSettings {
-    const saved = this.deps.db.getSetting<{ model?: string; effort?: string } | null>(
+    const stored = this.deps.db.getSetting<Omit<ChatSettings, 'agent'> | null>(
       settingsKey(chat.id),
       null,
     );
     return {
       agent: chat.agent === 'codex' ? 'codex' : 'claude-code',
-      ...(saved?.model ? { model: saved.model } : {}),
-      ...(saved?.effort ? { effort: saved.effort } : {}),
+      ...(stored ? saved(stored) : {}),
     };
   }
 
@@ -971,6 +1474,7 @@ export class ChatSessions implements ProjectToolHandlers {
       title: chat.title,
       agent: chat.agent === 'codex' ? 'codex' : 'claude-code',
       archived: chat.archived,
+      ...(this.importRecord(chat.id) ? { kind: 'import' as const } : {}),
       live: live !== undefined && live.timeline.state.status !== 'idle',
       updatedAt: chat.updatedAt,
     };
@@ -1082,6 +1586,135 @@ export class ChatSessions implements ProjectToolHandlers {
 
 // ── helpers ──────────────────────────────────────────────────────────────
 
+function importKey(chatId: string): string {
+  return `import.${chatId}`;
+}
+
+interface ImportWords {
+  title: string;
+  brief: string;
+  architecture: string;
+  files: (n: number) => string;
+  text: (format: string) => string;
+  table: (format: string) => string;
+  skipped: (reason: string) => string;
+}
+
+const IMPORT_RU: ImportWords = {
+  title: 'Импортировать документацию',
+  brief: 'Бриф',
+  architecture: 'Архитектура',
+  files: (n) => {
+    const d = n % 10;
+    const h = n % 100;
+    const word =
+      d === 1 && h !== 11 ? 'файл' : d >= 2 && d <= 4 && (h < 12 || h > 14) ? 'файла' : 'файлов';
+    return `${n} ${word}`;
+  },
+  text: (f) => `${f} → текст`,
+  table: (f) => `${f} → таблица`,
+  skipped: (r) => `пропущен · ${r}`,
+};
+
+const IMPORT_EN: ImportWords = {
+  title: 'Import documentation',
+  brief: 'Brief',
+  architecture: 'Architecture',
+  files: (n) => `${n} ${n === 1 ? 'file' : 'files'}`,
+  text: (f) => `${f} → text`,
+  table: (f) => `${f} → table`,
+  skipped: (r) => `skipped · ${r}`,
+};
+
+/** The "prepared" line's list: a path inside its source and what Skaro did with the file. */
+function prepFiles(
+  manifest: Manifest,
+  words: ImportWords,
+): { path: string; note: string; skipped: boolean }[] {
+  const inSource = (source: string) => {
+    const root = manifest.sources.find(
+      (s) => source === s.display || source.startsWith(`${s.display}/`),
+    );
+    if (!root || source === root.display) return source.split('/').pop() ?? source;
+    return source.slice(root.display.length + 1);
+  };
+  return manifest.files.map((f) => ({
+    path: inSource(f.source),
+    skipped: f.action === 'skipped',
+    note:
+      f.action === 'skipped'
+        ? words.skipped(f.reason ?? '')
+        : f.action === 'converted'
+          ? ['xlsx', 'csv', 'tsv'].includes(f.format)
+            ? words.table(f.format)
+            : words.text(f.format)
+          : f.format,
+  }));
+}
+
+/** Goal and criteria of a staged task, goal and done criterion of a milestone. */
+function fieldsOf(s: StagedArtifact): { goal?: string; doneWhen?: string; criteria?: string[] } {
+  if (s.type === 'milestone') {
+    const m = milestoneSections(s.body);
+    return {
+      ...(m.goal ? { goal: m.goal } : {}),
+      ...(m.criteria ? { doneWhen: m.criteria } : {}),
+    };
+  }
+  const t = taskSections(s.body);
+  return {
+    ...(t.goal ? { goal: t.goal } : {}),
+    criteria: t.criteria.map((c) => c.text),
+  };
+}
+
+/** Links of staged tasks must point to a staged artifact or an existing one. */
+function importLinks(staged: StagedArtifact[], artifacts: ProjectArtifacts): string[] {
+  const keys = new Map(staged.map((s) => [s.key, s.type]));
+  const problems: string[] = [];
+  for (const s of staged.filter((x) => x.type === 'task')) {
+    if (
+      s.milestone &&
+      keys.get(s.milestone) !== 'milestone' &&
+      !artifacts.milestones.some((m) => m.id === s.milestone!.toUpperCase())
+    ) {
+      problems.push(
+        `${s.key}: milestone ${s.milestone} is neither a staged milestone nor an existing one.`,
+      );
+    }
+    if (
+      s.spec &&
+      keys.get(s.spec) !== 'spec' &&
+      !artifacts.specs.some((x) => x.id === adrId(s.spec!))
+    ) {
+      problems.push(
+        `${s.key}: spec ${s.spec} is neither a staged specification nor an existing one.`,
+      );
+    }
+    for (const dep of s.dependsOn ?? []) {
+      if (keys.get(dep) !== 'task' && !artifacts.tasks.some((t) => t.id === dep.toUpperCase())) {
+        problems.push(`${s.key}: depends_on ${dep} is neither a staged task nor an existing one.`);
+      }
+    }
+  }
+  return problems;
+}
+
+/** What a chat keeps of its settings: the agent is on the chat record itself. */
+function saved(settings: Omit<ChatSettings, 'agent'>): Omit<ChatSettings, 'agent'> {
+  return {
+    ...(settings.model ? { model: settings.model } : {}),
+    ...(settings.effort ? { effort: settings.effort } : {}),
+    ...(settings.permissionMode === 'full' ? { permissionMode: 'full' as const } : {}),
+  };
+}
+
+/** A new chat takes the agent, model and effort of the last one, but always starts asking. */
+function lastOf(settings: ChatSettings): ChatSettings {
+  const { permissionMode: _mode, ...rest } = settings;
+  return rest;
+}
+
 function settingsKey(chatId: string): string {
   return `chat.${chatId}.agent`;
 }
@@ -1179,6 +1812,12 @@ function describe(proposal: Proposal): string {
       return `the change to .skaro/${proposal.path}`;
     case 'adr':
       return `ADR "${proposal.title}"`;
+    case 'spec':
+      return `specification "${proposal.title}"`;
+    case 'spec_change':
+      return `the change to SPEC-${proposal.id} "${proposal.title}"`;
+    case 'import':
+      return 'the import of documentation';
     case 'plan':
       return proposal.milestone?.isNew
         ? `milestone "${proposal.milestone.title}" and its ${proposal.tasks.length} tasks`
@@ -1206,6 +1845,11 @@ export function projectContextText(
   for (const adr of artifacts.adrs) {
     lines.push(`- ADR-${adr.id} ${adr.title} — ${adr.status} (${adr.path})`);
   }
+  lines.push('', '## Specifications', '');
+  if (!artifacts.specs.length) lines.push('(none)');
+  for (const spec of artifacts.specs) {
+    lines.push(`- SPEC-${spec.id} ${spec.title} — ${spec.status} (${spec.path})`);
+  }
   lines.push('', '## Documents', '');
   if (!artifacts.docs.length) lines.push('(none)');
   for (const d of artifacts.docs) lines.push(`- ${d.title} (${d.path})`);
@@ -1213,7 +1857,8 @@ export function projectContextText(
   const taskLine = (t: Task) => {
     const status = displayStatus(t, index, runtime.get(t.id)?.state);
     const deps = t.dependsOn.length ? `; depends on ${t.dependsOn.join(', ')}` : '';
-    return `- ${t.id} ${t.title} — ${status}${deps}${t.archived ? '; archived' : ''}`;
+    const spec = t.spec ? `; implements SPEC-${t.spec}` : '';
+    return `- ${t.id} ${t.title} — ${status}${deps}${spec}${t.archived ? '; archived' : ''}`;
   };
   for (const m of artifacts.milestones) {
     lines.push(`### ${m.id} ${m.title}`, '');

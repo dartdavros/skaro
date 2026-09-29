@@ -1,7 +1,7 @@
 // "Документы" (Documents mockup): the tree, ADR statuses and dates.
 
 import { i18n, t } from '@skaro/ui';
-import type { DocEntry } from '../../../shared/ipc';
+import type { DocEntry, DocRecord } from '../../../shared/ipc';
 import { agoLong, agoOrDate } from '../ago';
 
 export type AdrStatus = 'proposed' | 'accepted' | 'superseded';
@@ -11,6 +11,23 @@ export const ADR_STATUS: Record<AdrStatus, { label: string; dot: string }> = {
   accepted: { label: 'docs.adr.accepted', dot: 'var(--sk-fill-41)' },
   superseded: { label: 'docs.adr.superseded', dot: 'var(--sk-fill-36)' },
 };
+
+/** Specifications have the statuses of an ADR, in the feminine: «Предложена». */
+export const SPEC_STATUS: Record<AdrStatus, { label: string; dot: string }> = {
+  proposed: { label: 'docs.spec.proposed', dot: 'var(--sk-accent)' },
+  accepted: { label: 'docs.spec.accepted', dot: 'var(--sk-fill-41)' },
+  superseded: { label: 'docs.spec.superseded', dot: 'var(--sk-fill-36)' },
+};
+
+/** Number, status and links of an ADR or a specification. */
+export function recordOf(doc: DocEntry): DocRecord | undefined {
+  return doc.adr ?? doc.spec;
+}
+
+/** "ADR-0004", "SPEC-0003". */
+export function codeOf(doc: Pick<DocEntry, 'kind'>, id: string): string {
+  return `${doc.kind === 'spec' ? 'SPEC' : 'ADR'}-${id}`;
+}
 
 export const BRIEF = '.skaro/brief.md';
 export const ARCHITECTURE = '.skaro/architecture.md';
@@ -57,4 +74,9 @@ export function adrDate(date: string | undefined): string {
 /** A link inside a document that points to an ADR: "adr/0001-database.md", "ADR-0001". */
 export function adrLink(href: string): string | undefined {
   return /(?:^|\/)adr\/(\d{4})/i.exec(href)?.[1];
+}
+
+/** A link to a specification: "specs/0003-card-refunds.md". */
+export function specLink(href: string): string | undefined {
+  return /(?:^|\/)specs\/(\d{4})/i.exec(href)?.[1];
 }

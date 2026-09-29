@@ -109,7 +109,7 @@
   }
 
   a:hover {
-    color: var(--sk-teal-1);
+    color: var(--sk-link-hover);
     text-decoration: underline;
   }
 </style>

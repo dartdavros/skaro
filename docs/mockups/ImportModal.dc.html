@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div data-keep-menu="1" style="width: 540px; max-width: 100%; display: flex; flex-direction: column; border-radius: 14px; background: #1a1a1a; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04); font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; color: #b8b8b8; text-align: left;">
+  <div style="display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 14px;">
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+      <span style="font-size: 17px; font-weight: 700; color: #d8d8d8;">Импорт документации</span>
+      <span style="font-size: 14px; line-height: 1.5; color: #9f9f9f; text-wrap: pretty;">Агент перенесёт документацию в формат Skaro. Источник не изменится.</span>
+    </div>
+    <button onClick="{{ close }}" data-tip="Закрыть · Esc" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #242424; color: #e0e0e0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+  </div>
+
+  <div style="padding: 0 20px; display: flex; flex-direction: column; gap: 12px;">
+    <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+      <div role="alert" style="display: flex; align-items: center; gap: 11px; padding: 11px 12px 11px 14px; border-radius: 9px; background: rgba(239,106,99,.1); color: #ef6a63;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12 8v4M12 16h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"></path></svg>
+        <span style="flex: 1; min-width: 0; font-size: 14px;"><strong style="font-weight: 600;">Источник недоступен.</strong> Нет доступа к <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px;">~/Docs/old-specs.zip</span> — файл перемещён или удалён.</span>
+      </div>
+    </sc-if>
+
+    <div onClick="{{ addFolder }}" style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 16px 16px; border-radius: 10px; background: #141414; border: 1.5px dashed #363636; text-align: center; cursor: pointer;" style-hover="border-color: #4a4a4a; background: #161616;">
+      <span style="display: inline-flex; color: #767676;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg></span>
+      <span style="font-size: 14px; color: #adadad;">Перетащите папку, файлы или архив</span>
+      <div style="display: flex; gap: 8px;">
+        <button onClick="{{ addFolder }}" style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #e0e0e0;">Выбрать папку</button>
+        <button onClick="{{ addFiles }}" style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #2f2f2f; color: #e0e0e0;">Выбрать файлы</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ hasSources }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{ sources }}" as="s" hint-placeholder-count="2">
+          <div data-tip="{{ s.tip }}" style="display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 4px 6px 4px 10px; border-radius: 8px; background: #141414;">
+            <span style="flex: none; display: inline-flex; color: {{ s.iconColor }};">
+              <sc-if value="{{ s.isFolder }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6.6a1 1 0 0 1-.8-.4l-1.2-1.6A2 2 0 0 0 9.8 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg></sc-if>
+              <sc-if value="{{ s.isFile }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4"></path></svg></sc-if>
+              <sc-if value="{{ s.isArchive }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"></path></svg></sc-if>
+            </span>
+            <span style="flex: 1; min-width: 0; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; color: {{ s.pathColor }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ s.path }}</span>
+            <span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: {{ s.countColor }};">{{ s.count }}</span>
+            <button onClick="{{ s.remove }}" data-tip="Убрать" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 6px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #242424; color: #e0e0e0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ readable }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size: 13px; color: #919191;">{{ readCount }} будут прочитаны · <span data-tip="Форматы: .vsdx, .fig, .sketch, .psd" style="border-bottom: 1px dotted #5f5f5f; cursor: default;">{{ skipCount }} не поддерживаются</span></span>
+      </sc-if>
+      <sc-if value="{{ nothing }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size: 13px; color: #e0a33c;">Нечего импортировать: ни один файл не читается · <span data-tip="Форматы: .vsdx, .fig, .sketch, .psd" style="border-bottom: 1px dotted #7a5d2b; cursor: default;">форматы не поддерживаются</span></span>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ hasCode }}" hint-placeholder-val="{{ true }}">
+      <span style="font-size: 13px; color: #919191;">Код проекта агент тоже изучит — сверит с ним документацию.</span>
+    </sc-if>
+
+    <div style="display: flex; align-items: center; gap: 12px; padding-top: 2px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Агент</span>
+      <button data-tip="Агент, модель и усилие — по умолчанию агент чатов проекта" style="flex: none; height: 30px; padding: 0 10px 0 9px; display: inline-flex; align-items: center; gap: 7px; border: none; border-radius: 999px; background: #242424; color: #b8b8b8; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #e0e0e0;">
+        <svg width="15" height="15" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757"></path></svg>
+        Opus 5.5
+        <span style="color: #767676; font-weight: 400;">· Высокое</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: flex-end; gap: 8px; padding: 18px 20px;">
+    <button onClick="{{ close }}" style="height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #242424; color: #d5d5d5; font-size: 14px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #e0e0e0;">Отмена</button>
+    <button onClick="{{ start }}" data-tip="{{ startTip }}" style="height: 34px; padding: 0 15px; border: none; border-radius: 8px; background: {{ startBg }}; color: {{ startColor }}; font-size: 14px; font-weight: 700; cursor: {{ startCursor }};">Начать импорт</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 560, &quot;height&quot;: 560}, &quot;state&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;empty&quot;, &quot;selected&quot;, &quot;unsupported&quot;, &quot;error&quot;], &quot;default&quot;: &quot;selected&quot;, &quot;tsType&quot;: &quot;'empty'|'selected'|'unsupported'|'error'&quot;}, &quot;hasCode&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;}, &quot;onClose&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}, &quot;onStart&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { list: null };
+  base() {
+    const st = this.props.state || 'selected';
+    if (st === 'empty') return [];
+    if (st === 'unsupported') return [{ kind: 'folder', path: '~/Design/shop-mockups', total: 18, read: 0 }];
+    if (st === 'error') return [{ kind: 'folder', path: '~/Docs/shop', total: 42, read: 30 }, { kind: 'archive', path: '~/Docs/old-specs.zip', total: 0, read: 0, broken: true }];
+    return [{ kind: 'folder', path: '~/Docs/shop', total: 42, read: 30 }, { kind: 'file', path: '~/Downloads/ТЗ-админка.docx', total: 1, read: 1 }];
+  }
+  renderVals() {
+    const list = this.state.list ?? this.base();
+    const set = (l) => this.setState({ list: l });
+    const word = (n) => n % 10 === 1 && n % 100 !== 11 ? 'файл' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'файла' : 'файлов');
+    const total = list.reduce((a, s) => a + s.total, 0);
+    const read = list.reduce((a, s) => a + s.read, 0);
+    const ok = list.length > 0 && read > 0;
+    const st = this.props.state || 'selected';
+    const close = this.props.onClose || (() => {});
+    return {
+      close,
+      isError: st === 'error' && list.some((s) => s.broken),
+      hasSources: list.length > 0,
+      sources: list.map((s, i) => ({
+        path: s.path, count: s.broken ? 'недоступен' : s.total + ' ' + word(s.total),
+        isFolder: s.kind === 'folder', isFile: s.kind === 'file', isArchive: s.kind === 'archive',
+        iconColor: s.broken ? '#ef6a63' : '#919191', pathColor: s.broken ? '#ef6a63' : '#cfcfcf', countColor: s.broken ? '#ef6a63' : '#848484',
+        tip: s.broken ? 'Источник недоступен' : '',
+        remove: () => set(list.filter((_, k) => k !== i)),
+      })),
+      readable: list.length > 0 && read > 0, nothing: list.length > 0 && read === 0,
+      readCount: String(read), skipCount: String(total - read - list.filter((s) => s.broken).length * 0),
+      hasCode: this.props.hasCode ?? true,
+      addFolder: () => { if (!list.some((s) => s.path === '~/Docs/shop')) set(list.concat([{ kind: 'folder', path: '~/Docs/shop', total: 42, read: 30 }])); },
+      addFiles: () => { if (!list.some((s) => s.path === '~/Downloads/ТЗ-админка.docx')) set(list.concat([{ kind: 'file', path: '~/Downloads/ТЗ-админка.docx', total: 1, read: 1 }])); },
+      start: ok ? (this.props.onStart || close) : () => {},
+      startTip: ok ? '' : (list.length ? 'Ни один файл не читается' : 'Добавьте источник'),
+      startBg: ok ? '#2a52be' : '#242424', startColor: ok ? '#ffffff' : '#6f6f6f', startCursor: ok ? 'pointer' : 'default',
+    };
+  }
+}
+</script>
+</body>
+</html>

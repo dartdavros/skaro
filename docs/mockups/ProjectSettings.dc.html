@@ -14,8 +14,8 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; background: #151515; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; }
-a { color: #2a52be; text-decoration: none; }
-a:hover { color: #2bb3a6; text-decoration: underline; }
+a { color: #7d9ce8; text-decoration: none; }
+a:hover { color: #9bb4ee; text-decoration: underline; }
 input, button, textarea { font-family: inherit; }
 @keyframes skPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
 @keyframes skPulseRing { 0% { opacity: .5; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.2); } }
@@ -27,12 +27,10 @@ input, button, textarea { font-family: inherit; }
 </helmet>
 
 <div style="padding: 44px; background: #151515; width: max-content;">
-<div data-screen-label="Параметры проекта" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onClick="{{ onRootClick }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #171717; color: #b1b1b1; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
+<div data-screen-label="Параметры проекта" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onClick="{{ onRootClick }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #171717; color: #b8b8b8; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 15px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
 
   <div style="height: 42px; flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 0 10px 0 14px; background: #0f0f0f; border-bottom: 1px solid #1a1a1a;">
-    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; height: 32px; padding: 0 12px 0 4px; cursor: pointer;">
-      <span style="font-size: 17px; font-weight: 700; letter-spacing: .03em; color: #c2c2c2;">skaro</span>
-    </div>
+    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; height: 32px; padding: 0 12px 0 4px; cursor: pointer; color: #c9c9c9;" style-hover="color: #e0e0e0;"><span style="font-size: 18px; font-weight: 700; letter-spacing: .03em;">skaro</span></div>
 
     <div style="display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 42px; margin-left: -8px;">
       <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 11px 0 13px; border-radius: 11px 11px 0 0; background: #121212; border: 1px solid #242424; border-bottom: none; margin-bottom: -1px; position: relative; z-index: 1; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-before="content: ''; position: absolute; bottom: 0; left: -11px; width: 10px; height: 10px; border-bottom-right-radius: 10px; border-right: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: 3px 3px 0 3px #121212; pointer-events: none;" style-after="content: ''; position: absolute; bottom: 0; right: -11px; width: 10px; height: 10px; border-bottom-left-radius: 10px; border-left: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: -3px 3px 0 3px #121212; pointer-events: none;">
@@ -41,34 +39,34 @@ input, button, textarea { font-family: inherit; }
           <span style="position: absolute; inset: 0; border-radius: 50%; border: 1px solid #a6a6a6; animation: skPulseRing 1.8s ease-out infinite;"></span>
         </span>
         Shop API
-        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #848484; cursor: pointer;" style-hover="background: #262626; color: #e0e0e0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #a5a5a5; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #e0e0e0;">
         <span data-tip="Требует вашего внимания" style="width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
         Blog Engine
-        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #848484; cursor: pointer;" style-hover="background: #262626; color: #e0e0e0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #a5a5a5; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #e0e0e0;">
         Skaro Landing
-        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #848484; cursor: pointer;" style-hover="background: #262626; color: #e0e0e0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
       </div>
 
-      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Открыть проект">
+      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;" data-tip="Открыть проект">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
       </button>
     </div>
 
     <div style="display: flex; align-items: center; gap: 6px; height: 42px;">
-      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Настройки">
+      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;" data-tip="Настройки">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7h-9M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
       </button>
       <div style="width: 1px; height: 16px; background: #1d1d1d; margin: 0 2px;"></div>
       <div style="display: flex; align-items: center; gap: 2px;">
-        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
-        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
-        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #9f9f9f; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
       </div>
     </div>
   </div>
@@ -79,11 +77,11 @@ input, button, textarea { font-family: inherit; }
       <div style="flex: none; padding: 14px 18px 10px; display: flex; justify-content: center;">
         <div style="width: 100%; max-width: 760px; display: flex; align-items: center; gap: 10px;">
         <div style="display: flex; flex-direction: column; gap: 2px;">
-          <span style="font-size: 17px; font-weight: 700; color: #d8d8d8;">Параметры проекта</span>
-          <span style="font-size: 12px; color: #7d7d7d;">Shop API · применяется ко всем задачам проекта</span>
+          <span style="font-size: 18px; font-weight: 700; color: #d8d8d8;">Параметры проекта</span>
+          <span style="font-size: 13px; color: #848484;">Shop API · применяется ко всем задачам проекта</span>
         </div>
         <span style="flex: 1;"></span>
-        <span data-tip="{{ savedTip }}" style="font-size: 11.5px; color: #6f6f6f;">{{ savedLine }}</span>
+        <span data-tip="{{ savedTip }}" style="font-size: 12.5px; color: #767676;">{{ savedLine }}</span>
         </div>
       </div>
 
@@ -91,7 +89,7 @@ input, button, textarea { font-family: inherit; }
 
         <div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 10px;">
         <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 15px; border-radius: 10px; background: #1f1f1f;">
-          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Агент по умолчанию</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Агент по умолчанию</span>
           <div style="display: flex; gap: 9px;">
             <sc-for list="{{ agentCards }}" as="a" hint-placeholder-count="2">
               <div onClick="{{ a.select }}" data-tip="{{ a.tip }}" style="flex: 1; padding: 11px 13px; border-radius: 9px; background: {{ a.bg }}; cursor: pointer; display: flex; align-items: center; gap: 11px;">
@@ -104,8 +102,8 @@ input, button, textarea { font-family: inherit; }
                   </sc-if>
                 </span>
                 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                  <span style="font-size: 13px; font-weight: 600; color: {{ a.nameColor }};">{{ a.name }}</span>
-                  <span style="font-size: 11.5px; color: #7d7d7d;">{{ a.state }}</span>
+                  <span style="font-size: 14px; font-weight: 600; color: {{ a.nameColor }};">{{ a.name }}</span>
+                  <span style="font-size: 12.5px; color: #848484;">{{ a.state }}</span>
                 </div>
               </div>
             </sc-for>
@@ -113,22 +111,22 @@ input, button, textarea { font-family: inherit; }
 
           <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
             <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 7px;">
-              <span style="font-size: 11.5px; color: #8a8a8a;">Модель</span>
+              <span style="font-size: 12.5px; color: #919191;">Модель</span>
               <div data-keep-menu="1" style="position: relative;">
-                <button onClick="{{ toggleModelMenu }}" data-tip="Выбрать модель по умолчанию" style="width: 100%; height: 34px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0b0b0b;">
+                <button onClick="{{ toggleModelMenu }}" data-tip="Выбрать модель по умолчанию" style="width: 100%; height: 32px; padding: 0 11px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 13.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0d0d0d;">
                   <span style="flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ modelLabel }}</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#848484" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg>
                 </button>
                 <sc-if value="{{ modelMenuOpen }}" hint-placeholder-val="{{ false }}">
-                  <div style="position: absolute; top: 38px; left: 0; z-index: 30; width: 100%; padding: 5px; border-radius: 10px; background: #272727; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px;">
+                  <div style="position: absolute; top: 36px; left: 0; z-index: 30; width: 100%; padding: 5px; border-radius: 10px; background: #242424; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px;">
                     <sc-for list="{{ modelOptions }}" as="m" hint-placeholder-count="4">
-                      <div onClick="{{ m.select }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #303030;">
+                      <div onClick="{{ m.select }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 7px; background: {{ m.bg }}; cursor: pointer;" style-hover="background: #2d2d2d;">
                         <span style="flex: none; margin-top: 2px; width: 13px; color: {{ m.checkColor }}; display: inline-flex;">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
                         </span>
                         <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                          <span style="font-size: 12.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}</span>
-                          <span style="font-size: 11px; line-height: 1.4; color: #7d7d7d; text-wrap: pretty;">{{ m.tip }}</span>
+                          <span style="font-size: 13.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}</span>
+                          <span style="font-size: 12px; line-height: 1.4; color: #848484; text-wrap: pretty;">{{ m.tip }}</span>
                         </div>
                       </div>
                     </sc-for>
@@ -136,25 +134,21 @@ input, button, textarea { font-family: inherit; }
                 </sc-if>
               </div>
             </div>
-            <div style="flex: none; display: flex; flex-direction: column; gap: 7px;">
-              <span style="font-size: 11.5px; color: #8a8a8a;">Усилие</span>
-              <div style="align-self: flex-start; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #060606;">
-                <sc-for list="{{ effortOptions }}" as="e" hint-placeholder-count="3">
-                  <button onClick="{{ e.select }}" data-tip="{{ e.tip }}" style="{{ e.style }}">{{ e.label }}</button>
-                </sc-for>
-              </div>
+            <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 7px;">
+              <span style="font-size: 12.5px; color: #919191;">Усилие</span>
+              <dc-import name="EffortSlider" levels="{{ effLevels }}" value="{{ effCur }}" model="{{ modelLabel }}" on-change="{{ onEff }}" hint-size="100%,96px"></dc-import>
             </div>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 7px;">
-            <span style="font-size: 11.5px; color: #8a8a8a;">Режим прав</span>
+            <span style="font-size: 12.5px; color: #919191;">Режим прав</span>
             <div style="display: flex; flex-direction: column; gap: 1px;">
               <sc-for list="{{ permOptions }}" as="p" hint-placeholder-count="3">
                 <div onClick="{{ p.select }}" style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; background: {{ p.bg }}; cursor: pointer;" style-hover="background: #242424;">
                   <span style="flex: none; margin-top: 1px; width: 13px; height: 13px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px {{ p.dotBorder }}; background: {{ p.dotBg }};"></span>
                   <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                    <span style="font-size: 12.5px; font-weight: 600; color: {{ p.titleColor }};">{{ p.label }}</span>
-                    <span style="font-size: 11.5px; line-height: 1.45; color: {{ p.noteColor }}; text-wrap: pretty;">{{ p.note }}</span>
+                    <span style="font-size: 13.5px; font-weight: 600; color: {{ p.titleColor }};">{{ p.label }}</span>
+                    <span style="font-size: 12.5px; line-height: 1.45; color: {{ p.noteColor }}; text-wrap: pretty;">{{ p.note }}</span>
                   </div>
                 </div>
               </sc-for>
@@ -163,29 +157,29 @@ input, button, textarea { font-family: inherit; }
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 15px; border-radius: 10px; background: #1f1f1f;">
-          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Ветки и слияние</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Ветки и слияние</span>
           <div style="display: flex; gap: 14px; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 7px;">
-              <span style="font-size: 11.5px; color: #8a8a8a;">Базовая ветка</span>
-              <input value="main" data-tip="Ветка, от которой создаются worktree" style="height: 32px; padding: 0 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; outline: none; box-shadow: inset 0 0 0 1px #2a2a2a;"  style-hover="background: #0b0b0b; box-shadow: inset 0 0 0 1px #363636;" style-focus="background: #0b0b0b; box-shadow: inset 0 0 0 1px #2a52be;"/>
+              <span style="font-size: 12.5px; color: #919191;">Базовая ветка</span>
+              <input value="main" data-tip="Ветка, от которой создаются worktree" style="height: 32px; padding: 0 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13.5px; outline: none; box-shadow: inset 0 0 0 1px #2a2a2a;"  style-hover="background: #0d0d0d; box-shadow: inset 0 0 0 1px #363636;" style-focus="background: #0d0d0d; box-shadow: inset 0 0 0 1px #2a52be;"/>
             </div>
             <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 7px;">
-              <span style="font-size: 11.5px; color: #8a8a8a;">Шаблон имени ветки</span>
-              <input value="skaro/{id}-{slug}" data-tip="Доступны {id}, {slug}, {milestone}" style="height: 32px; padding: 0 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; outline: none; box-shadow: inset 0 0 0 1px #2a2a2a;"  style-hover="background: #0b0b0b; box-shadow: inset 0 0 0 1px #363636;" style-focus="background: #0b0b0b; box-shadow: inset 0 0 0 1px #2a52be;"/>
+              <span style="font-size: 12.5px; color: #919191;">Шаблон имени ветки</span>
+              <input value="skaro/{id}-{slug}" data-tip="Доступны {id}, {slug}, {milestone}" style="height: 32px; padding: 0 11px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13.5px; outline: none; box-shadow: inset 0 0 0 1px #2a2a2a;"  style-hover="background: #0d0d0d; box-shadow: inset 0 0 0 1px #363636;" style-focus="background: #0d0d0d; box-shadow: inset 0 0 0 1px #2a52be;"/>
             </div>
           </div>
           <div style="display: flex; gap: 20px; flex-wrap: wrap;">
             <div style="display: flex; flex-direction: column; gap: 7px;">
-              <span style="font-size: 11.5px; color: #8a8a8a;">Изоляция по умолчанию</span>
-              <div style="align-self: flex-start; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #060606;">
+              <span style="font-size: 12.5px; color: #919191;">Изоляция по умолчанию</span>
+              <div style="align-self: flex-start; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #0e0e0e;">
                 <sc-for list="{{ isoChoices }}" as="i" hint-placeholder-count="2">
                   <button onClick="{{ i.select }}" data-tip="{{ i.tip }}" style="{{ i.style }}">{{ i.label }}</button>
                 </sc-for>
               </div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 7px;">
-              <span style="font-size: 11.5px; color: #8a8a8a;">Способ слияния</span>
-              <div style="align-self: flex-start; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #060606;">
+              <span style="font-size: 12.5px; color: #919191;">Способ слияния</span>
+              <div style="align-self: flex-start; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: #0e0e0e;">
                 <sc-for list="{{ mergeChoices }}" as="i" hint-placeholder-count="3">
                   <button onClick="{{ i.select }}" data-tip="{{ i.tip }}" style="{{ i.style }}">{{ i.label }}</button>
                 </sc-for>
@@ -197,39 +191,39 @@ input, button, textarea { font-family: inherit; }
               <span style="width: 15px; height: 15px; border-radius: 50%; background: {{ delKnob }};"></span>
             </span>
             <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-              <span style="font-size: 12.5px; font-weight: 600; color: #c8c8c8;">Удалять ветку после слияния</span>
-              <span style="font-size: 11.5px; color: #7d7d7d;">Worktree удаляется вместе с ветвью</span>
+              <span style="font-size: 13.5px; font-weight: 600; color: #cfcfcf;">Удалять ветку после слияния</span>
+              <span style="font-size: 12.5px; color: #848484;">Worktree удаляется вместе с ветвью</span>
             </div>
           </div>
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 4px; padding: 14px 15px; border-radius: 10px; background: #1f1f1f;">
-          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f; padding-bottom: 6px;">Чат и файлы агентов</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676; padding-bottom: 6px;">Чат и файлы агентов</span>
           <sc-for list="{{ toggles }}" as="t" hint-placeholder-count="2">
             <div onClick="{{ t.toggle }}" style="display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 8px; cursor: pointer;" style-hover="background: #1c1c1c;">
               <span style="flex: none; width: 34px; height: 19px; border-radius: 10px; background: {{ t.track }}; display: flex; align-items: center; padding: 2px; justify-content: {{ t.justify }};">
                 <span style="width: 15px; height: 15px; border-radius: 50%; background: {{ t.knob }};"></span>
               </span>
               <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                <span style="font-size: 12.5px; font-weight: 600; color: #c8c8c8;">{{ t.label }}</span>
-                <span style="font-size: 11.5px; line-height: 1.45; color: #7d7d7d; text-wrap: pretty;">{{ t.note }}</span>
+                <span style="font-size: 13.5px; font-weight: 600; color: #cfcfcf;">{{ t.label }}</span>
+                <span style="font-size: 12.5px; line-height: 1.45; color: #848484; text-wrap: pretty;">{{ t.note }}</span>
               </div>
             </div>
           </sc-for>
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 9px; padding: 14px 15px; border-radius: 10px; background: #1f1f1f;">
-          <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Инструкции агенту</span>
-          <span style="font-size: 11.5px; line-height: 1.45; color: #7d7d7d; text-wrap: pretty;">Добавляется к каждому запуску и каждому сообщению в чате.</span>
-          <textarea placeholder="Например: код на TypeScript, тесты обязательны, коммиты на английском" style="min-height: 84px; padding: 10px 12px; border: none; border-radius: 9px; background: #242424; color: #d5d5d5; font-size: 12.5px; line-height: 1.55; resize: vertical; outline: none;" style-focus="box-shadow: inset 0 0 0 1px #2a52be;">Код на TypeScript, тесты обязательны для сервисного слоя. Коммиты на английском, по одному на задачу.</textarea>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Инструкции агенту</span>
+          <span style="font-size: 12.5px; line-height: 1.45; color: #848484; text-wrap: pretty;">Добавляется к каждому запуску и каждому сообщению в чате.</span>
+          <textarea placeholder="Например: код на TypeScript, тесты обязательны, коммиты на английском" style="min-height: 84px; padding: 10px 12px; border: none; border-radius: 9px; background: #242424; color: #d5d5d5; font-size: 13.5px; line-height: 1.55; resize: vertical; outline: none;" style-focus="box-shadow: inset 0 0 0 1px #2a52be;">Код на TypeScript, тесты обязательны для сервисного слоя. Коммиты на английском, по одному на задачу.</textarea>
         </div>
 
         <div style="display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: 10px; background: #1f1f1f;">
           <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-size: 12.5px; font-weight: 600; color: #c8c8c8;">Убрать проект из Skaro</span>
-            <span style="font-size: 11.5px; color: #7d7d7d;">Файлы и ветки в репозитории останутся на месте.</span>
+            <span style="font-size: 13.5px; font-weight: 600; color: #cfcfcf;">Убрать проект из Skaro</span>
+            <span style="font-size: 12.5px; color: #848484;">Файлы и ветки в репозитории останутся на месте.</span>
           </div>
-          <button data-tip="Проект исчезнет из списка, файлы не тронем" style="flex: none; height: 31px; padding: 0 13px; border: none; border-radius: 8px; background: #1a1414; color: #ef6a63; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: rgba(239,106,99,.18);">Убрать проект</button>
+          <button data-tip="Проект исчезнет из списка, файлы не тронем" style="flex: none; height: 31px; padding: 0 13px; border: none; border-radius: 8px; background: #1a1414; color: #ef6a63; font-size: 13.5px; font-weight: 600; cursor: pointer;" style-hover="background: rgba(239,106,99,.18);">Убрать проект</button>
         </div>
         </div>
 
@@ -239,8 +233,8 @@ input, button, textarea { font-family: inherit; }
     <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
       <div style="flex: none; width: 216px; border-left: 1px solid #1a1a1a; padding: 18px 8px 14px 8px; display: flex; flex-direction: column; gap: 2px;">
         <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px 8px 10px;">
-          <span style="flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #5f5f5f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
-          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <span style="flex: 1; min-width: 0; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #666666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
+          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #9f9f9f; cursor: pointer;" style-hover="background: #1c1c1c; color: #e0e0e0;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m17.6 10.6 1.4 1.4-1.4 1.4"></path></svg>
           </button>
         </div>
@@ -249,7 +243,7 @@ input, button, textarea { font-family: inherit; }
           <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
             <div style="height: 1px; background: #222222; margin: 9px 10px;"></div>
           </sc-if>
-          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 14px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #ededed;">
+          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 15px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #e0e0e0;">
             <span style="flex: none; width: 16px; display: inline-flex; align-items: center; justify-content: center; color: {{ n.iconColor }};">
               <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
@@ -272,7 +266,7 @@ input, button, textarea { font-family: inherit; }
             </span>
             <span style="flex: 1; min-width: 0;">{{ n.label }}</span>
             <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
-              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ n.count }}</span>
+              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #848484;">{{ n.count }}</span>
             </sc-if>
           </div>
         </sc-for>
@@ -285,7 +279,7 @@ input, button, textarea { font-family: inherit; }
 
     <sc-if value="{{ panelClosed }}" hint-placeholder-val="{{ false }}">
       <div style="flex: none; width: 44px; border-left: 1px solid #1a1a1a; padding: 18px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
-        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b1b1b1; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b8b8b8; cursor: pointer;" style-hover="background: #1c1c1c; color: #e0e0e0;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m18.4 10.6-1.4 1.4 1.4 1.4"></path></svg>
         </button>
 
@@ -293,7 +287,7 @@ input, button, textarea { font-family: inherit; }
           <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
             <div style="width: 20px; height: 1px; background: #222222; margin: 7px 0;"></div>
           </sc-if>
-          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #e0e0e0;">
             <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
             </sc-if>
@@ -313,7 +307,7 @@ input, button, textarea { font-family: inherit; }
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2"></path><circle cx="12" cy="12" r="3"></circle></svg>
             </sc-if>
             <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
-              <span style="position: absolute; top: 4px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #2a52be;"></span>
+              <span style="position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: #2a52be;"></span>
             </sc-if>
           </div>
         </sc-for>
@@ -366,7 +360,7 @@ class Component extends DCLogic {
     const MODELS = {
       anthropic: [
         { label: 'Fable 5.1', tip: 'Максимальная глубина — медленнее и дороже' },
-        { label: 'Opus 5', tip: 'По умолчанию для агентной разработки' },
+        { label: 'Opus 5.5', tip: 'По умолчанию для агентной разработки' },
         { label: 'Sonnet 5', tip: 'Баланс скорости и качества' },
         { label: 'Haiku 4.5', tip: 'Быстрая и дешёвая, для простых правок' },
         { label: 'Mythos 5.1', tip: 'Доступ по приглашению (Project Glasswing)' },
@@ -379,8 +373,8 @@ class Component extends DCLogic {
       ],
     };
     const models = MODELS[agent];
-    const model = this.state.model && models.some((m) => m.label === this.state.model) ? this.state.model : (agent === 'anthropic' ? 'Opus 5' : 'GPT-6 Astra');
-    const pill = (on) => 'display: inline-flex; align-items: center; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; ' + (on ? 'background: #121212; color: #ededed; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #989898;');
+    const model = this.state.model && models.some((m) => m.label === this.state.model) ? this.state.model : (agent === 'anthropic' ? 'Opus 5.5' : 'GPT-6 Astra');
+    const pill = (on) => 'display: inline-flex; align-items: center; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 13.5px; font-weight: 600; white-space: nowrap; ' + (on ? 'background: #121212; color: #e0e0e0; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #9f9f9f;');
 
     const agentCards = [
       { key: 'anthropic', name: 'Claude Code', state: 'Установлен · 2.1.4', tip: 'Агент по умолчанию для новых задач' },
@@ -389,16 +383,16 @@ class Component extends DCLogic {
       name: a.name, state: a.state, tip: a.tip,
       anthropic: a.key === 'anthropic', openai: a.key === 'openai',
       bg: agent === a.key ? '#1a1a1a' : '#272727',
-      iconColor: agent === a.key ? '#d5d5d5' : '#8a8a8a',
-      nameColor: agent === a.key ? '#d5d5d5' : '#a6a6a6',
+      iconColor: agent === a.key ? '#d5d5d5' : '#919191',
+      nameColor: agent === a.key ? '#d5d5d5' : '#adadad',
       select: () => this.setState({ agent: a.key, model: null, modelMenu: false }),
     }));
 
     const modelOptions = models.map((m) => ({
       label: m.label, tip: m.tip,
-      bg: model === m.label ? '#303030' : 'transparent',
-      checkColor: model === m.label ? '#2a52be' : 'transparent',
-      labelColor: model === m.label ? '#ededed' : '#c8c8c8',
+      bg: model === m.label ? '#2b2b2b' : 'transparent',
+      checkColor: model === m.label ? '#e0e0e0' : 'transparent',
+      labelColor: '#d5d5d5',
       select: () => this.setState({ model: m.label, modelMenu: false }),
     }));
 
@@ -412,8 +406,8 @@ class Component extends DCLogic {
       bg: on ? '#1c1c1c' : 'transparent',
       dotBorder: on ? (warn ? '#e0a33c' : '#2a52be') : '#3b3b3b',
       dotBg: on ? (warn ? '#e0a33c' : '#2a52be') : 'transparent',
-      titleColor: on ? '#d5d5d5' : '#a6a6a6',
-      noteColor: on && warn ? '#d0a45c' : '#7d7d7d',
+      titleColor: on ? '#d5d5d5' : '#adadad',
+      noteColor: on && warn ? '#d0a45c' : '#848484',
     });
 
     const permOptions = [
@@ -448,15 +442,14 @@ class Component extends DCLogic {
       offHover: this.unhover,
       tipOn: !!tip,
       tipText: tip ? tip.text : '',
-      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + 30 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 11.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
+      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + 30 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 12.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
       panelOpen: panel,
       panelClosed: !panel,
       togglePanel: () => this.setState({ panel: !panel, tip: null }),
       nav: [
-        { key: 'overview', label: 'Обзор', tip: 'Состояние проекта и последние события' },
+        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
         { key: 'spec', label: 'Документы', tip: 'Бриф, архитектура, решения' },
         { key: 'plan', label: 'План', tip: 'Этапы и их последовательность' },
-        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
         { key: 'chat', label: 'Чат', tip: 'Работа с агентом', sep: true },
         { key: 'settings', label: 'Параметры', tip: 'Агент, ветки, проверки и инструкции' },
       ].map((n) => ({
@@ -465,8 +458,8 @@ class Component extends DCLogic {
         railTip: n.count ? n.label + ' · 2 требуют внимания' : n.label,
         isOverview: n.key === 'overview', isChat: n.key === 'chat', isSpec: n.key === 'spec',
         isPlan: n.key === 'plan', isTasks: n.key === 'tasks', isSettings: n.key === 'settings',
-        color: n.key === 'settings' ? '#d5d5d5' : '#a6a6a6',
-        iconColor: n.key === 'settings' ? '#d5d5d5' : '#6f6f6f',
+        color: n.key === 'settings' ? '#d5d5d5' : '#adadad',
+        iconColor: n.key === 'settings' ? '#d5d5d5' : '#767676',
         weight: n.key === 'settings' ? '600' : '400',
         hasCount: !!n.count, count: n.count || '',
         select: () => {},
@@ -474,6 +467,9 @@ class Component extends DCLogic {
       modelMenuOpen: !!this.state.modelMenu,
       toggleModelMenu: () => this.setState({ modelMenu: !this.state.modelMenu, tip: null }),
       modelLabel: model,
+      effLevels: ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'],
+      effCur: this.state.effort,
+      onEff: (v) => this.setState({ effort: v }),
       agentCards, modelOptions, effortOptions, permOptions, isoChoices, mergeChoices, toggles,
       delTrack: del.track, delKnob: del.knob, delJustify: del.justify,
       toggleDeleteBranch: () => this.setState({ delBranch: !this.state.delBranch }),
@@ -483,7 +479,7 @@ class Component extends DCLogic {
         { name: 'Типы', cmd: 'npm run typecheck' },
       ],
       savedLine: 'Изменения сохраняются сразу',
-      savedTip: 'Настройки лежат в .skaro/project.json',
+      savedTip: 'Настройки лежат в .skaro/config.yaml',
     };
   }
 }

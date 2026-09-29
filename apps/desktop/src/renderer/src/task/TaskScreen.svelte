@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { InteractionAnswer, PermissionMode } from '@skaro/timeline';
+  import type { AgentModel, InteractionAnswer, PermissionMode } from '@skaro/timeline';
   import { Icon, t } from '@skaro/ui';
   import { onDestroy } from 'svelte';
   import type { AgentInfo, AgentSettings, MergeAction, MessageInput } from '../../../shared/ipc';
   import { provideFeed } from '../feed/context.svelte';
-  import { prettyModel } from '../feed/format';
+  import { modelName } from '../feed/format';
   import Feed from '../feed/Feed.svelte';
   import ImageViewer from '../feed/ImageViewer.svelte';
   import PinnedZone from '../feed/PinnedZone.svelte';
@@ -21,7 +21,15 @@
     taskId,
     agents,
     ontasks,
-  }: { projectId: string; taskId: string; agents: AgentInfo[]; ontasks: () => void } = $props();
+    onspec,
+  }: {
+    projectId: string;
+    taskId: string;
+    agents: AgentInfo[];
+    ontasks: () => void;
+    /** Opens the task's specification in "Документы". */
+    onspec: (path: string) => void;
+  } = $props();
 
   // The screen is keyed by task.
   // svelte-ignore state_referenced_locally
@@ -55,11 +63,17 @@
   const openQuestion = $derived(timeline?.interactions.find((i) => i.kind === 'question'));
   const openApproval = $derived(timeline?.interactions.find((i) => i.kind === 'approval'));
 
-  const modelLabel = $derived.by(() => {
-    const id = timeline?.session?.model || settings?.model;
-    if (!id) return agentInfo?.id === 'codex' ? 'Codex' : 'Claude Code';
-    return prettyModel(id);
+  // The model's own name ("Opus 5.5") from the agent's list, not the agent's name.
+  let models = $state.raw<AgentModel[]>([]);
+  $effect(() => {
+    const agent = agentInfo?.id;
+    if (!agent || !agentInfo.installed) return;
+    void window.skaro
+      .invoke('agents.models', agent, projectId)
+      .then((list) => (models = list))
+      .catch(() => (models = []));
   });
+  const modelLabel = $derived(modelName(timeline?.session?.model || settings?.model, models));
 
   const placeholder = $derived(
     openQuestion || openApproval
@@ -170,6 +184,7 @@
             saveDesc();
           }}
           {ontasks}
+          {onspec}
           ontoggle={(i) => void window.skaro.invoke('task.toggleCriterion', projectId, taskId, i)}
         />
       </div>

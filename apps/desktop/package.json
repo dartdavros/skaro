@@ -27,16 +27,22 @@
     "@skaro/ui": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@types/node": "^24.0.0",
+    "@types/turndown": "^5.0.6",
     "dompurify": "^3.4.16",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
     "highlight.js": "^11.12.0",
+    "mammoth": "^1.13.0",
     "marked": "^18.0.14",
     "mermaid": "^12.0.0",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",
+    "turndown": "^7.2.4",
     "typescript": "~6.0.3",
+    "unpdf": "^1.8.1",
     "vite": "^7.3.6"
   }
 }

@@ -32,6 +32,8 @@ export interface SessionOptions {
   planFirst?: boolean;
   /** Project and task chats read code only (architecture.md 9). */
   readOnly?: boolean;
+  /** Folders outside cwd the agent may read: the copy of an import's sources (architecture.md 12). */
+  readDirs?: string[];
   /** Native session to continue (Claude session id, Codex thread id). */
   resume?: string;
   /** Extra instructions for every turn (project rules, Skaro workflow). */

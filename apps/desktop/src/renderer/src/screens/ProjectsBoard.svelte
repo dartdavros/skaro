@@ -5,6 +5,7 @@
   import { agents } from '../agents.svelte';
   import { clock } from '../feed/context.svelte';
   import { agentName, prettyModel } from '../feed/format';
+  import ProjectAvatar from './ProjectAvatar.svelte';
 
   /**
    * "Проекты" (Projects mockup): search, sorting, grid or list of project cards with task
@@ -77,29 +78,6 @@
     if (sort === 'recent') return list.toSorted((a, b) => b.activeAt - a.activeAt);
     return list.toSorted((a, b) => a.name.localeCompare(b.name, 'ru'));
   });
-
-  const AVATARS = [
-    ['var(--sk-fill-21)', 'var(--sk-warn)'],
-    ['var(--sk-fill-21)', 'var(--sk-blue-3)'],
-    ['var(--sk-fill-21)', 'var(--sk-red-3)'],
-    ['var(--sk-fill-21)', 'var(--sk-green-1)'],
-    ['var(--sk-fill-21)', 'var(--sk-purple-1)'],
-    ['var(--sk-fill-24)', 'var(--sk-text-12)'],
-  ] as const;
-
-  function avatar(card: ProjectCard): { bg: string; fg: string; initials: string } {
-    let hash = 0;
-    for (const ch of card.name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-    const [bg, fg] = AVATARS[hash % AVATARS.length]!;
-    const initials = card.name
-      .split(/[\s_-]+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase();
-    return { bg, fg, initials };
-  }
 
   /** ~/code/shop-api for a folder in the home directory. */
   function shortPath(path: string): string {
@@ -223,7 +201,6 @@
   {:else if view === 'grid'}
     <div class="grid">
       {#each shown as c (c.id)}
-        {@const av = avatar(c)}
         <div
           class="card"
           role="button"
@@ -233,7 +210,7 @@
         >
           <div class="card-body">
             <div class="top">
-              <div class="avatar" style="background: {av.bg}; color: {av.fg}">{av.initials}</div>
+              <ProjectAvatar name={c.name} logo={c.logo} />
               <div class="names">
                 <div class="name">{c.name}</div>
                 <div class="path" data-tip={c.path}>{shortPath(c.path)}</div>
@@ -362,7 +339,6 @@
         <div></div>
       </div>
       {#each shown as c (c.id)}
-        {@const av = avatar(c)}
         <div
           class="row item-row"
           role="button"
@@ -371,9 +347,7 @@
           onkeydown={(e) => e.key === 'Enter' && !c.missing && onopen(c.id)}
         >
           <div class="cell-project">
-            <div class="avatar small" style="background: {av.bg}; color: {av.fg}">
-              {av.initials}
-            </div>
+            <ProjectAvatar name={c.name} logo={c.logo} small />
             <div class="names">
               <div class="name small">{c.name}</div>
               <div class="path small">{shortPath(c.path)}</div>
@@ -500,26 +474,6 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
-  }
-
-  .avatar {
-    flex: none;
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--sk-mono);
-    font-size: var(--sk-fs-5);
-    font-weight: 600;
-  }
-
-  .avatar.small {
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    font-size: var(--sk-fs-2);
   }
 
   .names {

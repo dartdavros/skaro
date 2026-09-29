@@ -1,5 +1,6 @@
 // Small formatting helpers for the feed.
 
+import type { AgentModel } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 
 /** 0:05, 4:36, 1:02:03 */
@@ -58,6 +59,15 @@ export function prettyModel(id: string): string {
   }
   if (id === 'default') return 'Claude Code';
   return id;
+}
+
+/** The model's own name ("Opus 5.5") — from the agent's list, else from the id; never "default". */
+export function modelName(id: string | undefined, models: AgentModel[]): string {
+  const known =
+    models.find((m) => m.id === id) ??
+    (!id || id === 'default' ? models.find((m) => m.isDefault) : undefined);
+  if (known) return known.name;
+  return id && id !== 'default' ? prettyModel(id) : '';
 }
 
 /** URL of an image for <img>: stored attachment or a file Skaro may show. */

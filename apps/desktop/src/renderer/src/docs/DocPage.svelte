@@ -1,10 +1,14 @@
 <script lang="ts">
-  import { t } from '@skaro/ui';
+  import { Icon, t } from '@skaro/ui';
   import type { Snippet } from 'svelte';
+  import { tocPanel } from '../side-panels.svelte';
   import DocArticle from './DocArticle.svelte';
   import type { Block, Heading } from './render';
 
-  /** A scrolling document page: the article and "На странице" beside it (Documents mockup). */
+  /**
+   * A scrolling document page: the article and "На странице" beside it (Documents mockup), shown
+   * by the button at the top right.
+   */
   let {
     blocks,
     headings,
@@ -51,6 +55,7 @@
   }
 </script>
 
+<div class="frame">
 <div class="page" bind:this={root} onscroll={scroll}>
   {#if empty}
     {@render empty()}
@@ -61,7 +66,7 @@
         <DocArticle {blocks} {onlink} />
         {#if editing && !blocks.length}<span class="blank">{t('docs.blank')}</span>{/if}
       </article>
-      {#if toc}
+      {#if toc && tocPanel.open}
         <nav>
           <span class="toc-title">{t('docs.toc')}</span>
           {#each headings as h (h.hid)}
@@ -81,8 +86,50 @@
     </div>
   {/if}
 </div>
+{#if toc && !empty}
+  <button
+    type="button"
+    class="toc-toggle"
+    class:on={tocPanel.open}
+    data-tip={tocPanel.open ? t('docs.toc.hide') : t('docs.toc.show')}
+    aria-label={t('docs.toc')}
+    aria-pressed={tocPanel.open}
+    onclick={() => (tocPanel.open = !tocPanel.open)}><Icon name="list" size={16} /></button
+  >
+{/if}
+</div>
 
 <style>
+  .frame {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+  }
+
+  .toc-toggle {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 6;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--sk-text-17);
+    cursor: pointer;
+  }
+
+  .toc-toggle:hover,
+  .toc-toggle.on {
+    background: var(--sk-fill-11);
+    color: var(--sk-text-2);
+  }
+
   .page {
     flex: 1;
     min-width: 0;

@@ -16,7 +16,7 @@ afterEach(() => db.close());
 
 describe('AppDb', () => {
   it('migrates a new database', () => {
-    expect(db.schemaVersion).toBe(2);
+    expect(db.schemaVersion).toBe(3);
   });
 
   it('keeps projects, most recently opened first', () => {
@@ -26,6 +26,19 @@ describe('AppDb', () => {
     expect(db.listProjects().map((p) => p.name)).toEqual(['A', 'B']);
     expect(db.findProjectByPath('/b')?.id).toBe(b.id);
     expect(() => db.addProject({ name: 'dup', path: '/a' })).toThrow();
+  });
+
+  it('renames a project and keeps or clears its logo', () => {
+    const a = db.addProject({ name: 'A', path: '/a' });
+    expect(db.getProject(a.id)?.logo).toBeUndefined();
+    db.renameProject(a.id, 'Shop API');
+    db.setProjectLogo(a.id, 'data:image/png;base64,AAAA');
+    expect(db.getProject(a.id)).toMatchObject({
+      name: 'Shop API',
+      logo: 'data:image/png;base64,AAAA',
+    });
+    db.setProjectLogo(a.id, undefined);
+    expect(db.getProject(a.id)?.logo).toBeUndefined();
   });
 
   it('restores open tabs and cascades project removal', () => {
@@ -177,7 +190,7 @@ describe('AppDb', () => {
       first.addProject({ name: 'P', path: '/p' });
       first.close();
       const second = AppDb.open(path);
-      expect(second.schemaVersion).toBe(2);
+      expect(second.schemaVersion).toBe(3);
       expect(second.listProjects().map((p) => p.name)).toEqual(['P']);
       second.close();
     } finally {

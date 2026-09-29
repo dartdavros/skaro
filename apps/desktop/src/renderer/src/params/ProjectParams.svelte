@@ -1,14 +1,21 @@
 <script lang="ts">
-  import { t } from '@skaro/ui';
+  import { Button, Icon, t } from '@skaro/ui';
   import type { ProjectInfo, ProjectSettings } from '../../../shared/ipc';
+  import ProjectAvatar from '../screens/ProjectAvatar.svelte';
   import AgentDefaults from './AgentDefaults.svelte';
   import './i18n';
   import ProjectRules from './ProjectRules.svelte';
 
   /** "Параметры проекта" (ProjectSettings mockup): saved on every change. */
-  let { project, onremove }: { project: ProjectInfo; onremove: () => void } = $props();
+  let {
+    project,
+    onremove,
+    onchanged,
+  }: { project: ProjectInfo; onremove: () => void; onchanged: () => void } = $props();
 
   let settings = $state<ProjectSettings | undefined>();
+  /** The logo could not be taken: too large or not an image. */
+  let logoError = $state<string | undefined>();
 
   $effect(() => {
     void window.skaro.invoke('project.settings', project.id).then((s) => (settings = s));
@@ -19,6 +26,38 @@
     const next = { ...settings, ...patch };
     settings = next;
     void window.skaro.invoke('project.saveSettings', project.id, $state.snapshot(next));
+  }
+
+  async function rename(input: HTMLInputElement): Promise<void> {
+    const name = input.value.trim();
+    if (!name || name === project.name) {
+      input.value = project.name;
+      return;
+    }
+    await window.skaro.invoke('project.rename', project.id, name);
+    onchanged();
+  }
+
+  async function pickLogo(): Promise<void> {
+    logoError = undefined;
+    try {
+      const picked = await window.skaro.invoke('project.pickLogo', project.id);
+      if (picked) onchanged();
+    } catch (error) {
+      const text = String(error);
+      logoError = text.includes('too large')
+        ? t('params.logo.tooLarge')
+        : text.includes('unsupported')
+          ? t('params.logo.unsupported')
+          : t('params.logo.failed');
+      console.error(error);
+    }
+  }
+
+  async function removeLogo(): Promise<void> {
+    logoError = undefined;
+    await window.skaro.invoke('project.removeLogo', project.id);
+    onchanged();
   }
 
   async function remove(): Promise<void> {
@@ -41,6 +80,37 @@
   {#if settings}
     <div class="scroll">
       <div class="inner cards">
+        <section class="card">
+          <span class="label">{t('params.project')}</span>
+          <div class="logo-row">
+            <ProjectAvatar name={project.name} logo={project.logo} />
+            <div class="logo-texts">
+              <div class="logo-actions">
+                <Button size="sm" onclick={() => void pickLogo()}
+                  ><Icon name="image" size={14} />{t('params.logo.pick')}</Button
+                >
+                {#if project.logo}
+                  <Button size="sm" onclick={() => void removeLogo()}
+                    ><Icon name="close" size={13} stroke={2.2} />{t('params.logo.remove')}</Button
+                  >
+                {/if}
+              </div>
+              <span class="note" class:error={logoError !== undefined}
+                >{logoError ?? t('params.logo.note')}</span
+              >
+            </div>
+          </div>
+          <label class="field">
+            <span class="key">{t('params.name')}</span>
+            <input
+              value={project.name}
+              data-tip={t('params.name.tip')}
+              onchange={(e) => void rename(e.currentTarget)}
+              onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+            />
+          </label>
+        </section>
+
         <section class="card">
           <span class="label">{t('params.agent')}</span>
           <AgentDefaults projectId={project.id} {settings} onchange={change} />
@@ -161,6 +231,62 @@
     line-height: 1.45;
     color: var(--sk-text-21);
     text-wrap: pretty;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-texts {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .logo-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .note.error {
+    color: var(--sk-error);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .key {
+    font-size: var(--sk-fs-3);
+    color: var(--sk-text-19);
+  }
+
+  input {
+    height: 32px;
+    padding: 0 11px;
+    border: none;
+    border-radius: 8px;
+    background: var(--sk-fill-3);
+    color: var(--sk-text-6);
+    font-size: var(--sk-fs-5);
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--sk-fill-25);
+  }
+
+  input:hover {
+    background: var(--sk-field-hover);
+    box-shadow: inset 0 0 0 1px var(--sk-fill-31);
+  }
+
+  input:focus {
+    background: var(--sk-field-hover);
+    box-shadow: inset 0 0 0 1px var(--sk-accent);
   }
 
   .card.remove {

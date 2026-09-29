@@ -9,6 +9,8 @@ export interface SkaroScope {
   taskId?: string;
   runId?: string;
   chatId?: string;
+  /** The chat imports documentation (architecture.md 12): it stages artifacts, nothing else. */
+  importId?: string;
 }
 
 export interface MergeTaskArgs {

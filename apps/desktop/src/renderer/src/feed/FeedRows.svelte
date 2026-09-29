@@ -6,6 +6,7 @@
   import ExploreGroup from './ExploreGroup.svelte';
   import FileRow from './FileRow.svelte';
   import ImageRow from './ImageRow.svelte';
+  import ImportPrepRow from './ImportPrepRow.svelte';
   import NoticeRow from './NoticeRow.svelte';
   import ProposalCard from './ProposalCard.svelte';
   import Reasoning from './Reasoning.svelte';
@@ -115,6 +116,8 @@
     <DecisionRow {row} />
   {:else if row.type === 'proposal'}
     <ProposalCard {row} />
+  {:else if row.type === 'import_prep'}
+    <ImportPrepRow {row} />
   {/if}
 {/snippet}
 

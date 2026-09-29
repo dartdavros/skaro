@@ -12,16 +12,17 @@
   import { needsYou } from '../tasks/model';
   import TasksScreen from '../tasks/TasksScreen.svelte';
   import ProjectParams from '../params/ProjectParams.svelte';
-  import Overview from './Overview.svelte';
+  import ImportModal from '../import/ImportModal.svelte';
 
   /** A project tab: the section on the left, the sections panel on the right. */
   let {
     project,
-    section = $bindable('overview'),
+    section = $bindable('tasks'),
     task = $bindable(),
     chat = $bindable(),
     collapsed = $bindable(false),
     onremove,
+    onchanged,
   }: {
     project: ProjectInfo;
     section?: string;
@@ -32,7 +33,20 @@
     collapsed?: boolean;
     /** "Убрать проект": the project left Skaro. */
     onremove: () => void;
+    /** The name or the logo changed in "Параметры проекта". */
+    onchanged: () => void;
   } = $props();
+
+  /** A document to open when "Документы" shows next (a task's specification). */
+  let doc = $state<string | undefined>();
+
+  function openDoc(path: string): void {
+    doc = path;
+    section = 'docs';
+  }
+
+  /** "Импортировать документацию" is open (ImportModal). */
+  let importing = $state(false);
 
   /** The start screen of a new chat (ChatScreen). */
   const NEW_CHAT = 'new';
@@ -45,9 +59,6 @@
   const attention = $derived(data.tasks.filter((x) => !x.archived && needsYou(x)).length);
 
   const items = $derived<NavItem[]>([
-    { id: 'overview', label: t('nav.overview'), tip: t('nav.overview.tip'), icon: 'overview' },
-    { id: 'docs', label: t('nav.docs'), tip: t('nav.docs.tip'), icon: 'docs' },
-    { id: 'plan', label: t('nav.plan'), tip: t('nav.plan.tip'), icon: 'plan' },
     {
       id: 'tasks',
       label: t('nav.tasks'),
@@ -57,6 +68,8 @@
       countTip: t('board.attention.tip'),
       railTip: tn('board.attention.rail', attention),
     },
+    { id: 'docs', label: t('nav.docs'), tip: t('nav.docs.tip'), icon: 'docs' },
+    { id: 'plan', label: t('nav.plan'), tip: t('nav.plan.tip'), icon: 'plan' },
     { id: 'chat', label: t('nav.chat'), tip: t('nav.chat.tip'), icon: 'chat', separated: true },
     { id: 'params', label: t('nav.params'), tip: t('nav.params.tip'), icon: 'params' },
   ]);
@@ -87,27 +100,38 @@
         taskId={task}
         agents={agents.list}
         ontasks={() => (task = undefined)}
+        onspec={openDoc}
       />
     {/key}
-  {:else if current.id === 'tasks'}
-    <TasksScreen projectId={project.id} {data} onopen={openTask} onnew={newChat} />
   {:else if current.id === 'docs'}
-    <DocsScreen projectId={project.id} onchat={newChat} />
+    <DocsScreen
+      projectId={project.id}
+      open={doc}
+      tasks={data}
+      onchat={newChat}
+      ontask={openTask}
+      onimport={() => (importing = true)}
+    />
   {:else if current.id === 'plan'}
     <PlanScreen projectId={project.id} {data} onopen={openTask} onchat={newChat} />
   {:else if current.id === 'params'}
-    <ProjectParams {project} {onremove} />
+    <ProjectParams {project} {onremove} {onchanged} />
   {:else if current.id === 'chat'}
     {#key project.id}
-      <ChatScreen {project} agents={agents.list} bind:chat onsection={go} />
+      <ChatScreen
+        {project}
+        agents={agents.list}
+        bind:chat
+        onsection={go}
+        onimport={() => (importing = true)}
+      />
     {/key}
   {:else}
-    <main class="content">
-      <Overview projectId={project.id} onsection={go} ontask={openTask} />
-    </main>
+    <TasksScreen projectId={project.id} {data} onopen={openTask} onnew={newChat} />
   {/if}
   <NavPanel
     title={project.name}
+    logo={project.logo}
     {items}
     active={current.id}
     bind:collapsed
@@ -118,18 +142,23 @@
   />
 </div>
 
+{#if importing}
+  <ImportModal
+    projectId={project.id}
+    agents={agents.list}
+    onclose={() => (importing = false)}
+    onstart={(started) => {
+      importing = false;
+      chat = started.id;
+      section = 'chat';
+    }}
+  />
+{/if}
+
 <style>
   .project {
     flex: 1;
     min-height: 0;
     display: flex;
-  }
-
-  .content {
-    flex: 1;
-    min-width: 0;
-    overflow-y: auto;
-    padding: 22px 26px 28px;
-    background: var(--sk-bg);
   }
 </style>

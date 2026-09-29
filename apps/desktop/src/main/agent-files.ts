@@ -1,5 +1,5 @@
 // The Skaro block in AGENTS.md and CLAUDE.md (architecture.md 3): links to the brief, the
-// architecture and the ADRs between markers; the rest of the files is never touched.
+// architecture, the ADRs and the specifications between markers; the rest of the files is never touched.
 
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -15,7 +15,8 @@ const TEXT: Record<string, string> = {
     'Контекст проекта ведёт Skaro:',
     '- бриф — `.skaro/brief.md`;',
     '- архитектура и правила для агентов — `.skaro/architecture.md`;',
-    '- принятые решения — `.skaro/adr/`.',
+    '- принятые решения — `.skaro/adr/`;',
+    '- спецификации функций — `.skaro/specs/`.',
   ].join('\n'),
   en: [
     '## Skaro',
@@ -23,7 +24,8 @@ const TEXT: Record<string, string> = {
     'Skaro keeps the project context:',
     '- the brief — `.skaro/brief.md`;',
     '- the architecture and rules for agents — `.skaro/architecture.md`;',
-    '- decisions — `.skaro/adr/`.',
+    '- decisions — `.skaro/adr/`;',
+    '- function specifications — `.skaro/specs/`.',
   ].join('\n'),
 };
 

@@ -78,14 +78,29 @@ export class ClaudeAdapter implements AgentAdapter {
 
   async listModels(cwd: string): Promise<AgentModel[]> {
     const init = await this.initialize(cwd);
-    return init.models.map((m, index) => ({
-      id: m.value,
-      name: m.displayName,
-      description: m.description,
-      isDefault: m.value === 'default' || index === 0,
-      efforts: (m.supportedEffortLevels ?? []).map((id) => ({ id })),
-      images: true,
-    }));
+    // Aliases ("default", "opus") become the model they stand for: the name is the model's own
+    // ("Opus 5.5", from "Opus 5.5 · Best for…"), and two aliases of one model are one row.
+    const models: AgentModel[] = [];
+    init.models.forEach((m, index) => {
+      const id = m.value.startsWith('claude-') ? m.value : (m.resolvedModel ?? m.value);
+      const isDefault = m.value === 'default' || index === 0;
+      const known = models.find((x) => x.id === id);
+      if (known) {
+        known.isDefault ||= isDefault;
+        return;
+      }
+      const [head, ...rest] = m.description.split(' · ');
+      const named = head !== undefined && rest.length > 0 && /\d/.test(head);
+      models.push({
+        id,
+        name: named ? head : m.displayName,
+        description: named ? rest.join(' · ') : m.description,
+        isDefault,
+        efforts: (m.supportedEffortLevels ?? []).map((e) => ({ id: e })),
+        images: true,
+      });
+    });
+    return models;
   }
 
   async listCommands(cwd: string): Promise<AgentCommand[]> {

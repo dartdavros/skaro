@@ -18,6 +18,8 @@ import {
   type Doc,
   type Milestone,
   type ProjectArtifacts,
+  type Spec,
+  type SpecStatus,
   type ProjectConfig,
   type Task,
   type TaskStatus,
@@ -36,6 +38,7 @@ export interface NewTask {
   agent?: string;
   model?: string;
   order?: number;
+  spec?: string;
   created?: string;
 }
 
@@ -52,6 +55,7 @@ export type TaskPatch = Partial<
     | 'agent'
     | 'model'
     | 'branch'
+    | 'spec'
     | 'body'
   >
 >;
@@ -63,6 +67,8 @@ export interface NewAdr {
   replaces?: string;
   date?: string;
 }
+
+export type NewSpec = NewAdr;
 
 /**
  * Reads and writes the project's .skaro/ directory. Only Skaro writes here (D-17);
@@ -97,6 +103,9 @@ export class ArtifactStore {
     const adrs = (await this.readAll('adr', problems, toAdr)).sort((a, b) =>
       a.id.localeCompare(b.id),
     );
+    const specs = (await this.readAll('specs', problems, toSpec)).sort((a, b) =>
+      a.id.localeCompare(b.id),
+    );
     const milestones = (await this.readAll('milestones', problems, toMilestone)).sort(
       (a, b) => a.order - b.order || a.id.localeCompare(b.id),
     );
@@ -115,8 +124,11 @@ export class ArtifactStore {
       if (task.milestone && !milestoneIds.has(task.milestone)) {
         problems.push({ path: task.path, message: `unknown milestone ${task.milestone}` });
       }
+      if (task.spec && !specs.some((s) => s.id === task.spec)) {
+        problems.push({ path: task.path, message: `unknown specification ${task.spec}` });
+      }
     }
-    return { config, brief, architecture, docs, adrs, milestones, tasks, problems };
+    return { config, brief, architecture, docs, adrs, specs, milestones, tasks, problems };
   }
 
   async readTask(id: string): Promise<Task> {
@@ -144,6 +156,7 @@ export class ArtifactStore {
       order: input.order,
       agent: input.agent,
       model: input.model,
+      spec: input.spec,
       created: input.created ?? new Date().toISOString().slice(0, 10),
     });
     file.body = input.body ?? '## Цель\n\n## Критерии приёмки\n';
@@ -165,6 +178,7 @@ export class ArtifactStore {
       ...('agent' in patch ? { agent: patch.agent } : {}),
       ...('model' in patch ? { model: patch.model } : {}),
       ...('branch' in patch ? { branch: patch.branch } : {}),
+      ...('spec' in patch ? { spec: patch.spec } : {}),
     });
     if (patch.body !== undefined) file.body = patch.body;
     await this.writeFile(path, serializeMarkdown(file));
@@ -267,6 +281,53 @@ export class ArtifactStore {
     file.body = body;
     await this.writeFile(path, serializeMarkdown(file));
     return (await this.findFile('adr', id, toAdr)).item;
+  }
+
+  // ── specifications (like ADR: number, status, replaces) ───────────────────
+
+  async createSpec(input: NewSpec): Promise<Spec> {
+    const existing = await this.readAll('specs', [], toSpec);
+    const id = String(
+      nextNumber(
+        existing.map((s) => s.id),
+        /^(\d+)$/,
+      ),
+    ).padStart(4, '0');
+    const file = parseMarkdown('');
+    setFields(file, {
+      id,
+      title: input.title,
+      status: input.status ?? 'proposed',
+      date: input.date ?? new Date().toISOString().slice(0, 10),
+      replaces: input.replaces,
+    });
+    file.body =
+      input.body ??
+      '## Проблема\n\n\n## Сценарии\n- \n\n## Требования\n- R-1 \n\n## Не входит\n- \n\n## Открытые вопросы\n- \n';
+    await this.writeFile(`specs/${id}-${slugify(input.title)}.md`, serializeMarkdown(file));
+    if (input.replaces && input.status === 'accepted') {
+      await this.supersedeIn('specs', toSpec, input.replaces, id);
+    }
+    return (await this.findFile('specs', id, toSpec)).item;
+  }
+
+  /** Accepting a specification that replaces another marks the old one superseded. */
+  async setSpecStatus(id: string, status: SpecStatus): Promise<Spec> {
+    const { file, path, item } = await this.findFile('specs', id, toSpec);
+    setFields(file, { status });
+    await this.writeFile(path, serializeMarkdown(file));
+    if (status === 'accepted' && item.replaces) {
+      await this.supersedeIn('specs', toSpec, item.replaces, id);
+    }
+    return (await this.findFile('specs', id, toSpec)).item;
+  }
+
+  /** Replaces the text of a specification; its frontmatter stays. */
+  async writeSpec(id: string, body: string): Promise<Spec> {
+    const { file, path } = await this.findFile('specs', id, toSpec);
+    file.body = body;
+    await this.writeFile(path, serializeMarkdown(file));
+    return (await this.findFile('specs', id, toSpec)).item;
   }
 
   /** Writes brief.md, architecture.md or docs/<name>.md, keeping existing frontmatter. */
@@ -504,7 +565,21 @@ export class ArtifactStore {
   }
 
   private async supersede(oldId: string, newId: string): Promise<void> {
-    const { file, path } = await this.findFile('adr', oldId, toAdr);
+    await this.supersedeIn('adr', toAdr, oldId, newId);
+  }
+
+  private async supersedeIn<T extends { id: string }>(
+    sub: string,
+    convert: (
+      fields: Record<string, unknown>,
+      body: string,
+      path: string,
+      problems: ArtifactProblem[],
+    ) => T | undefined,
+    oldId: string,
+    newId: string,
+  ): Promise<void> {
+    const { file, path } = await this.findFile(sub, oldId, convert);
     setFields(file, { status: 'superseded', replaced_by: newId });
     await this.writeFile(path, serializeMarkdown(file));
   }
@@ -547,6 +622,7 @@ function toTask(
     agent: str(f['agent']),
     model: str(f['model']),
     branch: str(f['branch']),
+    spec: specId(f['spec']),
     created: str(f['created']) ?? dateString(f['created']),
     body,
     path,
@@ -590,6 +666,37 @@ function toAdr(
     body,
     path,
   };
+}
+
+function toSpec(
+  f: Record<string, unknown>,
+  body: string,
+  path: string,
+  problems: ArtifactProblem[],
+): Spec | undefined {
+  const id = specId(f['id']);
+  if (!id) {
+    problems.push({ path, message: 'specification without id' });
+    return undefined;
+  }
+  const status = str(f['status']);
+  return {
+    id,
+    title: str(f['title']) ?? id,
+    status: status === 'accepted' || status === 'superseded' ? status : 'proposed',
+    replaces: specId(f['replaces']),
+    replacedBy: specId(f['replaced_by']),
+    date: str(f['date']) ?? dateString(f['date']),
+    body,
+    path,
+  };
+}
+
+/** "0003", 3 (YAML number) or "SPEC-0003" as "0003". */
+function specId(value: unknown): string | undefined {
+  const raw = typeof value === 'number' ? String(value) : str(value);
+  const digits = raw ? /^(?:SPEC-)?(\d+)$/i.exec(raw.trim())?.[1] : undefined;
+  return digits ? digits.padStart(4, '0') : undefined;
 }
 
 function checkIds(

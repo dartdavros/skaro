@@ -19,9 +19,12 @@ const handlers: ProjectToolHandlers = {
   context: async () => ({ text: '# Project' }),
   writeDoc: record('write_doc'),
   proposeAdr: record('propose_adr'),
+  proposeSpec: record('propose_spec'),
   proposeMilestones: record('propose_milestones'),
   proposeTasks: record('propose_tasks'),
   updateTask: record('update_task'),
+  stageArtifact: record('stage_artifact'),
+  finishImport: record('finish_import'),
 };
 
 beforeEach(async () => {
@@ -52,6 +55,7 @@ describe('project tools', () => {
       'get_project_context',
       'write_doc',
       'propose_adr',
+      'propose_spec',
       'propose_milestones',
       'propose_tasks',
       'update_task',
@@ -117,6 +121,84 @@ describe('project tools', () => {
                 },
               ],
             },
+          ],
+        },
+      },
+    ]);
+    await chat.close();
+  });
+
+  it('gives an import chat only the context and the import tools', async () => {
+    const chat = await connect({
+      kind: 'project_chat',
+      projectId: 'p1',
+      chatId: 'c1',
+      importId: 'i1',
+    });
+    expect((await chat.listTools()).tools.map((t) => t.name)).toEqual([
+      'get_project_context',
+      'stage_artifact',
+      'finish_import',
+    ]);
+    const bad = await chat.callTool({
+      name: 'stage_artifact',
+      arguments: { type: 'task', key: 't1', title: 'A', goal: 'g', sources: [] },
+    });
+    expect(bad.isError).toBe(true);
+    await chat.callTool({
+      name: 'stage_artifact',
+      arguments: {
+        type: 'milestone',
+        key: 'm1',
+        title: 'M',
+        goal: 'g',
+        done_when: 'd',
+        sources: ['code'],
+      },
+    });
+    expect(calls).toEqual([
+      {
+        tool: 'stage_artifact',
+        args: {
+          type: 'milestone',
+          key: 'm1',
+          title: 'M',
+          goal: 'g',
+          doneWhen: 'd',
+          sources: ['code'],
+        },
+      },
+    ]);
+    await chat.close();
+  });
+
+  it('takes a new specification with a title and a change to one by its number', async () => {
+    const chat = await connect({ kind: 'project_chat', projectId: 'p1', chatId: 'c1' });
+    const missing = await chat.callTool({
+      name: 'propose_spec',
+      arguments: { content: '## Проблема\n' },
+    });
+    expect(missing.isError).toBe(true);
+    await chat.callTool({
+      name: 'propose_spec',
+      arguments: { title: 'Возвраты', content: '## Проблема\n', replaces: '0001' },
+    });
+    await chat.callTool({ name: 'propose_spec', arguments: { id: '0002', content: '## R\n' } });
+    await chat.callTool({
+      name: 'propose_tasks',
+      arguments: { tasks: [{ title: 'A', goal: 'g', criteria: ['c'], spec: '0002' }] },
+    });
+    expect(calls).toEqual([
+      {
+        tool: 'propose_spec',
+        args: { title: 'Возвраты', content: '## Проблема', replaces: '0001' },
+      },
+      { tool: 'propose_spec', args: { id: '0002', content: '## R' } },
+      {
+        tool: 'propose_tasks',
+        args: {
+          tasks: [
+            { ref: 'task-1', title: 'A', goal: 'g', criteria: ['c'], dependsOn: [], spec: '0002' },
           ],
         },
       },

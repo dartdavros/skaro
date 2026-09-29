@@ -4,6 +4,24 @@ import type { AgentId, MilestoneInfo, TaskStatus, TaskSummary } from '../../../s
 
 const MS: Record<string, string> = { M01: 'Базовый API', M02: 'Платежи', M03: 'Админка' };
 const MIN = 60_000;
+/** Tasks that implement a specification of the Documents mockup. */
+const SPEC: Record<string, { id: string; title: string; path: string }> = {
+  'T-016': {
+    id: '0003',
+    title: 'Возвраты по картам',
+    path: '.skaro/specs/0003-card-refunds.md',
+  },
+  'T-022': {
+    id: '0003',
+    title: 'Возвраты по картам',
+    path: '.skaro/specs/0003-card-refunds.md',
+  },
+  'T-020': {
+    id: '0005',
+    title: 'Роли и доступы админки',
+    path: '.skaro/specs/0005-admin-roles.md',
+  },
+};
 
 type Row = [string, string, string, TaskStatus, AgentId | '', string, number, string[]?];
 
@@ -24,6 +42,7 @@ const ROWS: Row[] = [
   ['T-020', 'Роли и доступы админки', 'M03', 'todo', '', '', 1500],
   ['T-021', 'Список заказов', 'M03', 'todo', '', '', 1500],
   ['T-022', 'Экран возвратов', 'M03', 'blocked', '', '', 1500, ['T-016']],
+  ['T-023', 'Обновить зависимости платежей', '', 'todo', '', '', 1500],
 ];
 
 export const tasks: TaskSummary[] = ROWS.map(
@@ -31,12 +50,13 @@ export const tasks: TaskSummary[] = ROWS.map(
     id,
     title,
     status,
-    milestone: { id: ms, title: MS[ms]! },
+    ...(ms ? { milestone: { id: ms, title: MS[ms]! } } : {}),
     archived: false,
     ...(agent ? { agent } : {}),
     ...(model ? { model } : {}),
     deps: deps ?? [],
     waitsFor: status === 'blocked' ? (deps ?? []) : [],
+    ...(SPEC[id] ? { spec: SPEC[id] } : {}),
     updatedAt: Date.now() - ago * MIN,
   }),
 );
@@ -99,9 +119,10 @@ export const plan = {
   placeTask(taskId: string, milestoneId: string, index: number): void {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
-    task.milestone = { id: milestoneId, title: MS[milestoneId] ?? '' };
+    if (milestoneId) task.milestone = { id: milestoneId, title: MS[milestoneId] ?? '' };
+    else delete task.milestone;
     const siblings = tasks
-      .filter((t) => t.milestone?.id === milestoneId && t !== task)
+      .filter((t) => (t.milestone?.id ?? '') === milestoneId && t !== task)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     siblings.splice(index, 0, task);
     siblings.forEach((t, i) => (t.order = i + 1));

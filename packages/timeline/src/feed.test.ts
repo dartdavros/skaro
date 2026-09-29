@@ -14,7 +14,7 @@ const types = (rows: FeedRow[]) => rows.map((r) => r.type);
 describe('feedRows', () => {
   it('groups reads and searches into one line and ends the turn with a summary', () => {
     const rows = feedRows(golden('claude', 'read'));
-    expect(types(rows)).toEqual(['user', 'notice', 'explore', 'reasoning', 'agent', 'turn_end']);
+    expect(types(rows)).toEqual(['user', 'notice', 'explore', 'agent', 'turn_end']);
     const explore = rows[2] as Extract<FeedRow, { type: 'explore' }>;
     expect(exploreCounts(explore.items)).toMatchObject({ read: 2, search: [expect.any(String)] });
     const end = rows.at(-1) as Extract<FeedRow, { type: 'turn_end' }>;
@@ -57,6 +57,40 @@ describe('feedRows', () => {
         removed: 1,
         diffs: ['@@ e1', '@@ e2'],
       }),
+    ]);
+  });
+
+  it('shows reasoning only while it runs, so reads around it stay one line', () => {
+    const base = { turnId: 't1', startedAt: 0 };
+    const read = (id: string): Item => ({
+      ...base,
+      id,
+      kind: 'explore',
+      op: 'read',
+      target: `${id}.md`,
+      status: 'done',
+      native: { agent: 'test', type: 'read', ref: id },
+    });
+    const think = (id: string, status: 'running' | 'done'): Item => ({
+      ...base,
+      id,
+      kind: 'reasoning',
+      redacted: true,
+      status,
+      native: { agent: 'test', type: 'thinking', ref: id },
+    });
+    const state = (items: Item[]): TimelineState => ({
+      turns: [],
+      items,
+      interactions: [],
+      status: 'working',
+    });
+    const done = feedRows(state([read('r1'), think('th1', 'done'), read('r2')]));
+    expect(types(done)).toEqual(['explore']);
+    expect(done[0]).toMatchObject({ items: [{ id: 'r1' }, { id: 'r2' }] });
+    expect(types(feedRows(state([read('r1'), think('th1', 'running')])))).toEqual([
+      'explore',
+      'reasoning',
     ]);
   });
 

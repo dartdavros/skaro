@@ -19,6 +19,7 @@ const artifacts: ProjectArtifacts = {
   brief: { kind: 'brief', title: 'Бриф', body: '', path: '.skaro/brief.md' },
   docs: [],
   adrs: [],
+  specs: [],
   milestones: [],
   tasks: [task],
   problems: [],

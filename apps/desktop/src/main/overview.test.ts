@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AppDb, ArtifactStore } from '@skaro/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { projectCards, projectOverview } from './overview';
+import { projectCards } from './overview';
 import { Projects } from './projects';
 
 let root: string;
@@ -54,39 +54,6 @@ describe('projectCards', () => {
       agent: 'claude-code',
     });
     expect(c.dependsOn).toEqual([b.id]);
-  });
-
-  it('builds the overview: attention, milestones, the start checklist and events', async () => {
-    const store = new ArtifactStore(root);
-    await store.writeDoc('brief.md', '# Бриф');
-    await store.writeDoc(
-      'architecture.md',
-      '# Архитектура\n\n## Правила и ограничения\n\n- Только TypeScript\n- Без any\n',
-    );
-    await store.createAdr({ title: 'TS', status: 'accepted' });
-    const m1 = await store.createMilestone({ title: 'API' });
-    const m2 = await store.createMilestone({ title: 'Админка' });
-    const a = await store.createTask({ title: 'A', milestone: m1.id });
-    await store.updateTask(a.id, { status: 'review' });
-    const project = db.addProject({ name: 'Shop', path: root });
-    db.addEvent(project.id, 'merged', { task: a.id, base: 'main' });
-
-    const view = await projectOverview(db, projects, project.id);
-    expect(view.attention.map((t) => [t.id, t.status])).toEqual([[a.id, 'review']]);
-    expect(view.running).toEqual([]);
-    expect(view.milestones.map((m) => [m.id, m.done, m.total])).toEqual([
-      [m1.id, 0, 1],
-      [m2.id, 0, 0],
-    ]);
-    expect(view.start).toMatchObject({
-      architecture: { adrs: 1, rules: 2 },
-      milestones: 2,
-      tasks: 1,
-      emptyMilestone: { id: m2.id, title: 'Админка' },
-      hidden: false,
-    });
-    expect(view.start.brief?.updatedAt).toBeGreaterThan(0);
-    expect(view.events).toMatchObject([{ kind: 'merged', taskTitle: 'A' }]);
   });
 
   it('marks a project whose folder is gone', async () => {

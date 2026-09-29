@@ -1295,9 +1295,11 @@ function summary(
   extra: { agent?: AgentId; model?: string; updatedAt: number },
 ): TaskSummary {
   const milestone = artifacts.milestones.find((m) => m.id === task.milestone);
+  const spec = task.spec ? artifacts.specs.find((s) => s.id === task.spec) : undefined;
   return {
     ...ref(task, index, runtime),
     ...(milestone ? { milestone: { id: milestone.id, title: milestone.title } } : {}),
+    ...(spec ? { spec: { id: spec.id, title: spec.title, path: spec.path } } : {}),
     archived: task.archived,
     ...extra,
     deps: task.dependsOn,
@@ -1321,7 +1323,19 @@ function detail(
     blocks: artifacts.tasks.filter((t) => t.dependsOn.includes(task.id)).map(refOf),
     ...(task.branch ? { branch: task.branch } : {}),
     ...taskSections(task.body),
+    ...requirementsOf(artifacts.specs.find((s) => s.id === task.spec)?.body),
   };
+}
+
+/** "- R-2 Права проверяются на сервере" lines of a specification. */
+export function requirementsOf(body: string | undefined): {
+  requirements?: { id: string; text: string }[];
+} {
+  const list = [...(body ?? '').matchAll(/^\s*[-*]\s+(R-\d+)[\s:.—–-]+(.+)$/gm)].map((m) => ({
+    id: m[1]!,
+    text: m[2]!.trim(),
+  }));
+  return list.length ? { requirements: list } : {};
 }
 
 function mergeInteraction(

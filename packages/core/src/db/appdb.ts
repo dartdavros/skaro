@@ -11,6 +11,8 @@ export interface ProjectRecord {
   path: string;
   createdAt: number;
   lastOpenedAt?: number;
+  /** The project's logo as a data: URL (SVG, PNG or JPG). */
+  logo?: string;
 }
 
 export type RunOutcome = 'done' | 'interrupted' | 'failed';
@@ -166,6 +168,10 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX events_project ON events(project_id, at);
   `,
+  // 3: the project's logo ("Параметры проекта").
+  `
+  ALTER TABLE projects ADD COLUMN logo TEXT;
+  `,
 ];
 
 type Row = Record<string, SQLInputValue>;
@@ -246,6 +252,11 @@ export class AppDb {
 
   renameProject(id: string, name: string): void {
     this.db.prepare('UPDATE projects SET name = ? WHERE id = ?').run(name, id);
+  }
+
+  /** A data: URL, or undefined to go back to the initials. */
+  setProjectLogo(id: string, logo: string | undefined): void {
+    this.db.prepare('UPDATE projects SET logo = ? WHERE id = ?').run(logo ?? null, id);
   }
 
   /** The project folder moved: "Найти заново". */
@@ -603,6 +614,7 @@ function toProject(r: Row): ProjectRecord {
     path: String(r['path']),
     createdAt: Number(r['created_at']),
     lastOpenedAt: r['last_opened_at'] === null ? undefined : Number(r['last_opened_at']),
+    ...(typeof r['logo'] === 'string' ? { logo: r['logo'] } : {}),
   };
 }
 

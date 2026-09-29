@@ -25,12 +25,15 @@
 
   let {
     title,
+    logo,
     items,
     active,
     collapsed = $bindable(false),
     onselect,
   }: {
     title: string;
+    /** The project's logo (a data: URL), before the title. */
+    logo?: string | undefined;
     items: NavItem[];
     active: string;
     collapsed?: boolean;
@@ -41,6 +44,7 @@
 {#if !collapsed}
   <nav class="panel">
     <div class="head">
+      {#if logo}<img class="logo" src={logo} alt="" />{/if}
       <span class="title">{title}</span>
       <button
         type="button"
@@ -113,6 +117,14 @@
     align-items: center;
     gap: 8px;
     padding: 0 6px 8px 10px;
+  }
+
+  .logo {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    object-fit: contain;
   }
 
   .title {

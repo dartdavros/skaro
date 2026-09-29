@@ -22,7 +22,7 @@
     onopen: (id: string) => void;
   } = $props();
 
-  const list = $derived(groups(tasks, milestones));
+  const list = $derived(groups(tasks, milestones, t('board.loose')));
 </script>
 
 <div class="list">

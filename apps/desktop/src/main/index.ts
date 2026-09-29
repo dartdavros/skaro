@@ -31,7 +31,9 @@ import { registerHandlers, sendEvent } from './ipc';
 import { createFolder, inspectFolder } from './new-project';
 import { openEditor, openTerminal } from './external-apps';
 import { Notifier } from './notifier';
-import { projectCards, projectOverview } from './overview';
+import { hasCode } from './new-project';
+import { projectCards } from './overview';
+import { LOGO_EXTENSIONS, readLogo } from './project-logo';
 import { checkUpdate } from './updates';
 import { Docs } from './docs';
 import { Plan } from './plan';
@@ -142,9 +144,26 @@ function createMainWindow(): void {
     const b = current.getNormalBounds();
     state?.setSetting('window.bounds', { ...b, maximized: current.isMaximized() });
   };
-  current.on('close', saveBounds);
-  current.on('maximize', () => sendEvent(current.webContents, 'window.maximized', true));
-  current.on('unmaximize', () => sendEvent(current.webContents, 'window.maximized', false));
+  // Saved as soon as the user stops dragging: a killed process never gets to "close".
+  let boundsTimer: NodeJS.Timeout | undefined;
+  const saveBoundsSoon = () => {
+    clearTimeout(boundsTimer);
+    boundsTimer = setTimeout(saveBounds, 400);
+  };
+  current.on('resize', saveBoundsSoon);
+  current.on('move', saveBoundsSoon);
+  current.on('close', () => {
+    clearTimeout(boundsTimer);
+    saveBounds();
+  });
+  current.on('maximize', () => {
+    saveBounds();
+    sendEvent(current.webContents, 'window.maximized', true);
+  });
+  current.on('unmaximize', () => {
+    saveBounds();
+    sendEvent(current.webContents, 'window.maximized', false);
+  });
 
   // External links open in the system browser; the app itself never navigates away.
   current.webContents.setWindowOpenHandler(({ url }) => {
@@ -207,6 +226,9 @@ if (!locked) {
           context: (scope) => chats.context(scope),
           writeDoc: (args, scope) => chats.writeDoc(args, scope),
           proposeAdr: (args, scope) => chats.proposeAdr(args, scope),
+          proposeSpec: (args, scope) => chats.proposeSpec(args, scope),
+          stageArtifact: (args, scope) => chats.stageArtifact(args, scope),
+          finishImport: (args, scope) => chats.finishImport(args, scope),
           proposeMilestones: (args, scope) => chats.proposeMilestones(args, scope),
           proposeTasks: (args, scope) => chats.proposeTasks(args, scope),
           updateTask: (args, scope) => chats.updateTask(args, scope),
@@ -340,8 +362,30 @@ if (!locked) {
         },
         'projects.remove': (id) => appState.removeProject(id),
         'projects.overview': () => projectCards(db, projects),
-        'project.overview': (projectId) => projectOverview(db, projects, projectId),
+        'project.rename': (projectId, name) => appState.renameProject(projectId, name),
+        'project.pickLogo': async (projectId) => {
+          const options: Electron.OpenDialogOptions = {
+            properties: ['openFile'],
+            filters: [{ name: 'SVG, PNG, JPG', extensions: LOGO_EXTENSIONS }],
+          };
+          const result = win
+            ? await dialog.showOpenDialog(win, options)
+            : await dialog.showOpenDialog(options);
+          const path = result.canceled ? undefined : result.filePaths[0];
+          return path ? appState.setProjectLogo(projectId, await readLogo(path)) : undefined;
+        },
+        'project.removeLogo': (projectId) => appState.setProjectLogo(projectId, undefined),
         'project.settings': (projectId) => projectSettings(projects, projectId),
+        'project.hasCode': (projectId) => hasCode(projects.get(projectId).root),
+        'import.scan': (paths) => chats.scanImport(paths),
+        'import.start': (projectId, paths, settings) =>
+          chats.startImport(projectId, paths, settings),
+        'import.review': (projectId, chatId) => chats.importReview(projectId, chatId),
+        'import.openSource': async (projectId, chatId, source) => {
+          const path = await chats.openImportSource(projectId, chatId, source);
+          const failed = await shell.openPath(path);
+          if (failed) shell.showItemInFolder(path);
+        },
         'project.saveSettings': async (projectId, settings) => {
           await saveProjectSettings(
             projects,
@@ -401,7 +445,9 @@ if (!locked) {
         'docs.read': (projectId, path) => docs.read(projectId, path),
         'docs.write': (projectId, path, text) => docs.write(projectId, path, text),
         'docs.create': (projectId, name) => docs.create(projectId, name),
+        'docs.createSpec': (projectId, title) => docs.createSpec(projectId, title),
         'docs.setAdrStatus': (projectId, id, status) => docs.setAdrStatus(projectId, id, status),
+        'docs.setSpecStatus': (projectId, id, status) => docs.setSpecStatus(projectId, id, status),
         'docs.reveal': (projectId, path) => docs.reveal(projectId, path),
         'plan.milestones': (projectId) => plan.milestones(projectId),
         'plan.create': (projectId, input) => plan.create(projectId, input),

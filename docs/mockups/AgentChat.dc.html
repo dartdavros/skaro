@@ -14,8 +14,8 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; background: #151515; font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; }
-a { color: #2a52be; text-decoration: none; }
-a:hover { color: #2bb3a6; text-decoration: underline; }
+a { color: #7d9ce8; text-decoration: none; }
+a:hover { color: #9bb4ee; text-decoration: underline; }
 input, button, textarea { font-family: inherit; }
 @keyframes skPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
 @keyframes skPulseRing { 0% { opacity: .5; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.2); } }
@@ -26,13 +26,14 @@ input, button, textarea { font-family: inherit; }
 </style>
 </helmet>
 
-<div style="padding: 44px; background: #151515; width: max-content;">
-<div data-screen-label="Агент" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onClick="{{ onRootClick }}" style="position: relative; flex: none; width: 1280px; height: 800px; display: flex; flex-direction: column; background: #171717; color: #b1b1b1; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
+<div style="padding: 44px; background: #151515; width: max-content; display: flex; flex-direction: column; gap: 44px;">
+<sc-for list="{{ frames }}" as="fr" hint-placeholder-count="2">
+<div id="{{ fr.id }}" style="display: flex; flex-direction: column; gap: 10px;">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">{{ fr.caption }}</span>
+<div data-screen-label="{{ fr.label }}" data-frame="{{ fr.id }}" onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" onMouseDown="{{ fr.activate }}" onClick="{{ onRootClick }}" style="position: relative; flex: none; width: {{ fr.w }}; height: 800px; display: flex; flex-direction: column; background: #171717; color: #b8b8b8; border: 1px solid #222222; border-radius: 10px; overflow: hidden; font-size: 15px; box-shadow: 0 24px 60px rgba(0,0,0,.45);">
 
   <div style="height: 42px; flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 0 10px 0 14px; background: #0f0f0f; border-bottom: 1px solid #1a1a1a;">
-    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; height: 32px; padding: 0 12px 0 4px; cursor: pointer;">
-      <span style="font-size: 17px; font-weight: 700; letter-spacing: .03em; color: #c2c2c2;">skaro</span>
-    </div>
+    <div data-tip="Главная — все проекты" style="flex: none; display: flex; align-items: center; height: 32px; padding: 0 12px 0 4px; cursor: pointer; color: #c9c9c9;" style-hover="color: #e0e0e0;"><span style="font-size: 18px; font-weight: 700; letter-spacing: .03em;">skaro</span></div>
 
     <div style="display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 42px; margin-left: -8px;">
       <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 11px 0 13px; border-radius: 11px 11px 0 0; background: #121212; border: 1px solid #242424; border-bottom: none; margin-bottom: -1px; position: relative; z-index: 1; color: #d5d5d5; font-size: 13px; font-weight: 600; cursor: pointer;" style-before="content: ''; position: absolute; bottom: 0; left: -11px; width: 10px; height: 10px; border-bottom-right-radius: 10px; border-right: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: 3px 3px 0 3px #121212; pointer-events: none;" style-after="content: ''; position: absolute; bottom: 0; right: -11px; width: 10px; height: 10px; border-bottom-left-radius: 10px; border-left: 1px solid #242424; border-bottom: 1px solid #242424; box-shadow: -3px 3px 0 3px #121212; pointer-events: none;">
@@ -41,34 +42,34 @@ input, button, textarea { font-family: inherit; }
           <span style="position: absolute; inset: 0; border-radius: 50%; border: 1px solid #a6a6a6; animation: skPulseRing 1.8s ease-out infinite;"></span>
         </span>
         Shop API
-        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #848484; cursor: pointer;" style-hover="background: #262626; color: #e0e0e0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #a5a5a5; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #e0e0e0;">
         <span data-tip="Требует вашего внимания" style="width: 7px; height: 7px; border-radius: 50%; background: #2a52be;"></span>
         Blog Engine
-        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #848484; cursor: pointer;" style-hover="background: #262626; color: #e0e0e0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #9e9e9e; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #ededed;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 9px 0 11px; border-radius: 11px 11px 0 0; color: #a5a5a5; font-size: 13px; cursor: pointer;" style-hover="background: #161616; color: #e0e0e0;">
         Skaro Landing
-        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #7d7d7d; cursor: pointer;" style-hover="background: #262626; color: #ededed;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+        <span data-tip="Закрыть вкладку" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #848484; cursor: pointer;" style-hover="background: #262626; color: #e0e0e0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
       </div>
 
-      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Открыть проект">
+      <button style="width: 28px; height: 28px; margin-bottom: 2px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;" data-tip="Открыть проект">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
       </button>
     </div>
 
     <div style="display: flex; align-items: center; gap: 6px; height: 42px;">
-      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;" data-tip="Настройки">
+      <button style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 7px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;" data-tip="Настройки">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7h-9M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
       </button>
       <div style="width: 1px; height: 16px; background: #1d1d1d; margin: 0 2px;"></div>
       <div style="display: flex; align-items: center; gap: 2px;">
-        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
-        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #111111; color: #ededed;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
-        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #989898; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;"><svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #9f9f9f; cursor: pointer;" style-hover="background: #111111; color: #e0e0e0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+        <button style="width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 5px; color: #9f9f9f; cursor: pointer;" style-hover="background: #2a52be; color: #fff;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
       </div>
     </div>
   </div>
@@ -78,18 +79,15 @@ input, button, textarea { font-family: inherit; }
     <div style="flex: 1; min-width: 0; min-height: 0; display: flex; background: #121212;">
 
       <div style="flex: none; width: 224px; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px 10px 12px 14px;">
-        <button onClick="{{ newSession }}" data-tip="Начать новый чат" style="flex: none; height: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 0 11px; border: none; border-radius: 8px; background: transparent; color: #c8c8c8; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+        <button onClick="{{ newSession }}" data-tip="Начать новый чат" style="flex: none; height: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 0 11px; border: none; border-radius: 8px; background: transparent; color: #cfcfcf; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #1c1c1c; color: #e0e0e0;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg>
           Новый чат
         </button>
-        <div style="flex: none; align-self: flex-start; display: flex; align-items: center; gap: 2px; padding: 2px; margin: 6px 0; border-radius: 8px; background: #060606;">
-          <sc-for list="{{ listTabs }}" as="t" hint-placeholder-count="2">
-            <button onClick="{{ t.select }}" data-tip="{{ t.tip }}" style="{{ t.style }}">{{ t.label }}</button>
-          </sc-for>
-        </div>
+        
         <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;">
           <sc-for list="{{ sessions }}" as="t" hint-placeholder-count="4">
             <div onClick="{{ t.select }}" style="display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px 4px 10px; border-radius: 8px; background: {{ t.bg }}; cursor: pointer;" style-hover="background: #1c1c1c;">
+              <sc-if value="{{ t.isImport }}" hint-placeholder-val="{{ false }}"><span data-tip="Импорт документации" style="flex: none; display: inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg></span></sc-if>
               <div data-tip="{{ t.title }}" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
                 <span style="font-size: 12.5px; color: {{ t.color }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.title }}</span>
               </div>
@@ -97,24 +95,32 @@ input, button, textarea { font-family: inherit; }
                 <span data-tip="Агент отвечает" style="flex: none; width: 6px; height: 6px; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
               </sc-if>
               <sc-if value="{{ t.archived }}" hint-placeholder-val="{{ false }}">
-                <button onClick="{{ t.restore }}" data-tip="Вернуть из архива" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #272727; color: #d5d5d5;">
+                <button onClick="{{ t.restore }}" data-tip="Вернуть из архива" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #272727; color: #d5d5d5;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path></svg>
                 </button>
               </sc-if>
             </div>
           </sc-for>
           <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
-            <span style="padding: 18px 10px; font-size: 12px; line-height: 1.5; color: #6f6f6f; text-align: center; text-wrap: pretty;">{{ listEmptyText }}</span>
+            <span style="padding: 18px 10px; font-size: 12.5px; line-height: 1.5; color: #767676; text-align: center; text-wrap: pretty;">{{ listEmptyText }}</span>
           </sc-if>
+        </div>
+        <div style="flex: none; display: flex;">
+          <button onClick="{{ toggleArchive }}" data-tip="{{ archiveTip }}" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 7px; background: {{ archiveBg }}; color: {{ archiveColor }}; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"></path></svg>
+          </button>
         </div>
       </div>
 
       <div style="flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column;">
 
         <div style="flex: none; display: flex; align-items: center; gap: 8px; padding: 4px 14px 0;">
-          <span style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: #c8c8c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ sessionTitle }}</span>
+          <span style="flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; color: #cfcfcf; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ sessionTitle }}</span>
+          <button onClick="{{ fr.toggleChanged }}" data-tip="Изменено в чате" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: {{ fr.changedBg }}; color: {{ fr.changedColor }}; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"></path></svg>
+          </button>
           <sc-if value="{{ curActive }}" hint-placeholder-val="{{ true }}">
-            <button onClick="{{ archiveCurrent }}" data-tip="Архивировать чат" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #6f6f6f; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
+            <button onClick="{{ archiveCurrent }}" data-tip="Архивировать чат" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #767676; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path></svg>
             </button>
           </sc-if>
@@ -122,13 +128,107 @@ input, button, textarea { font-family: inherit; }
 
         <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
           <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px;">
-            <span style="font-size: 14px; font-weight: 600; color: #a6a6a6;">С чего начнём проект?</span>
-            <span style="max-width: 340px; font-size: 12.5px; line-height: 1.5; color: #7d7d7d; text-align: center; text-wrap: pretty;">Расскажите, что нужно построить. Я предложу бриф, архитектуру, этапы и задачи — вы подтвердите.</span>
+            <span style="font-size: 15px; font-weight: 600; color: #adadad;">{{ startTitle }}</span>
+            <span style="max-width: 360px; font-size: 13.5px; line-height: 1.5; color: #848484; text-align: center; text-wrap: pretty;">{{ startText }}</span>
             <div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: center;">
               <sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
-                <button onClick="{{ c.select }}" style="height: 29px; padding: 0 13px; border: none; border-radius: 8px; background: #1c1c1c; color: #c8c8c8; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #242424; color: #ededed;">{{ c.label }}</button>
+                <button onClick="{{ c.select }}" data-tip="{{ c.tip }}" style="display: inline-flex; align-items: center; gap: 7px; height: 29px; padding: 0 13px; border: none; border-radius: 8px; background: #1c1c1c; color: #cfcfcf; font-size: 13.5px; font-weight: 600; cursor: pointer;" style-hover="background: #242424; color: #e0e0e0;"><sc-if value="{{ c.imp }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg></sc-if>{{ c.label }}</button>
               </sc-for>
             </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isImportChat }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 34px 26px 30px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="flex: none; display: flex; flex-direction: column; align-items: flex-end;">
+              <div style="max-width: 76%; padding: 10px 15px; border-radius: 20px; background: #1c2a4d; display: flex; flex-direction: column; gap: 5px;">
+                <span style="font-size: 14px; line-height: 1.55; color: #dfe5f3;">Импортировать документацию</span>
+                <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; color: #b8c3dc;">~/Docs/shop · 42 файла</span>
+                <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; color: #b8c3dc;">~/Downloads/ТЗ-админка.docx · 1 файл</span>
+              </div>
+            </div>
+
+            <div style="flex: none; display: flex; flex-direction: column; gap: 6px;">
+              <div onClick="{{ ex.prep }}" data-tip="Что прочитано и что пропущено" style="display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 12.5px; color: #767676; cursor: pointer;" style-hover="color: #adadad;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ ex.prepRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg>Подготовлено 30 файлов · 12 пропущено</div>
+              <sc-if value="{{ ex.prepOn }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-left: 19px; display: flex; flex-direction: column;">
+                  <sc-for list="{{ prepRows }}" as="r" hint-placeholder-count="6">
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 4px 2px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px;">
+                      <span style="flex: 1; min-width: 0; color: {{ r.color }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.path }}</span>
+                      <span style="flex: none; font-size: 12.5px; color: #767676;">{{ r.meta }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div style="display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 12.5px; color: #767676;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ 'none' }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg>Прочитал 30 файлов · сверил с кодом · искал «<code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #919191;">payment</code>»</div>
+            </div>
+
+            <sc-if value="{{ qOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="flex: none; border-radius: 10px; background: #1a1a1a; padding: 12px 13px; display: flex; flex-direction: column; gap: 10px;">
+                <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Расхождение</span>
+                <div style="font-size: 14px; line-height: 1.55; color: #d5d5d5; text-wrap: pretty;">В README оплата через Stripe, в коде — YooKassa. Что верно?</div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <sc-for list="{{ qOpts }}" as="p" hint-placeholder-count="3">
+                    <div onClick="{{ p.select }}" style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; background: {{ p.bg }}; cursor: pointer;" style-hover="background: #222222;">
+                      <span style="flex: none; margin-top: 2px; width: 14px; height: 14px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1.5px {{ p.ring }};"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{ p.dot }};"></span></span>
+                      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                        <span style="font-size: 13.5px; font-weight: 600; color: {{ p.titleColor }};">{{ p.label }}</span>
+                        <span style="font-size: 12.5px; line-height: 1.4; color: #848484; text-wrap: pretty;">{{ p.note }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display: flex; align-items: center; gap: 9px;">
+                  <span style="flex: 1; font-size: 12.5px; color: #848484;">Можно ответить своими словами в поле ниже.</span>
+                  <button onClick="{{ answerQ }}" style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Ответить</button>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ qDone }}" hint-placeholder-val="{{ false }}">
+              <div style="flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 2px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+                <span style="flex: 1; font-size: 13px; color: #919191;">Расхождение · {{ qAnswer }}</span>
+              </div>
+              <div style="flex: none; font-size: 14px; line-height: 1.6; color: #cfcfcf; text-wrap: pretty;">Беру YooKassa, Stripe упомяну как прежнего провайдера. Перенёс бриф и архитектуру, собрал ADR, спецификации и план.</div>
+
+              <sc-if value="{{ impPending }}" hint-placeholder-val="{{ true }}">
+                <div style="flex: none; border-radius: 10px; background: #202020; padding: 11px 13px 12px; display: flex; flex-direction: column; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 9px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg>
+                    <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #d5d5d5;">Импорт готов</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column;">
+                    <sc-for list="{{ impRows }}" as="r" hint-placeholder-count="6">
+                      <div style="display: flex; align-items: center; gap: 10px; padding: 4px 0;">
+                        <span style="flex: 1; font-size: 13.5px; color: #cfcfcf;">{{ r.label }}</span>
+                        <span style="flex: none; font-size: 12.5px; color: {{ r.markColor }};">{{ r.mark }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display: flex; gap: 16px; font-size: 13px; color: #848484;">
+                    <span data-tip="Файлы, которые агент не перенёс, — с причинами" style="cursor: default;">Не перенесено: <span style="font-family: 'JetBrains Mono', Consolas, monospace;">4</span></span>
+                    <span data-tip="Где агент выбрал сам — видно при проверке" style="cursor: default;">Допущения: <span style="font-family: 'JetBrains Mono', Consolas, monospace;">2</span></span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                    <button onClick="{{ rejectImport }}" style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M18 6 6 18M6 6l12 12"></path></svg>Отклонить</button>
+                    <button onClick="{{ openReview }}" style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg>Проверить и импортировать</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ impApplied }}" hint-placeholder-val="{{ false }}">
+                <div style="flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 2px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+                  <span style="flex: 1; font-size: 13px; color: #919191;">Импортировано 16 из 19</span>
+                  <a href="Documents.dc.html" style="flex: none; font-size: 12.5px; font-weight: 600; color: #adadad; text-decoration: none;" style-hover="color: #e0e0e0; text-decoration: none;">Открыть документы</a>
+                </div>
+              </sc-if>
+              <sc-if value="{{ impRejected }}" hint-placeholder-val="{{ false }}">
+                <div style="flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 2px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="2.2" stroke-linecap="round" style="flex: none;"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+                  <span style="flex: 1; font-size: 13px; color: #919191;">Импорт отклонён</span>
+                </div>
+              </sc-if>
+            </sc-if>
           </div>
         </sc-if>
 
@@ -138,104 +238,142 @@ input, button, textarea { font-family: inherit; }
           <div ref="{{ chatRef }}" onScroll="{{ onChatScroll }}" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 34px 26px 30px; display: flex; flex-direction: column; gap: 14px;">
 
             <div onMouseEnter="{{ msgIn }}" onMouseLeave="{{ msgOut }}" style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-              <div style="max-width: 76%; padding: 10px 15px; border-radius: 20px; background: #1c2a4d; font-size: 13px; line-height: 1.55; color: #dfe5f3; text-wrap: pretty;">Дальше делаем платежи. Разбей на этап и задачи, зависимости учти.</div>
-              <div style="display: flex; gap: 2px; opacity: {{ msgOp }}; transition: opacity .12s;"><button onClick="{{ noop }}" data-tip="Изменить" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg></button><button onClick="{{ noop }}" data-tip="Откатить к этому сообщению" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg></button></div>
+              <div style="max-width: 76%; padding: 10px 15px; border-radius: 20px; background: #1c2a4d; font-size: 14px; line-height: 1.55; color: #dfe5f3; text-wrap: pretty;">Дальше делаем платежи. Разбей на этап и задачи, зависимости учти.</div>
+              <div style="display: flex; gap: 2px; opacity: {{ msgOp }}; transition: opacity .12s;"><button onClick="{{ noop }}" data-tip="Изменить" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg></button><button onClick="{{ noop }}" data-tip="Откатить к этому сообщению" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg></button></div>
             </div>
-            <div style="flex: none; display: flex; flex-direction: column; gap: 6px; margin-top: -8px;">
-              <div onClick="{{ ex.think }}" data-tip="Размышления агента" style="display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 11.5px; color: #6f6f6f; cursor: pointer;" style-hover="color: #a6a6a6;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ ex.thinkRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg>Думал 8 с</div>
-              <sc-if value="{{ ex.thinkOn }}" hint-placeholder-val="{{ false }}"><div style="margin-left: 19px; font-size: 12.5px; line-height: 1.55; color: #7d7d7d; text-wrap: pretty;">Нужно понять, как сейчас устроены заказы и есть ли уже решения по оплате. Прочитаю архитектуру и ADR, потом предложу этап и задачи с зависимостями.</div></sc-if>
-            </div>
-
             <div style="flex: none; display: flex; flex-direction: column; gap: 8px;">
-              <div onClick="{{ ex.read }}" data-tip="Что читал и искал агент" style="display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 11.5px; color: #6f6f6f; cursor: pointer;" style-hover="color: #a6a6a6;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ ex.readRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg><span>Прочитал 6 файлов · искал «<code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; color: #e8875b;">payment</code>»</span>
+              <div onClick="{{ ex.read }}" data-tip="Что читал и искал агент" style="display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 12.5px; color: #767676; cursor: pointer;" style-hover="color: #adadad;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ ex.readRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg><span>Прочитал 6 файлов · искал «<code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; color: #919191;">payment</code>»</span>
               </div>
               <sc-if value="{{ ex.readOn }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-left: 19px; display: flex; flex-direction: column;">
                   <sc-for list="{{ readRows }}" as="r" hint-placeholder-count="6">
-                    <div data-tip="{{ r.tip }}" style="display: flex; align-items: center; gap: 12px; padding: 4px 2px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; cursor: pointer;" style-hover="background: #161616;">
+                    <div data-tip="{{ r.tip }}" style="display: flex; align-items: center; gap: 12px; padding: 4px 2px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; cursor: pointer;" style-hover="background: #161616;">
                       <span style="flex: 1; min-width: 0; color: {{ r.color }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.path }}</span>
-                      <span style="flex: none; font-size: 11.5px; color: #6f6f6f;">{{ r.meta }}</span>
+                      <span style="flex: none; font-size: 12.5px; color: #767676;">{{ r.meta }}</span>
                     </div>
                   </sc-for>
                 </div>
               </sc-if>
-              <div style="font-size: 13px; line-height: 1.6; color: #c8c8c8; text-wrap: pretty;">Эквайринг лучше вынести за интерфейс провайдера — тогда webhook-обработчик не зависит от конкретного сервиса. Записал это решением и собрал этап.</div>
+              <div style="font-size: 14px; line-height: 1.6; color: #cfcfcf; text-wrap: pretty;">Эквайринг лучше вынести за интерфейс провайдера — тогда webhook-обработчик не зависит от конкретного сервиса. Записал это решением и собрал этап.</div>
             </div>
 
             <div style="flex: none; border-radius: 10px; background: #202020; overflow: hidden;">
               <div style="display: flex; align-items: center; gap: 9px; padding: 11px 13px 9px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>
-                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: #d5d5d5;">Обновить architecture.md</span>
-                <span style="display: inline-flex; gap: 6px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px;"><span style="color: #58b47c;">+18</span><span style="color: #ef6a63;">−2</span></span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>
+                <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #d5d5d5;">Обновить architecture.md</span>
+                <span style="display: inline-flex; gap: 6px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px;"><span style="color: #58b47c;">+18</span><span style="color: #ef6a63;">−2</span></span>
               </div>
-              <div style="padding: 0 13px 10px; display: flex; flex-direction: column; gap: 3px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-width: 0;">
+              <div style="padding: 0 13px 10px; display: flex; flex-direction: column; gap: 3px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-width: 0;">
                 <span style="color: #58b47c;">+ ## Платежи</span>
                 <span style="color: #58b47c;">+ Эквайринг за интерфейсом PaymentProvider, webhook-обработчик идемпотентен.</span>
-                <span style="color: #6f6f6f;">  ## Каталог</span>
+                <span style="color: #767676;">  ## Каталог</span>
               </div>
               <div style="padding: 0 13px 12px; display: flex; align-items: center; gap: 8px;">
-                <span style="flex: 1; font-size: 11.5px; color: #7d7d7d;">Автоприменение выключено в параметрах</span>
-                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Открыть</button>
-                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отклонить</button>
-                <button style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Применить</button>
+                <span style="flex: 1; font-size: 12.5px; color: #848484;">Автоприменение выключено в параметрах</span>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg>Открыть</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M18 6 6 18M6 6l12 12"></path></svg>Отклонить</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>Применить</button>
               </div>
             </div>
 
             <div style="flex: none; border-radius: 10px; background: #202020; padding: 11px 13px; display: flex; flex-direction: column; gap: 9px;">
               <div style="display: flex; align-items: center; gap: 9px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 3v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="6" r="3"></circle><path d="M18 9v3a3 3 0 0 1-3 3H9"></path></svg>
-                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: #d5d5d5;">ADR-0007 · Провайдер эквайринга за интерфейсом</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 3v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="6" r="3"></circle><path d="M18 9v3a3 3 0 0 1-3 3H9"></path></svg>
+                <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #d5d5d5;">ADR-0007 · Провайдер эквайринга за интерфейсом</span>
               </div>
-              <span style="font-size: 12.5px; line-height: 1.55; color: #a6a6a6; text-wrap: pretty;">Работаем через <code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #e8875b;">PaymentProvider</code>; конкретный сервис подключается адаптером. Причина — смена провайдера не должна трогать бизнес-логику заказов.</span>
+              <span style="font-size: 13.5px; line-height: 1.55; color: #adadad; text-wrap: pretty;">Работаем через <code style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #d5d5d5; padding: 1px 5px; border-radius: 5px; background: #242424;">PaymentProvider</code>; конкретный сервис подключается адаптером. Причина — смена провайдера не должна трогать бизнес-логику заказов.</span>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="flex: 1;"></span>
-                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отклонить</button>
-                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Изменить</button>
-                <button style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Принять</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M18 6 6 18M6 6l12 12"></path></svg>Отклонить</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg>Посмотреть</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>Принять</button>
               </div>
+            </div>
+
+            <div style="flex: none; border-radius: 10px; background: #202020; padding: 11px 13px; display: flex; flex-direction: column; gap: 9px;">
+              <div style="display: flex; align-items: center; gap: 9px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M9 13h6M9 17h4"></path></svg>
+                <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #d5d5d5;">SPEC-0003 · Возвраты по картам</span>
+              </div>
+              <span style="font-size: 13.5px; line-height: 1.55; color: #adadad; text-wrap: pretty;">Полный и частичный возврат из карточки заказа, чек по 54-ФЗ, возврат без заказа — только для роли manager. 4 требования, 1 открытый вопрос.</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1;"></span>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M18 6 6 18M6 6l12 12"></path></svg>Отклонить</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg>Посмотреть</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>Принять</button>
+              </div>
+            </div>
+
+            <div style="flex: none; border-radius: 10px; background: #202020; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 9px; padding: 11px 13px 9px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M9 13h6M9 17h4"></path></svg>
+                <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #d5d5d5;">Обновить SPEC-0002</span>
+                <span style="display: inline-flex; gap: 6px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px;"><span style="color: #58b47c;">+2</span><span style="color: #ef6a63;">−0</span></span>
+              </div>
+              <div style="padding: 0 13px 10px; display: flex; flex-direction: column; gap: 3px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+                <span style="color: #767676;">  ## Требования</span>
+                <span style="color: #58b47c;">+ - R-3 Ключ хранится 24 часа, потом повтор создаёт новую операцию</span>
+              </div>
+              <div style="padding: 0 13px 12px; display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1; font-size: 12.5px; color: #848484;">Автоприменение выключено в параметрах</span>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg>Открыть</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M18 6 6 18M6 6l12 12"></path></svg>Отклонить</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>Применить</button>
+              </div>
+            </div>
+
+            <div style="flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 2px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <span style="flex: 1; font-size: 13px; color: #919191;">Принята спецификация SPEC-0001</span>
+              <span data-tip="Открыть" style="flex: none; font-size: 12.5px; font-weight: 600; color: #adadad; cursor: pointer;" style-hover="color: #e0e0e0;">Открыть</span>
+            </div>
+            <div style="flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 2px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <span style="flex: 1; font-size: 13px; color: #919191;">Обновлена SPEC-0002</span>
+              <span data-tip="Открыть" style="flex: none; font-size: 12.5px; font-weight: 600; color: #adadad; cursor: pointer;" style-hover="color: #e0e0e0;">Открыть</span>
             </div>
 
             <div style="flex: none; border-radius: 10px; background: #202020; overflow: hidden;">
               <div style="display: flex; align-items: center; gap: 9px; padding: 11px 13px 4px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a52be" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M12 22V12"></path><polyline points="3.29 7 12 12 20.71 7"></polyline></svg>
-                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: #d5d5d5;">{{ tasksTitle }}</span>
+                <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #d5d5d5;">{{ tasksTitle }}</span>
               </div>
               <div style="padding: 0 13px; display: flex; flex-direction: column;">
                 <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="4">
                   <div onClick="{{ t.toggle }}" style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; cursor: pointer;">
                     <span style="flex: none; margin-top: 2px; width: 16px; height: 16px; border-radius: 5px; background: {{ t.boxBg }}; box-shadow: inset 0 0 0 1px {{ t.boxBorder }}; transition: background .12s, box-shadow .12s; display: inline-flex; align-items: center; justify-content: center; color: #d5d5d5;">
                       <sc-if value="{{ t.checked }}" hint-placeholder-val="{{ true }}">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ededed" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e0e0e0" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
                       </sc-if>
                     </span>
                     <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                      <span style="font-size: 12.5px; font-weight: 600; color: {{ t.titleColor }};">{{ t.title }}</span>
-                      <span style="font-size: 11.5px; color: #7d7d7d;">{{ t.meta }}</span>
+                      <span style="font-size: 13.5px; font-weight: 600; color: {{ t.titleColor }};">{{ t.title }}</span>
+                      <span style="font-size: 12.5px; color: #848484;">{{ t.meta }}</span>
                     </div>
                   </div>
                 </sc-for>
               </div>
               <div style="padding: 10px 13px 12px; display: flex; align-items: center; gap: 8px;">
-                <span style="flex: 1; font-size: 11.5px; color: #7d7d7d;">{{ tasksHint }}</span>
-                <button style="height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b1b1b1; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отклонить</button>
-                <button style="height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">{{ tasksAction }}</button>
+                <span style="flex: 1; font-size: 12.5px; color: #848484;">{{ tasksHint }}</span>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: none; border-radius: 7px; background: #272727; color: #b8b8b8; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M18 6 6 18M6 6l12 12"></path></svg>Отклонить</button>
+                <button style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #2a52be; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12 5v14M5 12h14"></path></svg>{{ tasksAction }}</button>
               </div>
             </div>
 
             <div style="flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 2px;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
-              <span style="flex: 1; font-size: 12px; color: #8a8a8a;">Создан этап M01 «Базовый API» и 6 задач</span>
-              <span data-tip="Открыть этап" style="flex: none; font-size: 11.5px; font-weight: 600; color: #a6a6a6; cursor: pointer;" style-hover="color: #ededed;">Открыть</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <span style="flex: 1; font-size: 13px; color: #919191;">Создан этап M01 «Базовый API» и 6 задач</span>
+              <span data-tip="Открыть этап" style="flex: none; font-size: 12.5px; font-weight: 600; color: #adadad; cursor: pointer;" style-hover="color: #e0e0e0;">Открыть</span>
             </div>
 
             <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; background: #202020;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
-              <span style="flex: 1; min-width: 0; font-size: 12px; color: #8a8a8a;">Готово · 0:48 · 12k токенов</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <span style="flex: 1; min-width: 0; font-size: 13px; color: #919191;">Готово · 0:48 · 12k токенов</span>
             </div>
 
             <div style="flex: none; display: flex; gap: 2px; margin-top: -8px;">
-              <button onClick="{{ copyAnswer }}" data-tip="{{ copyTip }}" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
+              <button onClick="{{ copyAnswer }}" data-tip="{{ copyTip }}" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;">
                 <sc-if value="{{ notCopied }}" hint-placeholder-val="{{ true }}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
                 </sc-if>
@@ -243,7 +381,7 @@ input, button, textarea { font-family: inherit; }
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
                 </sc-if>
               </button>
-              <button onClick="{{ noop }}" data-tip="Повторить" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #7d7d7d; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+              <button onClick="{{ noop }}" data-tip="Повторить" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #1e1e1e; color: #d5d5d5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
             </div>
 
           </div>
@@ -258,50 +396,83 @@ input, button, textarea { font-family: inherit; }
         <sc-if value="{{ curArchived }}" hint-placeholder-val="{{ false }}">
           <div style="flex: none; padding: 0 14px 12px;">
             <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 11px; background: #2b2b2b;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path></svg>
-              <span style="flex: 1; font-size: 12.5px; color: #8a8a8a;">Чат в архиве — только чтение</span>
-              <button onClick="{{ restoreCurrent }}" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #c8c8c8; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Вернуть из архива</button>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#848484" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path></svg>
+              <span style="flex: 1; font-size: 13.5px; color: #919191;">Чат в архиве — только чтение</span>
+              <button onClick="{{ restoreCurrent }}" style="flex: none; height: 28px; padding: 0 12px; border: none; border-radius: 7px; background: #272727; color: #cfcfcf; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;">Вернуть из архива</button>
             </div>
           </div>
         </sc-if>
         <sc-if value="{{ curActive }}" hint-placeholder-val="{{ true }}">
-        <div style="flex: none; padding: 0 14px 12px;">
-          <dc-import name="Composer" placeholder="Спросить агента · Enter — отправить" ctx="{{ 34 }}" agent="{{ agentKey }}" model="{{ modelLabel }}" model-tip="Модель · агента сменить можно только в новом чате" on-model="{{ openAgentModal }}" hint-size="100%,96px"></dc-import>
+        <div style="flex: none; padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px;">
+          <sc-if value="{{ importRunning }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius: 10px; background: #202020; padding: 10px 12px; display: flex; flex-direction: column; gap: 9px;">
+              <sc-if value="{{ impPlanOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <sc-for list="{{ impPlan }}" as="p" hint-placeholder-count="6">
+                    <div style="display: flex; align-items: flex-start; gap: 9px;">
+                      <span style="flex: none; margin-top: 1px; width: 13px; color: #919191; display: inline-flex;">
+                        <sc-if value="{{ p.done }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+                        <sc-if value="{{ p.active }}" hint-placeholder-val="{{ false }}"><span style="width: 7px; height: 7px; margin: 3px; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span></sc-if>
+                        <sc-if value="{{ p.todo }}" hint-placeholder-val="{{ false }}"><span style="width: 7px; height: 7px; margin: 3px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #3b3b3b;"></span></sc-if>
+                      </span>
+                      <span style="flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.45; color: {{ p.color }};">{{ p.text }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div onClick="{{ toggleImpPlan }}" data-tip="План импорта обновляется по ходу работы" style="display: flex; align-items: center; gap: 9px; cursor: pointer;">
+                <span style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #a6a6a6; animation: skPulse 1.6s ease-in-out infinite;"></span>
+                <span style="flex: none; font-size: 12.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #848484;">План · <span style="font-family: 'JetBrains Mono', Consolas, monospace; letter-spacing: 0;">2/6</span></span>
+                <span style="flex: 1; min-width: 0; font-size: 13.5px; color: #adadad; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">ADR — жду ответа о провайдере оплаты</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#767676" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; transform: {{ impPlanUp }}; transition: transform .15s;"><path d="m18 15-6-6-6 6"></path></svg>
+              </div>
+            </div>
+          </sc-if>
+          <dc-import name="Composer" placeholder="{{ composerHint }}" text="{{ prefill }}" running="{{ importRunning }}" ctx="{{ 34 }}" agent="{{ agentKey }}" model="{{ modelLabel }}" model-tip="Модель · агента сменить можно только в новом чате" on-model="{{ openAgentModal }}" hint-size="100%,96px"></dc-import>
         </div>
         </sc-if>
       </div>
 
+      <sc-if value="{{ fr.changedOpen }}" hint-placeholder-val="{{ false }}">
       <div style="flex: none; width: 216px; min-height: 0; display: flex; flex-direction: column; gap: 9px; padding: 12px 14px 12px 8px;">
-        <span style="flex: none; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Изменено в чате</span>
+        <span style="flex: none; font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Изменено в чате</span>
+        <sc-if value="{{ changedEmpty }}" hint-placeholder-val="{{ false }}"><span style="padding: 8px 9px; font-size: 13px; line-height: 1.5; color: #767676; text-wrap: pretty;">Чат пока ничего не изменил</span></sc-if>
         <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 3px;">
           <sc-for list="{{ changed }}" as="c" hint-placeholder-count="3">
             <div data-tip="{{ c.tip }}" style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 9px; border-radius: 8px; cursor: pointer;" style-hover="background: #1c1c1c;">
-              <span style="flex: none; margin-top: 1px; color: #6f6f6f; display: inline-flex;">
+              <span style="flex: none; margin-top: 1px; color: #767676; display: inline-flex;">
                 <sc-if value="{{ c.isDoc }}" hint-placeholder-val="{{ true }}">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>
                 </sc-if>
                 <sc-if value="{{ c.isAdr }}" hint-placeholder-val="{{ false }}">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="6" r="3"></circle><path d="M18 9v3a3 3 0 0 1-3 3H9"></path></svg>
                 </sc-if>
+                <sc-if value="{{ c.isSpec }}" hint-placeholder-val="{{ false }}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M9 13h6M9 17h4"></path></svg>
+                </sc-if>
+                <sc-if value="{{ c.isImp }}" hint-placeholder-val="{{ false }}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg>
+                </sc-if>
                 <sc-if value="{{ c.isMs }}" hint-placeholder-val="{{ false }}">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M12 22V12"></path></svg>
                 </sc-if>
               </span>
               <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                <span style="font-size: 12px; color: #c8c8c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.title }}</span>
-                <span style="font-size: 11px; color: {{ c.noteColor }};">{{ c.note }}</span>
+                <span style="font-size: 13px; color: #cfcfcf; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.title }}</span>
+                <span style="font-size: 12px; color: {{ c.noteColor }};">{{ c.note }}</span>
               </div>
             </div>
           </sc-for>
         </div>
       </div>
+      </sc-if>
     </div>
 
     <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
       <div style="flex: none; width: 216px; border-left: 1px solid #1a1a1a; padding: 18px 8px 14px 8px; display: flex; flex-direction: column; gap: 2px;">
         <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px 8px 10px;">
-          <span style="flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #5f5f5f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
-          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #989898; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <span style="flex: 1; min-width: 0; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #666666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Shop API</span>
+          <button onClick="{{ togglePanel }}" data-tip="Свернуть панель" style="flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: #9f9f9f; cursor: pointer;" style-hover="background: #1c1c1c; color: #e0e0e0;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m17.6 10.6 1.4 1.4-1.4 1.4"></path></svg>
           </button>
         </div>
@@ -310,7 +481,7 @@ input, button, textarea { font-family: inherit; }
           <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
             <div style="height: 1px; background: #222222; margin: 9px 10px;"></div>
           </sc-if>
-          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 14px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #ededed;">
+          <div onClick="{{ n.select }}" data-tip="{{ n.tip }}" style="display: flex; align-items: center; gap: 11px; height: 32px; padding: 0 10px; border-radius: 6px; color: {{ n.color }}; font-size: 15px; font-weight: {{ n.weight }}; cursor: pointer;" style-hover="color: #e0e0e0;">
             <span style="flex: none; width: 16px; display: inline-flex; align-items: center; justify-content: center; color: {{ n.iconColor }};">
               <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
@@ -333,7 +504,7 @@ input, button, textarea { font-family: inherit; }
             </span>
             <span style="flex: 1; min-width: 0;">{{ n.label }}</span>
             <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
-              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11.5px; color: #7d7d7d;">{{ n.count }}</span>
+              <span data-tip="Нужен ответ + на ревью" style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #848484;">{{ n.count }}</span>
             </sc-if>
           </div>
         </sc-for>
@@ -346,7 +517,7 @@ input, button, textarea { font-family: inherit; }
 
     <sc-if value="{{ panelClosed }}" hint-placeholder-val="{{ false }}">
       <div style="flex: none; width: 44px; border-left: 1px solid #1a1a1a; padding: 18px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
-        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b1b1b1; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+        <button onClick="{{ togglePanel }}" data-tip="Развернуть панель" style="width: 28px; height: 28px; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: #1c1c1c; color: #b8b8b8; cursor: pointer;" style-hover="background: #1c1c1c; color: #e0e0e0;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path d="m18.4 10.6-1.4 1.4 1.4 1.4"></path></svg>
         </button>
 
@@ -354,7 +525,7 @@ input, button, textarea { font-family: inherit; }
           <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}">
             <div style="width: 20px; height: 1px; background: #222222; margin: 7px 0;"></div>
           </sc-if>
-          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #ededed;">
+          <div onClick="{{ n.select }}" data-tip="{{ n.railTip }}" style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 7px; color: {{ n.iconColor }}; cursor: pointer;" style-hover="background: #1c1c1c; color: #e0e0e0;">
             <sc-if value="{{ n.isOverview }}" hint-placeholder-val="{{ true }}">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round"></path></svg>
             </sc-if>
@@ -384,12 +555,12 @@ input, button, textarea { font-family: inherit; }
     </sc-if>
   </div>
 
-  <sc-if value="{{ agentModalOpen }}" hint-placeholder-val="{{ false }}">
+  <sc-if value="{{ fr.modalOn }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeAgentModal }}" style="position: absolute; inset: 0; z-index: 80; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center;">
       <div data-keep-menu="1" onClick="{{ stopProp }}" style="width: 468px; max-width: 92%; border-radius: 14px; background: #1e1e1e; box-shadow: 0 30px 70px rgba(0,0,0,.6); display: flex; flex-direction: column; overflow: hidden;">
         <div style="padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 3px;">
-          <span style="font-size: 15px; font-weight: 700; color: #d8d8d8;">Агент чата</span>
-          <span style="font-size: 12px; color: #7d7d7d;">Применится к следующему запросу в чате</span>
+          <span style="font-size: 16px; font-weight: 700; color: #d8d8d8;">Агент чата</span>
+          <span style="font-size: 13px; color: #848484;">Применится к следующему запросу в чате</span>
         </div>
         <div style="padding: 0 18px 4px; display: flex; flex-direction: column; gap: 15px;">
           <div style="display: flex; gap: 9px;">
@@ -404,19 +575,19 @@ input, button, textarea { font-family: inherit; }
                   </sc-if>
                 </span>
                 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                  <span style="font-size: 13px; font-weight: 600; color: {{ a.nameColor }};">{{ a.name }}</span>
-                  <span style="font-size: 11.5px; color: {{ a.stateColor }};">{{ a.state }}</span>
+                  <span style="font-size: 14px; font-weight: 600; color: {{ a.nameColor }};">{{ a.name }}</span>
+                  <span style="font-size: 12.5px; color: {{ a.stateColor }};">{{ a.state }}</span>
                 </div>
               </div>
             </sc-for>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Модель</span>
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Модель</span>
             <div data-keep-menu="1" style="position: relative;">
-              <button onClick="{{ toggleModelMenu }}" data-tip="{{ modelTip }}" style="width: 100%; height: 34px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0b0b0b;">
+              <button onClick="{{ toggleModelMenu }}" data-tip="{{ modelTip }}" style="width: 100%; height: 34px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px; background: #0f0f0f; color: #d5d5d5; font-size: 13.5px; font-weight: 600; cursor: pointer;" style-hover="background: #0d0d0d;">
                 <span style="flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ modelLabel }}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7d7d7d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#848484" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="m6 9 6 6 6-6"></path></svg>
               </button>
               <sc-if value="{{ modelMenuOpen }}" hint-placeholder-val="{{ false }}">
                 <div style="position: absolute; top: 38px; left: 0; z-index: 30; width: 100%; padding: 5px; border-radius: 10px; background: #272727; box-shadow: 0 16px 38px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 1px;">
@@ -426,8 +597,8 @@ input, button, textarea { font-family: inherit; }
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
                       </span>
                       <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                        <span style="font-size: 12.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}</span>
-                        <span style="font-size: 11px; line-height: 1.4; color: #7d7d7d; text-wrap: pretty;">{{ m.tip }}</span>
+                        <span style="font-size: 13.5px; font-weight: 600; color: {{ m.labelColor }};">{{ m.label }}</span>
+                        <span style="font-size: 12px; line-height: 1.4; color: #848484; text-wrap: pretty;">{{ m.tip }}</span>
                       </div>
                     </div>
                   </sc-for>
@@ -437,31 +608,44 @@ input, button, textarea { font-family: inherit; }
           </div>
 
           <sc-if value="{{ hasEffort }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-direction: column; gap: 8px;">
-            <span style="font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6f6f6f;">Усилие</span>
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Усилие</span>
             <dc-import name="EffortSlider" levels="{{ effortLevels }}" value="{{ effortValue }}" model="{{ modelLabel }}" on-change="{{ onEffort }}" hint-size="100%,96px"></dc-import>
           </div></sc-if>
 
           
         </div>
         <div style="padding: 16px 18px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
-          <button onClick="{{ closeAgentModal }}" style="height: 31px; padding: 0 13px; border: none; border-radius: 8px; background: #272727; color: #b1b1b1; font-size: 12.5px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #ededed;">Отмена</button>
-          <button onClick="{{ closeAgentModal }}" style="height: 31px; padding: 0 15px; border: none; border-radius: 8px; background: #2a52be; color: #ffffff; font-size: 12.5px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Применить</button>
+          <button onClick="{{ closeAgentModal }}" style="height: 31px; padding: 0 13px; border: none; border-radius: 8px; background: #272727; color: #b8b8b8; font-size: 13.5px; font-weight: 600; cursor: pointer;" style-hover="background: #303030; color: #e0e0e0;">Отмена</button>
+          <button onClick="{{ closeAgentModal }}" style="height: 31px; padding: 0 15px; border: none; border-radius: 8px; background: #2a52be; color: #ffffff; font-size: 13.5px; font-weight: 700; cursor: pointer;" style-hover="background: #3461d6;">Применить</button>
         </div>
       </div>
     </div>
   </sc-if>
 
-  <sc-if value="{{ tipOn }}" hint-placeholder-val="{{ false }}">
+  <sc-if value="{{ fr.importOn }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeImport }}" style="position: absolute; inset: 0; z-index: 80; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <div onClick="{{ stopProp }}" style="width: 540px; max-width: 100%;"><dc-import name="ImportModal" state="empty" has-code="{{ hasCodeProject }}" on-close="{{ closeImport }}" on-start="{{ closeImport }}" hint-size="540px,420px"></dc-import></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ fr.reviewOn }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeReview }}" style="position: absolute; inset: 0; z-index: 80; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <div onClick="{{ stopProp }}" style="width: 1040px; max-width: 100%;"><dc-import name="ImportReview" on-close="{{ closeReview }}" on-apply="{{ applyImport }}" hint-size="1040px,660px"></dc-import></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ fr.tipOn }}" hint-placeholder-val="{{ false }}">
     <div style="{{ tipStyle }}">{{ tipText }}</div>
   </sc-if>
 
 </div>
 </div>
+</sc-for>
+</div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1368, &quot;height&quot;: 888}, &quot;threadState&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;Идёт обсуждение&quot;, &quot;Новый чат&quot;], &quot;default&quot;: &quot;Идёт обсуждение&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Экран&quot;}, &quot;panelOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1688, &quot;height&quot;: 1850}, &quot;threadState&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;Идёт обсуждение&quot;, &quot;Новый чат · проект без кода&quot;, &quot;Новый чат · проект с кодом&quot;, &quot;Импорт документации&quot;], &quot;default&quot;: &quot;Идёт обсуждение&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Экран&quot;}, &quot;panelOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Экран&quot;}}">
 class Component extends DCLogic {
-  state = { tip: null, panel: null, modelMenu: false, agentModal: false, agent: 'anthropic', model: null, effort: 'Среднее', perm: 'Авто в пределах задачи', thread: 't1', listTab: 'active', archived: { t5: true, t6: true }, tasksChecked: null };
+  state = { tip: null, panel: null, modelMenu: false, agentModal: false, agent: 'anthropic', model: null, effort: 'Среднее', perm: 'Авто в пределах задачи', thread: 't1', listTab: 'active', frame: 'chat-1280', changed: {}, archived: { t5: true, t6: true }, tasksChecked: null };
 
   hover = (e) => {
     const el = e.target.closest ? e.target.closest('[data-tip]') : null;
@@ -475,7 +659,7 @@ class Component extends DCLogic {
     const next = { text, x, y: r.top - host.top, below: r.top - host.top < 46 };
     const cur = this.state.tip;
     if (cur && cur.text === next.text && Math.abs(cur.x - next.x) < 1 && Math.abs(cur.y - next.y) < 1) return;
-    this.setState({ tip: next });
+    this.setState({ tip: next, tipFrame: e.currentTarget.getAttribute('data-frame') });
   };
 
   closeMenus = (e) => {
@@ -520,12 +704,17 @@ class Component extends DCLogic {
     const panel = this.state.panel ?? (this.props.panelOpen ?? true);
     const tip = this.state.tip;
     const agent = this.state.agent;
-    const empty = (this.props.threadState ?? 'Идёт обсуждение') === 'Новый чат';
+    const TS0 = this.props.threadState ?? 'Идёт обсуждение';
+    const TS = TS0 === 'Идёт обсуждение' && this.state.thread === 'ti' ? 'Импорт документации' : TS0;
+    const empty = TS.startsWith('Новый чат');
+    const withCode = TS === 'Новый чат · проект с кодом';
+    const isImp = TS === 'Импорт документации';
+    const imp = this.state.imp || 'pending';
 
     const MODELS = {
       anthropic: [
         { label: 'Fable 5.1', tip: 'Максимальная глубина — медленнее и дороже' },
-        { label: 'Opus 5', tip: 'По умолчанию для агентной разработки' },
+        { label: 'Opus 5.5', tip: 'По умолчанию для агентной разработки' },
         { label: 'Sonnet 5', tip: 'Баланс скорости и качества' },
         { label: 'Haiku 4.5', tip: 'Быстрая и дешёвая, для простых правок' },
         { label: 'Mythos 5.1', tip: 'Доступ по приглашению (Project Glasswing)' },
@@ -538,10 +727,11 @@ class Component extends DCLogic {
       ],
     };
     const models = MODELS[agent];
-    const model = this.state.model && models.some((m) => m.label === this.state.model) ? this.state.model : (agent === 'anthropic' ? 'Opus 5' : 'GPT-6 Astra');
+    const model = this.state.model && models.some((m) => m.label === this.state.model) ? this.state.model : (agent === 'anthropic' ? 'Opus 5.5' : 'GPT-6 Astra');
 
     const all = [
       { key: 't1', title: 'Платежи: этапы и задачи', meta: 'сейчас', live: true },
+      { key: 'ti', title: 'Импорт документации', meta: '10 мин назад', imp: true },
       { key: 't2', title: 'Идемпотентность вебхуков', meta: '2 ч назад' },
       { key: 't3', title: 'Разбор ТЗ по админке', meta: 'вчера' },
       { key: 't4', title: 'Выбор очереди задач', meta: '3 дн назад' },
@@ -554,13 +744,13 @@ class Component extends DCLogic {
     const thread = this.state.thread;
     const visible = all.filter((t) => (listTab === 'archive' ? !!arch[t.key] : !arch[t.key]));
     const sessions = visible.map((t) => ({
-      title: t.title, meta: t.meta, live: !!t.live && !arch[t.key], archived: !!arch[t.key],
+      title: t.title, meta: t.meta, live: !!t.live && !arch[t.key], archived: !!arch[t.key], isImport: !!t.imp,
       bg: thread === t.key ? '#1e1e1e' : 'transparent',
-      color: thread === t.key ? '#d5d5d5' : '#a6a6a6',
+      color: thread === t.key ? '#d5d5d5' : '#adadad',
       select: () => this.setState({ thread: t.key, tip: null }),
       restore: (e) => { e.stopPropagation(); setArch(t.key, false); },
     }));
-    const cur = all.find((t) => t.key === thread) || all[0];
+    const cur = TS === 'Импорт документации' ? all.find((t) => t.key === 'ti') : (all.find((t) => t.key === thread) || all[0]);
     const curArchived = !!arch[cur.key];
     const archCount = all.filter((t) => arch[t.key]).length;
     const listTabs = [
@@ -568,7 +758,7 @@ class Component extends DCLogic {
       { key: 'archive', label: archCount ? 'Архив · ' + archCount : 'Архив', tip: 'Архивные чаты — можно вернуть' },
     ].map((t) => ({
       label: t.label, tip: t.tip,
-      style: 'display: inline-flex; align-items: center; gap: 6px; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; ' + (listTab === t.key ? 'background: #121212; color: #ededed; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #989898;'),
+      style: 'display: inline-flex; align-items: center; gap: 6px; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 13.5px; font-weight: 600; white-space: nowrap; ' + (listTab === t.key ? 'background: #121212; color: #e0e0e0; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #9f9f9f;'),
       select: () => this.setState({ listTab: t.key, tip: null }),
     }));
 
@@ -581,25 +771,38 @@ class Component extends DCLogic {
     const checked = this.state.tasksChecked ?? tasksRaw.map(() => true);
     const tasks = tasksRaw.map((t, i) => ({
       title: t.title, meta: t.meta, checked: checked[i],
-      boxBg: checked[i] ? '#0b0b0b' : '#1a1a1a',
+      boxBg: checked[i] ? '#0d0d0d' : '#1a1a1a',
       boxBorder: checked[i] ? '#5a5a5a' : '#353535',
-      titleColor: checked[i] ? '#d5d5d5' : '#8a8a8a',
+      titleColor: checked[i] ? '#d5d5d5' : '#919191',
       toggle: () => this.setState({ tasksChecked: checked.map((v, k) => (k === i ? !v : v)) }),
     }));
     const n = checked.filter(Boolean).length;
 
-    const changed = [
+    const impState = this.state.imp || 'pending';
+    const changedRaw = TS === 'Импорт документации' ? (impState === 'applied' ? [
+      { title: 'brief.md', note: 'Создан · применено', kind: 'doc', done: true },
+      { title: 'architecture.md', note: 'Обновлён · применено', kind: 'doc', done: true },
+      { title: 'ADR-0008 · Выбор эквайера', note: 'Принят', kind: 'adr', done: true },
+      { title: 'ADR-0009 · Очередь задач', note: 'Принят', kind: 'adr', done: true },
+      { title: 'SPEC-0004 · Возвраты по картам', note: 'Принята', kind: 'spec', done: true },
+      { title: 'SPEC-0005 · Роли и доступы', note: 'Принята', kind: 'spec', done: true },
+      { title: 'M04 · Возвраты', note: 'Этап создан', kind: 'ms', done: true },
+    ] : (impState === 'pending' && this.state.qAnswer ? [{ title: 'Импорт документации', note: 'Ждёт решения', kind: 'imp', done: false }] : [])) : [
       { title: 'architecture.md', note: 'Обновлён · применено', kind: 'doc', done: true },
       { title: 'ADR-0007 · Провайдер эквайринга', note: 'Ждёт решения', kind: 'adr', done: false },
+      { title: 'SPEC-0003 · Возвраты по картам', note: 'Ждёт решения', kind: 'spec', done: false },
+      { title: 'SPEC-0002 · Идемпотентность', note: 'Обновлена · применено', kind: 'spec', done: true },
+      { title: 'SPEC-0001 · Оплата картой', note: 'Принята', kind: 'spec', done: true },
       { title: 'M02 · Платежи', note: 'Этап создан', kind: 'ms', done: true },
-    ].map((c) => ({
+    ];
+    const changed = changedRaw.map((c) => ({
       title: c.title, note: c.note,
-      isDoc: c.kind === 'doc', isAdr: c.kind === 'adr', isMs: c.kind === 'ms',
-      noteColor: c.done ? '#8a8a8a' : '#e8b356',
+      isDoc: c.kind === 'doc', isAdr: c.kind === 'adr', isMs: c.kind === 'ms', isSpec: c.kind === 'spec', isImp: c.kind === 'imp',
+      noteColor: c.done ? '#919191' : '#7d9ce8',
       tip: c.done ? 'Открыть' : 'Требует вашего решения',
     }));
 
-    const pill = (on) => 'display: inline-flex; align-items: center; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; ' + (on ? 'background: #121212; color: #ededed; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #989898;');
+    const pill = (on) => 'display: inline-flex; align-items: center; height: 27px; padding: 0 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 13.5px; font-weight: 600; white-space: nowrap; ' + (on ? 'background: #121212; color: #e0e0e0; box-shadow: 0 1px 2px rgba(0,0,0,.35);' : 'background: transparent; color: #9f9f9f;');
     const agentCards = [
       { key: 'anthropic', name: 'Claude Code', state: 'Агент по умолчанию', tip: 'Настроен в проекте' },
       { key: 'openai', name: 'Codex', state: 'Готов к работе', tip: 'Переключить на Codex' },
@@ -607,13 +810,13 @@ class Component extends DCLogic {
       name: a.name, state: a.state, tip: a.tip,
       anthropic: a.key === 'anthropic', openai: a.key === 'openai',
       bg: agent === a.key ? '#0d0d0d' : '#1c1c1c',
-      iconColor: agent === a.key ? '#d5d5d5' : '#8a8a8a',
-      nameColor: agent === a.key ? '#d5d5d5' : '#a6a6a6',
-      stateColor: '#7d7d7d',
+      iconColor: agent === a.key ? '#d5d5d5' : '#919191',
+      nameColor: agent === a.key ? '#d5d5d5' : '#adadad',
+      stateColor: '#848484',
       select: () => this.setState({ agent: a.key, model: null, modelMenu: false }),
     }));
     const EFF_TIPS = { 'Минимальное': 'Почти без рассуждений — самые быстрые ответы', 'Низкое': 'Минимум рассуждений — быстро и дёшево', 'Среднее': 'Значение по умолчанию', 'Высокое': 'Больше рассуждений и самопроверок', 'Очень высокое': 'Долгие рассуждения для сложных задач', 'Максимум': 'Предел модели — медленно и дорого' };
-    const EFF_BY_MODEL = { 'Fable 5.1': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Opus 5': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Mythos 5.1': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Sonnet 5': ['Низкое', 'Среднее', 'Высокое', 'Максимум'], 'Haiku 4.5': [],
+    const EFF_BY_MODEL = { 'Fable 5.1': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Opus 5.5': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Mythos 5.1': ['Низкое', 'Среднее', 'Высокое', 'Очень высокое', 'Максимум'], 'Sonnet 5': ['Низкое', 'Среднее', 'Высокое', 'Максимум'], 'Haiku 4.5': [],
       'GPT-6 Astra': ['Минимальное', 'Низкое', 'Среднее', 'Высокое', 'Очень высокое'], 'GPT-5.6 Terra': ['Минимальное', 'Низкое', 'Среднее', 'Высокое'], 'GPT-5.6 Sol': ['Низкое', 'Среднее', 'Высокое'], 'GPT-5.6 Luna': ['Низкое', 'Высокое'] };
     const effList = EFF_BY_MODEL[model] || ['Низкое', 'Среднее', 'Высокое'];
     const effCur = effList.includes(this.state.effort) ? this.state.effort : (effList.includes('Среднее') ? 'Среднее' : effList[0]);
@@ -623,8 +826,8 @@ class Component extends DCLogic {
       bg: on ? '#1c1c1c' : 'transparent',
       dotBorder: on ? (warn ? '#e0a33c' : '#2a52be') : '#3b3b3b',
       dotBg: on ? (warn ? '#e0a33c' : '#2a52be') : 'transparent',
-      titleColor: on ? '#d5d5d5' : '#a6a6a6',
-      noteColor: on && warn ? '#d0a45c' : '#7d7d7d',
+      titleColor: on ? '#d5d5d5' : '#adadad',
+      noteColor: on && warn ? '#d0a45c' : '#848484',
     });
     const permOptions = [
       { label: 'Спрашивать', note: 'Агент запрашивает разрешение на каждую команду и запись.' },
@@ -652,8 +855,8 @@ class Component extends DCLogic {
       restoreCurrent: () => setArch(cur.key, false),
       newSession: () => this.setState({ listTab: 'active', tip: null }),
       noop: () => {}, msgIn: () => this.setState({ msgHover: true }), msgOut: () => this.setState({ msgHover: false }), msgOp: this.state.msgHover ? '1' : '0',
-      ex: (() => { const o = this.state.ex || {}; const r = {}; ['think', 'read'].forEach((k) => { r[k] = () => this.setState({ ex: Object.assign({}, o, { [k]: !o[k] }), tip: null }); r[k + 'On'] = !!o[k]; r[k + 'Rot'] = o[k] ? 'rotate(90deg)' : 'none'; }); return r; })(),
-      readRows: [['docs/architecture.md', 'целиком'], ['docs/adr/0004-orders.md', 'целиком'], ['src/orders/order.service.ts', 'строки 1–140'], ['src/orders/order.entity.ts', 'целиком'], ['src/checkout/checkout.controller.ts', 'строки 20–90'], ['package.json', 'целиком'], ['поиск «payment»', '9 совпадений']].map((x) => ({ path: x[0], meta: x[1], color: x[0].startsWith('поиск') ? '#a6a6a6' : '#7d9ce8', tip: x[0].startsWith('поиск') ? 'Поиск по коду' : 'Открыть файл' })),
+      ex: (() => { const o = this.state.ex || {}; const r = {}; ['think', 'read', 'prep'].forEach((k) => { r[k] = () => this.setState({ ex: Object.assign({}, o, { [k]: !o[k] }), tip: null }); r[k + 'On'] = !!o[k]; r[k + 'Rot'] = o[k] ? 'rotate(90deg)' : 'none'; }); return r; })(),
+      readRows: [['docs/architecture.md', 'целиком'], ['docs/adr/0004-orders.md', 'целиком'], ['src/orders/order.service.ts', 'строки 1–140'], ['src/orders/order.entity.ts', 'целиком'], ['src/checkout/checkout.controller.ts', 'строки 20–90'], ['package.json', 'целиком'], ['поиск «payment»', '9 совпадений']].map((x) => ({ path: x[0], meta: x[1], color: x[0].startsWith('поиск') ? '#adadad' : '#7d9ce8', tip: x[0].startsWith('поиск') ? 'Поиск по коду' : 'Открыть файл' })),
       agentCards, effortOptions, hasEffort, effortLevels: effList, effortValue: effCur, onEffort: (v) => this.setState({ effort: v }), permOptions, agentKey: this.state.agent === 'openai' ? 'openai' : 'anthropic',
       modelTip: 'Выбрать модель',
       effortLine: (agent === 'anthropic' ? 'Claude Code' : 'Codex') + ' · усилие: ' + this.state.effort.toLowerCase(),
@@ -664,32 +867,31 @@ class Component extends DCLogic {
       attachOpen: !!this.state.attachMenu,
       toggleAttach: () => this.setState({ attachMenu: !this.state.attachMenu, tip: null }),
       attachBg: this.state.attachMenu ? '#383838' : 'transparent',
-      attachColor: this.state.attachMenu ? '#e2e2e2' : '#8a8a8a',
+      attachColor: this.state.attachMenu ? '#e2e2e2' : '#919191',
       pickFile: () => this.setState({ attachMenu: false }),
       pickFolder: () => this.setState({ attachMenu: false }),
       onRootClick: this.closeMenus,
       offHover: this.unhover,
       tipOn: !!tip,
       tipText: tip ? tip.text : '',
-      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + 30 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 11.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
+      tipStyle: 'position: absolute; z-index: 1000; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? (tip.below ? tip.y + 30 : tip.y - 9) : 0) + 'px; transform: translate(-50%, ' + (tip && tip.below ? '0' : '-100%') + '); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 12.5px; line-height: 1.4; white-space: normal; text-wrap: pretty; width: max-content; pointer-events: none;',
       panelOpen: panel,
       panelClosed: !panel,
       togglePanel: () => this.setState({ panel: !panel, tip: null }),
       nav: [
-        { key: 'overview', label: 'Обзор', tip: 'Состояние проекта и последние события' },
+        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
         { key: 'spec', label: 'Документы', tip: 'Бриф, архитектура, решения' },
         { key: 'plan', label: 'План', tip: 'Этапы и их последовательность' },
-        { key: 'tasks', label: 'Задачи', tip: 'Доска и список задач', count: '2' },
         { key: 'chat', label: 'Чат', tip: 'Работа с агентом', sep: true },
-        { key: 'settings', label: 'Параметры', tip: 'Агент, ветки и инструкции' },
+        { key: 'settings', label: 'Параметры', tip: 'Агент, ветки, проверки и инструкции' },
       ].map((x) => ({
         sep: !!x.sep,
         label: x.label, tip: x.tip,
         railTip: x.count ? x.label + ' · 2 требуют внимания' : x.label,
         isOverview: x.key === 'overview', isChat: x.key === 'chat', isSpec: x.key === 'spec',
         isPlan: x.key === 'plan', isTasks: x.key === 'tasks', isSettings: x.key === 'settings',
-        color: x.key === 'chat' ? '#d5d5d5' : '#a6a6a6',
-        iconColor: x.key === 'chat' ? '#d5d5d5' : '#6f6f6f',
+        color: x.key === 'chat' ? '#d5d5d5' : '#adadad',
+        iconColor: x.key === 'chat' ? '#d5d5d5' : '#767676',
         weight: x.key === 'chat' ? '600' : '400',
         hasCount: !!x.count, count: x.count || '',
         select: () => {},
@@ -704,18 +906,54 @@ class Component extends DCLogic {
         label: m.label, tip: m.tip,
         bg: model === m.label ? '#303030' : 'transparent',
         checkColor: model === m.label ? '#2a52be' : 'transparent',
-        labelColor: model === m.label ? '#ededed' : '#c8c8c8',
+        labelColor: model === m.label ? '#e0e0e0' : '#cfcfcf',
         select: () => this.setState({ model: m.label, modelMenu: false }),
       })),
       switchAgent: () => this.setState({ agent: agent === 'anthropic' ? 'openai' : 'anthropic', model: null, modelMenu: false, tip: null }),
       isEmpty: empty,
-      hasChat: !empty,
-      chips: ['Опишу идею', 'Приложу ТЗ', 'Есть готовый код'].map((c) => ({ label: c, select: () => {} })),
+      hasChat: !empty && !isImp, isImportChat: !empty && isImp, hasCodeProject: withCode || isImp,
+      startTitle: withCode ? 'Что делаем?' : 'С чего начнём проект?',
+      startText: withCode ? 'Опишите фичу или доработку — я изучу код и предложу спецификацию или задачу.' : 'Расскажите, что нужно построить. Я предложу бриф, архитектуру, этапы и задачи — вы подтвердите.',
+      chips: (withCode ? [['Новая фича', 'Новая фича: '], ['Доработать или исправить', 'Доработать: '], ['Импортировать документацию', null]] : [['Опишу идею', ''], ['Импортировать документацию', null]]).map((c) => ({
+        label: c[0], imp: c[1] === null, tip: c[1] === null ? 'Перенести готовую документацию в формат Skaro' : (c[1] ? 'Подставит «' + c[1].trim() + '» в поле ввода' : ''),
+        select: () => (c[1] === null ? this.setState({ modal: 'import', tip: null }) : this.setState({ prefill: c[1], tip: null })) })),
+      prefill: this.state.prefill || '', composerHint: isImp ? 'Вмешаться в импорт · например, «ADR не переноси»' : 'Спросить агента · Enter — отправить',
+      stopProp: (e) => e.stopPropagation(),
+      closeImport: () => this.setState({ modal: null }), closeReview: () => this.setState({ modal: null }),
+      applyImport: () => this.setState({ modal: null, imp: 'applied' }),
+      openReview: () => this.setState({ modal: 'review', tip: null }), rejectImport: () => this.setState({ imp: 'rejected' }),
+      importRunning: isImp && !this.state.qAnswer,
+      impPlanOpen: !!this.state.impPlan, impPlanUp: this.state.impPlan ? 'rotate(180deg)' : 'none', toggleImpPlan: () => this.setState({ impPlan: !this.state.impPlan }),
+      impPlan: [['Бриф', 'done'], ['Архитектура', 'done'], ['ADR', 'active'], ['Спецификации', 'todo'], ['Этапы и задачи', 'todo'], ['Прочее', 'todo']].map(([text, k]) => ({ text, done: k === 'done', active: k === 'active', todo: k === 'todo', color: k === 'todo' ? '#848484' : '#cfcfcf' })),
+      prepRows: [['README.md', 'md'], ['architecture.pdf', 'pdf → текст'], ['ТЗ-админка.docx', 'docx → текст'], ['decisions/payments.md', 'md'], ['roles.xlsx', 'xlsx → таблица'], ['flows.vsdx', 'пропущен · формат не поддерживается'], ['mockups.fig', 'пропущен · формат не поддерживается']].map(([p, m]) => ({ path: p, meta: m, color: m.startsWith('пропущен') ? '#767676' : '#adadad' })),
+      qOpen: isImp && !this.state.qAnswer, qDone: isImp && !!this.state.qAnswer, qAnswer: this.state.qAnswer || '',
+      qOpts: [['Верно в коде — YooKassa', 'README устарел, Stripe убрать'], ['Верно в README — Stripe', 'Код переводят на Stripe'], ['Оба', 'YooKassa для карт РФ, Stripe для зарубежных']].map((o, k) => { const on = (this.state.qPick ?? 0) === k; return { label: o[0], note: o[1], bg: on ? '#222222' : 'transparent', ring: on ? '#2a52be' : '#3b3b3b', dot: on ? '#2a52be' : 'transparent', titleColor: on ? '#d5d5d5' : '#adadad', select: () => this.setState({ qPick: k }) }; }),
+      answerQ: () => this.setState({ qAnswer: ['Верно в коде — YooKassa', 'Верно в README — Stripe', 'Оба'][this.state.qPick ?? 0] }),
+      impPending: imp === 'pending', impApplied: imp === 'applied', impRejected: imp === 'rejected',
+      impRows: [['Бриф', ''], ['Архитектура', 'обновит'], ['4 ADR', ''], ['3 спецификации', ''], ['2 документа', 'обновит 1'], ['2 этапа · 6 задач', '']].map(([label, mark]) => ({ label, mark: mark || 'новый', markColor: mark ? '#7d9ce8' : '#848484' })),
       tasks,
       tasksTitle: 'Этап M02 «Платежи» и 4 задачи',
       tasksAction: n === 0 ? 'Выберите задачи' : (n === 4 ? 'Создать 4 задачи' : 'Создать ' + n),
       tasksHint: n === 0 ? 'Ничего не выбрано' : 'Задачи попадут в этап M02',
-      changed,
+      changed, changedEmpty: changed.length === 0,
+      toggleArchive: () => this.setState({ listTab: listTab === 'archive' ? 'active' : 'archive', tip: null }),
+      archiveTip: listTab === 'archive' ? 'Вернуться к активным чатам' : (archCount ? 'Архив чатов · ' + archCount : 'Архив чатов'),
+      archiveBg: listTab === 'archive' ? '#1e1e1e' : 'transparent', archiveColor: listTab === 'archive' ? '#d5d5d5' : '#767676',
+      frames: [
+        { id: 'chat-1280', w: '1280px', wide: false, caption: 'Чат · окно 1280 — «Изменено в чате» скрыто', label: 'Чат 1280' },
+        { id: 'chat-1600', w: '1600px', wide: true, caption: 'Чат · окно 1600 — «Изменено в чате» открыто', label: 'Чат 1600' },
+      ].map((fr) => {
+        const open = this.state.changed[fr.id] ?? fr.wide;
+        return Object.assign(fr, {
+          changedOpen: open, changedBg: open ? '#1e1e1e' : 'transparent', changedColor: open ? '#d5d5d5' : '#767676',
+          toggleChanged: () => this.setState({ changed: Object.assign({}, this.state.changed, { [fr.id]: !open }), tip: null }),
+          activate: () => { if (this.state.frame !== fr.id) this.setState({ frame: fr.id }); },
+          tipOn: !!this.state.tip && this.state.tipFrame === fr.id,
+          modalOn: !!this.state.agentModal && this.state.frame === fr.id,
+          importOn: this.state.modal === 'import' && this.state.frame === fr.id,
+          reviewOn: this.state.modal === 'review' && this.state.frame === fr.id,
+        });
+      }),
     };
   }
 }

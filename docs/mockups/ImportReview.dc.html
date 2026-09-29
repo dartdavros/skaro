@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div onMouseOver="{{ onHover }}" onMouseOut="{{ offHover }}" style="position: relative; width: 1040px; height: 660px; max-width: 100%; display: flex; flex-direction: column; border-radius: 14px; background: #1a1a1a; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04); font-family: 'Nunito Sans', -apple-system, 'Segoe UI', system-ui, sans-serif; color: #b8b8b8; text-align: left; overflow: hidden;">
+  <div style="flex: none; display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid #222222;">
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+      <span style="font-size: 17px; font-weight: 700; color: #d8d8d8;">Проверка импорта</span>
+      <span style="font-size: 14px; color: #9f9f9f;">Отметьте, что перенести в проект. Номера ADR и спецификаций выдаст Skaro.</span>
+    </div>
+    <button onClick="{{ close }}" data-tip="Закрыть · Esc" style="flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: transparent; color: #848484; cursor: pointer;" style-hover="background: #242424; color: #e0e0e0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+  </div>
+
+  <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+    <div role="alert" style="flex: none; margin: 12px 20px 0; display: flex; align-items: center; gap: 11px; padding: 11px 12px 11px 14px; border-radius: 9px; background: rgba(239,106,99,.1); color: #ef6a63;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M12 8v4M12 16h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"></path></svg>
+      <span style="flex: 1; min-width: 0; font-size: 14px;"><strong style="font-weight: 600;">Не удалось применить импорт.</strong> Файл <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px;">.skaro/architecture.md</span> изменился на диске — изменения не записаны.</span>
+      <button onClick="{{ retry }}" style="flex: none; padding: 0; border: none; background: transparent; color: inherit; font-size: 14px; font-weight: 600; cursor: pointer;" style-hover="text-decoration: underline;">Повторить</button>
+    </div>
+  </sc-if>
+
+  <div style="flex: 1; min-height: 0; display: flex;">
+    <div style="flex: none; width: 400px; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid #222222;">
+      <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 1px;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="10">
+          <sc-if value="{{ r.isGroup }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 10px; height: 32px; margin-top: {{ r.mt }}; padding: 0 10px;">
+              <span onClick="{{ r.toggle }}" data-tip="{{ r.boxTip }}" style="flex: none; width: 16px; height: 16px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: {{ r.boxBg }}; box-shadow: inset 0 0 0 1px {{ r.boxRing }}; cursor: pointer;">
+                <sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e0e0e0" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+                <sc-if value="{{ r.part }}" hint-placeholder-val="{{ false }}"><span style="width: 8px; height: 2px; border-radius: 1px; background: #cfcfcf;"></span></sc-if>
+              </span>
+              <span style="flex: 1; font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">{{ r.label }}</span>
+              <span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #767676;">{{ r.count }}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ r.isSub }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; height: 28px; margin-top: 4px; padding: 0 10px 0 36px; font-size: 13px; color: #767676;">{{ r.label }}</div>
+          </sc-if>
+          <sc-if value="{{ r.isItem }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ r.select }}" style="display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 4px 10px 4px {{ r.pad }}; border-radius: 8px; background: {{ r.bg }}; cursor: pointer;" style-hover="background: #202020;">
+              <span onClick="{{ r.toggle }}" style="flex: none; width: 16px; height: 16px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: {{ r.boxBg }}; box-shadow: inset 0 0 0 1px {{ r.boxRing }}; cursor: pointer;">
+                <sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e0e0e0" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+              </span>
+              <sc-if value="{{ r.hasMs }}" hint-placeholder-val="{{ false }}"><span style="flex: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #9f9f9f;">{{ r.ms }}</span></sc-if>
+              <span style="flex: 1; min-width: 0; font-size: 14px; color: {{ r.color }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.title }}</span>
+              <sc-if value="{{ r.dangling }}" hint-placeholder-val="{{ false }}"><span data-tip="Ссылка на снятый артефакт будет убрана" style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #e0a33c;"></span></sc-if>
+              <span style="flex: none; font-size: 12.5px; color: {{ r.markColor }};">{{ r.mark }}</span>
+              <span data-tip="{{ r.srcTip }}" style="flex: none; min-width: 16px; text-align: right; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #767676; cursor: default;">{{ r.srcCount }}</span>
+            </div>
+          </sc-if>
+        </sc-for>
+
+        <div style="height: 1px; margin: 12px 10px 6px; background: #222222;"></div>
+        <sc-if value="{{ hasSkipped }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ toggleSkipped }}" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 7px; font-size: 13px; color: #919191; cursor: pointer;" style-hover="background: #202020; color: #d5d5d5;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ skippedRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg>
+            Не перенесено · <span style="font-family: 'JetBrains Mono', Consolas, monospace;">{{ skippedCount }}</span>
+          </div>
+          <sc-if value="{{ skippedOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; padding: 0 10px 6px 30px;">
+              <sc-for list="{{ skipped }}" as="k" hint-placeholder-count="4">
+                <div style="display: flex; align-items: baseline; gap: 10px; padding: 4px 0;">
+                  <span style="flex: 1; min-width: 0; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px; color: #adadad; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ k.path }}</span>
+                  <span style="flex: none; font-size: 12.5px; color: #767676;">{{ k.why }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
+        <div onClick="{{ toggleNotes }}" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 7px; font-size: 13px; color: #919191; cursor: pointer;" style-hover="background: #202020; color: #d5d5d5;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ notesRot }}; transition: transform .15s;"><path d="m9 18 6-6-6-6"></path></svg>
+          Допущения и расхождения · <span style="font-family: 'JetBrains Mono', Consolas, monospace;">2</span>
+        </div>
+        <sc-if value="{{ notesOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 2px 10px 6px 30px; font-size: 13px; line-height: 1.5; color: #adadad;">
+            <span style="text-wrap: pretty;">В README оплата через Stripe, в коде — YooKassa. По вашему ответу оставил YooKassa, Stripe упомянут как прежний провайдер.</span>
+            <span style="text-wrap: pretty;">Роль «оператор» в ТЗ совпадает с ролью manager в коде — объединил их.</span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: 22px 26px 24px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: baseline; gap: 10px;">
+        <sc-if value="{{ pv.hasCode }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; font-weight: 600; color: #919191;">{{ pv.code }}</span></sc-if>
+        <span style="font-size: 12.5px; color: {{ pv.markColor }};">{{ pv.mark }}</span>
+      </div>
+      <h2 style="margin: -8px 0 0; font-size: 21px; font-weight: 700; color: #d8d8d8; letter-spacing: -.01em;">{{ pv.title }}</h2>
+
+      <sc-if value="{{ pv.isDiff }}" hint-placeholder-val="{{ false }}">
+        <div style="border-radius: 10px; background: #202020; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 9px; padding: 11px 13px 9px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#919191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>
+            <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #d5d5d5;">Обновить architecture.md</span>
+            <span style="display: inline-flex; gap: 6px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12.5px;"><span style="color: #58b47c;">+24</span><span style="color: #ef6a63;">−3</span></span>
+          </div>
+          <div style="padding: 0 13px 12px; display: flex; flex-direction: column; gap: 3px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap;">
+            <span style="color: #767676;">  ## Компоненты</span>
+            <span style="color: #ef6a63;">− | payments | Эквайринг Stripe | src/payments |</span>
+            <span style="color: #58b47c;">+ | payments | Эквайринг YooKassa, СБП, возвраты | src/payments |</span>
+            <span style="color: #58b47c;">+ | notifications | Письма и пуши о заказах | src/notify |</span>
+            <span style="color: #767676;">  ## Потоки данных</span>
+            <span style="color: #58b47c;">+ Возвраты идут через очередь, как и вебхуки — см. ADR «Очередь задач».</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pv.isDoc }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <sc-for list="{{ pv.blocks }}" as="b" hint-placeholder-count="4">
+            <sc-if value="{{ b.h }}" hint-placeholder-val="{{ false }}"><h3 style="margin: 6px 0 0; font-size: 16px; font-weight: 700; color: #d5d5d5;">{{ b.text }}</h3></sc-if>
+            <sc-if value="{{ b.p }}" hint-placeholder-val="{{ true }}"><p style="margin: 0; font-size: 14.5px; line-height: 1.65; color: #b8b8b8; text-wrap: pretty;">{{ b.text }}</p></sc-if>
+            <sc-if value="{{ b.li }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 10px; font-size: 14.5px; line-height: 1.6; color: #b8b8b8;"><span style="flex: none; width: 5px; height: 5px; margin-top: 9px; border-radius: 50%; background: #5f5f5f;"></span><span style="text-wrap: pretty;">{{ b.text }}</span></div></sc-if>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pv.isPlan }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <sc-for list="{{ pv.fields }}" as="x" hint-placeholder-count="2">
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">{{ x.label }}</span>
+              <span style="font-size: 14.5px; line-height: 1.6; color: #b8b8b8; text-wrap: pretty;">{{ x.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid #222222; display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #767676;">Источники</span>
+        <sc-for list="{{ pv.sources }}" as="s" hint-placeholder-count="2">
+          <a href="#" onClick="{{ noop }}" data-tip="Открыть исходный файл" style="align-self: flex-start; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; color: #7d9ce8; text-decoration: none;" style-hover="text-decoration: underline;">{{ s }}</a>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: none; display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid #222222;">
+    <span style="flex: 1; font-size: 14px; color: #adadad;">Выбрано <span style="font-family: 'JetBrains Mono', Consolas, monospace;">{{ picked }}</span> из <span style="font-family: 'JetBrains Mono', Consolas, monospace;">{{ total }}</span></span>
+    <button onClick="{{ close }}" style="height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #242424; color: #d5d5d5; font-size: 14px; font-weight: 600; cursor: pointer;" style-hover="background: #2d2d2d; color: #e0e0e0;">Отмена</button>
+    <sc-if value="{{ applying }}" hint-placeholder-val="{{ false }}">
+      <button data-tip="Skaro записывает файлы и план" style="position: relative; height: 34px; min-width: 196px; padding: 0 15px; border: none; border-radius: 8px; background: #242424; color: #adadad; font-size: 14px; font-weight: 700; cursor: default; overflow: hidden;">
+        <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ progPct }}; background: #303030; transition: width .5s;"></span>
+        <span style="position: relative;">Импорт · {{ progText }}</span>
+      </button>
+    </sc-if>
+    <sc-if value="{{ notApplying }}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{ apply }}" data-tip="{{ applyTip }}" style="height: 34px; padding: 0 15px; border: none; border-radius: 8px; background: {{ applyBg }}; color: {{ applyColor }}; font-size: 14px; font-weight: 700; cursor: {{ applyCursor }};">Импортировать выбранное</button>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ tipOn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ tipStyle }}">{{ tipText }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1060, &quot;height&quot;: 680}, &quot;state&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;default&quot;, &quot;none&quot;, &quot;applying&quot;, &quot;error&quot;, &quot;dangling&quot;, &quot;codeOnly&quot;], &quot;default&quot;: &quot;default&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;onClose&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}, &quot;onApply&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}}">
+const ITEMS = [
+  { id: 'brief', group: 'core', title: 'Бриф', mark: 'new', src: ['~/Docs/shop/README.md', '~/Downloads/ТЗ-админка.docx'] },
+  { id: 'arch', group: 'core', title: 'Архитектура', mark: 'upd', src: ['~/Docs/shop/architecture.pdf', 'код проекта'], refs: ['adr2'] },
+  { id: 'adr1', group: 'adr', title: 'Выбор эквайера', mark: 'new', src: ['~/Docs/shop/decisions/payments.md'] },
+  { id: 'adr2', group: 'adr', title: 'Очередь задач', mark: 'new', src: ['~/Docs/shop/decisions/queue.md', 'код проекта'] },
+  { id: 'adr3', group: 'adr', title: 'Хранение файлов в S3', mark: 'new', src: ['~/Docs/shop/decisions/storage.md'] },
+  { id: 'adr4', group: 'adr', title: 'Авторизация JWT', mark: 'upd', src: ['~/Docs/shop/auth.md'] },
+  { id: 'spec1', group: 'spec', title: 'Возвраты по картам', mark: 'new', src: ['~/Downloads/ТЗ-админка.docx'] },
+  { id: 'spec2', group: 'spec', title: 'Роли и доступы админки', mark: 'new', src: ['~/Downloads/ТЗ-админка.docx', '~/Docs/shop/roles.xlsx'] },
+  { id: 'spec3', group: 'spec', title: 'Уведомления о заказе', mark: 'new', src: ['~/Docs/shop/notifications.md'] },
+  { id: 'doc1', group: 'doc', title: 'requirements.md', mark: 'upd', src: ['~/Docs/shop/nfr.md'] },
+  { id: 'doc2', group: 'doc', title: 'glossary.md', mark: 'new', src: ['~/Docs/shop/glossary.md'] },
+  { id: 'm1', group: 'plan', ms: 'M04', title: 'Возвраты', mark: 'new', src: ['~/Downloads/ТЗ-админка.docx'] },
+  { id: 't1', group: 'plan', parent: 'm1', title: 'Возврат из карточки заказа', mark: 'new', src: ['~/Downloads/ТЗ-админка.docx'] },
+  { id: 't2', group: 'plan', parent: 'm1', title: 'Чек возврата по 54-ФЗ', mark: 'new', src: ['~/Downloads/ТЗ-админка.docx'], refs: ['t1'] },
+  { id: 't3', group: 'plan', parent: 'm1', title: 'Экран возвратов в админке', mark: 'new', src: ['~/Downloads/ТЗ-админка.docx'] },
+  { id: 'm2', group: 'plan', ms: 'M05', title: 'Уведомления', mark: 'new', src: ['~/Docs/shop/notifications.md'] },
+  { id: 't4', group: 'plan', parent: 'm2', title: 'Письма о статусе заказа', mark: 'new', src: ['~/Docs/shop/notifications.md'] },
+  { id: 't5', group: 'plan', parent: 'm2', title: 'Пуши в приложение', mark: 'new', src: ['~/Docs/shop/notifications.md'] },
+  { id: 't6', group: 'plan', parent: null, title: 'Обновить зависимости платежей', mark: 'new', src: ['код проекта'] },
+];
+const GROUPS = [['adr', 'ADR'], ['spec', 'Спецификации'], ['doc', 'Документы'], ['plan', 'План']];
+const DOCS = {
+  brief: [['h', 'Что строим'], ['p', 'Shop API — бэкенд интернет-магазина: каталог, заказы, оплата и админка для менеджеров.'], ['h', 'Для кого'], ['li', 'Покупатели — через витрину и приложение'], ['li', 'Менеджеры — обработка заказов и возвратов в админке']],
+  spec1: [['h', 'Проблема'], ['p', 'Возвраты оформляются вручную в кабинете эквайера — без следа в заказе и без чека.'], ['h', 'Требования'], ['li', 'Возврат из карточки заказа на сумму не больше оплаченной'], ['li', 'По каждому возврату — чек по 54-ФЗ']],
+};
+class Component extends DCLogic {
+  state = { off: null, sel: 'arch', skipped: false, notes: false, tip: null, prog: 0 };
+  componentDidMount() { this.iv = setInterval(() => { if ((this.props.state || 'default') === 'applying') this.setState((s) => ({ prog: (s.prog + 1) % 18 })); }, 700); }
+  componentWillUnmount() { clearInterval(this.iv); }
+  hover = (e) => {
+    const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!el) return; const text = el.getAttribute('data-tip'); if (!text) return;
+    const host = e.currentTarget.getBoundingClientRect(); const r = el.getBoundingClientRect();
+    const w = Math.min(260, 6.6 * text.length + 20);
+    const x = Math.max(w / 2 + 10, Math.min(host.width - w / 2 - 10, r.left - host.left + r.width / 2));
+    const next = { text, x, y: r.top - host.top };
+    const c = this.state.tip; if (c && c.text === text && Math.abs(c.x - x) < 1) return;
+    this.setState({ tip: next });
+  };
+  unhover = () => { if (this.state.tip) this.setState({ tip: null }); };
+  initialOff() {
+    const st = this.props.state || 'default';
+    if (st === 'none') return Object.fromEntries(ITEMS.map((i) => [i.id, true]));
+    if (st === 'dangling') return { adr2: true, t1: true };
+    return {};
+  }
+  renderVals() {
+    const S = this.state; const st = this.props.state || 'default';
+    const off = S.off ?? this.initialOff();
+    const setOff = (o) => this.setState({ off: o });
+    const isOn = (id) => !off[id];
+    const toggle = (ids, v) => { const o = Object.assign({}, off); ids.forEach((id) => { if (v) delete o[id]; else o[id] = true; }); setOff(o); };
+    const kids = (id) => ITEMS.filter((i) => i.parent === id).map((i) => i.id);
+    const box = (on, part) => ({ on, part: !!part && !on, boxBg: on ? '#0d0d0d' : '#1a1a1a', boxRing: on || part ? '#5a5a5a' : '#353535' });
+    const codeOnly = st === 'codeOnly';
+    const item = (i, pad) => {
+      const on = isOn(i.id);
+      const dangling = on && (i.refs || []).some((r) => !isOn(r));
+      const src = codeOnly ? ['код проекта'] : i.src;
+      return Object.assign({ isGroup: false, isSub: false, isItem: true, hasMs: !!i.ms, ms: i.ms || '', title: i.title, pad,
+        bg: S.sel === i.id ? '#242424' : 'transparent', color: on ? '#d5d5d5' : '#848484', dangling,
+        mark: i.mark === 'upd' ? 'обновит' : 'новый', markColor: i.mark === 'upd' ? '#7d9ce8' : '#848484',
+        srcCount: String(src.length), srcTip: src.join('\n'),
+        select: () => this.setState({ sel: i.id }),
+        toggle: (e) => { e.stopPropagation(); const ids = [i.id].concat(on ? kids(i.id) : []); toggle(ids, !on); } }, box(on));
+    };
+    const rows = [];
+    ITEMS.filter((i) => i.group === 'core').forEach((i) => rows.push(item(i, '10px')));
+    GROUPS.forEach(([g, label]) => {
+      const list = ITEMS.filter((i) => i.group === g);
+      const n = list.filter((i) => isOn(i.id)).length;
+      rows.push(Object.assign({ isGroup: true, isSub: false, isItem: false, label, count: n + ' из ' + list.length, mt: '10px',
+        boxTip: n === list.length ? 'Снять все' : 'Отметить все', toggle: () => toggle(list.map((i) => i.id), n !== list.length) }, box(n === list.length, n > 0)));
+      if (g === 'plan') {
+        list.filter((i) => i.ms).forEach((m) => { rows.push(item(m, '10px')); list.filter((i) => i.parent === m.id).forEach((t) => rows.push(item(t, '36px'))); });
+        const loose = list.filter((i) => !i.ms && !i.parent);
+        if (loose.length) { rows.push({ isGroup: false, isSub: true, isItem: false, label: 'Без этапа' }); loose.forEach((t) => rows.push(item(t, '36px'))); }
+      } else list.forEach((i) => rows.push(item(i, '10px')));
+    });
+    const cur = ITEMS.find((i) => i.id === S.sel) || ITEMS[0];
+    const isPlan = cur.group === 'plan';
+    const isDiff = cur.mark === 'upd' && cur.id === 'arch';
+    const blocks = (DOCS[cur.id] || [['h', 'Контекст'], ['p', 'Раздел перенесён из исходного документа и сверен с кодом проекта.'], ['h', 'Решение'], ['p', cur.title + ' — зафиксировано как в источнике, формулировки приведены к формату Skaro.']]).map(([k, t]) => ({ h: k === 'h', p: k === 'p', li: k === 'li', text: t }));
+    const fields = cur.ms ? [{ label: 'Цель', text: 'Возвраты оформляются из админки и попадают в заказ, чек формируется автоматически.' }, { label: 'Критерий готовности', text: 'Менеджер делает полный и частичный возврат без кабинета эквайера.' }]
+      : [{ label: 'Цель', text: cur.title + '.' }, { label: 'Критерии приёмки', text: 'Сумма возврата не больше оплаченной · повтор с тем же ключом не создаёт второй возврат (R-2).' }, { label: 'Зависимости', text: cur.refs ? 'после «Возврат из карточки заказа»' : 'нет' }];
+    const code = cur.group === 'adr' ? 'ADR · номер выдаст Skaro' : (cur.group === 'spec' ? 'SPEC · номер выдаст Skaro' : (cur.ms ? cur.ms : ''));
+    const total = ITEMS.length, picked = ITEMS.filter((i) => isOn(i.id)).length;
+    const applying = st === 'applying';
+    const tip = S.tip;
+    const close = this.props.onClose || (() => {});
+    return {
+      onHover: this.hover, offHover: this.unhover, close, noop: (e) => e.preventDefault(),
+      isError: st === 'error', retry: () => {},
+      rows,
+      hasSkipped: !codeOnly, skippedCount: '4', skippedOpen: S.skipped, skippedRot: S.skipped ? 'rotate(90deg)' : 'none', toggleSkipped: () => this.setState({ skipped: !S.skipped }),
+      skipped: [['~/Docs/shop/flows.vsdx', 'формат не поддерживается'], ['~/Docs/shop/todo.md', 'пустой файл'], ['~/Docs/shop/requirements-old.md', 'дубликат requirements.md'], ['~/Docs/shop/team-offsite.md', 'не относится к проекту']].map(([path, why]) => ({ path, why })),
+      notesOpen: S.notes, notesRot: S.notes ? 'rotate(90deg)' : 'none', toggleNotes: () => this.setState({ notes: !S.notes }),
+      pv: { title: cur.title, hasCode: !!code, code, mark: cur.mark === 'upd' ? 'обновит' : 'новый', markColor: cur.mark === 'upd' ? '#7d9ce8' : '#848484',
+        isDiff, isPlan, isDoc: !isDiff && !isPlan, blocks, fields, sources: codeOnly ? ['код проекта'] : cur.src },
+      picked: String(picked), total: String(total),
+      applying, notApplying: !applying, progPct: Math.round((6 + S.prog) / 24 * 100) + '%', progText: (6 + S.prog) + ' из ' + picked,
+      apply: picked ? (this.props.onApply || close) : () => {}, applyTip: picked ? '' : 'Ничего не выбрано',
+      applyBg: picked ? '#2a52be' : '#242424', applyColor: picked ? '#ffffff' : '#6f6f6f', applyCursor: picked ? 'pointer' : 'default',
+      tipOn: !!tip, tipText: tip ? tip.text : '',
+      tipStyle: 'position: absolute; z-index: 100; left: ' + (tip ? tip.x : 0) + 'px; top: ' + (tip ? tip.y - 9 : 0) + 'px; transform: translate(-50%, -100%); max-width: 260px; padding: 6px 9px; border-radius: 7px; background: #000000; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #d5d5d5; font-size: 12.5px; line-height: 1.4; white-space: pre-line; width: max-content; pointer-events: none;',
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -96,8 +96,10 @@ export class Plan {
   ): Promise<void> {
     const context = this.deps.projects.get(projectId);
     const { tasks } = await context.load();
+    // "" is "Без этапа": the task leaves its milestone.
+    const target = milestoneId || undefined;
     const siblings = tasks
-      .filter((t) => t.milestone === milestoneId && t.id !== taskId)
+      .filter((t) => t.milestone === target && t.id !== taskId)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     const moved = tasks.find((t) => t.id === taskId);
     if (!moved) throw new Error(`unknown task ${taskId}`);
@@ -105,7 +107,7 @@ export class Plan {
     for (const [i, task] of siblings.entries()) {
       const patch = {
         ...(task.order !== i + 1 ? { order: i + 1 } : {}),
-        ...(task.milestone !== milestoneId ? { milestone: milestoneId } : {}),
+        ...(task.milestone !== target ? { milestone: target } : {}),
       };
       if (Object.keys(patch).length) await context.store.updateTask(task.id, patch);
     }

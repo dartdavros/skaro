@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, Segmented, t } from '@skaro/ui';
+  import { Icon, t } from '@skaro/ui';
   import { onDestroy } from 'svelte';
   import type { AgentInfo, ProjectInfo } from '../../../shared/ipc';
   import ChatPane from './ChatPane.svelte';
@@ -7,20 +7,23 @@
   import { ChatList } from './session.svelte';
 
   /**
-   * "Чат" (AgentChat mockup): chats of the project on the left — active and archived, the open
-   * chat in the middle, what the chat changed on the right.
+   * "Чат" (AgentChat mockup): chats of the project on the left — active, or archived by the
+   * archive button at the bottom; the open chat in the middle, what it changed on the right.
    */
   let {
     project,
     agents,
     chat = $bindable(),
     onsection,
+    onimport,
   }: {
     project: ProjectInfo;
     agents: AgentInfo[];
     /** Open chat; `NEW_CHAT` for the start screen of a new one, undefined to pick the latest. */
     chat?: string | undefined;
     onsection: (section: 'plan' | 'docs' | 'tasks') => void;
+    /** "Импортировать документацию". */
+    onimport: () => void;
   } = $props();
 
   const NEW_CHAT = 'new';
@@ -42,14 +45,13 @@
 
   const archivedCount = $derived(list.chats.filter((c) => c.archived).length);
   const shown = $derived(list.chats.filter((c) => c.archived === (tab === 'archive')));
-  const tabs = $derived([
-    { value: 'active' as const, label: t('chat.tab.active'), tip: t('chat.tab.active.tip') },
-    {
-      value: 'archive' as const,
-      label: archivedCount ? t('chat.tab.archiveN', { n: archivedCount }) : t('chat.tab.archive'),
-      tip: t('chat.tab.archive.tip'),
-    },
-  ]);
+  const archiveTip = $derived(
+    tab === 'archive'
+      ? t('chat.archive.close')
+      : archivedCount
+        ? t('chat.archive.openN', { n: archivedCount })
+        : t('chat.archive.open'),
+  );
 
   function restore(id: string): void {
     void window.skaro.invoke('chat.archive', project.id, id, false);
@@ -70,7 +72,6 @@
       <Icon name="edit" size={14} stroke={1.9} />
       {t('chat.new')}
     </button>
-    <div class="tabs"><Segmented options={tabs} bind:value={tab} /></div>
     <div class="list">
       {#each shown as item (item.id)}
         <div
@@ -81,6 +82,11 @@
           onclick={() => (chat = item.id)}
           onkeydown={(e) => e.key === 'Enter' && (chat = item.id)}
         >
+          {#if item.kind === 'import'}
+            <span class="row-icon" data-tip={t('chat.import.tip')}
+              ><Icon name="import" size={14} stroke={1.8} /></span
+            >
+          {/if}
           <span class="row-title" data-tip={item.title}>{item.title}</span>
           {#if item.live}
             <span class="live" data-tip={t('chat.live')}></span>
@@ -107,6 +113,19 @@
         >
       {/if}
     </div>
+    <div class="foot">
+      <button
+        type="button"
+        class="archive-toggle"
+        class:on={tab === 'archive'}
+        data-tip={archiveTip}
+        aria-label={archiveTip}
+        aria-pressed={tab === 'archive'}
+        onclick={() => (tab = tab === 'archive' ? 'active' : 'archive')}
+      >
+        <Icon name="archive" size={15} stroke={1.8} />
+      </button>
+    </div>
   </div>
 
   {#if chat !== undefined}
@@ -121,6 +140,7 @@
           void list.reload();
         }}
         {onsection}
+        {onimport}
       />
     {/key}
   {/if}
@@ -157,7 +177,7 @@
     background: transparent;
     color: var(--sk-text-7);
     font: inherit;
-    font-size: var(--sk-fs-5);
+    font-size: var(--sk-fs-3);
     font-weight: 600;
     cursor: pointer;
   }
@@ -165,13 +185,6 @@
   .new:hover {
     background: var(--sk-fill-13);
     color: var(--sk-text-2);
-  }
-
-  .tabs {
-    flex: none;
-    display: flex;
-    justify-content: center;
-    margin: 6px 0;
   }
 
   .list {
@@ -203,10 +216,16 @@
     background: var(--sk-fill-15);
   }
 
+  .row-icon {
+    flex: none;
+    display: inline-flex;
+    color: var(--sk-text-19);
+  }
+
   .row-title {
     flex: 1;
     min-width: 0;
-    font-size: var(--sk-fs-5);
+    font-size: var(--sk-fs-3);
     color: var(--sk-text-13);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -248,10 +267,35 @@
 
   .list-empty {
     padding: 18px 10px;
-    font-size: var(--sk-fs-4);
+    font-size: var(--sk-fs-3);
     line-height: 1.5;
     color: var(--sk-text-23);
     text-align: center;
     text-wrap: pretty;
+  }
+
+  .foot {
+    flex: none;
+    display: flex;
+  }
+
+  .archive-toggle {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--sk-text-23);
+    cursor: pointer;
+  }
+
+  .archive-toggle:hover,
+  .archive-toggle.on {
+    background: var(--sk-fill-15);
+    color: var(--sk-text-6);
   }
 </style>

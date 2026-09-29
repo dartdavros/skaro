@@ -138,6 +138,8 @@ export class ClaudeSession implements AgentSession {
         ...process.env,
         ...(this.config.configDir ? { CLAUDE_CONFIG_DIR: this.config.configDir } : {}),
       },
+      // Without summaries the thinking arrives empty: minutes of "Думает…" with nothing to show.
+      settings: { showThinkingSummaries: true },
       ...(o.model ? { model: o.model } : {}),
       ...(o.effort ? { effort: o.effort as Options['effort'] } : {}),
       ...(o.instructions
@@ -150,6 +152,7 @@ export class ClaudeSession implements AgentSession {
           }
         : {}),
       ...(o.mcpServers ? { mcpServers: o.mcpServers } : {}),
+      ...(o.readDirs?.length ? { additionalDirectories: o.readDirs } : {}),
       // D-28: the Bash sandbox only where the self-check showed it holds the boundary.
       ...(o.sandboxVerified && this.mode === 'auto'
         ? { sandbox: { enabled: true, autoAllowBashIfSandboxed: true } }

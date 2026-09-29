@@ -117,6 +117,25 @@ describe('ArtifactStore', () => {
     });
   });
 
+  it('keeps specifications like ADRs and links tasks to them', async () => {
+    const old = await store.createSpec({ title: 'Оплата картой', status: 'accepted' });
+    const next = await store.createSpec({ title: 'Возвраты по картам', replaces: old.id });
+    expect([old.id, next.id, next.status]).toEqual(['0001', '0002', 'proposed']);
+    expect(next.path).toBe('.skaro/specs/0002-vozvraty-po-kartam.md');
+    expect(next.body).toContain('## Требования');
+    await store.setSpecStatus(next.id, 'accepted');
+    const task = await store.createTask({ title: 'Возврат из заказа', spec: next.id });
+    const project = await store.load();
+    expect(project.specs.find((s) => s.id === old.id)).toMatchObject({
+      status: 'superseded',
+      replacedBy: next.id,
+    });
+    expect(project.tasks.find((t) => t.id === task.id)?.spec).toBe(next.id);
+    expect(project.problems).toEqual([]);
+    await store.updateTask(task.id, { spec: undefined });
+    expect((await store.readTask(task.id)).spec).toBeUndefined();
+  });
+
   it('writes documents and reads their titles', async () => {
     await store.writeDoc('brief.md', '# Калькулятор\n\nЧто строим.\n');
     await store.writeDoc('docs/notes.md', 'no heading');

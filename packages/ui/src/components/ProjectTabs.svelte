@@ -90,7 +90,7 @@
     padding: 0 9px 0 11px;
     border-radius: 11px 11px 0 0;
     color: var(--sk-text-16);
-    font-size: var(--sk-fs-6);
+    font-size: var(--sk-fs-4);
     cursor: pointer;
     outline: none;
     -webkit-app-region: no-drag;

@@ -15,10 +15,10 @@
   --sk-modal: #1a1a1a;
   --sk-composer: #2b2b2b; /* chat input */
   /* The darkest surface: switch tracks, filter buttons, board columns, inset panels. */
-  --sk-deep: #0b0b0b;
+  --sk-deep: #0e0e0e;
   --sk-seg-track: var(--sk-deep); /* segmented switch track */
   --sk-field: #0f0f0f; /* fields and selects, darker than any surface */
-  --sk-field-hover: #0b0b0b;
+  --sk-field-hover: #0d0d0d;
   --sk-field-ring: #2a2a2a;
   --sk-field-ring-hover: #363636;
   --sk-line: #1f1f1f;
@@ -33,14 +33,15 @@
   --sk-user-message: #1c2a4d;
   --sk-link: #7d9ce8;
   --sk-link-hover: #9bb4ee;
-  --sk-code: #ef8f3d; /* non-clickable highlights: code, commands */
+  --sk-code: var(--sk-link); /* highlights: commands, branches — the accent, never orange */
+  --sk-code-bg: var(--sk-fill-20); /* inline code: a notch lighter than the page */
   --sk-error: #ef6a63;
   --sk-warn: #e0a33c;
   --sk-diff-add: #4caf50;
 
-  /* Text: pure white is never used, #f0f0f0 at most */
-  --sk-text-bright: #f0f0f0;
-  --sk-text: #dbdbdb;
+  /* Text: pure white is never used; headings and active items stay muted, #e0e0e0 at most */
+  --sk-text-bright: #e0e0e0;
+  --sk-text: #d5d5d5;
   --sk-text-body: #b8b8b8;
   --sk-text-secondary: #adadad;
   --sk-text-muted: #848484;
@@ -99,7 +100,6 @@ a:hover {
 
 code {
   font-family: var(--sk-mono);
-  color: var(--sk-code);
 }
 
 ::-webkit-scrollbar {
@@ -202,32 +202,32 @@ code {
 :root {
   /* Text */
   --sk-text-1: #ffffff;
-  --sk-text-2: #f0f0f0;
-  --sk-text-3: #ededed;
-  --sk-text-4: #e6e6e6;
-  --sk-text-5: #dedede;
-  --sk-text-6: #dbdbdb;
+  --sk-text-2: #e0e0e0;
+  --sk-text-3: #dedede;
+  --sk-text-4: #dbdbdb;
+  --sk-text-5: #d8d8d8;
+  --sk-text-6: #d5d5d5;
   --sk-text-7: #cfcfcf;
   --sk-text-8: #c9c9c9;
   --sk-text-9: #bfbfbf;
   --sk-text-10: #b8b8b8;
-  --sk-text-11: #b1b1b1;
+  --sk-text-11: #b8b8b8;
   --sk-text-12: #afafaf;
   --sk-text-13: #adadad;
   --sk-text-14: #a9a9a9;
-  --sk-text-15: #a6a6a6;
+  --sk-text-15: #adadad;
   --sk-text-16: #a5a5a5;
   --sk-text-17: #9f9f9f;
-  --sk-text-18: #989898;
+  --sk-text-18: #9f9f9f;
   --sk-text-19: #919191;
-  --sk-text-20: #8a8a8a;
+  --sk-text-20: #919191;
   --sk-text-21: #848484;
-  --sk-text-22: #7d7d7d;
+  --sk-text-22: #848484;
   --sk-text-23: #767676;
   --sk-text-24: #727272;
-  --sk-text-25: #6f6f6f;
+  --sk-text-25: #767676;
   --sk-text-26: #676767;
-  --sk-text-27: #5f5f5f;
+  --sk-text-27: #666666;
   --sk-text-28: #525252;
   --sk-text-29: #3b3b3b;
 
@@ -325,6 +325,7 @@ code {
   --sk-white-a55: rgba(255, 255, 255, 0.55);
 
   /* Font sizes */
+  --sk-fs-0: 11px;
   --sk-fs-1: 11.5px;
   --sk-fs-2: 12px;
   --sk-fs-3: 12.5px;

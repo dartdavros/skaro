@@ -25,6 +25,8 @@ export const doneLike = (s: RowStatus) => s === 'done' || s === 'cancel';
 
 export interface Stage {
   milestone: MilestoneInfo;
+  /** "Без этапа": tasks without a milestone; no goal, no menu, not dragged (D-32). */
+  loose?: boolean;
   /** All tasks of the milestone in order. */
   tasks: TaskSummary[];
   done: number;
@@ -35,16 +37,25 @@ export interface Stage {
   errors: number;
 }
 
-export function stages(milestones: MilestoneInfo[], tasks: TaskSummary[]): Stage[] {
+export function stages(
+  milestones: MilestoneInfo[],
+  tasks: TaskSummary[],
+  looseTitle = '',
+): Stage[] {
   const live = tasks.filter((x) => !x.archived);
-  return milestones.map((milestone) => {
+  // Tasks without a milestone close the plan as "Без этапа"; the block is shown only with tasks.
+  const loose = live.some((x) => !x.milestone)
+    ? [{ id: '', title: looseTitle, order: Number.MAX_SAFE_INTEGER }]
+    : [];
+  return [...milestones, ...loose].map((milestone) => {
     const own = live
-      .filter((x) => x.milestone?.id === milestone.id)
+      .filter((x) => (x.milestone?.id ?? '') === milestone.id)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     const count = (...kinds: RowStatus[]) =>
       own.filter((x) => kinds.includes(rowStatus(x.status))).length;
     return {
       milestone,
+      ...(milestone.id === '' ? { loose: true } : {}),
       tasks: own,
       done: count('done'),
       total: own.length - count('cancel'),

@@ -117,6 +117,45 @@ PostgreSQL 16, миграции через \`node-pg-migrate\`. Схема ме�
 ## Вывод
 Берём **ЮKassa**: есть СБП и чеки из коробки, понятные вебхуки.
 `,
+  '.skaro/specs/0001-card-payment.md': `## Проблема
+Первая версия оплаты без возвратов и частичных списаний.
+`,
+  '.skaro/specs/0002-idempotency.md': `## Проблема
+Повторный запрос или вебхук не должен списать деньги дважды.
+
+## Требования
+- R-1 Каждая операция с деньгами принимает ключ идемпотентности
+- R-2 Повтор с тем же ключом возвращает первый результат
+`,
+  '.skaro/specs/0005-admin-roles.md': `## Проблема
+Все сотрудники видят и меняют всё в админке.
+
+## Требования
+- R-1 Три роли с матрицей прав: владелец, менеджер, поддержка
+- R-2 Права проверяются на сервере, в сервисном слое
+- R-3 Доступ без прав — 403 и запись в журнал действий
+`,
+  '.skaro/specs/0003-card-refunds.md': `## Проблема
+Поддержка оформляет возвраты вручную в кабинете эквайера: долго, без следа в заказе и без чека возврата.
+
+## Сценарии
+- Покупатель отменил заказ до отгрузки — полный возврат
+- Вернул часть товаров — частичный возврат на сумму позиций
+- Возврат без заказа (ошибочное списание) — только роль manager
+
+## Требования
+- R-1 Возврат создаётся из карточки заказа на сумму не больше оплаченной
+- R-2 Повторный запрос возврата с тем же ключом не создаёт второй возврат
+- R-3 По каждому возврату формируется чек по 54-ФЗ
+- R-4 Возврат без заказа доступен только роли manager и пишется в журнал
+
+## Не входит
+- Возвраты по СБП — отдельная спецификация
+- Возврат наличными
+
+## Открытые вопросы
+- Нужен ли лимит суммы возврата без подтверждения старшего менеджера?
+`,
 };
 
 const now = Date.now();
@@ -136,6 +175,14 @@ const entries: DocEntry[] = (
     adr('0002', 'Очередь задач', 'queue', 'proposed', '2026-09-21', {}),
     adr('0003', 'Сессии в Redis', 'sessions', 'superseded', '2026-09-10', { replacedBy: '0004' }),
     adr('0004', 'Авторизация JWT', 'jwt', 'accepted', '2026-09-16', { replaces: '0003' }),
+    spec('0001', 'Оплата картой', 'card-payment', 'superseded', '2026-09-14', {
+      replacedBy: '0003',
+    }),
+    spec('0002', 'Идемпотентность платежей', 'idempotency', 'accepted', '2026-09-18', {}),
+    spec('0003', 'Возвраты по картам', 'card-refunds', 'proposed', '2026-09-24', {
+      replaces: '0001',
+    }),
+    spec('0005', 'Роли и доступы админки', 'admin-roles', 'accepted', '2026-09-20', {}),
     {
       kind: 'doc',
       path: '.skaro/docs/requirements.md',
@@ -168,8 +215,30 @@ function adr(
   };
 }
 
+function spec(
+  id: string,
+  title: string,
+  slug: string,
+  status: 'proposed' | 'accepted' | 'superseded',
+  date: string,
+  links: { replaces?: string; replacedBy?: string },
+): DocEntry {
+  return {
+    kind: 'spec',
+    path: `.skaro/specs/${id}-${slug}.md`,
+    title,
+    editedAt: Date.parse(date),
+    spec: { id, status, date, ...links },
+  };
+}
+
 export const docs = {
-  list: (): DocEntry[] => entries.map((d) => ({ ...d, ...(d.adr ? { adr: { ...d.adr } } : {}) })),
+  list: (): DocEntry[] =>
+    entries.map((d) => ({
+      ...d,
+      ...(d.adr ? { adr: { ...d.adr } } : {}),
+      ...(d.spec ? { spec: { ...d.spec } } : {}),
+    })),
   read: (path: string): string => TEXTS[path] ?? '',
   write(path: string, text: string): void {
     TEXTS[path] = text;
@@ -193,5 +262,27 @@ export const docs = {
   setStatus(id: string, status: 'proposed' | 'accepted' | 'superseded'): void {
     const entry = entries.find((d) => d.adr?.id === id);
     if (entry?.adr) entry.adr.status = status;
+  },
+  setSpecStatus(id: string, status: 'proposed' | 'accepted' | 'superseded'): void {
+    const entry = entries.find((d) => d.spec?.id === id);
+    if (entry?.spec) entry.spec.status = status;
+  },
+  createSpec(title: string): DocEntry {
+    const n = entries.filter((d) => d.kind === 'spec').length + 1;
+    const id = String(n).padStart(4, '0');
+    const entry = spec(
+      id,
+      title,
+      `spec-${n}`,
+      'proposed',
+      new Date().toISOString().slice(0, 10),
+      {},
+    );
+    entry.editedAt = Date.now();
+    const last = entries.findLastIndex((d) => d.kind === 'spec' || d.kind === 'adr');
+    entries.splice(last + 1, 0, entry);
+    TEXTS[entry.path] =
+      '## Проблема\n\n\n## Сценарии\n- \n\n## Требования\n- R-1 \n\n## Не входит\n- \n\n## Открытые вопросы\n- \n';
+    return entry;
   },
 };

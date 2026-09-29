@@ -69,13 +69,14 @@
   .head {
     flex: none;
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 8px;
     padding: 10px 12px 8px;
   }
 
   .name {
-    font-size: var(--sk-fs-4);
+    font-size: var(--sk-fs-0);
+    line-height: 16px;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -83,7 +84,8 @@
 
   .count {
     font-family: var(--sk-mono);
-    font-size: var(--sk-fs-3);
+    font-size: var(--sk-fs-0);
+    line-height: 16px;
     color: var(--sk-text-21);
   }
 

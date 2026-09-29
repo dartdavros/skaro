@@ -65,7 +65,9 @@
     {#if dot}<span class="dot {dot}" data-tip={statusLabel(task.status)}></span>{/if}
   </div>
   <div class="meta">
-    {#if task.milestone}<span class="ms">{task.milestone.id} · {task.milestone.title}</span>{/if}
+    <span class="ms"
+      >{task.milestone ? `${task.milestone.id} · ${task.milestone.title}` : t('board.loose')}</span
+    >
   </div>
   <div class="bottom">
     <span

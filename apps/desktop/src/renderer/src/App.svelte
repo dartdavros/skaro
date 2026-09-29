@@ -133,12 +133,14 @@
         <Project
           project={activeProject}
           bind:section={
-            () => sections[activeProject.id] ?? 'overview', (v) => (sections[activeProject.id] = v)
+            () => sections[activeProject.id] ?? 'tasks', (v) => (sections[activeProject.id] = v)
           }
           bind:task={() => openTasks[activeProject.id], (v) => (openTasks[activeProject.id] = v)}
           bind:chat={() => openChats[activeProject.id], (v) => (openChats[activeProject.id] = v)}
           bind:collapsed={panelCollapsed}
           onremove={() => void projectRemoved(activeProject.id)}
+          onchanged={() =>
+            void window.skaro.invoke('projects.list').then((list) => (projects = list))}
         />
       {/key}
     {:else if view === 'settings'}

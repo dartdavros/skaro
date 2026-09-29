@@ -24,6 +24,8 @@ export interface FeedActions {
   proposal?(itemId: string, action: ProposalAction): Promise<void>;
   /** Opens a section of the project: the created milestone, the ADR. */
   openSection?(section: 'plan' | 'docs' | 'tasks'): void;
+  /** "Проверить и импортировать": the review screen of an import (ImportReview mockup). */
+  reviewImport?(itemId: string): void;
 }
 
 const KEY = Symbol('feed');

@@ -101,15 +101,19 @@
     class="head"
     role="button"
     tabindex="0"
-    draggable="true"
+    draggable={!stage.loose}
     onclick={ontoggle}
     onkeydown={(e) => e.key === 'Enter' && ontoggle()}
-    ondragstart={(e) => start(e, { kind: 'stage', id: m.id })}
+    ondragstart={(e) => !stage.loose && start(e, { kind: 'stage', id: m.id })}
     ondragend={() => ondrag(undefined)}
   >
-    <span class="grip" data-tip={t('plan.dragStage')}
-      ><Icon name="grip" size={14} stroke={2} /></span
-    >
+    {#if stage.loose}
+      <span class="grip-space"></span>
+    {:else}
+      <span class="grip" data-tip={t('plan.dragStage')}
+        ><Icon name="grip" size={14} stroke={2} /></span
+      >
+    {/if}
     <span class="chev" class:open><Icon name="chevronRight" size={14} stroke={2.2} /></span>
     <span class="id">{m.id}</span>
     <span class="name" class:finished>{m.title}</span>
@@ -142,31 +146,35 @@
       <span class="count">{t('plan.progress', { done: stage.done, total: stage.total })}</span>
     </div>
     <!-- The menu does not toggle the milestone. -->
-    <div class="menu" role="presentation" onclick={(e) => e.stopPropagation()}>
-      <ActionMenu
-        size="row"
-        align="right"
-        width={222}
-        tip={t('plan.menu')}
-        items={[
-          {
-            label: t('plan.menu.newTask'),
-            icon: 'plus',
-            tip: t('plan.menu.newTask.tip'),
-            onselect: () => onmenu('newTask'),
-          },
-          { label: t('plan.menu.edit'), icon: 'edit', onselect: () => onmenu('edit') },
-          { label: t('plan.discuss'), icon: 'chat', onselect: () => onmenu('discuss') },
-          'separator',
-          {
-            label: t('plan.menu.delete'),
-            icon: 'trashRound',
-            danger: true,
-            onselect: () => onmenu('delete'),
-          },
-        ]}
-      />
-    </div>
+    {#if stage.loose}
+      <span class="menu-space"></span>
+    {:else}
+      <div class="menu" role="presentation" onclick={(e) => e.stopPropagation()}>
+        <ActionMenu
+          size="row"
+          align="right"
+          width={222}
+          tip={t('plan.menu')}
+          items={[
+            {
+              label: t('plan.menu.newTask'),
+              icon: 'plus',
+              tip: t('plan.menu.newTask.tip'),
+              onselect: () => onmenu('newTask'),
+            },
+            { label: t('plan.menu.edit'), icon: 'edit', onselect: () => onmenu('edit') },
+            { label: t('plan.discuss'), icon: 'chat', onselect: () => onmenu('discuss') },
+            'separator',
+            {
+              label: t('plan.menu.delete'),
+              icon: 'trashRound',
+              danger: true,
+              onselect: () => onmenu('delete'),
+            },
+          ]}
+        />
+      </div>
+    {/if}
   </div>
 
   {#if open}
@@ -275,6 +283,16 @@
     justify-content: center;
     color: var(--sk-text-28);
     cursor: grab;
+  }
+
+  .grip-space {
+    flex: none;
+    width: 14px;
+  }
+
+  .menu-space {
+    flex: none;
+    width: 28px;
   }
 
   .chev {

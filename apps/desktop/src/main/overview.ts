@@ -2,8 +2,6 @@
 // agents work on now, branch and last activity; and opening the folder in other apps.
 
 import { existsSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { join } from 'node:path';
 import {
   displayStatus,
   indexTasks,
@@ -11,7 +9,7 @@ import {
   type AppDb,
   type ProjectRecord,
 } from '@skaro/core';
-import type { AgentId, OverviewTask, ProjectCard, ProjectOverview } from '../shared/ipc';
+import type { AgentId, ProjectCard } from '../shared/ipc';
 import type { Projects } from './projects';
 
 export async function projectCards(db: AppDb, projects: Projects): Promise<ProjectCard[]> {
@@ -30,6 +28,7 @@ async function projectCard(
     name: project.name,
     path: project.path,
     missing: !existsSync(project.path),
+    ...(project.logo ? { logo: project.logo } : {}),
     counts: { working: 0, needs: 0, review: 0, failed: 0, blocked: 0 },
     running: [],
     agent: 'claude-code',
@@ -89,131 +88,4 @@ async function projectCard(
     };
   }
   return card;
-}
-
-/** "Обзор" of one project (ProjectOverview mockup). */
-export async function projectOverview(
-  db: AppDb,
-  projects: Projects,
-  projectId: string,
-): Promise<ProjectOverview> {
-  const project = db.getProject(projectId);
-  if (!project) throw new Error('unknown project');
-  const context = projects.get(projectId);
-  const [artifacts, branch, clean] = await Promise.all([
-    context.load(),
-    context.git.currentBranch().catch(() => undefined),
-    context.git.isClean().catch(() => undefined),
-  ]);
-  const index = indexTasks(artifacts.tasks);
-  const runtime = db.getTaskRuntime(projectId);
-  const runs = db.listRuns(projectId);
-  const milestoneOf = (id?: string) => {
-    const m = artifacts.milestones.find((x) => x.id === id);
-    return m ? { id: m.id, title: m.title } : undefined;
-  };
-
-  const attention: OverviewTask[] = [];
-  const running: OverviewTask[] = [];
-  const queued: { id: string; title: string }[] = [];
-  const work: Promise<void>[] = [];
-  for (const task of artifacts.tasks.filter((t) => !t.archived)) {
-    const state = runtime.get(task.id)?.state;
-    const status = displayStatus(task, index, state);
-    if (status === 'queued') {
-      queued.push({ id: task.id, title: task.title });
-      continue;
-    }
-    if (status !== 'review' && status !== 'needs_answer' && status !== 'in_progress') continue;
-    const run = runs.find((r) => r.taskId === task.id);
-    const milestone = milestoneOf(task.milestone);
-    const item: OverviewTask = {
-      id: task.id,
-      title: task.title,
-      ...(milestone ? { milestone } : {}),
-      status,
-      since:
-        status === 'in_progress' ? (run?.startedAt ?? 0) : (run?.endedAt ?? run?.startedAt ?? 0),
-      agent: run?.agent === 'codex' ? 'codex' : 'claude-code',
-      ...(run?.model ? { model: run.model } : {}),
-    };
-    (status === 'in_progress' ? running : attention).push(item);
-    const worktree = run?.worktree;
-    if (worktree && existsSync(worktree)) {
-      work.push(
-        context.git
-          .worktreeStats(worktree, artifacts.config.baseBranch)
-          .then((stats) => void (item.stats = stats))
-          .catch(() => undefined),
-      );
-    }
-  }
-
-  const briefStat = await stat(join(context.root, '.skaro', 'brief.md')).catch(() => undefined);
-  const withProgress = artifacts.milestones.map((m) => ({
-    m,
-    progress: milestoneProgress(m, artifacts.tasks),
-  }));
-  const empty = withProgress.find((x) => x.progress.total === 0)?.m;
-  const titles = new Map(artifacts.tasks.map((t) => [t.id, t.title]));
-  await Promise.all(work);
-
-  return {
-    id: projectId,
-    name: project.name,
-    path: project.path,
-    ...(branch ? { branch } : {}),
-    ...(clean !== undefined ? { clean } : {}),
-    attention: attention.sort((a, b) => b.since - a.since),
-    running,
-    queued,
-    start: {
-      ...(artifacts.brief && briefStat ? { brief: { updatedAt: briefStat.mtimeMs } } : {}),
-      ...(artifacts.architecture
-        ? {
-            architecture: {
-              adrs: artifacts.adrs.length,
-              rules: countRules(artifacts.architecture.body),
-            },
-          }
-        : {}),
-      milestones: artifacts.milestones.length,
-      tasks: artifacts.tasks.length,
-      ...(empty ? { emptyMilestone: { id: empty.id, title: empty.title } } : {}),
-      hidden: db.getSetting<boolean | null>(`overview.${projectId}.startHidden`, null) === true,
-    },
-    milestones: withProgress.map(({ m, progress }) => ({
-      id: m.id,
-      title: m.title,
-      done: progress.done,
-      total: progress.total,
-    })),
-    events: db.listEvents(projectId, 6).map((e) => {
-      const task = typeof e.data['task'] === 'string' ? titles.get(e.data['task']) : undefined;
-      const milestone =
-        typeof e.data['milestone'] === 'string' ? milestoneOf(e.data['milestone']) : undefined;
-      return {
-        kind: e.kind,
-        data: e.data,
-        at: e.at,
-        ...(task ? { taskTitle: task } : {}),
-        ...(milestone ? { milestoneTitle: milestone.title } : {}),
-      };
-    }),
-  };
-}
-
-/** Rules for the agents: items of the "Правила и ограничения" section of the architecture. */
-function countRules(body: string): number {
-  let inRules = false;
-  let count = 0;
-  for (const line of body.split(/\r?\n/)) {
-    const heading = /^#{2,3}\s+(.+)$/.exec(line);
-    if (heading) {
-      inRules = /правила|rules/i.test(heading[1]!);
-      continue;
-    }
-    if (inRules && /^\s*(?:[-*]|\d+\.)\s+\S/.test(line)) count++;
-  }
-  return count;
 }

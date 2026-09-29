@@ -11,13 +11,15 @@
   } from '../../../shared/ipc';
   import { provideFeed } from '../feed/context.svelte';
   import Feed from '../feed/Feed.svelte';
-  import { agentName, prettyModel } from '../feed/format';
+  import { modelName } from '../feed/format';
   import ImageViewer from '../feed/ImageViewer.svelte';
   import PinnedZone from '../feed/PinnedZone.svelte';
   import '../feed/i18n';
   import AgentModal from '../task/AgentModal.svelte';
   import Composer from '../task/Composer.svelte';
   import SessionBanners from '../task/SessionBanners.svelte';
+  import ImportReview from '../import/ImportReview.svelte';
+  import { changedPanel } from '../side-panels.svelte';
   import './i18n';
   import { ChatSession } from './session.svelte';
 
@@ -35,6 +37,7 @@
     chatId,
     oncreated,
     onsection,
+    onimport,
   }: {
     projectId: string;
     projectPath: string;
@@ -42,6 +45,8 @@
     chatId: string | undefined;
     oncreated: (chatId: string) => void;
     onsection: (section: 'plan' | 'docs' | 'tasks') => void;
+    /** "Импортировать документацию" (ImportModal). */
+    onimport: () => void;
   } = $props();
 
   // The pane is keyed by chat.
@@ -61,6 +66,15 @@
   }
 
   let modal = $state(false);
+  /** Proposal item of the import whose review screen is open (ImportReview mockup). */
+  let reviewing = $state<string | undefined>();
+  /** The project has code of its own: the start screen offers a feature or a fix (D-32). */
+  let hasCode = $state(false);
+  // svelte-ignore state_referenced_locally
+  void window.skaro
+    .invoke('project.hasCode', projectId)
+    .then((v) => (hasCode = v))
+    .catch(() => undefined);
   let viewer = $state<string | undefined>();
   let actionError = $state<string | undefined>();
   let composer: Composer | undefined = $state();
@@ -75,7 +89,7 @@
   const title = $derived(view?.chat.title ?? t('chat.new'));
   const openQuestion = $derived(timeline?.interactions.find((i) => i.kind === 'question'));
   const openApproval = $derived(timeline?.interactions.find((i) => i.kind === 'approval'));
-  // Model names come from the agent's own list ("Default (recommended)", "Opus 5").
+  // Model names come from the agent's own list ("Opus 5.5").
   let models = $state.raw<AgentModel[]>([]);
   $effect(() => {
     const agent = settings?.agent;
@@ -85,20 +99,14 @@
       .then((list) => (models = list))
       .catch(() => (models = []));
   });
-  const modelLabel = $derived.by(() => {
-    const id = timeline?.session?.model || settings?.model;
-    const known =
-      models.find((m) => m.id === id) ?? (id ? undefined : models.find((m) => m.isDefault));
-    if (known) return known.name;
-    return id ? prettyModel(id) : agentName(settings?.agent ?? 'claude-code');
-  });
+  const modelLabel = $derived(modelName(timeline?.session?.model || settings?.model, models));
   /** The modal's settings; the same object until they change, so an open modal keeps its draft. */
   const modalSettings = $derived<AgentSettings | undefined>(
     settings && {
       agent: settings.agent,
       ...(settings.model ? { model: settings.model } : {}),
       ...(settings.effort ? { effort: settings.effort } : {}),
-      permissionMode: 'ask',
+      permissionMode: settings.permissionMode ?? 'ask',
       planFirst: false,
       isolation: 'in-place',
     },
@@ -158,11 +166,13 @@
       agent: next.agent,
       ...(next.model ? { model: next.model } : {}),
       ...(next.effort ? { effort: next.effort } : {}),
+      ...(next.permissionMode === 'full' ? { permissionMode: 'full' as const } : {}),
     };
     if (!chatId) {
       draft = value;
-      // A new chat starts with what was chosen last (main: ChatSessions.defaults).
-      void window.skaro.invoke('app.setSetting', `chats.${projectId}.last`, value);
+      // A new chat starts with what was chosen last (main: ChatSessions.defaults), always asking.
+      const { permissionMode: _mode, ...last } = value;
+      void window.skaro.invoke('app.setSetting', `chats.${projectId}.last`, last);
       return;
     }
     const chat = chatId;
@@ -177,13 +187,31 @@
       );
   }
 
-  function chip(kind: 'idea' | 'spec' | 'code'): void {
-    if (kind === 'code') {
-      void send({ text: t('chat.chip.code.text') }).catch(() => undefined);
-      return;
-    }
-    composer?.prefill(t(`chat.chip.${kind}.text`));
-    if (kind === 'spec') void composer?.attach('files');
+  /** Start screen (D-32): a project with code starts from a feature or a fix, a new one from an idea. */
+  const chips = $derived<{ label: string; tip: string; prefill?: string }[]>(
+    hasCode
+      ? [
+          {
+            label: t('chat.chip.feature'),
+            prefill: t('chat.chip.feature.text'),
+            tip: t('chat.chip.prefill.tip', { text: t('chat.chip.feature.text').trim() }),
+          },
+          {
+            label: t('chat.chip.fix'),
+            prefill: t('chat.chip.fix.text'),
+            tip: t('chat.chip.prefill.tip', { text: t('chat.chip.fix.text').trim() }),
+          },
+          { label: t('chat.chip.import'), tip: t('chat.chip.import.tip') },
+        ]
+      : [
+          { label: t('chat.chip.idea'), prefill: '', tip: '' },
+          { label: t('chat.chip.import'), tip: t('chat.chip.import.tip') },
+        ],
+  );
+
+  function chip(c: { prefill?: string }): void {
+    if (c.prefill === undefined) onimport();
+    else composer?.prefill(c.prefill);
   }
 
   provideFeed({
@@ -215,11 +243,12 @@
       return guard(() => window.skaro.invoke('chat.proposal', projectId, chat, itemId, action));
     },
     openSection: (section) => onsection(section),
+    reviewImport: (itemId) => (reviewing = itemId),
   });
 
   /** "Изменено в чате": what each proposal is and where it stands. */
   function changed(item: ProposalItem): {
-    icon: 'file' | 'adr' | 'milestone';
+    icon: 'file' | 'adr' | 'spec' | 'milestone' | 'import';
     title: string;
     note: string;
     pending: boolean;
@@ -257,6 +286,27 @@
           pending,
           note: pending ? t('changed.pending') : (settled ?? t('changed.adr.accepted')),
         };
+      case 'import':
+        return {
+          icon: 'import',
+          title: t('changed.import'),
+          pending,
+          note: pending ? t('changed.pending') : (settled ?? t('changed.pending')),
+        };
+      case 'spec':
+        return {
+          icon: 'spec',
+          title: `SPEC-${item.result?.spec?.id ?? p.id} · ${item.result?.spec?.title ?? p.title}`,
+          pending,
+          note: pending ? t('changed.pending') : (settled ?? t('changed.spec.accepted')),
+        };
+      case 'spec_change':
+        return {
+          icon: 'spec',
+          title: `SPEC-${p.id} · ${p.title}`,
+          pending,
+          note: pending ? t('changed.pending') : (settled ?? t('changed.spec.updated')),
+        };
       case 'plan':
         return {
           icon: 'milestone',
@@ -272,6 +322,62 @@
     }
   }
 
+  /** Rows of "Изменено в чате": one per proposal, what an applied import wrote one by one. */
+  const changedRows = $derived(
+    proposals.flatMap((item) => {
+      if (item.proposal.type === 'import' && item.state === 'applied') {
+        return (item.result?.imported ?? [])
+          .filter((x) => x.kind !== 'plan' || x.code?.startsWith('M'))
+          .map((x, i) => ({ key: `${item.id}-${i}`, item, c: importedRow(x) }));
+      }
+      return [{ key: item.id, item, c: changed(item) }];
+    }),
+  );
+
+  function importedRow(x: {
+    kind: string;
+    code?: string;
+    title: string;
+    update: boolean;
+  }): ReturnType<typeof changed> {
+    const titled = x.code ? `${x.code} · ${x.title}` : x.title;
+    switch (x.kind) {
+      case 'adr':
+        return {
+          icon: 'adr',
+          title: titled,
+          pending: false,
+          note: x.update ? t('changed.doc.updated') : t('changed.adr.accepted'),
+        };
+      case 'spec':
+        return {
+          icon: 'spec',
+          title: titled,
+          pending: false,
+          note: x.update ? t('changed.spec.updated') : t('changed.spec.accepted'),
+        };
+      case 'plan':
+        return {
+          icon: 'milestone',
+          title: titled,
+          pending: false,
+          note: t('changed.plan.milestone'),
+        };
+      default:
+        return {
+          icon: 'file',
+          title:
+            x.kind === 'brief'
+              ? 'brief.md'
+              : x.kind === 'architecture'
+                ? 'architecture.md'
+                : x.title,
+          pending: false,
+          note: x.update ? t('changed.doc.updated') : t('changed.doc.createdShort'),
+        };
+    }
+  }
+
   function reveal(item: ProposalItem): void {
     document
       .getElementById(`proposal-${item.id}`)
@@ -282,6 +388,17 @@
 <div class="main">
   <div class="head">
     <span class="title">{title}</span>
+    <button
+      type="button"
+      class="archive"
+      class:on={changedPanel.open}
+      data-tip={t('chat.changed.toggle')}
+      aria-label={t('chat.changed.toggle')}
+      aria-pressed={changedPanel.open}
+      onclick={() => (changedPanel.open = !changedPanel.open)}
+    >
+      <Icon name="docText" size={15} stroke={1.8} />
+    </button>
     {#if view && !archived}
       <button
         type="button"
@@ -313,12 +430,17 @@
     <div class="empty"><span class="empty-text">{t('chat.notFound')}</span></div>
   {:else if !chatId}
     <div class="empty">
-      <span class="empty-title">{t('chat.empty.title')}</span>
-      <span class="empty-text">{t('chat.empty.text')}</span>
+      <span class="empty-title">{hasCode ? t('chat.empty.code.title') : t('chat.empty.title')}</span
+      >
+      <span class="empty-text">{hasCode ? t('chat.empty.code.text') : t('chat.empty.text')}</span>
       <div class="chips">
-        {#each ['idea', 'spec', 'code'] as const as kind (kind)}
-          <button type="button" class="chip" onclick={() => chip(kind)}
-            >{t(`chat.chip.${kind}`)}</button
+        {#each chips as c (c.label)}
+          <button type="button" class="chip" data-tip={c.tip || undefined} onclick={() => chip(c)}
+            >{#if c.prefill === undefined}<Icon
+                name="import"
+                size={13}
+                stroke={1.9}
+              />{/if}{c.label}</button
           >
         {/each}
       </div>
@@ -342,7 +464,9 @@
       {#if timeline}<PinnedZone {timeline} />{/if}
       <Composer
         bind:this={composer}
-        placeholder={t('chat.placeholder')}
+        placeholder={view?.chat.kind === 'import'
+          ? t('chat.import.placeholder')
+          : t('chat.placeholder')}
         {running}
         agent={agentInfo?.id ?? settings.agent}
         model={modelLabel}
@@ -364,26 +488,32 @@
   {/if}
 </div>
 
-<div class="changed">
-  <span class="sk-label changed-label">{t('chat.changed')}</span>
-  <div class="changed-list">
-    {#each proposals as item (item.id)}
-      {@const c = changed(item)}
-      <button
-        type="button"
-        class="changed-row"
-        data-tip={c.pending ? t('chat.changed.pending.tip') : t('chat.changed.open.tip')}
-        onclick={() => reveal(item)}
-      >
-        <span class="changed-icon"><Icon name={c.icon} size={13} stroke={1.8} /></span>
-        <span class="changed-texts">
-          <span class="changed-title">{c.title}</span>
-          <span class="changed-note" class:pending={c.pending}>{c.note}</span>
-        </span>
-      </button>
-    {/each}
+{#if changedPanel.open}
+  <div class="changed">
+    <span class="sk-label changed-label">{t('chat.changed')}</span>
+    <div class="changed-list">
+      {#each changedRows as row (row.key)}
+        {@const c = row.c}
+        {@const item = row.item}
+        <button
+          type="button"
+          class="changed-row"
+          data-tip={c.pending ? t('chat.changed.pending.tip') : t('chat.changed.open.tip')}
+          onclick={() => reveal(item)}
+        >
+          <span class="changed-icon"><Icon name={c.icon} size={13} stroke={1.8} /></span>
+          <span class="changed-texts">
+            <span class="changed-title">{c.title}</span>
+            <span class="changed-note" class:pending={c.pending}>{c.note}</span>
+          </span>
+        </button>
+      {/each}
+      {#if !changedRows.length}
+        <span class="changed-empty">{t('chat.changed.empty')}</span>
+      {/if}
+    </div>
   </div>
-</div>
+{/if}
 
 {#if modalSettings}
   <AgentModal
@@ -397,6 +527,19 @@
   />
 {/if}
 <ImageViewer bind:src={viewer} />
+{#if reviewing && chatId}
+  {@const itemId = reviewing}
+  <ImportReview
+    {projectId}
+    {chatId}
+    onclose={() => (reviewing = undefined)}
+    onapply={(keys) =>
+      window.skaro.invoke('chat.proposal', projectId, chatId, itemId, {
+        action: 'apply',
+        import: keys,
+      })}
+  />
+{/if}
 
 <style>
   .main {
@@ -442,7 +585,8 @@
     cursor: pointer;
   }
 
-  .archive:hover {
+  .archive:hover,
+  .archive.on {
     background: var(--sk-fill-15);
     color: var(--sk-text-6);
   }
@@ -493,6 +637,9 @@
   }
 
   .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     height: 29px;
     padding: 0 13px;
     border: none;
@@ -621,6 +768,14 @@
   }
 
   .changed-note.pending {
-    color: var(--sk-orange-1);
+    color: var(--sk-link);
+  }
+
+  .changed-empty {
+    padding: 8px 9px;
+    font-size: var(--sk-fs-4);
+    line-height: 1.5;
+    color: var(--sk-text-23);
+    text-wrap: pretty;
   }
 </style>

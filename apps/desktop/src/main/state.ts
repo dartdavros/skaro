@@ -2,7 +2,7 @@
 
 import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
-import { AppDb } from '@skaro/core';
+import { AppDb, type ProjectRecord } from '@skaro/core';
 import type { Locale, ProjectInfo, TabsState } from '../shared/ipc';
 
 export class AppState {
@@ -15,9 +15,7 @@ export class AppState {
   }
 
   listProjects(): ProjectInfo[] {
-    return this.db
-      .listProjects()
-      .map((p) => ({ id: p.id, name: p.name, path: p.path, missing: !existsSync(p.path) }));
+    return this.db.listProjects().map(info);
   }
 
   /** Registers a folder as a project; returns the existing one if already added. */
@@ -25,12 +23,7 @@ export class AppState {
     const existing =
       this.db.findProjectByPath(path) ?? this.db.addProject({ name: basename(path) || path, path });
     this.db.touchProject(existing.id);
-    return {
-      id: existing.id,
-      name: existing.name,
-      path: existing.path,
-      missing: !existsSync(existing.path),
-    };
+    return info(existing);
   }
 
   /** "Найти заново": the same project, now in `path`. */
@@ -38,7 +31,25 @@ export class AppState {
     const project = this.db.getProject(id);
     if (!project) throw new Error('unknown project');
     this.db.moveProject(id, path);
-    return { id, name: project.name, path, missing: !existsSync(path) };
+    return info({ ...project, path });
+  }
+
+  /** The name shown in Skaro; an empty one keeps the old name. */
+  renameProject(id: string, name: string): ProjectInfo {
+    const trimmed = name.trim();
+    if (trimmed) this.db.renameProject(id, trimmed);
+    return this.project(id);
+  }
+
+  setProjectLogo(id: string, logo: string | undefined): ProjectInfo {
+    this.db.setProjectLogo(id, logo);
+    return this.project(id);
+  }
+
+  private project(id: string): ProjectInfo {
+    const project = this.db.getProject(id);
+    if (!project) throw new Error('unknown project');
+    return info(project);
   }
 
   removeProject(id: string): void {
@@ -78,4 +89,14 @@ export class AppState {
   close(): void {
     this.db.close();
   }
+}
+
+function info(p: ProjectRecord): ProjectInfo {
+  return {
+    id: p.id,
+    name: p.name,
+    path: p.path,
+    missing: !existsSync(p.path),
+    ...(p.logo ? { logo: p.logo } : {}),
+  };
 }

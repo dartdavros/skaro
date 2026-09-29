@@ -23,7 +23,8 @@
   /**
    * "Агент задачи" (mockup 7a): agent, model and effort from the agent, permission mode,
    * isolation, plan first. Applies to the next request. "Агент чата" (AgentChat mockup): agent,
-   * model and effort only.
+   * model and effort, and the permission mode "Спрашивать" / "Полный доступ" (owner, 2026-09-29:
+   * the chat works in the main working copy, so no "auto within the task" there).
    */
   let {
     open = $bindable(false),
@@ -152,11 +153,18 @@
     { value: PermissionMode; label: string; note: string; warn?: boolean }[]
   >([
     { value: 'ask', label: t('agent.perm.ask'), note: t('agent.perm.ask.note') },
-    {
-      value: 'auto',
-      label: t('agent.perm.auto'),
-      note: sandboxHolds === false ? t('agent.perm.autoNoSandbox.note') : t('agent.perm.auto.note'),
-    },
+    ...(kind === 'task'
+      ? [
+          {
+            value: 'auto' as const,
+            label: t('agent.perm.auto'),
+            note:
+              sandboxHolds === false
+                ? t('agent.perm.autoNoSandbox.note')
+                : t('agent.perm.auto.note'),
+          },
+        ]
+      : []),
     { value: 'full', label: t('agent.perm.full'), note: t('agent.perm.full.note'), warn: true },
   ]);
   const isoOptions = $derived<{ value: 'worktree' | 'in-place'; label: string; note: string }[]>([
@@ -289,16 +297,12 @@
       </div>
     {/if}
 
-    {#if kind === 'task'}
-      <div class="section">
-        <span class="sk-label">{t('agent.perm')}</span>
-        <RadioCards
-          options={permOptions}
-          bind:value={draft.permissionMode}
-          label={t('agent.perm')}
-        />
-      </div>
+    <div class="section">
+      <span class="sk-label">{t('agent.perm')}</span>
+      <RadioCards options={permOptions} bind:value={draft.permissionMode} label={t('agent.perm')} />
+    </div>
 
+    {#if kind === 'task'}
       <div class="section">
         <span class="sk-label">{t('agent.iso')}</span>
         <RadioCards options={isoOptions} bind:value={draft.isolation} label={t('agent.iso')} />
@@ -460,7 +464,7 @@
   }
 
   .link:hover {
-    color: var(--sk-teal-1);
+    color: var(--sk-link-hover);
     text-decoration: underline;
   }
 

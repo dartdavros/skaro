@@ -113,6 +113,60 @@ export function demoChatTimeline(): TimelineState {
       status: 'done',
     }),
     item({
+      id: 'p2s',
+      kind: 'proposal',
+      proposal: {
+        type: 'spec',
+        id: '0003',
+        title: 'Возвраты по картам',
+        body: '## Проблема\n\n…\n\n## Требования\n\n- R-1 …\n',
+        summary:
+          'Полный и частичный возврат из карточки заказа, чек по 54-ФЗ, возврат без заказа — только для роли manager. 4 требования, 1 открытый вопрос.',
+      },
+      state: 'pending',
+      status: 'done',
+    }),
+    item({
+      id: 'p2c',
+      kind: 'proposal',
+      proposal: {
+        type: 'spec_change',
+        id: '0002',
+        title: 'Идемпотентность платежей',
+        before: '## Требования\n\n- R-1 Ключ идемпотентности\n',
+        after:
+          '## Требования\n\n- R-1 Ключ идемпотентности\n- R-3 Ключ хранится 24 часа, потом повтор создаёт новую операцию\n',
+      },
+      state: 'pending',
+      status: 'done',
+    }),
+    item({
+      id: 'p2a',
+      kind: 'proposal',
+      proposal: {
+        type: 'spec',
+        id: '0001',
+        title: 'Оплата картой',
+        body: '## Проблема\n\n…\n',
+      },
+      state: 'applied',
+      result: { spec: { id: '0001', title: 'Оплата картой' } },
+      status: 'done',
+    }),
+    item({
+      id: 'p2u',
+      kind: 'proposal',
+      proposal: {
+        type: 'spec_change',
+        id: '0002',
+        title: 'Идемпотентность платежей',
+        before: '## Требования\n',
+        after: '## Требования\n\n- R-2 …\n',
+      },
+      state: 'applied',
+      status: 'done',
+    }),
+    item({
       id: 'p3',
       kind: 'proposal',
       proposal: {

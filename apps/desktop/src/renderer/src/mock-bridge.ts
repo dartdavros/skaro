@@ -17,6 +17,7 @@ import type {
 } from '../../shared/ipc';
 import type { TimelineState } from '@skaro/timeline';
 import { demoChatTimeline } from './demo-chat';
+import { demoImportTimeline, importReview, importSource } from './demo-import';
 import { demoTimeline } from './demo-timeline';
 import { docs } from './mock/docs';
 import { board, milestones, plan, tasks } from './mock/tasks';
@@ -73,14 +74,29 @@ function detail(id: string): TaskDetail {
     goal: 'Разграничить доступ в админке: роли «владелец», «менеджер» и «поддержка», проверка прав на уровне сервисного слоя, а не только UI.',
     criteria: [
       {
-        text: 'Три роли: владелец, менеджер, поддержка — с матрицей прав из ADR-0006',
+        text: `${task.spec ? 'R-1 ' : ''}Три роли: владелец, менеджер, поддержка — с матрицей прав из ADR-0006`,
         done: false,
       },
-      { text: 'Проверка прав в сервисном слое, а не только в UI', done: true },
-      { text: 'Попытка доступа без прав возвращает 403 и пишется в журнал', done: false },
+      {
+        text: `${task.spec ? 'R-2 ' : ''}Проверка прав в сервисном слое, а не только в UI`,
+        done: true,
+      },
+      {
+        text: `${task.spec ? 'R-3 ' : ''}Попытка доступа без прав возвращает 403 и пишется в журнал`,
+        done: false,
+      },
       { text: 'Юнит-тесты на матрицу прав', done: false },
     ],
     notes: 'Роли уже заведены в схеме БД (T-004). Матрицу прав согласовали в ADR-0006.',
+    ...(task.spec
+      ? {
+          requirements: [
+            { id: 'R-1', text: 'Три роли с матрицей прав: владелец, менеджер, поддержка' },
+            { id: 'R-2', text: 'Права проверяются на сервере, в сервисном слое' },
+            { id: 'R-3', text: 'Доступ без прав — 403 и запись в журнал действий' },
+          ],
+        }
+      : {}),
   };
 }
 
@@ -90,6 +106,7 @@ const chats: ChatSummary[] = noChats
   ? []
   : [
       ['c1', 'Платежи: этапы и задачи', false, true],
+      ['imp1', 'Импорт документации', false, false],
       ['c2', 'Идемпотентность вебхуков', false, false],
       ['c3', 'Разбор ТЗ по админке', false, false],
       ['c4', 'Выбор очереди задач', false, false],
@@ -100,6 +117,7 @@ const chats: ChatSummary[] = noChats
       title: title as string,
       agent: 'claude-code',
       archived: archived as boolean,
+      ...(id === 'imp1' ? { kind: 'import' as const } : {}),
       live: live as boolean,
       updatedAt: Date.now() - i * 3_600_000,
     }));
@@ -110,7 +128,7 @@ const chatSeqs = new Map<string, number>();
 function chatTimeline(id: string): TimelineState {
   let timeline = chatTimelines.get(id);
   if (!timeline) {
-    timeline = demoChatTimeline();
+    timeline = id === 'imp1' ? demoImportTimeline() : demoChatTimeline();
     chatTimelines.set(id, timeline);
   }
   return timeline;
@@ -125,6 +143,17 @@ function emit<E extends keyof Events>(event: E, payload: Events[E]): void {
 function boardChanged(projectId: string, change: () => void): void {
   change();
   emit('project.changed', { projectId });
+}
+
+/** "Выбрать логотип…" in the browser mock: a fixed picture instead of a file dialog. */
+const MOCK_LOGO = `data:image/svg+xml;base64,${btoa(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2a52be"/><path d="M7 15l5-8 5 8z" fill="#fff"/></svg>',
+)}`;
+
+function mockProject(id: string): ProjectInfo {
+  const project = projects.find((p) => p.id === id);
+  if (!project) throw new Error('unknown project');
+  return project;
 }
 
 function addMock(path: string): ProjectInfo {
@@ -240,98 +269,49 @@ const handlers: {
         activeAt: now - 42 * 86_400_000,
       },
     ];
-    return cards.filter(
-      (c) => projects.some((p) => p.id === c.id) || c.id === 'p4' || c.id === 'p5',
-    );
+    return cards
+      .filter((c) => projects.some((p) => p.id === c.id) || c.id === 'p4' || c.id === 'p5')
+      .map((c) => {
+        const p = projects.find((x) => x.id === c.id);
+        return p ? { ...c, name: p.name, ...(p.logo ? { logo: p.logo } : {}) } : c;
+      });
+  },
+  'project.rename': (id, name) => {
+    const p = mockProject(id);
+    if (name.trim()) p.name = name.trim();
+    return { ...p };
+  },
+  'project.pickLogo': (id) => {
+    const p = mockProject(id);
+    p.logo = MOCK_LOGO;
+    return { ...p };
+  },
+  'project.removeLogo': (id) => {
+    const p = mockProject(id);
+    delete p.logo;
+    return { ...p };
   },
   'project.settings': () => ({ ...projectSettings }),
   'project.saveSettings': (_p, next) => void Object.assign(projectSettings, next),
-  'project.overview': (projectId) => {
-    const now = Date.now();
-    const m02 = { id: 'M02', title: 'Платежи' };
-    return {
-      id: projectId,
-      name: projects.find((p) => p.id === projectId)?.name ?? 'Shop API',
-      path: '/Users/dev/code/shop-api',
-      branch: 'main',
-      clean: true,
-      attention: [
-        {
-          id: 'T-016',
-          title: 'Возвраты по картам',
-          milestone: m02,
-          status: 'review',
-          since: now - 4 * 60_000,
-          stats: { files: 7, added: 214, removed: 38 },
-          agent: 'claude-code',
-          model: 'claude-opus-5',
-        },
-        {
-          id: 'T-019',
-          title: 'Идемпотентность вебхуков',
-          milestone: m02,
-          status: 'needs_answer',
-          since: now - 60 * 60_000,
-          stats: { files: 2, added: 38, removed: 4 },
-          agent: 'codex',
-          model: 'gpt-6-astra',
-        },
-      ],
-      running: [
-        {
-          id: 'T-014',
-          title: 'Интеграция с эквайрингом',
-          milestone: m02,
-          status: 'in_progress',
-          since: now - 845_000,
-          stats: { files: 3, added: 96, removed: 12 },
-          agent: 'claude-code',
-          model: 'claude-opus-5',
-        },
-      ],
-      queued: [{ id: 'T-018', title: 'Отчёты по платежам' }],
-      start: {
-        brief: { updatedAt: now - 3 * 86_400_000 },
-        architecture: { adrs: 4, rules: 6 },
-        milestones: 3,
-        tasks: 14,
-        emptyMilestone: { id: 'M03', title: 'Админка' },
-        hidden: false,
-      },
-      milestones: [
-        { id: 'M01', title: 'Базовый API', done: 6, total: 6 },
-        { id: 'M02', title: 'Платежи', done: 3, total: 8 },
-        { id: 'M03', title: 'Админка', done: 0, total: 5 },
-      ],
-      events: [
-        {
-          kind: 'merged',
-          data: { task: 'T-013', base: 'main' },
-          at: now - 24 * 60_000,
-          taskTitle: 'Схема платежей',
-        },
-        {
-          kind: 'adr_accepted',
-          data: { id: '0004', title: 'Идемпотентность через ключи запроса' },
-          at: now - 60 * 60_000,
-        },
-        { kind: 'waiting', data: { task: 'T-019', what: 'approval' }, at: now - 61 * 60_000 },
-        {
-          kind: 'tasks_created',
-          data: { count: 3, milestone: 'M02' },
-          at: now - 120 * 60_000,
-          milestoneTitle: 'Платежи',
-        },
-        { kind: 'doc_updated', data: { path: 'architecture.md' }, at: now - 180 * 60_000 },
-        {
-          kind: 'task_failed',
-          data: { task: 'T-011' },
-          at: now - 86_400_000,
-          taskTitle: 'Черновик отчётов',
-        },
-      ],
+  'import.scan': (paths) => paths.map((path) => importSource(path)),
+  'import.start': (projectId) => {
+    const chat: ChatSummary = {
+      id: 'imp1',
+      title: 'Импорт документации',
+      agent: 'claude-code',
+      archived: false,
+      kind: 'import',
+      live: false,
+      updatedAt: Date.now(),
     };
+    if (!chats.some((c) => c.id === chat.id)) chats.unshift(chat);
+    emit('chats.changed', { projectId });
+    return chat;
   },
+  'import.review': () => importReview(),
+  'import.openSource': () => undefined,
+  // `?nocode` opens a project without code of its own (the start screens of D-32).
+  'project.hasCode': () => !new URLSearchParams(location.search).has('nocode'),
   'projects.relocate': (id, path) => ({ id, name: path, path, missing: false }),
   'projects.openIn': () => undefined,
   'tabs.get': () => tabs,
@@ -415,8 +395,15 @@ const handlers: {
     emit('project.changed', { projectId });
     return entry;
   },
+  'docs.createSpec': (projectId, title) => {
+    const entry = docs.createSpec(title);
+    emit('project.changed', { projectId });
+    return entry;
+  },
   'docs.setAdrStatus': (projectId, id, status) =>
     boardChanged(projectId, () => docs.setStatus(id, status)),
+  'docs.setSpecStatus': (projectId, id, status) =>
+    boardChanged(projectId, () => docs.setSpecStatus(id, status)),
   'docs.reveal': () => undefined,
   'plan.milestones': () => milestones.map((m) => ({ ...m })),
   'plan.create': (projectId, input) => {
@@ -517,6 +504,29 @@ const handlers: {
             : {}),
           ...(tasks ? { tasks } : {}),
           ...(p.type === 'adr' ? { adr: { id: p.id, title: action.adr?.title ?? p.title } } : {}),
+          ...(p.type === 'import'
+            ? {
+                applied: action.import?.length ?? p.total,
+                imported: [
+                  { kind: 'brief' as const, title: 'Бриф', update: false },
+                  { kind: 'architecture' as const, title: 'Архитектура', update: true },
+                  {
+                    kind: 'adr' as const,
+                    code: 'ADR-0008',
+                    title: 'Выбор эквайера',
+                    update: false,
+                  },
+                  { kind: 'adr' as const, code: 'ADR-0009', title: 'Очередь задач', update: false },
+                  {
+                    kind: 'spec' as const,
+                    code: 'SPEC-0004',
+                    title: 'Возвраты по картам',
+                    update: false,
+                  },
+                  { kind: 'plan' as const, code: 'M04', title: 'Возвраты', update: false },
+                ],
+              }
+            : {}),
         },
       };
     });
@@ -537,12 +547,16 @@ const handlers: {
   'files.exist': (_p, _t, paths) =>
     paths.filter((p) => p.startsWith('src/') || p.startsWith('docs/')),
   'files.open': () => undefined,
-  'files.pick': () => [],
+  'files.pick': (kind) =>
+    kind === 'folder'
+      ? [{ path: 'C:/Users/dev/Docs/shop', kind: 'folder' }]
+      : [{ path: 'C:/Users/dev/Downloads/ТЗ-админка.docx', kind: 'file' }],
   'shell.openExternal': () => undefined,
 };
 
 const bridge: SkaroApi = {
   platform: 'win32',
+  pathOf: (file: File) => `C:/Users/dev/Docs/${file.name}`,
   invoke: (method, ...args) =>
     Promise.resolve((handlers[method] as (...a: unknown[]) => unknown)(...args) as never),
   on: <E extends keyof Events>(event: E, listener: (payload: Events[E]) => void) => {

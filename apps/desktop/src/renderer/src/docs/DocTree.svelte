@@ -2,27 +2,53 @@
   import { Icon, t } from '@skaro/ui';
   import type { DocEntry } from '../../../shared/ipc';
   import type { ProjectDocs } from './data.svelte';
-  import { titleOf } from './model';
+  import { recordOf, titleOf } from './model';
 
-  /** The document tree (Documents mockup): brief, architecture, ADR and free documents. */
+  /**
+   * The document tree (Documents mockup): brief, architecture, ADR, specifications and free
+   * documents; "Новый документ" opens a menu, the icon next to it imports documentation.
+   */
   let {
     docs,
     width = $bindable(),
     onselect,
     onhide,
     onnew,
+    onnewspec,
+    onimport,
   }: {
     docs: ProjectDocs;
     width: number;
     onselect: (path: string) => void;
     onhide: () => void;
     onnew: () => void;
+    onnewspec: () => void;
+    onimport: () => void;
   } = $props();
 
-  let groups = $state({ adr: true, docs: true });
+  let groups = $state({ adr: true, specs: true, docs: true });
   let resizing = $state(false);
+  let menu = $state(false);
+  let foot: HTMLDivElement | undefined = $state();
 
   const adrs = $derived(docs.entries.filter((d) => d.kind === 'adr'));
+  const specs = $derived(docs.entries.filter((d) => d.kind === 'spec'));
+
+  $effect(() => {
+    if (!menu) return;
+    const outside = (e: PointerEvent) => {
+      if (foot && !foot.contains(e.target as Node)) menu = false;
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') menu = false;
+    };
+    window.addEventListener('pointerdown', outside);
+    window.addEventListener('keydown', esc);
+    return () => {
+      window.removeEventListener('pointerdown', outside);
+      window.removeEventListener('keydown', esc);
+    };
+  });
   const free = $derived(docs.entries.filter((d) => d.kind === 'doc'));
   const fixed = $derived(docs.all.slice(0, 2));
 
@@ -50,17 +76,26 @@
     if (doc.adr?.status === 'proposed') return t('docs.adr.proposed.tip');
     if (doc.adr?.status === 'superseded')
       return t('docs.adr.replacedBy.tip', { id: doc.adr.replacedBy ?? '' });
+    if (doc.spec?.status === 'proposed') return t('docs.spec.proposed.tip');
+    if (doc.spec?.status === 'superseded')
+      return t('docs.spec.replacedBy.tip', { id: doc.spec.replacedBy ?? '' });
     return undefined;
+  }
+
+  function pick(action: () => void): void {
+    menu = false;
+    action();
   }
 </script>
 
 {#snippet item(doc: DocEntry, icon: 'brief' | 'arch' | 'doc' | undefined)}
   {@const on = docs.selected === doc.path}
   {@const missing = !docs.exists(doc.path)}
+  {@const rec = recordOf(doc)}
   <div
     class="item"
     class:on
-    class:muted={missing || doc.adr?.status === 'superseded'}
+    class:muted={missing || rec?.status === 'superseded'}
     role="treeitem"
     aria-selected={on}
     tabindex="0"
@@ -76,14 +111,14 @@
         /></span
       >
     {:else}
-      <span class="num">{doc.adr?.id}</span>
+      <span class="num">{rec?.id}</span>
     {/if}
     <span class="label">{titleOf(doc)}</span>
-    {#if doc.adr?.status === 'proposed'}<span class="dot"></span>{/if}
+    {#if rec?.status === 'proposed'}<span class="dot"></span>{/if}
   </div>
 {/snippet}
 
-{#snippet group(key: 'adr' | 'docs', count: number)}
+{#snippet group(key: 'adr' | 'specs' | 'docs', count: number)}
   <div
     class="group"
     role="button"
@@ -111,12 +146,44 @@
     {@render item(fixed[1]!, 'arch')}
     {@render group('adr', adrs.length)}
     {#if groups.adr}{#each adrs as doc (doc.path)}{@render item(doc, undefined)}{/each}{/if}
+    {#if specs.length}
+      {@render group('specs', specs.length)}
+      {#if groups.specs}{#each specs as doc (doc.path)}{@render item(doc, undefined)}{/each}{/if}
+    {/if}
     {@render group('docs', free.length)}
     {#if groups.docs}{#each free as doc (doc.path)}{@render item(doc, 'doc')}{/each}{/if}
   </div>
-  <div class="foot">
-    <button type="button" class="new" onclick={onnew}
-      ><Icon name="plus" size={15} stroke={2.6} />{t('docs.new')}</button
+  <div class="foot" bind:this={foot}>
+    {#if menu}
+      <div class="menu" role="menu">
+        <button type="button" class="menu-item" role="menuitem" onclick={() => pick(onnew)}>
+          <Icon name="fileBlank" size={14} stroke={1.8} color="var(--sk-text-19)" />
+          {t('docs.new')}
+        </button>
+        <button type="button" class="menu-item" role="menuitem" onclick={() => pick(onnewspec)}>
+          <Icon name="spec" size={14} stroke={1.8} color="var(--sk-text-19)" />
+          {t('docs.newSpec')}
+        </button>
+      </div>
+    {/if}
+    <button
+      type="button"
+      class="new"
+      class:open={menu}
+      aria-haspopup="menu"
+      aria-expanded={menu}
+      onclick={() => (menu = !menu)}
+    >
+      <Icon name="plus" size={15} stroke={2.6} />
+      <span class="new-label">{t('docs.new')}</span>
+      <Icon name="chevronUp" size={11} stroke={2.4} />
+    </button>
+    <button
+      type="button"
+      class="import"
+      data-tip={t('docs.import')}
+      aria-label={t('docs.import')}
+      onclick={() => pick(onimport)}><Icon name="import" size={15} stroke={1.8} /></button
     >
   </div>
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -287,12 +354,75 @@
 
   .foot {
     flex: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     padding: 8px;
     border-top: 1px solid var(--sk-fill-11);
   }
 
+  .menu {
+    position: absolute;
+    left: 8px;
+    bottom: 46px;
+    z-index: 30;
+    width: 220px;
+    padding: 5px;
+    border-radius: 10px;
+    background: var(--sk-menu);
+    box-shadow: var(--sk-menu-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 9px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--sk-text-6);
+    font: inherit;
+    font-size: var(--sk-fs-6);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .menu-item:hover {
+    background: var(--sk-menu-hover);
+  }
+
+  .new-label {
+    flex: 1;
+    text-align: left;
+  }
+
+  .import {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--sk-text-17);
+    cursor: pointer;
+  }
+
+  .import:hover {
+    background: var(--sk-fill-11);
+    color: var(--sk-text-2);
+  }
+
   .new {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 9px;
@@ -307,8 +437,12 @@
     cursor: pointer;
   }
 
-  .new:hover {
+  .new:hover,
+  .new.open {
     background: var(--sk-fill-11);
+  }
+
+  .new:hover {
     color: var(--sk-text-2);
   }
 

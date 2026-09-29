@@ -4,6 +4,9 @@
   import { useFeed } from './context.svelte';
   import { imageUrl } from './format';
 
+  /** What Skaro writes as the first message of an import chat (main: chats.ts). */
+  const IMPORT_HEADS = ['Импортировать документацию', 'Import documentation'];
+
   /** User bubble: queued state, attached images, edit and rewind on hover (mockup 9g). */
   let { row }: { row: Extract<FeedRow, { type: 'user' }> } = $props();
 
@@ -12,6 +15,16 @@
   let editing = $state(false);
   let draft = $state('');
   let confirm = $state<'rewind' | 'edit' | undefined>();
+
+  /**
+   * The first message of an import chat (AgentChat mockup): "Импортировать документацию" and a
+   * line per source in mono ("~/Docs/shop · 42 файла").
+   */
+  const importLines = $derived.by(() => {
+    const [head, ...rest] = row.item.text.split('\n');
+    if (!head || !IMPORT_HEADS.includes(head) || !rest.length) return undefined;
+    return rest.every((l) => / · \d+ /.test(l)) ? { head, sources: rest } : undefined;
+  });
 
   function startEdit(): void {
     draft = row.item.text;
@@ -66,6 +79,12 @@
           {/each}
         </div>
         <span>{row.item.text}</span>
+      {:else if importLines}
+        <span class="import"
+          ><span>{importLines.head}</span>{#each importLines.sources as source, i (i)}<span
+              class="import-source">{source}</span
+            >{/each}</span
+        >
       {:else}
         {row.item.text}
       {/if}
@@ -108,6 +127,19 @@
 />
 
 <style>
+  .import {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    white-space: normal;
+  }
+
+  .import-source {
+    font-family: var(--sk-mono);
+    font-size: var(--sk-fs-4);
+    color: var(--sk-blue-2);
+  }
+
   .editing {
     width: 78%;
     padding: 10px 12px 10px 15px;

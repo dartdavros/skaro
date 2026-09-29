@@ -3,18 +3,32 @@
   import type { TaskDetail } from '../../../shared/ipc';
   import StatusChip from './StatusChip.svelte';
 
-  /** Left panel of the task screen: breadcrumbs, status, links, goal, criteria, notes. */
+  /**
+   * Left panel of the task screen: breadcrumbs, status, links (the specification among them),
+   * goal, criteria with their requirements R-n, notes.
+   */
   let {
     task,
     oncollapse,
     ontasks,
     ontoggle,
+    onspec,
   }: {
     task: TaskDetail;
     oncollapse: () => void;
     ontasks: () => void;
     ontoggle: (index: number) => void;
+    /** Opens the specification in "Документы". */
+    onspec: (path: string) => void;
   } = $props();
+
+  /** "R-2 Проверка прав…": the requirement the criterion names, and the rest of its text. */
+  function requirement(text: string): { id: string; tip: string; rest: string } | undefined {
+    const m = /^(R-\d+)\s+(.*)$/s.exec(text);
+    if (!m) return undefined;
+    const req = task.requirements?.find((r) => r.id === m[1]);
+    return { id: m[1]!, tip: req ? `${req.id} · ${req.text}` : m[1]!, rest: m[2]! };
+  }
 </script>
 
 <div class="desc">
@@ -74,6 +88,18 @@
         {/each}
       </div>
     {/if}
+    {#if task.spec}
+      {@const spec = task.spec}
+      <div class="line">
+        {t('task.spec')}
+        <button
+          type="button"
+          class="spec"
+          data-tip={t('task.spec.tip', { title: spec.title })}
+          onclick={() => onspec(spec.path)}>SPEC-{spec.id}</button
+        >
+      </div>
+    {/if}
     {#if task.branch}
       <div class="branch" data-tip={t('task.branch.tip')}>
         <Icon name="branch" size={12} stroke={1.9} />
@@ -96,6 +122,7 @@
       <span class="sk-label">{t('task.criteria')}</span>
       <div class="criteria">
         {#each task.criteria as criterion, i (i)}
+          {@const req = requirement(criterion.text)}
           <button type="button" class="criterion" onclick={() => ontoggle(i)}>
             <span class="box" class:done={criterion.done}>
               {#if criterion.done}<Icon
@@ -105,7 +132,10 @@
                   color="var(--sk-text-3)"
                 />{/if}
             </span>
-            <span class="text" class:done={criterion.done}>{criterion.text}</span>
+            <span class="text" class:done={criterion.done}
+              >{#if req}<span class="req" data-tip={req.tip}>{req.id}</span>
+                {req.rest}{:else}{criterion.text}{/if}</span
+            >
           </button>
         {/each}
       </div>
@@ -234,6 +264,28 @@
     gap: 4px;
     font-family: var(--sk-mono);
     color: var(--sk-text-13);
+  }
+
+  .spec {
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: var(--sk-mono);
+    font-size: inherit;
+    color: var(--sk-link);
+    cursor: pointer;
+  }
+
+  .spec:hover {
+    text-decoration: underline;
+  }
+
+  .req {
+    font-family: var(--sk-mono);
+    font-size: var(--sk-fs-4);
+    font-weight: 600;
+    color: var(--sk-link);
+    cursor: default;
   }
 
   .branch {

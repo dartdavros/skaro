@@ -86,6 +86,8 @@ export interface TaskSummary extends TaskRef {
   updatedAt: number;
   /** Position inside its milestone. */
   order?: number;
+  /** Specification the task implements (architecture.md 3.7). */
+  spec?: { id: string; title: string; path: string };
 }
 
 /** A milestone of the plan ("План", Plan mockup). */
@@ -98,22 +100,74 @@ export interface MilestoneInfo {
   criteria?: string;
 }
 
+/** A source of an import as the import modal shows it (architecture.md 12.1). */
+export interface ImportSource {
+  path: string;
+  /** "~/Docs/shop" */
+  display: string;
+  kind: 'folder' | 'file' | 'archive';
+  files: number;
+  readable: number;
+  unsupported: number;
+  /** Extensions Skaro does not read: ".vsdx". */
+  formats: string[];
+  missing?: boolean;
+}
+
+export type ImportItemType =
+  'brief' | 'architecture' | 'adr' | 'spec' | 'doc' | 'milestone' | 'task';
+
+/** An artifact on the import review screen (ImportReview mockup). */
+export interface ImportReviewItem {
+  key: string;
+  type: ImportItemType;
+  title: string;
+  /** Changes an existing artifact ("обновит"). */
+  update: boolean;
+  sources: string[];
+  /** Text in the Skaro format; for a task its body (goal, criteria, notes). */
+  body: string;
+  /** Text now, for an update. */
+  before?: string;
+  /** Task: milestone (staged key or id), dependencies and specification. */
+  milestone?: string;
+  dependsOn: string[];
+  spec?: string;
+  /** Keys of other staged artifacts it links to. */
+  refs: string[];
+  /** Milestone: goal and done criterion; task: goal and criteria. */
+  fields?: { goal?: string; doneWhen?: string; criteria?: string[] };
+}
+
+export interface ImportReview {
+  items: ImportReviewItem[];
+  /** Numbers new milestones get, by key: "M04". */
+  milestones: Record<string, string>;
+  skipped: { path: string; reason: string }[];
+  notes: string[];
+}
+
 /** A document of "Документы" (Documents mockup). */
 export interface DocEntry {
-  kind: 'brief' | 'architecture' | 'adr' | 'doc';
+  kind: 'brief' | 'architecture' | 'adr' | 'spec' | 'doc';
   /** Relative to the project root: ".skaro/adr/0001-database.md". */
   path: string;
-  /** ADR title or the file name of a free document. */
+  /** ADR or specification title, or the file name of a free document. */
   title: string;
   /** Last change of the file on disk. */
   editedAt: number;
-  adr?: {
-    id: string;
-    status: 'proposed' | 'accepted' | 'superseded';
-    date?: string;
-    replaces?: string;
-    replacedBy?: string;
-  };
+  adr?: DocRecord;
+  /** A specification (architecture.md 3.7): numbered and with a status, like an ADR. */
+  spec?: DocRecord;
+}
+
+/** Number, status, date and links of an ADR or a specification. */
+export interface DocRecord {
+  id: string;
+  status: 'proposed' | 'accepted' | 'superseded';
+  date?: string;
+  replaces?: string;
+  replacedBy?: string;
 }
 
 export interface MilestoneInput {
@@ -145,6 +199,8 @@ export interface TaskDetail extends TaskSummary {
   notes?: string;
   /** "Итог", filled by Skaro after the merge. */
   summary?: string;
+  /** Requirements R-n of the task's specification, for criteria that name them. */
+  requirements?: { id: string; text: string }[];
 }
 
 export interface RunInfo {
@@ -191,7 +247,12 @@ export interface ChatSettings {
   agent: AgentId;
   model?: string;
   effort?: string;
+  /** "Спрашивать" by default; "Полный доступ" runs everything without asking (owner, 2026-09-29). */
+  permissionMode?: ChatPermissionMode;
 }
+
+/** A chat works in the project's main working copy: no "auto within the task" there. */
+export type ChatPermissionMode = Extract<PermissionMode, 'ask' | 'full'>;
 
 /** A project chat in the list ("Чат" section). */
 export interface ChatSummary {
@@ -199,6 +260,8 @@ export interface ChatSummary {
   title: string;
   agent: AgentId;
   archived: boolean;
+  /** "Импорт документации" (architecture.md 12): the chat stages the import. */
+  kind?: 'import';
   /** The agent is answering now. */
   live: boolean;
   updatedAt: number;
@@ -222,6 +285,8 @@ export type ProposalAction =
       tasks?: string[];
       /** ADR: the text after "Изменить". */
       adr?: { title: string; body: string };
+      /** Import: keys of the staged artifacts to write. */
+      import?: string[];
     }
   | { action: 'reject' }
   /** An applied document goes back to its previous text. */
@@ -243,6 +308,8 @@ export interface ProjectInfo {
   path: string;
   /** The folder is gone (moved or deleted). */
   missing: boolean;
+  /** The logo picked in "Параметры проекта", a data: URL; without it — initials. */
+  logo?: string;
 }
 
 /** A project card on "Проекты" (Projects mockup): status, current milestone, running tasks. */
@@ -252,6 +319,7 @@ export interface ProjectCard {
   path: string;
   /** The folder is gone (moved or deleted). */
   missing: boolean;
+  logo?: string;
   branch?: string;
   /** The first milestone not done yet (or the last one when all are done). */
   milestone?: { id: string; title: string; done: number; total: number };
@@ -263,55 +331,6 @@ export interface ProjectCard {
   model?: string;
   /** Last activity: runs, chats, opening the project. */
   activeAt: number;
-}
-
-/** A task on the project overview: waiting for the user or worked on now. */
-export interface OverviewTask {
-  id: string;
-  title: string;
-  milestone?: { id: string; title: string };
-  status: 'review' | 'needs_answer' | 'in_progress';
-  /** When the run started (working) or stopped (waiting for the user). */
-  since: number;
-  /** What the task changed so far in its worktree. */
-  stats?: { files: number; added: number; removed: number };
-  agent: AgentId;
-  model?: string;
-}
-
-/** "Недавние события": what happened, with the titles it names. */
-export interface ProjectEvent {
-  kind: string;
-  data: Record<string, unknown>;
-  at: number;
-  taskTitle?: string;
-  milestoneTitle?: string;
-}
-
-/** "Обзор" (ProjectOverview mockup). */
-export interface ProjectOverview {
-  id: string;
-  name: string;
-  path: string;
-  branch?: string;
-  /** No uncommitted changes in the main working copy. */
-  clean?: boolean;
-  attention: OverviewTask[];
-  running: OverviewTask[];
-  /** Tasks waiting for a free slot. */
-  queued: { id: string; title: string }[];
-  /** "Старт проекта": what is there already. */
-  start: {
-    brief?: { updatedAt: number };
-    architecture?: { adrs: number; rules: number };
-    milestones: number;
-    tasks: number;
-    /** A milestone without tasks yet. */
-    emptyMilestone?: { id: string; title: string };
-    hidden: boolean;
-  };
-  milestones: { id: string; title: string; done: number; total: number }[];
-  events: ProjectEvent[];
 }
 
 /** "Параметры проекта" (ProjectSettings mockup): the project's .skaro/config.yaml. */
@@ -344,6 +363,9 @@ export interface ProjectDefaults {
   agentFiles: boolean;
   agentInstructions: string;
 }
+
+/** A logo is a small picture: larger files are refused ("Параметры проекта"). */
+export const LOGO_MAX_BYTES = 1024 * 1024;
 
 export const PROJECT_DEFAULTS_KEY = 'defaults.project';
 
@@ -422,10 +444,24 @@ export interface Methods {
   /** "Найти заново": the project folder moved to `path`. */
   'projects.relocate': (id: string, path: string) => ProjectInfo;
   'projects.openIn': (id: string, app: 'explorer' | 'terminal' | 'editor') => void;
-  'project.overview': (projectId: string) => ProjectOverview;
+  /** The name shown in Skaro; the folder keeps its name. */
+  'project.rename': (projectId: string, name: string) => ProjectInfo;
+  /** SVG, PNG or JPG picker; undefined if cancelled. Throws "too large" over LOGO_MAX_BYTES. */
+  'project.pickLogo': (projectId: string) => ProjectInfo | undefined;
+  'project.removeLogo': (projectId: string) => ProjectInfo;
   'project.settings': (projectId: string) => ProjectSettings;
   /** Saves at once; turning "agentFiles" on or off writes or removes the Skaro block. */
   'project.saveSettings': (projectId: string, settings: ProjectSettings) => void;
+  /** The project has code of its own, not only Skaro files (D-32: what the start screens offer). */
+  'project.hasCode': (projectId: string) => boolean;
+  /** "Импорт документации": what is in the picked folders, files and archives. */
+  'import.scan': (paths: string[]) => ImportSource[];
+  /** Copies the sources and starts the import chat; returns the chat. */
+  'import.start': (projectId: string, paths: string[], settings: ChatSettings) => ChatSummary;
+  /** What the import agent staged, for the review screen. */
+  'import.review': (projectId: string, chatId: string) => ImportReview;
+  /** "Открыть исходный файл" of an import source. */
+  'import.openSource': (projectId: string, chatId: string, source: string) => void;
   'tabs.get': () => TabsState;
   'tabs.set': (state: TabsState) => void;
   'agents.list': () => AgentInfo[];
@@ -472,9 +508,16 @@ export interface Methods {
   'docs.write': (projectId: string, path: string, text: string) => void;
   /** "Новый документ": .skaro/docs/<name>.md, empty. */
   'docs.create': (projectId: string, name: string) => DocEntry;
+  /** "Новая спецификация": .skaro/specs/<n>-<slug>.md with the empty sections, proposed. */
+  'docs.createSpec': (projectId: string, title: string) => DocEntry;
   'docs.setAdrStatus': (
     projectId: string,
     adrId: string,
+    status: 'proposed' | 'accepted' | 'superseded',
+  ) => void;
+  'docs.setSpecStatus': (
+    projectId: string,
+    specId: string,
     status: 'proposed' | 'accepted' | 'superseded',
   ) => void;
   /** "Показать в папке". */
@@ -553,6 +596,8 @@ export interface Events {
   'chat.events': { projectId: string; chatId: string; seq: number; events: TimelineEvent[] };
   /** The chat list or a chat's state outside the timeline changed. */
   'chats.changed': { projectId: string; chatId?: string };
+  /** "Импорт · 6 из 19": an import being written (ImportReview mockup). */
+  'import.progress': { projectId: string; chatId: string; done: number; total: number };
 }
 
 export type MethodName = keyof Methods;
@@ -583,9 +628,16 @@ export const METHODS = [
   'projects.overview',
   'projects.relocate',
   'projects.openIn',
-  'project.overview',
+  'project.rename',
+  'project.pickLogo',
+  'project.removeLogo',
   'project.settings',
   'project.saveSettings',
+  'project.hasCode',
+  'import.scan',
+  'import.start',
+  'import.review',
+  'import.openSource',
   'tabs.get',
   'tabs.set',
   'agents.list',
@@ -614,7 +666,9 @@ export const METHODS = [
   'docs.read',
   'docs.write',
   'docs.create',
+  'docs.createSpec',
   'docs.setAdrStatus',
+  'docs.setSpecStatus',
   'docs.reveal',
   'task.open',
   'task.send',
@@ -651,6 +705,7 @@ export const EVENTS = [
   'task.changed',
   'chat.events',
   'chats.changed',
+  'import.progress',
 ] as const satisfies readonly EventName[];
 
 // Compile-time check that METHODS covers every method.
@@ -664,6 +719,8 @@ export const EVENT_CHANNEL = 'skaro:event';
 /** What the renderer sees as `window.skaro`. */
 export interface SkaroApi {
   readonly platform: string;
+  /** Path on disk of a file or a folder dropped into the window. */
+  pathOf(file: File): string;
   invoke<M extends MethodName>(
     method: M,
     ...args: Parameters<Methods[M]>

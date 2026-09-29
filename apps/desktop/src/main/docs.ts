@@ -1,9 +1,10 @@
-// "Документы" (Documents mockup): brief, architecture, ADRs and free documents in .skaro/.
+// "Документы" (Documents mockup): brief, architecture, ADRs, specifications and free documents
+// in .skaro/.
 
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { SKARO_DIR, type AdrStatus } from '@skaro/core';
-import type { DocEntry, Events, EventName } from '../shared/ipc';
+import { SKARO_DIR, type Adr, type AdrStatus, type Spec, type SpecStatus } from '@skaro/core';
+import type { DocEntry, DocRecord, Events, EventName } from '../shared/ipc';
 import type { Projects } from './projects';
 
 interface Deps {
@@ -42,13 +43,16 @@ export class Docs {
         path: adr.path,
         title: adr.title,
         editedAt: await edited(adr.path),
-        adr: {
-          id: adr.id,
-          status: adr.status,
-          ...(adr.date ? { date: adr.date } : {}),
-          ...(adr.replaces ? { replaces: adr.replaces } : {}),
-          ...(adr.replacedBy ? { replacedBy: adr.replacedBy } : {}),
-        },
+        adr: record(adr),
+      });
+    }
+    for (const spec of artifacts.specs) {
+      entries.push({
+        kind: 'spec',
+        path: spec.path,
+        title: spec.title,
+        editedAt: await edited(spec.path),
+        spec: record(spec),
       });
     }
     for (const doc of artifacts.docs) {
@@ -68,7 +72,8 @@ export class Docs {
     const artifacts = await context.load();
     const doc =
       [artifacts.brief, artifacts.architecture, ...artifacts.docs].find((d) => d?.path === path) ??
-      artifacts.adrs.find((a) => a.path === path);
+      artifacts.adrs.find((a) => a.path === path) ??
+      artifacts.specs.find((s) => s.path === path);
     if (!doc) throw new Error(`unknown document ${path}`);
     return doc.body;
   }
@@ -76,10 +81,11 @@ export class Docs {
   async write(projectId: string, path: string, text: string): Promise<void> {
     const context = this.deps.projects.get(projectId);
     const inner = this.inner(path);
-    const adr = /^adr\//.test(inner)
-      ? (await context.load()).adrs.find((a) => a.path === path)
-      : undefined;
+    const artifacts = /^(adr|specs)\//.test(inner) ? await context.load() : undefined;
+    const adr = artifacts?.adrs.find((a) => a.path === path);
+    const spec = artifacts?.specs.find((s) => s.path === path);
     if (adr) await context.store.writeAdr(adr.id, text);
+    else if (spec) await context.store.writeSpec(spec.id, text);
     else await context.store.writeDoc(inner, text);
     this.changed(projectId);
   }
@@ -91,6 +97,25 @@ export class Docs {
     const doc = await context.store.writeDoc(`docs/${file}.md`, '');
     this.changed(projectId);
     return { kind: 'doc', path: doc.path, title: `${file}.md`, editedAt: Date.now() };
+  }
+
+  async createSpec(projectId: string, title: string): Promise<DocEntry> {
+    const name = title.trim();
+    if (!name) throw new Error('a specification needs a title');
+    const spec = await this.deps.projects.get(projectId).store.createSpec({ title: name });
+    this.changed(projectId);
+    return {
+      kind: 'spec',
+      path: spec.path,
+      title: spec.title,
+      editedAt: Date.now(),
+      spec: record(spec),
+    };
+  }
+
+  async setSpecStatus(projectId: string, specId: string, status: SpecStatus): Promise<void> {
+    await this.deps.projects.get(projectId).store.setSpecStatus(specId, status);
+    this.changed(projectId);
   }
 
   async setAdrStatus(projectId: string, adrId: string, status: AdrStatus): Promise<void> {
@@ -113,4 +138,14 @@ export class Docs {
     this.deps.projects.get(projectId).invalidate();
     this.deps.emit('project.changed', { projectId });
   }
+}
+
+function record(item: Adr | Spec): DocRecord {
+  return {
+    id: item.id,
+    status: item.status,
+    ...(item.date ? { date: item.date } : {}),
+    ...(item.replaces ? { replaces: item.replaces } : {}),
+    ...(item.replacedBy ? { replacedBy: item.replacedBy } : {}),
+  };
 }

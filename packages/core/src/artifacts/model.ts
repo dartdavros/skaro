@@ -27,6 +27,8 @@ export interface Task {
   agent?: string;
   model?: string;
   branch?: string;
+  /** Specification the task implements, e.g. "0003" (architecture.md 3.7). */
+  spec?: string;
   created?: string;
   body: string;
   /** Path relative to the project root. */
@@ -49,6 +51,22 @@ export interface Adr {
   title: string;
   status: AdrStatus;
   /** ADR this one replaces / is replaced by. */
+  replaces?: string;
+  replacedBy?: string;
+  date?: string;
+  body: string;
+  path: string;
+}
+
+export type SpecStatus = AdrStatus;
+
+/** What a function does: problem, scenarios, requirements R-n (architecture.md 3.7, D-30). */
+export interface Spec {
+  /** Four digits, e.g. "0003"; shown as SPEC-0003. */
+  id: string;
+  title: string;
+  status: SpecStatus;
+  /** Specification this one replaces / is replaced by. */
   replaces?: string;
   replacedBy?: string;
   date?: string;
@@ -123,6 +141,7 @@ export interface ProjectArtifacts {
   architecture?: Doc;
   docs: Doc[];
   adrs: Adr[];
+  specs: Spec[];
   milestones: Milestone[];
   tasks: Task[];
   problems: ArtifactProblem[];

@@ -36,6 +36,8 @@ export type FeedRow =
   | { type: 'decision'; id: string; item: Of<'decision'> }
   /** A chat agent's proposal: a card between the replies (agent-output.md 5.4). */
   | { type: 'proposal'; id: string; item: Of<'proposal'> }
+  /** "Подготовлено 30 файлов · 12 пропущено": the copy of an import's sources. */
+  | { type: 'import_prep'; id: string; item: Of<'import_prep'> }
   | {
       type: 'turn_end';
       id: string;
@@ -123,7 +125,8 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
         }
         break;
       case 'reasoning':
-        rows.push({ type: 'reasoning', id: item.id, item });
+        // Only the live "Думает…" line; a finished "Думал 12 с" carries nothing (owner's call).
+        if (item.status === 'running') rows.push({ type: 'reasoning', id: item.id, item });
         break;
       case 'command':
         rows.push({ type: 'command', id: item.id, item });
@@ -139,6 +142,9 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
         break;
       case 'proposal':
         rows.push({ type: 'proposal', id: item.id, item });
+        break;
+      case 'import_prep':
+        rows.push({ type: 'import_prep', id: item.id, item });
         break;
       case 'decision':
         // Permissions show on the row they were about; the rest get a summary line.

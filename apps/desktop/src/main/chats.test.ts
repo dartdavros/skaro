@@ -48,7 +48,8 @@ class FakeSession implements AgentSession {
   steer = (input: UserInput) => this.send(input);
   respond = async () => undefined;
   setModel = async () => undefined;
-  setPermissionMode = async () => undefined;
+  modes: string[] = [];
+  setPermissionMode = async (mode: string) => void this.modes.push(mode);
   rewind = async () => undefined;
   compact = async () => undefined;
   interrupt = async () => undefined;
@@ -137,11 +138,29 @@ async function proposals(chatId: string): Promise<ProposalItem[]> {
 }
 
 describe('project chats', () => {
-  it('runs the agent read-only in the project with Skaro tools and a title from the message', async () => {
+  it('runs the agent in the ask mode in the project with Skaro tools and a title from the message', async () => {
     const { chatId } = await startChat();
-    expect(started).toMatchObject({ cwd: root, readOnly: true, model: 'm', effort: 'e' });
+    expect(started).toMatchObject({ cwd: root, permissionMode: 'ask', model: 'm', effort: 'e' });
+    expect(started?.readOnly).toBeUndefined();
     expect(started?.mcpServers?.['skaro']?.url).toBe(mcp.url);
     expect(chats.list(projectId)).toMatchObject([{ id: chatId, title: 'Дальше делаем платежи' }]);
+  });
+
+  it('runs a chat with full access and switches its permission mode live', async () => {
+    const chat = await chats.create(
+      projectId,
+      { agent: 'claude-code', model: 'm', effort: 'e', permissionMode: 'full' },
+      { text: 'Распакуй архив' },
+    );
+    await until(() => session.received.length === 1);
+    expect(started).toMatchObject({ permissionMode: 'full' });
+    expect((await chats.open(projectId, chat.id)).settings.permissionMode).toBe('full');
+    // A new chat starts asking again.
+    expect((await chats.defaults(projectId)).permissionMode).toBeUndefined();
+
+    await chats.setSettings(projectId, chat.id, { agent: 'claude-code', model: 'm', effort: 'e' });
+    expect(session.modes).toEqual(['ask']);
+    expect((await chats.open(projectId, chat.id)).settings.permissionMode).toBeUndefined();
   });
 
   it('applies documents at once and rolls them back', async () => {
@@ -235,6 +254,175 @@ describe('project chats', () => {
     expect(task.title).toBe('Схема БД и миграции');
     expect(task.body).toContain('Таблицы.');
     expect((await proposals(chatId)).map((p) => p.state)).toEqual(['applied', 'rejected']);
+  });
+
+  it('accepts a specification, links tasks to it and applies its change', async () => {
+    const { chatId, scope } = await startChat();
+    const spec = '## Проблема\n\nВозвраты вручную.\n\n## Требования\n\n- R-1 Полный возврат\n';
+    await chats.proposeSpec({ title: 'Возвраты', content: spec }, scope);
+    const [card] = await proposals(chatId);
+    expect(card?.proposal).toMatchObject({ type: 'spec', id: '0001', title: 'Возвраты' });
+    await chats.proposal(projectId, chatId, card!.id, { action: 'apply' });
+    let artifacts = await new ArtifactStore(root).load();
+    expect(artifacts.specs.map((s) => [s.id, s.title, s.status])).toEqual([
+      ['0001', 'Возвраты', 'accepted'],
+    ]);
+
+    const unknown = await chats.proposeTasks(
+      { tasks: [{ ref: 'x', title: 'X', goal: 'g', criteria: ['c'], dependsOn: [], spec: '9' }] },
+      scope,
+    );
+    expect(unknown.isError).toBe(true);
+    await chats.proposeTasks(
+      {
+        tasks: [
+          { ref: 'r', title: 'Возврат', goal: 'g', criteria: ['c'], dependsOn: [], spec: '1' },
+        ],
+      },
+      scope,
+    );
+    const plan = (await proposals(chatId)).at(-1)!;
+    await chats.proposal(projectId, chatId, plan.id, { action: 'apply' });
+
+    // Auto-apply is on by default: the change is written at once.
+    await chats.proposeSpec({ id: '0001', content: `${spec}- R-2 Частичный возврат\n` }, scope);
+    const change = (await proposals(chatId)).at(-1)!;
+    expect(change).toMatchObject({
+      state: 'applied',
+      proposal: { type: 'spec_change', id: '0001' },
+    });
+    artifacts = await new ArtifactStore(root).load();
+    expect(artifacts.tasks.find((t) => t.title === 'Возврат')?.spec).toBe('0001');
+    expect(artifacts.specs[0]?.body).toContain('R-2 Частичный возврат');
+  });
+
+  it('imports documentation: copies the sources, stages artifacts and applies the picked', async () => {
+    const docs = join(dataDir, 'docs');
+    await mkdir(join(docs, 'adr'), { recursive: true });
+    await writeFile(join(docs, 'README.md'), '# Shop\n\nМагазин.\n');
+    await writeFile(join(docs, 'adr', 'queue.md'), '# Очередь\n\nBullMQ.\n');
+    await writeFile(join(docs, 'flows.vsdx'), 'binary');
+    await writeFile(join(docs, 'roles.csv'), 'роль,права\nowner,всё\n');
+
+    const [source] = await chats.scanImport([docs]);
+    expect(source).toMatchObject({ kind: 'folder', files: 4, readable: 3, formats: ['.vsdx'] });
+
+    const chat = await chats.startImport(projectId, [docs], { agent: 'claude-code' });
+    expect(chat.kind).toBe('import');
+    await until(() => session.received.length === 1);
+    expect(session.received[0]).toMatch(/^Импортировать документацию\n.+ · 4 файла$/);
+    expect(started?.readDirs?.[0]).toContain('imports');
+    const scope: SkaroScope = {
+      kind: 'project_chat',
+      projectId,
+      chatId: chat.id,
+      importId: 'x',
+    };
+    const manifest = JSON.parse(
+      await readFile(join(started!.readDirs![0]!, 'manifest.json'), 'utf8'),
+    ) as { files: { source: string; action: string; copy?: string }[] };
+    expect(manifest.files.map((f) => f.action).sort()).toEqual([
+      'converted',
+      'copied',
+      'copied',
+      'skipped',
+    ]);
+    const table = manifest.files.find((f) => f.source.endsWith('roles.csv'))!;
+    expect(await readFile(join(started!.readDirs![0]!, table.copy!), 'utf8')).toContain(
+      '| owner | всё |',
+    );
+
+    await chats.stageArtifact(
+      { type: 'brief', key: 'brief', body: '## Что строим\n\nМагазин.', sources: ['README.md'] },
+      scope,
+    );
+    await chats.stageArtifact(
+      {
+        type: 'adr',
+        key: 'adr-queue',
+        title: 'Очередь задач',
+        body: '## Решение\n\nBullMQ.',
+        sources: ['adr/queue.md'],
+      },
+      scope,
+    );
+    await chats.stageArtifact(
+      { type: 'milestone', key: 'm1', title: 'Возвраты', goal: 'Г', doneWhen: 'К', sources: [] },
+      scope,
+    );
+    await chats.stageArtifact(
+      {
+        type: 'task',
+        key: 't1',
+        title: 'Возврат из заказа',
+        goal: 'Через очередь {{adr-queue}}.',
+        criteria: ['Работает'],
+        milestone: 'm1',
+        sources: ['code'],
+      },
+      scope,
+    );
+    await chats.stageArtifact(
+      {
+        type: 'task',
+        key: 't2',
+        title: 'Чек возврата',
+        goal: 'Чек.',
+        criteria: ['Есть чек'],
+        dependsOn: ['t1', 'nope'],
+        sources: ['code'],
+      },
+      scope,
+    );
+    const bad = await chats.finishImport({ skipped: [], notes: [] }, scope);
+    expect(bad.isError).toBe(true);
+    await chats.stageArtifact(
+      {
+        type: 'task',
+        key: 't2',
+        title: 'Чек возврата',
+        goal: 'Чек.',
+        criteria: ['Есть чек'],
+        dependsOn: ['t1'],
+        sources: ['code'],
+      },
+      scope,
+    );
+    await chats.finishImport({ skipped: [{ path: 'x.md', reason: 'дубликат' }], notes: [] }, scope);
+    const [card] = await proposals(chat.id);
+    expect(card?.proposal).toMatchObject({
+      type: 'import',
+      total: 5,
+      skipped: 2,
+      groups: [
+        { kind: 'brief', count: 1 },
+        { kind: 'adr', count: 1 },
+        { kind: 'plan', count: 1, tasks: 2 },
+      ],
+    });
+    const review = await chats.importReview(projectId, chat.id);
+    expect(review.items.find((i) => i.key === 't1')?.refs.sort()).toEqual(['adr-queue', 'm1']);
+
+    // The milestone is not taken: its task goes without one; the ADR link becomes its number.
+    await chats.proposal(projectId, chat.id, card!.id, {
+      action: 'apply',
+      import: ['brief', 'adr-queue', 't1', 't2'],
+    });
+    const artifacts = await new ArtifactStore(root).load();
+    expect(artifacts.brief?.body).toContain('Магазин.');
+    expect(artifacts.adrs.map((a) => [a.id, a.title, a.status])).toEqual([
+      ['0001', 'Очередь задач', 'accepted'],
+    ]);
+    const t1 = artifacts.tasks.find((t) => t.title === 'Возврат из заказа')!;
+    const t2 = artifacts.tasks.find((t) => t.title === 'Чек возврата')!;
+    expect(t1.milestone).toBeUndefined();
+    expect(t1.body).toContain('Через очередь ADR-0001.');
+    expect(t2.dependsOn).toEqual([t1.id]);
+    expect(artifacts.milestones).toEqual([]);
+    expect((await proposals(chat.id))[0]).toMatchObject({
+      state: 'applied',
+      result: { applied: 4 },
+    });
   });
 
   it('keeps the chat after a restart and makes an archived chat read-only', async () => {

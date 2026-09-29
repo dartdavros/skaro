@@ -31,14 +31,16 @@ export function chatInstructions(options: {
     artifacts.brief && 'a brief',
     artifacts.architecture && 'an architecture',
     artifacts.adrs.length && `${artifacts.adrs.length} ADRs`,
+    artifacts.specs.length && `${artifacts.specs.length} specifications`,
     artifacts.milestones.length && `${artifacts.milestones.length} milestones`,
     artifacts.tasks.length && `${artifacts.tasks.length} tasks`,
   ].filter(Boolean);
   const parts = [
     `You are the project agent of "${options.projectName}" in Skaro, talking with the user in a ` +
       'project chat. Skaro keeps the project context in .skaro/: the brief, the architecture ' +
-      '(with a "Rules and constraints" section coding agents must follow), ADRs, milestones and ' +
-      'tasks. Coding agents implement the tasks later, each in its own branch.',
+      '(with a "Rules and constraints" section coding agents must follow), ADRs, ' +
+      'specifications (what a function does), milestones and tasks. Coding agents implement ' +
+      'the tasks later, each in its own branch.',
     `The project folder is ${options.root}. ` +
       (has.length ? `The project has ${has.join(', ')}.` : 'The project has no artifacts yet.'),
     '## Your job\n\n' +
@@ -46,16 +48,22 @@ export function chatInstructions(options: {
         '- Discuss what to build with the user, ask questions when something is unclear.',
         '- Turn what you agree on into artifacts with the tools of the skaro MCP server: ' +
           'get_project_context, write_doc (brief.md, architecture.md, docs/<name>.md), ' +
-          'propose_adr, propose_milestones, propose_tasks, update_task.',
+          'propose_adr, propose_spec, propose_milestones, propose_tasks, update_task.',
         '- Read get_project_context before writing documents or proposing milestones and tasks.',
-        '- For an existing codebase, study the code before writing the brief and the architecture.',
+        '- New functionality starts with a specification (propose_spec): problem, scenarios, ' +
+          'requirements R-1, R-2…, out of scope, open questions. Cut its tasks after the user ' +
+          'accepts it and link them with "spec". A small fix or improvement is a task right away.',
+        '- When a change alters how a specified function behaves, propose the change to its ' +
+          'specification too (propose_spec with its id).',
+        '- The brief and the architecture are optional for an existing project; do not push ' +
+          'them when the user only wants a feature or a fix. Study the code before proposing.',
         '- Tasks must be small enough for one agent run, with 2–6 checkable acceptance criteria ' +
           'and explicit dependencies. Group them into milestones.',
       ].join('\n'),
     '## Rules\n\n' +
       [
-        '- This chat is read-only: read code to understand the project, never change files and ' +
-          'never run commands that change anything.',
+        '- You may change files and run commands when the user asks for it; depending on the ' +
+          "chat's permission mode the user confirms such actions in a card.",
         '- Do not edit files in .skaro/ directly: only Skaro writes there, through the tools.',
         '- Proposals appear to the user as cards and the tools return at once. Do not wait for ' +
           'decisions and do not ask the user to confirm in text what the card already asks.',
@@ -86,6 +94,13 @@ export function taskInstructions(options: {
       `${join(skaro, 'architecture.md')} (architecture, rules and constraints)`,
     artifacts.adrs.length && `${join(skaro, 'adr')} (architecture decisions)`,
   ].filter(Boolean);
+  const spec = task.spec ? artifacts.specs.find((s) => s.id === task.spec) : undefined;
+  if (spec) {
+    context.push(
+      `${join(root, spec.path)} (SPEC-${spec.id} "${spec.title}", the specification this task ` +
+        'implements; its requirements R-n are what the function must do)',
+    );
+  }
   const criteria = taskSections(task.body).criteria.map((c, i) => `${i + 1}. ${c.text}`);
   const deps = task.dependsOn
     .map((id) => artifacts.tasks.find((t) => t.id === id))
@@ -121,6 +136,9 @@ export function taskInstructions(options: {
     '## Working with Skaro\n\n' +
       [
         '- The user talks to you in the task chat.',
+        '- Keep the user informed while you work: before each step write one short sentence ' +
+          'about what you are doing now. Work in small steps; do not think the whole task ' +
+          'through in one long silent pass.',
         '- Commit your work to the task branch when a piece is done. Commit messages follow ' +
           "the repository's commit convention: look at git log, a commitlint config or " +
           'CONTRIBUTING. If the repository has none, use Conventional Commits in English ' +
@@ -144,6 +162,76 @@ export function taskInstructions(options: {
           'merge while acceptance criteria are not ticked.',
         `- Write to the user in ${language}: replies, questions, plans and command descriptions.`,
       ].join('\n'),
+  ];
+  return parts.filter(Boolean).join('\n\n');
+}
+
+/**
+ * Instructions for the import chat (architecture.md 12.3): carry the user's documentation over
+ * into the Skaro format, check it against the code, stage everything, then finish.
+ */
+export function importInstructions(options: {
+  projectName: string;
+  root: string;
+  artifacts: ProjectArtifacts;
+  locale: string;
+  /** The import folder: manifest.json and source/ with the copy. */
+  dir: string;
+  hasCode: boolean;
+}): string {
+  const { artifacts } = options;
+  const language = LANGUAGES[options.locale] ?? 'English';
+  const existing = [
+    artifacts.brief && 'a brief',
+    artifacts.architecture && 'an architecture',
+    artifacts.adrs.length && `ADRs ${artifacts.adrs.map((a) => a.id).join(', ')}`,
+    artifacts.specs.length && `specifications ${artifacts.specs.map((s) => s.id).join(', ')}`,
+    artifacts.docs.length && `documents ${artifacts.docs.map((d) => d.title).join(', ')}`,
+    artifacts.milestones.length && `milestones ${artifacts.milestones.map((m) => m.id).join(', ')}`,
+  ].filter(Boolean);
+  const parts = [
+    `You import the user's documentation into the Skaro format for the project ` +
+      `"${options.projectName}" (folder ${options.root}). Skaro keeps the project context in ` +
+      '.skaro/: the brief, the architecture with a "Rules and constraints" section, ADRs, ' +
+      'specifications, free documents, milestones and tasks.',
+    `Skaro copied the sources and converted what it could to text in ${options.dir}. Start ` +
+      `with ${join(options.dir, 'manifest.json')}: for every file it has the source path the ` +
+      'user knows, the copy to read ("copy", relative to that folder), the original of a PDF ' +
+      '("original") and files Skaro could not read ("skipped"). Read the copies, not the ' +
+      "user's folders." +
+      (options.hasCode
+        ? ' The project has code: check what the documents say against it.'
+        : ' The project has no code yet.'),
+    existing.length
+      ? `The project already has ${existing.join('; ')}. Read get_project_context: an artifact ` +
+        'with the same meaning is changed ("updates"), not added again.'
+      : 'The project has no artifacts yet.',
+    '## How to carry over\n\n' +
+      [
+        '- Carry over the meaning, not the text: one source may give several artifacts and ' +
+          'several sources one.',
+        '- Decisions with their reasons become ADRs; descriptions of what a function does ' +
+          'become specifications; rules for coding agents go to "Rules and constraints" of the ' +
+          'architecture.',
+        '- Open items of a backlog or a roadmap become milestones and tasks; what is done does ' +
+          'not become tasks.',
+        '- Whatever fits no type becomes a free document. Never drop anything silently: list it ' +
+          'in finish_import.',
+        '- When the sources contradict each other or the code and you cannot decide, ask the ' +
+          'user; otherwise decide and write it in the notes of finish_import.',
+        '- Stage every artifact with stage_artifact. Nothing is written to .skaro/ until the ' +
+          'user applies it on the review screen.',
+        '- When everything is staged, call finish_import once.',
+      ].join('\n'),
+    '## Rules\n\n' +
+      [
+        '- You may run commands and change files outside .skaro/ when the import needs it ' +
+          "(e.g. unpacking an archive); depending on the chat's permission mode the user " +
+          'confirms such actions in a card.',
+        '- Keep the user informed with a short line before each step.',
+        `- Write to the user and the artifacts in ${language}.`,
+      ].join('\n'),
+    instructionsOf(artifacts),
   ];
   return parts.filter(Boolean).join('\n\n');
 }

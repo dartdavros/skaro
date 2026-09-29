@@ -28,11 +28,13 @@ export class ProjectDocs {
     return this.editing && this.draft !== this.text;
   }
 
-  /** Brief and architecture first (even when missing), then ADRs and free documents. */
+  /** Brief and architecture first (even when missing), then ADRs, specifications, documents. */
   get all(): DocEntry[] {
     return [
       ...fixed(this.entries),
-      ...this.entries.filter((d) => d.kind === 'adr' || d.kind === 'doc'),
+      ...this.entries.filter((d) => d.kind === 'adr'),
+      ...this.entries.filter((d) => d.kind === 'spec'),
+      ...this.entries.filter((d) => d.kind === 'doc'),
     ];
   }
 

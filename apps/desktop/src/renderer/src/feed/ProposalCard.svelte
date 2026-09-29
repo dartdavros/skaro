@@ -28,7 +28,8 @@
   const MAX_LINES = 12;
 
   const diff = $derived.by(() => {
-    if (proposal.type !== 'doc' && proposal.type !== 'task') return undefined;
+    if (proposal.type !== 'doc' && proposal.type !== 'task' && proposal.type !== 'spec_change')
+      return undefined;
     const lines = lineDiff(proposal.before ?? '', proposal.after);
     // Blank lines carry nothing on a card; the viewer shows the whole text.
     const excerpt = diffExcerpt(lines, 1)
@@ -64,7 +65,7 @@
   }
 
   function startEdit(): void {
-    if (proposal.type !== 'adr') return;
+    if (proposal.type !== 'adr' && proposal.type !== 'spec') return;
     adrTitle = proposal.title;
     adrBody = proposal.body;
     editing = true;
@@ -92,7 +93,15 @@
   /** The line a decided plan or ADR collapses into. */
   const summaryLine = $derived.by(
     ():
-      { text: string; ok: boolean; open?: 'plan' | 'docs' | 'tasks'; tip?: string } | undefined => {
+      | {
+          text: string;
+          ok: boolean;
+          open?: 'plan' | 'docs' | 'tasks';
+          tip?: string;
+          /** Link text other than "Открыть". */
+          action?: string;
+        }
+      | undefined => {
       if (item.state === 'pending') return undefined;
       if (proposal.type === 'plan') {
         if (item.state === 'rejected') {
@@ -132,6 +141,40 @@
           tip: proposal.milestone ? t('proposal.open.plan.tip') : t('proposal.open.tasks.tip'),
         };
       }
+      if (proposal.type === 'import') {
+        if (item.state === 'rejected') return { ok: false, text: t('proposal.import.rejected') };
+        return {
+          ok: true,
+          text: t('proposal.import.done', {
+            n: item.result?.applied ?? proposal.total,
+            of: proposal.total,
+          }),
+          open: 'docs',
+          action: t('proposal.import.openDocs'),
+        };
+      }
+      if (proposal.type === 'spec') {
+        if (item.state === 'rejected') {
+          return { ok: false, text: t('proposal.rejected.spec', { title: proposal.title }) };
+        }
+        return {
+          ok: true,
+          text: t('proposal.done.spec', { id: item.result?.spec?.id ?? proposal.id }),
+          open: 'docs',
+          tip: t('proposal.open'),
+        };
+      }
+      if (proposal.type === 'spec_change') {
+        if (item.state === 'rejected') {
+          return { ok: false, text: t('proposal.rejected.specChange', { id: proposal.id }) };
+        }
+        return {
+          ok: true,
+          text: t('proposal.done.specChange', { id: proposal.id }),
+          open: 'docs',
+          tip: t('proposal.open'),
+        };
+      }
       if (proposal.type === 'adr') {
         if (item.state === 'rejected') {
           return { ok: false, text: t('proposal.rejected.adr', { title: proposal.title }) };
@@ -147,6 +190,37 @@
       return undefined;
     },
   );
+
+  type ImportGroup = Extract<typeof proposal, { type: 'import' }>['groups'][number];
+
+  /** "Бриф", "4 ADR", "3 спецификации", "2 этапа · 6 задач". */
+  function importLabel(g: ImportGroup): string {
+    switch (g.kind) {
+      case 'brief':
+        return t('proposal.import.brief');
+      case 'architecture':
+        return t('proposal.import.architecture');
+      case 'adr':
+        return t('proposal.import.adr', { n: g.count });
+      case 'spec':
+        return tn('proposal.import.specs', g.count);
+      case 'doc':
+        return tn('proposal.import.docs', g.count);
+      case 'plan': {
+        const tasks = g.tasks ? tn('proposal.tasks', g.tasks) : '';
+        return g.count
+          ? [tn('proposal.import.milestones', g.count), tasks].filter(Boolean).join(' · ')
+          : tasks;
+      }
+    }
+  }
+
+  /** "новый", "обновит", "обновит 1" (some of the group change existing artifacts). */
+  function importMark(g: ImportGroup): { text: string; update: boolean } {
+    if (!g.updates) return { text: t('proposal.import.new'), update: false };
+    if (g.updates === g.count) return { text: t('proposal.import.update'), update: true };
+    return { text: `${t('proposal.import.update')} ${g.updates}`, update: true };
+  }
 
   /** `code` spans in a short plain text (the ADR summary). */
   function segments(text: string): { code: boolean; text: string }[] {
@@ -188,20 +262,28 @@
           type="button"
           class="line-open"
           data-tip={summaryLine.tip}
-          onclick={() => feed.openSection?.(section)}>{t('proposal.open')}</button
+          onclick={() => feed.openSection?.(section)}
+          >{summaryLine.action ?? t('proposal.open')}</button
         >
       {/if}
     </div>
-  {:else if (proposal.type === 'doc' || proposal.type === 'task') && diff}
+  {:else if (proposal.type === 'doc' || proposal.type === 'task' || proposal.type === 'spec_change') && diff}
     <div class="card flush">
       <div class="head">
-        <Icon name="file" size={14} stroke={1.8} color="var(--sk-text-20)" />
+        <Icon
+          name={proposal.type === 'spec_change' ? 'spec' : 'file'}
+          size={14}
+          stroke={1.8}
+          color="var(--sk-text-20)"
+        />
         <span class="title"
           >{proposal.type === 'task'
             ? t('proposal.task.update', { id: proposal.id, title: proposal.title })
-            : proposal.before === undefined
-              ? t('proposal.doc.create', { path: proposal.path })
-              : t('proposal.doc.update', { path: proposal.path })}</span
+            : proposal.type === 'spec_change'
+              ? t('proposal.spec.update', { id: proposal.id })
+              : proposal.before === undefined
+                ? t('proposal.doc.create', { path: proposal.path })
+                : t('proposal.doc.update', { path: proposal.path })}</span
         >
         <span class="stats"
           ><span class="add">+{diff.stats.added}</span><span class="del">−{diff.stats.removed}</span
@@ -225,42 +307,52 @@
       <div class="foot">
         <span class="hint"
           >{item.state === 'pending'
-            ? proposal.type === 'doc'
+            ? proposal.type === 'doc' || proposal.type === 'spec_change'
               ? t('proposal.hint.manual')
               : ''
             : t(`proposal.hint.${item.state}`)}</span
         >
         <button type="button" class="btn" onclick={() => (viewer = true)}
-          >{t('proposal.open')}</button
+          ><Icon name="eye" size={13} stroke={2} />{t('proposal.open')}</button
         >
         {#if actionable && item.state === 'pending'}
           <button
             type="button"
             class="btn"
             disabled={busy}
-            onclick={() => void decide({ action: 'reject' })}>{t('proposal.reject')}</button
+            onclick={() => void decide({ action: 'reject' })}
+            ><Icon name="close" size={13} stroke={2.2} />{t('proposal.reject')}</button
           >
           <button
             type="button"
             class="btn primary"
             disabled={busy}
-            onclick={() => void decide({ action: 'apply' })}>{t('proposal.apply')}</button
+            onclick={() => void decide({ action: 'apply' })}
+            ><Icon name="check" size={13} stroke={2.4} />{t('proposal.apply')}</button
           >
         {:else if actionable && item.state === 'applied' && proposal.type === 'doc'}
           <button
             type="button"
             class="btn"
             disabled={busy}
-            onclick={() => void decide({ action: 'revert' })}>{t('proposal.revert')}</button
+            onclick={() => void decide({ action: 'revert' })}
+            ><Icon name="undo" size={13} stroke={2} />{t('proposal.revert')}</button
           >
         {/if}
       </div>
     </div>
-  {:else if proposal.type === 'adr'}
+  {:else if proposal.type === 'adr' || proposal.type === 'spec'}
     <div class="card padded">
       <div class="head bare">
-        <Icon name="adr" size={14} stroke={1.8} color="var(--sk-text-20)" />
-        <span class="title">ADR-{proposal.id} · {proposal.title}</span>
+        <Icon
+          name={proposal.type === 'spec' ? 'spec' : 'adr'}
+          size={14}
+          stroke={1.8}
+          color="var(--sk-text-20)"
+        />
+        <span class="title"
+          >{proposal.type === 'spec' ? 'SPEC' : 'ADR'}-{proposal.id} · {proposal.title}</span
+        >
       </div>
       <span class="text"
         >{#each segments(adrText(proposal)) as part, i (i)}{#if part.code}<code>{part.text}</code
@@ -273,16 +365,60 @@
             type="button"
             class="btn"
             disabled={busy}
-            onclick={() => void decide({ action: 'reject' })}>{t('proposal.reject')}</button
+            onclick={() => void decide({ action: 'reject' })}
+            ><Icon name="close" size={13} stroke={2.2} />{t('proposal.reject')}</button
           >
           <button type="button" class="btn" disabled={busy} onclick={startEdit}
-            >{t('proposal.edit')}</button
+            ><Icon name="eye" size={13} stroke={2} />{t('proposal.view')}</button
           >
           <button
             type="button"
             class="btn primary"
             disabled={busy}
-            onclick={() => void decide({ action: 'apply' })}>{t('proposal.accept')}</button
+            onclick={() => void decide({ action: 'apply' })}
+            ><Icon name="check" size={13} stroke={2.4} />{t('proposal.accept')}</button
+          >
+        </div>
+      {/if}
+    </div>
+  {:else if proposal.type === 'import'}
+    <div class="card import">
+      <div class="head bare">
+        <Icon name="import" size={14} stroke={1.8} color="var(--sk-text-20)" />
+        <span class="title">{t('proposal.import.title')}</span>
+      </div>
+      <div class="import-rows">
+        {#each proposal.groups as group (group.kind)}
+          {@const mark = importMark(group)}
+          <div class="import-row">
+            <span class="import-label">{importLabel(group)}</span>
+            <span class="import-mark" class:update={mark.update}>{mark.text}</span>
+          </div>
+        {/each}
+      </div>
+      <div class="import-counts">
+        <span data-tip={t('proposal.import.skipped.tip')}
+          >{t('proposal.import.skipped')} <span class="mono">{proposal.skipped}</span></span
+        >
+        <span data-tip={t('proposal.import.notes.tip')}
+          >{t('proposal.import.notes')} <span class="mono">{proposal.notes}</span></span
+        >
+      </div>
+      {#if actionable}
+        <div class="foot bare import-foot">
+          <button
+            type="button"
+            class="btn"
+            disabled={busy}
+            onclick={() => void decide({ action: 'reject' })}
+            ><Icon name="close" size={13} stroke={2.2} />{t('proposal.reject')}</button
+          >
+          <button
+            type="button"
+            class="btn primary"
+            disabled={busy}
+            onclick={() => feed.reviewImport?.(item.id)}
+            ><Icon name="import" size={13} stroke={2} />{t('proposal.import.review')}</button
           >
         </div>
       {/if}
@@ -327,14 +463,15 @@
             type="button"
             class="btn"
             disabled={busy}
-            onclick={() => void decide({ action: 'reject' })}>{t('proposal.reject')}</button
+            onclick={() => void decide({ action: 'reject' })}
+            ><Icon name="close" size={13} stroke={2.2} />{t('proposal.reject')}</button
           >
           <button
             type="button"
             class="btn primary"
             disabled={busy || chosen.length === 0}
             onclick={() => void decide({ action: 'apply', tasks: chosen.map((c) => c.ref) })}
-            >{chosen.length === 0
+            ><Icon name="plus" size={13} stroke={2.4} />{chosen.length === 0
               ? t('proposal.plan.pick')
               : chosen.length === plan.tasks.length
                 ? t('proposal.plan.create', { tasks: tn('proposal.tasks', chosen.length) })
@@ -346,22 +483,26 @@
   {/if}
 </div>
 
-{#if proposal.type === 'doc' || proposal.type === 'task'}
+{#if proposal.type === 'doc' || proposal.type === 'task' || proposal.type === 'spec_change'}
   <Modal
     bind:open={viewer}
     width={760}
-    title={proposal.type === 'doc' ? proposal.path : `${proposal.id} · ${proposal.title}`}
+    title={proposal.type === 'doc'
+      ? proposal.path
+      : proposal.type === 'spec_change'
+        ? `SPEC-${proposal.id} · ${proposal.title}`
+        : `${proposal.id} · ${proposal.title}`}
     subtitle={t('proposal.viewer.subtitle')}
   >
     <div class="viewer"><Markdown text={proposal.after} /></div>
   </Modal>
 {/if}
 
-{#if proposal.type === 'adr'}
+{#if proposal.type === 'adr' || proposal.type === 'spec'}
   <Modal
     bind:open={editing}
     width={640}
-    title={t('proposal.adr.edit')}
+    title={proposal.type === 'spec' ? t('proposal.spec.view') : t('proposal.adr.view')}
     subtitle={t('proposal.adr.edit.subtitle')}
   >
     <div class="edit">
@@ -402,6 +543,58 @@
 
   .card.flush {
     overflow: hidden;
+  }
+
+  .card.import {
+    padding: 11px 13px 12px;
+    gap: 10px;
+  }
+
+  .import-rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .import-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+  }
+
+  .import-label {
+    flex: 1;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-7);
+  }
+
+  .import-mark {
+    flex: none;
+    font-size: var(--sk-fs-3);
+    color: var(--sk-text-21);
+  }
+
+  .import-mark.update {
+    color: var(--sk-link);
+  }
+
+  .import-counts {
+    display: flex;
+    gap: 16px;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-21);
+  }
+
+  .import-counts > span {
+    cursor: default;
+  }
+
+  .mono {
+    font-family: var(--sk-mono);
+  }
+
+  .import-foot {
+    justify-content: flex-end;
   }
 
   .card.padded {
@@ -487,6 +680,9 @@
 
   .btn {
     flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     height: 28px;
     padding: 0 11px;
     border: none;
@@ -531,7 +727,10 @@
   .text code {
     font-family: var(--sk-mono);
     font-size: var(--sk-fs-3);
-    color: var(--sk-code);
+    color: var(--sk-text-12);
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--sk-code-bg);
   }
 
   .tasks {

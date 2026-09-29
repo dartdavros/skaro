@@ -153,10 +153,14 @@
     background: var(--sk-fill-38);
   }
 
+  /* Inline code: the text a tone lighter on a slightly lighter ground. */
   .md :global(code) {
     font-family: var(--sk-mono);
     font-size: var(--sk-fs-5);
-    color: var(--sk-code);
+    color: var(--sk-text-9);
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--sk-code-bg);
   }
 
   .md :global(strong) {

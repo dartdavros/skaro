@@ -131,7 +131,7 @@
   margin-top: -8px;
 }
 
-/* Collapsible gray line: "Думал 12 с", "Прочитал 6 файлов" */
+/* Collapsible gray line: "Прочитал 6 файлов" */
 .fd-fold {
   display: inline-flex;
   align-items: center;
@@ -151,14 +151,6 @@
   color: var(--sk-text-13);
 }
 
-.fd-fold.static {
-  cursor: default;
-}
-
-.fd-fold.static:hover {
-  color: var(--sk-text-23);
-}
-
 .fd-chevron {
   flex: none;
   transition: transform 0.15s;
@@ -172,17 +164,7 @@
 .fd-live code {
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-2);
-  color: var(--sk-code);
-}
-
-.fd-reasoning {
-  margin-left: 19px;
-  font-size: var(--sk-fs-5);
-  line-height: 1.45;
-  color: var(--sk-text-21);
-  text-wrap: pretty;
-  white-space: pre-wrap;
-  user-select: text;
+  color: var(--sk-text-19);
 }
 
 .fd-sublist {
@@ -1003,10 +985,14 @@
   color: var(--sk-text-13);
 }
 
+/* Inline code: the text a tone lighter on a slightly lighter ground. */
 .md code {
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-4);
-  color: var(--sk-code);
+  color: var(--sk-text-6);
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--sk-code-bg);
 }
 
 .md td code {
@@ -1023,12 +1009,12 @@
 }
 
 .md a {
-  color: var(--sk-accent);
+  color: var(--sk-link);
   text-decoration: none;
 }
 
 .md a:hover {
-  color: var(--sk-teal-1);
+  color: var(--sk-link-hover);
   text-decoration: underline;
 }
 
@@ -1128,6 +1114,9 @@
 .md pre code {
   color: var(--sk-text-13);
   font-size: var(--sk-fs-4);
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .md .hljs-keyword,
@@ -1141,7 +1130,7 @@
 .md .hljs-number,
 .md .hljs-regexp,
 .md .hljs-attr {
-  color: var(--sk-orange-2);
+  color: var(--sk-green-1);
 }
 
 .md .hljs-comment,

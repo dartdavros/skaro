@@ -118,6 +118,17 @@ export type ItemBody =
       retry?: { attempt: number; max: number; inMs: number };
     }
   | { kind: 'unknown'; raw: unknown }
+  /**
+   * Import of documentation (architecture.md 12): the copy of the sources Skaro prepared, added
+   * by Skaro at the start of the import chat.
+   */
+  | {
+      kind: 'import_prep';
+      /** Files the agent reads (as they are or converted to text). */
+      prepared: number;
+      skipped: number;
+      files: { path: string; note: string; skipped: boolean }[];
+    }
   /** The user's answer to an interaction, added by Skaro (not by adapters) so the feed keeps it. */
   | { kind: 'decision'; interaction: Interaction; answer: InteractionAnswer }
   /**
@@ -144,6 +155,8 @@ export interface ProposedTask {
   dependsOn: string[];
   /** Titles of those tasks, for "после «…»" on the card. */
   dependsOnTitles: string[];
+  /** Specification the task implements ("0003"). */
+  spec?: string;
 }
 
 export type Proposal =
@@ -170,10 +183,43 @@ export type Proposal =
       summary?: string;
     }
   | {
+      /** A new specification (architecture.md 3.7). */
+      type: 'spec';
+      /** Number the specification gets if accepted now, e.g. "0003". */
+      id: string;
+      title: string;
+      body: string;
+      /** Specification it replaces. */
+      replaces?: string;
+      /** A sentence or two for the card. */
+      summary?: string;
+    }
+  | {
+      /** A change to an existing specification, written as a whole. */
+      type: 'spec_change';
+      id: string;
+      title: string;
+      before: string;
+      after: string;
+      summary?: string;
+    }
+  | {
       /** A milestone with its tasks, or tasks for an existing milestone. */
       type: 'plan';
       milestone?: { id: string; title: string; body?: string; isNew: boolean };
       tasks: ProposedTask[];
+    }
+  | {
+      /** "Импорт готов": what the import agent staged, decided on the review screen. */
+      type: 'import';
+      /** Id of the import (its folder in the app data). */
+      id: string;
+      /** A line per kind of artifact: "Бриф", "4 ADR", "2 этапа · 6 задач". */
+      groups: { kind: ImportKind; count: number; tasks?: number; updates: number }[];
+      /** Items in all, as the review screen counts them. */
+      total: number;
+      skipped: number;
+      notes: number;
     }
   | {
       /** Changes to an existing task. */
@@ -196,7 +242,14 @@ export interface ProposalResult {
   /** Created tasks; `ref` links them to the proposal (later cards may depend on them). */
   tasks?: { id: string; title: string; ref: string }[];
   adr?: { id: string; title: string };
+  spec?: { id: string; title: string };
+  /** Import: what was written, for "Изменено в чате" and the summary line. */
+  imported?: { kind: ImportKind; code?: string; title: string; update: boolean }[];
+  /** Import: items applied of all. */
+  applied?: number;
 }
+
+export type ImportKind = 'brief' | 'architecture' | 'adr' | 'spec' | 'doc' | 'plan';
 
 export type NoticeCode =
   | 'auth'
