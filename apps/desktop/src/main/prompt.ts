@@ -7,6 +7,19 @@ import { taskSections } from './task-body';
 
 const LANGUAGES: Record<string, string> = { ru: 'Russian', en: 'English' };
 
+/** Skaro's own words in the user's language, as the interface names them (owner decisions). */
+const TERMS: Record<string, string> = {
+  ru:
+    "- Use the terms of Skaro's interface: a milestone is «этап» (never «веха»), a task is " +
+    '«задача», a specification is «спецификация», a brief is «бриф», the architecture is ' +
+    '«архитектура», an ADR is «ADR».',
+};
+
+function terms(locale: string): string[] {
+  const rule = TERMS[locale];
+  return rule ? [rule] : [];
+}
+
 /** The user's instructions: app-wide ("Настройки") first, then the project's own. */
 function instructionsOf(artifacts: ProjectArtifacts): string {
   const all = [artifacts.config.globalInstructions, artifacts.config.agentInstructions]
@@ -70,6 +83,7 @@ export function chatInstructions(options: {
         "- The user's decisions on cards arrive at the start of their next message inside " +
           '<skaro-note>…</skaro-note>. Take them into account; do not quote the note back.',
         `- Write to the user, the documents and the task texts in ${language}.`,
+        ...terms(options.locale),
       ].join('\n'),
     instructionsOf(artifacts),
   ];
@@ -161,6 +175,7 @@ export function taskInstructions(options: {
           'after the user confirms; never merge into the base branch yourself. Skaro does not ' +
           'merge while acceptance criteria are not ticked.',
         `- Write to the user in ${language}: replies, questions, plans and command descriptions.`,
+        ...terms(options.locale),
       ].join('\n'),
   ];
   return parts.filter(Boolean).join('\n\n');
@@ -230,6 +245,7 @@ export function importInstructions(options: {
           'confirms such actions in a card.',
         '- Keep the user informed with a short line before each step.',
         `- Write to the user and the artifacts in ${language}.`,
+        ...terms(options.locale),
       ].join('\n'),
     instructionsOf(artifacts),
   ];

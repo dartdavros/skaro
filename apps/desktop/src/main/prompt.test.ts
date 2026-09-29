@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { DEFAULT_CONFIG, type ProjectArtifacts, type Task } from '@skaro/core';
 import { describe, expect, it } from 'vitest';
-import { taskInstructions } from './prompt';
+import { chatInstructions, taskInstructions } from './prompt';
 
 const task: Task = {
   id: 'T-001',
@@ -50,5 +50,15 @@ describe('task instructions', () => {
 
   it('forbids calling the task done without a full report', () => {
     expect(text).toMatch(/done only when submit_result reports every criterion met/);
+  });
+});
+
+describe('chat instructions', () => {
+  const chat = (locale: string): string =>
+    chatInstructions({ projectName: 'Магазин', root: '/work/project', artifacts, locale });
+
+  it('names milestones «этапы» in Russian, as the interface does', () => {
+    expect(chat('ru')).toContain('a milestone is «этап» (never «веха»)');
+    expect(chat('en')).not.toContain('«этап»');
   });
 });
