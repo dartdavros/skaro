@@ -9,6 +9,7 @@ import {
 } from '@skaro/core';
 
 import { PROJECT_DEFAULTS_KEY } from '../shared/ipc';
+import { watchProjectArtifacts } from './project-artifact-watch';
 
 export class ProjectContext {
   readonly id: string;
@@ -23,14 +24,10 @@ export class ProjectContext {
     this.root = root;
     this.store = new ArtifactStore(root, defaults);
     this.git = new GitService(root);
-    try {
-      this.stopWatch = this.store.watch(() => {
-        this.artifacts = undefined;
-        onChange();
-      });
-    } catch {
-      // No .skaro/ yet: nothing to watch.
-    }
+    this.stopWatch = watchProjectArtifacts(root, this.store, () => {
+      this.artifacts = undefined;
+      onChange();
+    });
   }
 
   /** Artifacts, cached until the files change. */
