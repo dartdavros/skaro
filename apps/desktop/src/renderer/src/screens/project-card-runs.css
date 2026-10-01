@@ -1,0 +1,77 @@
+.projects .runs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: var(--sk-deep);
+}
+
+.projects .run {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.projects .run-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sk-fill-41);
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+
+.projects .run-id {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-14);
+}
+
+.projects .run-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects .run-agent {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.projects .more {
+  padding-left: 14px;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.projects .foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sk-fill-10);
+}
+
+.projects .activity {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.projects .branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-17);
+}

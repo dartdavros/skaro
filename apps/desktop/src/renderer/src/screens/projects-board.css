@@ -1,0 +1,267 @@
+.projects {
+  display: flex;
+  flex-direction: column;
+}
+
+.projects .head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.projects .title {
+  margin: 0;
+  font-size: var(--sk-fs-16);
+  font-weight: 700;
+  color: var(--sk-text-5);
+  letter-spacing: -0.01em;
+}
+
+.projects .banner {
+  margin-bottom: 16px;
+}
+
+.projects .toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.projects .search {
+  flex: none;
+  width: 268px;
+}
+
+.projects .spacer {
+  flex: 1;
+}
+
+.projects .grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.projects .card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background: var(--sk-fill-11);
+  cursor: pointer;
+  outline: none;
+}
+
+.projects .card:hover {
+  background: var(--sk-fill-18);
+}
+
+.projects .card-body {
+  flex: 1;
+  padding: 13px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.projects .top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.projects .names {
+  flex: 1;
+  min-width: 0;
+}
+
+.projects .name {
+  font-size: var(--sk-fs-9);
+  font-weight: 600;
+  color: var(--sk-text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects .name.small {
+  font-size: var(--sk-fs-7);
+}
+
+.projects .path {
+  margin-top: 2px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-17);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects .path.small {
+  margin-top: 0;
+  font-size: var(--sk-fs-1);
+}
+
+.projects .missing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.projects .missing-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--sk-fs-5);
+  line-height: 1.5;
+  color: var(--sk-text-6);
+}
+
+.projects .missing-line svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.projects .missing-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.projects .find,
+.projects .drop {
+  height: 27px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 7px;
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.projects .find {
+  background: var(--sk-error-a18);
+  color: var(--sk-red-2);
+}
+
+.projects .find:hover {
+  background: var(--sk-error-a28);
+  color: var(--sk-text-1);
+}
+
+.projects .drop {
+  background: var(--sk-fill-23);
+  color: var(--sk-text-10);
+}
+
+.projects .drop:hover {
+  background: var(--sk-fill-29);
+  color: var(--sk-text-2);
+}
+
+.projects .ok {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.projects .marks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.projects .mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 23px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-13);
+  cursor: default;
+}
+
+.projects .dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.projects .dot.pulse {
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+
+.projects .ms {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+
+.projects .ms.small {
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.projects .ms-id {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  font-weight: 600;
+  color: var(--sk-text-14);
+}
+
+.projects .ms.small .ms-id {
+  font-size: var(--sk-fs-2);
+  font-weight: 400;
+}
+
+.projects .ms-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-6);
+  color: var(--sk-text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects .ms.small .ms-name {
+  font-size: var(--sk-fs-5);
+}
+
+.projects .ms-count {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.projects .ms.small .ms-count {
+  font-size: var(--sk-fs-1);
+}
+
+.projects .bar {
+  height: 4px;
+  border-radius: 3px;
+  background: var(--sk-fill-20);
+  overflow: hidden;
+}
+
+.projects .bar.thin {
+  margin-top: 6px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.projects .fill {
+  height: 100%;
+  border-radius: inherit;
+}

@@ -1,0 +1,228 @@
+.import-review .list {
+  flex: none;
+  width: 400px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--sk-fill-18);
+}
+
+.import-review .rows {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.import-review .group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  margin-top: 10px;
+  padding: 0 10px;
+}
+
+.import-review .group-label {
+  flex: 1;
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sk-text-23);
+}
+
+.import-review .group-count {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+}
+
+.import-review .sub {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  margin-top: 4px;
+  padding: 0 10px 0 36px;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-23);
+}
+
+.import-review .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.import-review .row:hover {
+  background: var(--sk-fill-17);
+}
+
+.import-review .row.on {
+  background: var(--sk-fill-20);
+}
+
+.import-review .box {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sk-fill-11);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-30);
+  cursor: pointer;
+  outline: none;
+}
+
+.import-review .box.checked {
+  background: var(--sk-fill-2);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-37);
+}
+
+.import-review .box.part {
+  box-shadow: inset 0 0 0 1px var(--sk-fill-37);
+}
+
+.import-review .dash {
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--sk-text-7);
+}
+
+.import-review .ms {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.import-review .row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-6);
+  color: var(--sk-text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-review .row-title.off {
+  color: var(--sk-text-21);
+}
+
+.import-review .dangling {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sk-warn);
+}
+
+.import-review .mark {
+  flex: none;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.import-review .mark.update {
+  color: var(--sk-link);
+}
+
+.import-review .src {
+  flex: none;
+  min-width: 16px;
+  text-align: right;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+  cursor: default;
+  white-space: pre-line;
+}
+
+.import-review .sep {
+  height: 1px;
+  margin: 12px 10px 6px;
+  background: var(--sk-fill-18);
+}
+
+.import-review .fold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+  text-align: left;
+  cursor: pointer;
+}
+
+.import-review .fold:hover {
+  background: var(--sk-fill-17);
+  color: var(--sk-text-6);
+}
+
+.import-review .chev {
+  display: inline-flex;
+  transition: transform 0.15s;
+}
+
+.import-review .chev.open {
+  transform: rotate(90deg);
+}
+
+.import-review .skipped {
+  display: flex;
+  flex-direction: column;
+  padding: 0 10px 6px 30px;
+}
+
+.import-review .skipped-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.import-review .skipped-path {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-review .skipped-why {
+  flex: none;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+}
+
+.import-review .notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 10px 6px 30px;
+  font-size: var(--sk-fs-4);
+  line-height: 1.5;
+  color: var(--sk-text-13);
+  text-wrap: pretty;
+}

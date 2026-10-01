@@ -1,0 +1,173 @@
+.import-review .preview {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.import-review .pv-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.import-review .pv-code {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  color: var(--sk-text-19);
+}
+
+.import-review h2 {
+  margin: -8px 0 0;
+  font-size: var(--sk-fs-14);
+  font-weight: 700;
+  color: var(--sk-text-5);
+  letter-spacing: -0.01em;
+}
+
+.import-review .diff-card {
+  border-radius: 10px;
+  background: var(--sk-fill-17);
+  overflow: hidden;
+}
+
+.import-review .diff-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px 9px;
+}
+
+.import-review .diff-title {
+  flex: 1;
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  color: var(--sk-text-6);
+}
+
+.import-review .stats {
+  display: inline-flex;
+  gap: 6px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+}
+
+.import-review .add {
+  color: var(--sk-green-2);
+}
+
+.import-review .del {
+  color: var(--sk-error);
+}
+
+.import-review .ctx {
+  color: var(--sk-text-23);
+}
+
+.import-review .diff-lines {
+  padding: 0 13px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.import-review .doc {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.import-review .doc h3 {
+  margin: 6px 0 0;
+  font-size: var(--sk-fs-10);
+  font-weight: 700;
+  color: var(--sk-text-6);
+}
+
+.import-review .doc p {
+  margin: 0;
+  font-size: var(--sk-fs-7);
+  line-height: 1.65;
+  color: var(--sk-text-10);
+  text-wrap: pretty;
+}
+
+.import-review .li {
+  display: flex;
+  gap: 10px;
+  font-size: var(--sk-fs-7);
+  line-height: 1.6;
+  color: var(--sk-text-10);
+}
+
+.import-review .bullet {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin-top: 9px;
+  border-radius: 50%;
+  background: var(--sk-text-27);
+}
+
+.import-review .fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.import-review .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.import-review .field-text {
+  font-size: var(--sk-fs-7);
+  line-height: 1.6;
+  color: var(--sk-text-10);
+  text-wrap: pretty;
+}
+
+.import-review .sources {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--sk-fill-18);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.import-review .source {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-link);
+  text-align: left;
+  cursor: pointer;
+}
+
+.import-review .source:hover {
+  text-decoration: underline;
+}
+
+.import-review .source.code {
+  color: var(--sk-text-13);
+  cursor: default;
+}
+
+.import-review .source.code:hover {
+  text-decoration: none;
+}
