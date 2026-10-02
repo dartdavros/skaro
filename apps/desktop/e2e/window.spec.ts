@@ -8,6 +8,10 @@ import { launchApp, tempUserData } from './launch';
 
 declare const window: Window & { skaro: SkaroApi };
 
+// Without a ready agent the app stays on Settings, so project screens need installed agents.
+const noAgents = !process.env['SKARO_AGENTS_DIR'];
+const noAgentsReason = 'SKARO_AGENTS_DIR with installed agents is not set';
+
 test('opens the frameless main window with the Skaro top bar', async () => {
   const app = await launchApp();
   const page = await app.firstWindow();
@@ -36,6 +40,7 @@ test('opens the frameless main window with the Skaro top bar', async () => {
 });
 
 test('restores project tabs after a restart', async () => {
+  test.skip(noAgents, noAgentsReason);
   const userData = tempUserData();
   const shop = join(userData, 'shop-api');
   const blog = join(userData, 'blog-engine');
@@ -74,6 +79,7 @@ test('restores project tabs after a restart', async () => {
 });
 
 test('creates a new project folder as a git repository from the "Новый проект" modal', async () => {
+  test.skip(noAgents, noAgentsReason);
   const userData = tempUserData();
   const parent = join(userData, 'code');
   mkdirSync(parent);
