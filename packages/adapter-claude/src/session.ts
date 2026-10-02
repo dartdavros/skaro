@@ -1,22 +1,13 @@
-// Claude Code session over the Agent SDK with the pinned CLI binary (D-23).
-// Every stdin/stdout line of the CLI is recorded raw and projected (principle P2).
-
-import { spawn } from 'node:child_process';
+// Claude Code session over the pinned Agent SDK; raw process IO remains the source of truth.
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { extname } from 'node:path';
-import { PassThrough } from 'node:stream';
 import {
   query,
   type CanUseTool,
   type OnElicitation,
-  type Options,
-  type PermissionMode as NativeMode,
   type PermissionResult,
   type Query,
   type SDKUserMessage,
-  type SpawnedProcess,
-  type SpawnOptions,
 } from '@anthropic-ai/claude-agent-sdk';
 import {
   EventChannel,
@@ -31,54 +22,14 @@ import {
   type UserInput,
 } from '@skaro/timeline';
 import { ClaudeProjector } from './projector.ts';
-
-/** Task tools are off by default on new models; Skaro enables them so the agent plan exists. */
-const PLAN_TOOLS = ['TaskCreate', 'TaskUpdate', 'TaskGet', 'TaskList'];
-const EDIT_TOOLS = ['Edit', 'Write', 'NotebookEdit'];
-/** Shell tools: in a read-only chat only commands the CLI itself treats as read-only run. */
-const SHELL_TOOLS = ['Bash', 'PowerShell'];
-
-/** Skaro mode → Claude mode (architecture.md 5.4, D-28). */
-export function nativeMode(mode: PermissionMode, planFirst = false): NativeMode {
-  if (planFirst) return 'plan';
-  return mode === 'full' ? 'bypassPermissions' : mode === 'auto' ? 'acceptEdits' : 'default';
-}
-
-export interface ClaudeSessionConfig {
-  /** Pinned CLI binary from the installer. */
-  executable: string;
-  /** Overrides the config dir (tests, "not logged in" checks). */
-  configDir?: string;
-}
-
-class InputQueue implements AsyncIterable<SDKUserMessage> {
-  private readonly items: SDKUserMessage[] = [];
-  private wake: (() => void) | undefined;
-  private ended = false;
-
-  push(message: SDKUserMessage): void {
-    this.items.push(message);
-    this.wake?.();
-  }
-
-  end(): void {
-    this.ended = true;
-    this.wake?.();
-  }
-
-  async *[Symbol.asyncIterator](): AsyncIterator<SDKUserMessage> {
-    while (true) {
-      const next = this.items.shift();
-      if (next) {
-        yield next;
-        continue;
-      }
-      if (this.ended) return;
-      await new Promise<void>((resolve) => (this.wake = resolve));
-      this.wake = undefined;
-    }
-  }
-}
+import { type ClaudeSessionConfig, nativeMode, EDIT_TOOLS, SHELL_TOOLS } from './session-config.ts';
+import { InputQueue } from './session-queue.ts';
+import { imageType } from './session-helpers.ts';
+import { queryOptions } from './session-options.ts';
+import { spawnTapped } from './session-tap.ts';
+export { nativeMode } from './session-config.ts';
+export type { ClaudeSessionConfig } from './session-config.ts';
+export { lines } from './session-helpers.ts';
 
 interface Pending {
   interaction: Interaction;
@@ -121,43 +72,12 @@ export class ClaudeSession implements AgentSession {
   start(resume?: { sessionId: string; at?: string }): void {
     this.input = new InputQueue();
     const o = this.options;
-    const options: Options = {
-      cwd: o.cwd,
-      pathToClaudeCodeExecutable: this.config.executable,
-      permissionMode: nativeMode(this.mode, this.planFirst),
-      allowDangerouslySkipPermissions: true,
-      includePartialMessages: true,
-      enableFileCheckpointing: true,
-      // Skaro's own tools confirm through their cards (merge_task), never through a permission prompt.
-      allowedTools: [...PLAN_TOOLS, ...(o.mcpServers?.['skaro'] ? ['mcp__skaro'] : [])],
-      ...(o.readOnly ? { disallowedTools: EDIT_TOOLS } : {}),
+    const options = queryOptions(o, this.config, this.mode, this.planFirst, {
       canUseTool: this.canUseTool,
       onElicitation: this.onElicitation,
-      spawnClaudeCodeProcess: (spawnOptions) => this.spawnTapped(spawnOptions),
-      env: {
-        ...process.env,
-        ...(this.config.configDir ? { CLAUDE_CONFIG_DIR: this.config.configDir } : {}),
-      },
-      // Without summaries the thinking arrives empty: minutes of "Думает…" with nothing to show.
-      settings: { showThinkingSummaries: true },
-      ...(o.model ? { model: o.model } : {}),
-      ...(o.effort ? { effort: o.effort as Options['effort'] } : {}),
-      ...(o.instructions
-        ? {
-            systemPrompt: {
-              type: 'preset' as const,
-              preset: 'claude_code' as const,
-              append: o.instructions,
-            },
-          }
-        : {}),
-      ...(o.mcpServers ? { mcpServers: o.mcpServers } : {}),
-      ...(o.readDirs?.length ? { additionalDirectories: o.readDirs } : {}),
-      // D-28: the Bash sandbox only where the self-check showed it holds the boundary.
-      ...(o.sandboxVerified && this.mode === 'auto'
-        ? { sandbox: { enabled: true, autoAllowBashIfSandboxed: true } }
-        : {}),
-    };
+      spawnClaudeCodeProcess: (spawnOptions) =>
+        spawnTapped(spawnOptions, this.options, this.projector, (line) => this.track(line)),
+    });
     const resumeFrom = resume ?? (o.resume ? { sessionId: o.resume } : undefined);
     if (resumeFrom) {
       options.resume = resumeFrom.sessionId;
@@ -340,103 +260,10 @@ export class ClaudeSession implements AgentSession {
     return { action: 'decline' };
   };
 
-  /** Spawns the CLI like the SDK would, recording every stdin/stdout line. */
-  private spawnTapped(options: SpawnOptions): SpawnedProcess {
-    const raw = this.options.raw;
-    const now = () => this.options.context.now();
-    const child = spawn(options.command, options.args, {
-      cwd: options.cwd,
-      env: options.env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
-
-    const stdin = new PassThrough();
-    stdin.on(
-      'data',
-      lines((line) => {
-        const msg = parse(line);
-        raw({ ts: now(), dir: 'in', line: msg });
-        this.projector.input(msg);
-      }),
-    );
-    stdin.pipe(child.stdin);
-
-    const stdout = new PassThrough();
-    child.stdout.on(
-      'data',
-      lines((line) => {
-        const msg = parse(line);
-        raw({ ts: now(), dir: 'out', line: msg });
-        this.track(msg);
-        this.projector.output(msg);
-        stdout.write(`${line}\n`);
-      }),
-    );
-    child.stdout.on('end', () => stdout.end());
-    child.stderr.on(
-      'data',
-      lines((line) => raw({ ts: now(), dir: 'err', line })),
-    );
-
-    return {
-      stdin,
-      stdout,
-      get killed() {
-        return child.killed;
-      },
-      get exitCode() {
-        return child.exitCode;
-      },
-      get signalCode() {
-        return child.signalCode;
-      },
-      kill: (signal: NodeJS.Signals) => child.kill(signal),
-      on: (event: string, listener: (...args: unknown[]) => void) => void child.on(event, listener),
-      once: (event: string, listener: (...args: unknown[]) => void) =>
-        void child.once(event, listener),
-      off: (event: string, listener: (...args: unknown[]) => void) =>
-        void child.off(event, listener),
-    } as unknown as SpawnedProcess;
-  }
-
   private track(line: unknown): void {
     const msg = obj(line);
     if (msg?.['type'] === 'assistant' && !msg['parent_tool_use_id']) {
       this.lastAssistant = str(msg['uuid']) ?? this.lastAssistant;
     }
-  }
-}
-
-function imageType(path: string): 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' {
-  const ext = extname(path).toLowerCase();
-  return ext === '.png'
-    ? 'image/png'
-    : ext === '.gif'
-      ? 'image/gif'
-      : ext === '.webp'
-        ? 'image/webp'
-        : 'image/jpeg';
-}
-
-/** Splits a byte stream into lines. */
-export function lines(onLine: (line: string) => void): (chunk: Buffer | string) => void {
-  let buffer = '';
-  return (chunk) => {
-    buffer += chunk.toString();
-    let index: number;
-    while ((index = buffer.indexOf('\n')) >= 0) {
-      const line = buffer.slice(0, index).replace(/\r$/, '');
-      buffer = buffer.slice(index + 1);
-      if (line.trim()) onLine(line);
-    }
-  };
-}
-
-function parse(line: string): unknown {
-  try {
-    return JSON.parse(line) as unknown;
-  } catch {
-    return line;
   }
 }
