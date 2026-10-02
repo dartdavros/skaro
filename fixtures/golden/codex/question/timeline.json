@@ -29,15 +29,16 @@
       "turnId": "01a0d507-550e-7661-9a90-221c84a5bf86",
       "kind": "message",
       "role": "agent",
+      "phase": "commentary",
       "text": "Which approach do you prefer?\n- Fix in place\n- Rewrite",
-      "phase": "final",
       "status": "done",
+      "startedAt": 6014,
+      "endedAt": 6014,
       "native": {
         "agent": "codex",
-        "type": "agentMessage",
+        "type": "async_question",
         "ref": "call_0xNxFMaR2jvaSxuEBpuHjLdz"
-      },
-      "startedAt": 6014
+      }
     },
     {
       "id": "rs_02b459e6d6e3983b016ab582ed769487d29621d1f6664086f9",
@@ -250,7 +251,31 @@
       "startedAt": 478898
     }
   ],
-  "interactions": [],
+  "interactions": [
+    {
+      "kind": "question",
+      "id": "async-call_0xNxFMaR2jvaSxuEBpuHjLdz",
+      "itemId": "call_0xNxFMaR2jvaSxuEBpuHjLdz",
+      "delivery": "async",
+      "questions": [
+        {
+          "id": "0",
+          "header": "",
+          "text": "Which approach do you prefer?",
+          "multi": false,
+          "allowFreeText": true,
+          "options": [
+            {
+              "label": "Fix in place"
+            },
+            {
+              "label": "Rewrite"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "status": "idle",
   "session": {
     "nativeSessionId": "01a0d507-53c0-7cd2-b625-637fe58fc5bc",

@@ -3,6 +3,8 @@
 
 import {
   EventChannel,
+  asyncQuestionInput,
+  isAsyncQuestion,
   obj,
   str,
   type AgentSession,
@@ -15,41 +17,18 @@ import {
 } from '@skaro/timeline';
 import { CodexProjector } from './projector.ts';
 import { AppServer, type CodexBinary } from './rpc.ts';
+import { codexMcpConfig } from './mcp-config.ts';
+import { codexPolicy, sandboxPolicy } from './session-policy.ts';
+import { TurnControl } from './turn-control.ts';
+import { PERMISSION_CONTINUATION, toInput, toCodexAnswer } from './session-input.ts';
+import { CODEX_DEFAULT_INSTRUCTIONS } from './interaction-instructions.ts';
+
+export { codexPolicy } from './session-policy.ts';
 
 export interface CodexSessionConfig extends CodexBinary {
   /** `-c key=value` overrides, e.g. the Windows sandbox mode chosen by the self-check. */
   config?: string[];
   codexHome?: string;
-}
-
-interface Policy {
-  approvalPolicy: 'untrusted' | 'on-request' | 'never';
-  sandbox: 'read-only' | 'workspace-write' | 'danger-full-access';
-}
-
-/** Skaro mode → Codex approval and sandbox (architecture.md 5.4, D-28). */
-export function codexPolicy(
-  mode: PermissionMode,
-  options: { readOnly?: boolean; sandboxVerified?: boolean } = {},
-): Policy {
-  if (options.readOnly) return { approvalPolicy: 'on-request', sandbox: 'read-only' };
-  if (mode === 'full') return { approvalPolicy: 'never', sandbox: 'danger-full-access' };
-  if (mode === 'auto' && options.sandboxVerified)
-    return { approvalPolicy: 'on-request', sandbox: 'workspace-write' };
-  // "Ask", and "auto" where the sandbox does not hold: commands need approval.
-  return { approvalPolicy: 'untrusted', sandbox: 'workspace-write' };
-}
-
-function sandboxPolicy(sandbox: Policy['sandbox']): Record<string, unknown> {
-  if (sandbox === 'danger-full-access') return { type: 'dangerFullAccess' };
-  if (sandbox === 'read-only') return { type: 'readOnly', networkAccess: false };
-  return {
-    type: 'workspaceWrite',
-    writableRoots: [],
-    networkAccess: false,
-    excludeTmpdirEnvVar: false,
-    excludeSlashTmp: false,
-  };
 }
 
 export class CodexSession implements AgentSession {
@@ -63,7 +42,7 @@ export class CodexSession implements AgentSession {
   private effort: string | undefined;
   private mode: PermissionMode;
   private planning: boolean;
-  private activeTurn: string | undefined;
+  private readonly turns = new TurnControl();
   private readonly interactions = new Map<string, Interaction>();
   private readonly requestIds = new Map<string, unknown>();
   private closed = false;
@@ -78,9 +57,12 @@ export class CodexSession implements AgentSession {
       if (event.t === 'interaction.opened')
         this.interactions.set(event.interaction.id, event.interaction);
       if (event.t === 'interaction.closed') this.interactions.delete(event.id);
-      if (event.t === 'turn.started') this.activeTurn = event.turnId;
-      if (event.t === 'turn.completed') this.activeTurn = undefined;
-      this.events.push(event);
+      if (event.t === 'turn.completed') {
+        for (const [id, interaction] of this.interactions)
+          if (!isAsyncQuestion(interaction)) this.interactions.delete(id);
+        this.requestIds.clear();
+      }
+      this.events.push(this.turns.observe(event));
     });
   }
 
@@ -92,6 +74,8 @@ export class CodexSession implements AgentSession {
       config: [
         ...(this.config.config ?? []),
         ...(o.sandboxMode ? [`windows.sandbox="${o.sandboxMode}"`] : []),
+        'features.default_mode_request_user_input=true',
+        'suppress_unstable_features_warning=true',
       ],
       cwd: o.cwd,
       onMessage: (msg) => {
@@ -107,29 +91,21 @@ export class CodexSession implements AgentSession {
       },
       onExit: (code, signal) => {
         o.raw({ ts: now(), dir: 'meta', line: { event: 'exit', code, signal } });
-        if (this.activeTurn) {
-          this.events.push({
-            t: 'turn.completed',
-            turnId: this.activeTurn,
-            outcome: 'failed',
-            error: { category: 'other', message: `Codex stopped (${code ?? signal})` },
-          });
+        if (this.turns.active) {
+          this.events.push(
+            this.turns.observe({
+              t: 'turn.completed',
+              turnId: this.turns.active,
+              outcome: 'failed',
+              error: { category: 'other', message: `Codex stopped (${code ?? signal})` },
+            }),
+          );
         }
         void this.close();
       },
     });
     const policy = codexPolicy(this.mode, o);
-    const mcp = Object.fromEntries(
-      Object.entries(o.mcpServers ?? {}).map(([name, s]) => [
-        `mcp_servers.${name}`,
-        {
-          url: s.url,
-          ...(s.headers ? { http_headers: s.headers } : {}),
-          // Codex asks before every MCP tool call otherwise, and the turn waits for the answer.
-          ...(s.trusted ? { default_tools_approval_mode: 'approve' } : {}),
-        },
-      ]),
-    );
+    const mcp = codexMcpConfig(o.mcpServers);
     const params = {
       cwd: o.cwd,
       approvalPolicy: policy.approvalPolicy,
@@ -140,14 +116,23 @@ export class CodexSession implements AgentSession {
     };
     const result = obj(
       o.resume
-        ? await this.server.request('thread/resume', { threadId: o.resume, ...params })
+        ? await this.server.request('thread/resume', {
+            threadId: o.resume,
+            ...params,
+            excludeTurns: true,
+          })
         : await this.server.request('thread/start', params),
     );
     this.threadId = str(obj(result?.['thread'])?.['id']) ?? '';
     this.model = str(result?.['model']) ?? o.model ?? '';
   }
 
-  async send(input: UserInput): Promise<void> {
+  send(input: UserInput): Promise<void> {
+    return this.turns.run(() => this.startTurn(input));
+  }
+
+  private async startTurn(input: UserInput): Promise<void> {
+    if (this.closed) throw new Error('Codex session is closed');
     const policy = codexPolicy(this.mode, this.options);
     await this.rpc().request('turn/start', {
       threadId: this.threadId,
@@ -161,25 +146,28 @@ export class CodexSession implements AgentSession {
         settings: {
           model: this.model,
           reasoning_effort: this.effort ?? null,
-          developer_instructions: null,
+          developer_instructions: this.planning ? null : CODEX_DEFAULT_INSTRUCTIONS,
         },
       },
     });
   }
 
   /** Adds to the running turn; without one, `turn/steer` fails, so it becomes a new turn. */
-  async steer(input: UserInput): Promise<void> {
-    if (!this.activeTurn) return this.send(input);
-    await this.rpc().request('turn/steer', {
-      threadId: this.threadId,
-      input: toInput(input),
-      expectedTurnId: this.activeTurn,
+  steer(input: UserInput): Promise<void> {
+    return this.turns.run(async () => {
+      if (!this.turns.active) return this.startTurn(input);
+      await this.rpc().request('turn/steer', {
+        threadId: this.threadId,
+        input: toInput(input),
+        expectedTurnId: this.turns.active,
+      });
     });
   }
 
   async respond(interactionId: string, answer: InteractionAnswer): Promise<void> {
     const interaction = this.interactions.get(interactionId);
     if (!interaction) throw new Error(`no open interaction ${interactionId}`);
+    if (isAsyncQuestion(interaction)) return this.steer(asyncQuestionInput(interaction, answer));
     if (interaction.kind === 'plan_approval' && answer.kind === 'plan_approval') {
       // Codex has no approval request: the answer is the next turn, out of plan mode if approved.
       this.planning = !answer.approve;
@@ -201,9 +189,30 @@ export class CodexSession implements AgentSession {
     this.effort = effort;
   }
 
-  /** Applies from the next turn: approval policy and sandbox go with every turn/start. */
-  async setPermissionMode(mode: PermissionMode): Promise<void> {
-    this.mode = mode;
+  /** Restart the active turn with new permissions, retaining its thread and conversation. */
+  setPermissionMode(mode: PermissionMode): Promise<void> {
+    return this.turns.run(async () => {
+      if (mode === this.mode) return;
+      const before = this.mode;
+      this.mode = mode;
+      try {
+        await this.turns.resumeWithPermissions(
+          (turnId) => this.rpc().request('turn/interrupt', { threadId: this.threadId, turnId }),
+          () => this.startTurn({ text: PERMISSION_CONTINUATION }),
+          (event) => {
+            this.options.raw({
+              ts: this.options.context.now(),
+              dir: 'meta',
+              line: { skaro: 'event', event },
+            });
+            this.events.push(event);
+          },
+        );
+      } catch (error) {
+        this.mode = before;
+        throw error;
+      }
+    });
   }
 
   /** Conversation only: `thread/revert` keeps files, Skaro restores them from git (agent-output.md 9.2). */
@@ -218,11 +227,21 @@ export class CodexSession implements AgentSession {
   }
 
   async interrupt(): Promise<void> {
-    if (this.activeTurn)
+    this.turns.cancelRestart();
+    const active = this.turns.active;
+    if (active)
       await this.rpc().request('turn/interrupt', {
         threadId: this.threadId,
-        turnId: this.activeTurn,
+        turnId: active,
       });
+    // A continuation may already be starting: stop it once its turn/start finishes too.
+    await this.turns.run(async () => {
+      if (this.turns.active && this.turns.active !== active)
+        await this.rpc().request('turn/interrupt', {
+          threadId: this.threadId,
+          turnId: this.turns.active,
+        });
+    });
   }
 
   async stopBackground(): Promise<void> {
@@ -232,6 +251,7 @@ export class CodexSession implements AgentSession {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    this.turns.cancelRestart();
     await this.server?.close();
     this.events.close();
   }
@@ -240,41 +260,4 @@ export class CodexSession implements AgentSession {
     if (!this.server) throw new Error('session not started');
     return this.server;
   }
-}
-
-function toInput(input: UserInput): unknown[] {
-  return [
-    { type: 'text', text: input.text, text_elements: [] },
-    ...(input.images ?? []).map((path) => ({ type: 'localImage', path })),
-  ];
-}
-
-function toCodexAnswer(interaction: Interaction, answer: InteractionAnswer): unknown {
-  switch (answer.kind) {
-    case 'question':
-      return {
-        answers: Object.fromEntries(
-          Object.entries(answer.answers).map(([id, answers]) => [id, { answers }]),
-        ),
-      };
-    case 'form':
-      return answer.action === 'accept'
-        ? { action: 'accept', content: answer.values ?? {}, _meta: null }
-        : { action: 'decline', content: null, _meta: null };
-    case 'login':
-      return { action: answer.action === 'done' ? 'accept' : 'cancel', content: null, _meta: null };
-    case 'approval':
-      if (interaction.kind !== 'approval') break;
-      return {
-        decision:
-          answer.choice === 'allow_once'
-            ? 'accept'
-            : answer.choice === 'allow_session'
-              ? 'acceptForSession'
-              : 'decline',
-      };
-    default:
-      break;
-  }
-  return { decision: 'decline' };
 }

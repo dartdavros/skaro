@@ -1,0 +1,37 @@
+.chat > .main > .bottom {
+  flex: none;
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chat > .main > .bottom .archived {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--sk-fill-26);
+}
+.chat > .main > .bottom .archived-text {
+  flex: 1;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-19);
+}
+.chat > .main > .bottom .restore {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: var(--sk-fill-23);
+  color: var(--sk-text-7);
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+.chat > .main > .bottom .restore:hover {
+  background: var(--sk-fill-29);
+  color: var(--sk-text-2);
+}

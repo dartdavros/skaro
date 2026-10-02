@@ -1,0 +1,116 @@
+.project-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+  height: 100%;
+}
+
+.project-tabs .tab {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 9px 0 11px;
+  border-radius: 11px 11px 0 0;
+  color: var(--sk-text-16);
+  font-size: var(--sk-fs-4);
+  cursor: pointer;
+  outline: none;
+  -webkit-app-region: no-drag;
+}
+
+.project-tabs .tab:hover {
+  background: var(--sk-fill-7);
+  color: var(--sk-text-bright);
+}
+
+.project-tabs .tab.active {
+  z-index: 1;
+  margin-bottom: -1px;
+  padding: 0 11px 0 13px;
+  background: var(--sk-fill-8);
+  border: 1px solid var(--sk-surface-2);
+  border-bottom: none;
+  color: var(--sk-text);
+  font-weight: 600;
+}
+
+/* Keep the lower curves, clipping only the shadow below the tab's bottom edge. */
+.project-tabs .tab.active::before,
+.project-tabs .tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  border-bottom: 1px solid var(--sk-surface-2);
+  clip-path: inset(-1px -4px 0);
+  pointer-events: none;
+}
+
+.project-tabs .tab.active::before {
+  left: -11px;
+  border-bottom-right-radius: 10px;
+  border-right: 1px solid var(--sk-surface-2);
+  box-shadow: 3px 3px 0 3px var(--sk-fill-8);
+}
+
+.project-tabs .tab.active::after {
+  right: -11px;
+  border-bottom-left-radius: 10px;
+  border-left: 1px solid var(--sk-surface-2);
+  box-shadow: -3px 3px 0 3px var(--sk-fill-8);
+}
+
+.project-tabs .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-tabs .close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sk-text-muted);
+  cursor: pointer;
+}
+
+.project-tabs .close:hover {
+  background: var(--sk-fill-22);
+  color: var(--sk-text-bright);
+}
+
+.project-tabs .add {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-icon);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.project-tabs .add:hover {
+  background: var(--sk-fill-7);
+  color: var(--sk-text-bright);
+}

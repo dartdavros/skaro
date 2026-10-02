@@ -23,8 +23,9 @@ export function toSettings(config: ProjectConfig): ProjectSettings {
   };
 }
 
-export function toConfig(s: ProjectSettings): ProjectConfig {
+export function toConfig(s: ProjectSettings, checks: ProjectConfig['checks'] = []): ProjectConfig {
   return {
+    checks,
     defaultAgent: s.defaultAgent,
     ...(s.defaultModel ? { defaultModel: s.defaultModel } : {}),
     ...(s.defaultEffort ? { defaultEffort: s.defaultEffort } : {}),
@@ -68,10 +69,13 @@ export async function saveProjectSettings(
   locale: string,
 ): Promise<void> {
   const context = projects.get(projectId);
-  const before = (await context.load()).config;
+  const artifacts = await context.load();
+  const problems = artifacts.problems.filter((problem) => problem.path === '.skaro/config.yaml');
+  if (problems.length) throw new Error(problems.map((problem) => problem.message).join('\n'));
+  const before = artifacts.config;
   const defaults = appDefaults(projects);
   const inherited = INHERITABLE.filter((key) => settings[key] === defaults[key]);
-  await context.store.writeConfig(toConfig(settings), inherited);
+  await context.store.writeConfig(toConfig(settings, before.checks), inherited);
   context.invalidate();
   if (before.agentFiles !== settings.agentFiles) {
     await syncAgentFiles(context.root, settings.agentFiles, locale);

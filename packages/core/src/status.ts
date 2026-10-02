@@ -30,6 +30,7 @@ export function displayStatus(
   index: TaskIndex,
   runtime: TaskRuntime = 'idle',
 ): DisplayStatus {
+  if (task.status === 'done') return 'done';
   if (runtime === 'waiting') return 'needs_answer';
   if (runtime === 'queued') return 'queued';
   if (runtime === 'running') return 'in_progress';

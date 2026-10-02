@@ -82,7 +82,13 @@ export interface Doc {
   path: string;
 }
 
+export interface ProjectCheck {
+  name: string;
+  run: string;
+}
+
 export interface ProjectConfig {
+  checks: ProjectCheck[];
   defaultAgent: string;
   defaultModel?: string;
   defaultEffort?: string;
@@ -119,6 +125,7 @@ export interface ConfigDefaults {
 export type InheritableSetting = Exclude<keyof ConfigDefaults, 'agentInstructions'>;
 
 export const DEFAULT_CONFIG: ProjectConfig = {
+  checks: [],
   defaultAgent: 'claude-code',
   permissionMode: 'auto',
   baseBranch: 'main',

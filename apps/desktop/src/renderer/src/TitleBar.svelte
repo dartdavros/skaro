@@ -1,5 +1,6 @@
 <script lang="ts">
   import { IconButton, Icon, ProjectTabs, t, WindowControls, type ProjectTab } from '@skaro/ui';
+  import UpdateButton from './updates/UpdateButton.svelte';
 
   /** The top bar is the window title bar: home, project tabs, settings, window buttons. */
   let {
@@ -53,6 +54,7 @@
     <ProjectTabs {tabs} {active} {onselect} {onclose} {onadd} />
   </div>
   <div class="right">
+    <UpdateButton />
     <IconButton tip={t('window.settings')} active={settings} onclick={onsettings}>
       <Icon name="settings" size={16} />
     </IconButton>
@@ -77,7 +79,7 @@
     gap: 10px;
     padding: 0 10px 0 14px;
     background: var(--sk-topbar);
-    border-bottom: 1px solid var(--sk-surface);
+    border-bottom: 1px solid var(--sk-fill-18);
     -webkit-app-region: drag;
     user-select: none;
   }

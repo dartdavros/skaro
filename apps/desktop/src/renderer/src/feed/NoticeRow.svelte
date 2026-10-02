@@ -5,9 +5,12 @@
 </script>
 
 <script lang="ts">
-  import type { FeedRow } from '@skaro/timeline';
+  import { reconnectionProgress, type FeedRow } from '@skaro/timeline';
   import { Icon, t } from '@skaro/ui';
   import { clock, useFeed } from './context.svelte';
+  import ActionIcon from './ActionIcon.svelte';
+  import './action-groups-i18n';
+  import MergedNotice from './MergedNotice.svelte';
 
   /** Service lines: retry, compaction, model switch, MCP failure, session restore, merge. */
   let { row, last }: { row: Extract<FeedRow, { type: 'notice' }>; last: boolean } = $props();
@@ -15,38 +18,39 @@
   const feed = useFeed();
   const item = $derived(row.item);
   let details = $state(false);
+  const reconnect = $derived(reconnectionProgress(item));
 
   const retryIn = $derived(
     item.retry ? Math.max(0, Math.ceil((item.startedAt + item.retry.inMs - clock.now) / 1000)) : 0,
   );
 </script>
 
-{#if item.code === 'retry' && item.retry}
-  <!-- A retry line lives until the next event (agent-output.md 5.2). -->
-  {#if last}
-    <div class="fd-live" data-tip={t('feed.notice.retry.tip')}>
-      <span class="fd-pulse"></span>{t('feed.notice.retry', {
-        a: item.retry.attempt,
-        b: item.retry.max,
-        s: retryIn,
-      })}
-    </div>
-  {/if}
+{#if item.code === 'retry'}
+  <div class="fd-live" data-tip={item.text || t('feed.notice.retry.tip')}>
+    <ActionIcon kind="reconnect" />
+    <span
+      >{t('feed.group.reconnect.done')}{#if reconnect}
+        {reconnect.attempt}/{reconnect.max}{/if}</span
+    >
+    {#if last && item.retry}<span
+        >{t('feed.notice.retry', {
+          a: item.retry.attempt,
+          b: item.retry.max,
+          s: retryIn,
+        })}</span
+      >{/if}
+  </div>
 {:else if item.code === 'compaction'}
   <div class="fd-divider" data-tip={t('feed.notice.compaction.tip')}>
     <span>{t('feed.notice.compaction')}</span>
   </div>
 {:else if item.code === 'session_restored'}
-  <div class="fd-divider" data-tip={t('feed.notice.restored.tip')}>
+  <div class="fd-live" data-tip={t('feed.notice.restored.tip')}>
+    <ActionIcon kind="reconnect" />
     <span>{t('feed.notice.restored')}</span>
   </div>
 {:else if item.code === 'merged'}
-  <div
-    class="fd-divider"
-    data-tip={t('feed.notice.merged.tip', { commit: item.native.ref.slice(0, 7) })}
-  >
-    <span>{t('feed.notice.merged', { branch: item.text })}</span>
-  </div>
+  <MergedNotice {row} />
 {:else if item.code === 'session_lost'}
   <div class="fd-bar warning">
     <Icon name="warning" size={13} stroke={2.2} color="var(--sk-warn)" />

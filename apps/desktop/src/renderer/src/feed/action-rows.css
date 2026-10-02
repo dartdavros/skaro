@@ -1,0 +1,34 @@
+/* Owner's 2026-09-29 screenshot: larger, lighter action/thought text, no leading chevron. */
+.fd-feed .fd-action-summary,
+.fd-feed .fd-live {
+  font-size: var(--fd-text, 14px);
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--sk-text-17);
+  gap: 5px;
+}
+
+.fd-feed .fd-action-summary:hover {
+  color: var(--sk-text-13);
+}
+
+.fd-feed .fd-action-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.fd-feed .fd-row {
+  gap: 5px;
+  font-size: var(--fd-text, 14px);
+}
+
+.fd-feed .fd-subrow {
+  gap: 5px;
+  font-size: var(--fd-text, 14px);
+}
+
+.fd-feed .fd-text.commentary {
+  font-size: var(--fd-text, 14px);
+  color: var(--sk-text-7);
+}

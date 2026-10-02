@@ -2,6 +2,8 @@
   import { t } from '@skaro/ui';
   import Card from './Card.svelte';
   import { LINKS, updates } from './updates.svelte';
+  import { exportDiagnostics } from './diagnostics-export';
+  import './diagnostics-i18n';
 
   /** "О программе": the version, checking for a newer one, links. */
   $effect(() => {
@@ -21,13 +23,20 @@
 <Card label={t('settings.about')} id="about">
   <div class="row">
     <span class="name">Skaro <span class="version">{updates.info?.current ?? ''}</span></span>
-    {#if updates.info?.latest}
-      <button type="button" class="install" onclick={() => open(updates.info?.url ?? LINKS.github)}
-        >{t('settings.update.install', { v: updates.info.latest })}</button
+    <button type="button" class="check" onclick={() => void exportDiagnostics()}
+      >{t('diagnostics.export')}</button
+    >
+    {#if updates.available}
+      <button type="button" class="install" onclick={() => (updates.open = true)}
+        >{t('updates.title')}</button
       >
     {:else}
-      <button type="button" class="check" data-tip={tip} onclick={() => void updates.check()}
-        >{t('settings.update.check')}</button
+      <button
+        type="button"
+        class="check"
+        data-tip={tip}
+        disabled={updates.state?.phase === 'checking'}
+        onclick={() => void updates.check()}>{t('settings.update.check')}</button
       >
     {/if}
   </div>

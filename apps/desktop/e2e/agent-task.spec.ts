@@ -5,71 +5,18 @@
 // Needs signed-in agents and spends a little of their usage, so it runs only on request:
 //   SKARO_E2E_AGENTS=claude-code,codex SKARO_AGENTS_DIR=<shared agents dir> pnpm test:e2e agent-task
 
-import { expect, test, type Page } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { expect, test } from '@playwright/test';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { deflateSync } from 'node:zlib';
+import { git, makeRepo, openTask, send, openCalc, card } from './agent-task-support';
+import { waitForCommand, waitTurnEnd } from './feed-test-support';
 import { AppDb } from '@skaro/core';
 import { launchApp, tempUserData } from './launch';
 
 const agents = (process.env['SKARO_E2E_AGENTS'] ?? '').split(',').filter(Boolean);
 
-function git(cwd: string, ...args: string[]): string {
-  return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
-}
-
-/** A tiny project with two tasks: T-002 depends on T-001. */
-function makeRepo(root: string): string {
-  const repo = join(root, 'calc');
-  mkdirSync(join(repo, 'src'), { recursive: true });
-  mkdirSync(join(repo, '.skaro', 'tasks'), { recursive: true });
-  writeFileSync(join(repo, 'src', 'math.js'), 'export const add = (a, b) => a - b;\n');
-  writeFileSync(join(repo, 'README.md'), '# calc\n');
-  mkdirSync(join(repo, 'docs'));
-  writeFileSync(join(repo, 'docs', 'logo.png'), redSquare());
-  writeFileSync(join(repo, '.skaro', 'config.yaml'), 'base_branch: main\n');
-  writeFileSync(
-    join(repo, '.skaro', 'tasks', 'T-001-fix-add.md'),
-    '---\nid: T-001\ntitle: Исправить сложение\nstatus: todo\ndepends_on: []\n---\n' +
-      '## Цель\n\nФункция add в src/math.js вычитает вместо сложения. Исправь её.\n\n' +
-      '## Критерии приёмки\n\n- add(2, 3) возвращает 5\n',
-  );
-  writeFileSync(
-    join(repo, '.skaro', 'tasks', 'T-002-mul.md'),
-    '---\nid: T-002\ntitle: Добавить умножение\nstatus: todo\ndepends_on: [T-001]\n---\n' +
-      '## Цель\n\nДобавь в src/math.js функцию mul(a, b), которая возвращает произведение.\n\n' +
-      '## Критерии приёмки\n\n- mul(2, 3) возвращает 6\n',
-  );
-  git(repo, 'init', '-q', '-b', 'main');
-  git(repo, 'config', 'user.name', 'Skaro E2E');
-  git(repo, 'config', 'user.email', 'e2e@skaro.dev');
-  git(repo, 'config', 'core.autocrlf', 'false');
-  git(repo, 'add', '-A');
-  git(repo, 'commit', '-q', '-m', 'init');
-  return repo;
-}
-
-async function openTask(page: Page, title: string): Promise<void> {
-  await page.getByRole('navigation').getByText('Задачи').click();
-  await page.getByRole('button', { name: new RegExp(title) }).click();
-  await expect(page.getByRole('heading', { name: title })).toBeVisible();
-}
-
-/** Waits until the agent is idle after a turn: the summary line of the latest turn. */
-async function waitTurnEnd(page: Page, count: number): Promise<void> {
-  await expect(page.locator('.fd-bar')).toHaveCount(count, { timeout: 10 * 60_000 });
-  await expect(page.locator('.fd-bar').last()).not.toHaveClass(/error/);
-}
-
-async function send(page: Page, text: string): Promise<void> {
-  const box = page.locator('.composer textarea');
-  await box.fill(text);
-  await box.press('Enter');
-}
-
 for (const agent of agents) {
-  test(`${agent}: task runs, merges from the task chat and survives a restart`, async () => {
+  test(`${agent}: task runs, merges, survives a restart and reverts from the feed`, async () => {
     test.setTimeout(30 * 60_000);
     const userData = tempUserData();
     const repo = makeRepo(userData);
@@ -107,23 +54,25 @@ for (const agent of agents) {
     await card.getByRole('button', { name: 'Влить' }).click();
     await expect(page.getByText('Влито в main')).toBeVisible({ timeout: 60_000 });
 
-    // The main branch has the fix and the task file says done; the worktree is gone.
+    // D33: the merge keeps the task branch and worktree, including service/ignored data.
     expect(readFileSync(join(repo, 'src', 'math.js'), 'utf8')).toContain('a + b');
     expect(readFileSync(join(repo, '.skaro', 'tasks', 'T-001-fix-add.md'), 'utf8')).toContain(
       'status: done',
     );
     expect(git(repo, 'status', '--porcelain', '--untracked-files=no', '--', 'src')).toBe('');
-    // The worktree goes away once the agent has finished its reply.
-    await expect
-      .poll(() => git(repo, 'worktree', 'list'), { timeout: 5 * 60_000 })
-      .not.toContain(taskId);
+    expect(existsSync(worktree)).toBe(true);
+    expect(git(repo, 'worktree', 'list')).toContain(worktree.replaceAll('\\', '/'));
+    const retainedBranch = git(worktree, 'symbolic-ref', '--short', 'HEAD');
+    expect(retainedBranch).toMatch(/^skaro\/T-001/);
+    expect(git(repo, 'show-ref', '--verify', `refs/heads/${retainedBranch}`)).toBeTruthy();
     await expect(page.locator('.chip').filter({ hasText: 'Готово' })).toBeVisible();
 
     // T-002 is no longer blocked.
     await page.getByRole('button', { name: 'Задачи', exact: true }).first().click();
-    await expect(
-      page.getByRole('button', { name: /Добавить умножение/ }).locator('.chip'),
-    ).toHaveText(/Не начата/);
+    const dependent = page.getByRole('button', { name: /Добавить умножение/ });
+    await expect(dependent).toBeVisible();
+    await expect(dependent).not.toHaveClass(/dim/);
+    await expect(dependent.locator('.lock')).toHaveCount(0);
     await app.close();
 
     // After a restart the feed of T-001 is rebuilt from its raw log.
@@ -132,40 +81,30 @@ for (const agent of agents) {
     await openTask(page, 'Исправить сложение');
     await expect(page.locator('.fd-user')).toHaveCount(2);
     await expect(page.getByText('Влито в main')).toBeVisible();
+    expect(existsSync(worktree)).toBe(true);
+    expect(git(repo, 'worktree', 'list')).toContain(worktree.replaceAll('\\', '/'));
+    await page.getByRole('button', { name: 'Отменить слияние', exact: true }).click();
+    const dialog = page.getByRole('alertdialog', { name: 'Отменить слияние' });
+    await expect(dialog).toBeVisible();
+    await page.screenshot({ path: `test-results/${agent}-revert-confirm.png` });
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+    expect(readFileSync(join(repo, 'src', 'math.js'), 'utf8')).toContain('a + b');
+    await page.getByRole('button', { name: 'Отменить слияние', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Отменить слияние', exact: true }).click();
+    await expect(page.getByText('Слияние отменено', { exact: true })).toBeVisible();
+    expect(readFileSync(join(repo, 'src', 'math.js'), 'utf8')).toContain('a - b');
+    expect(readFileSync(join(repo, '.skaro', 'tasks', 'T-001-fix-add.md'), 'utf8')).toContain('status: review');
+    expect(existsSync(worktree)).toBe(true);
+    await page.screenshot({ path: `test-results/${agent}-revert-review.png` });
+    await app.close();
+    app = await launchApp(userData);
+    page = await app.firstWindow();
+    await openTask(page, 'Исправить сложение');
+    await expect(page.getByText('Слияние отменено', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Отменить слияние', exact: true })).toHaveCount(0);
     await app.close();
   });
 }
-
-interface Setup {
-  permissionMode: 'ask' | 'auto' | 'full';
-  planFirst?: boolean;
-}
-
-/** A fresh app with the calc project open on T-001 and the agent settings given. */
-async function openCalc(agent: string, setup: Setup) {
-  const userData = tempUserData();
-  const repo = makeRepo(userData);
-  const db = AppDb.open(join(userData, 'skaro.db'));
-  const project = db.addProject({ name: 'Calc', path: repo });
-  db.setOpenTabs([project.id], project.id);
-  db.setSetting('ui.locale', 'ru');
-  db.setSetting(`task.${project.id}.T-001.agent`, {
-    agent,
-    effort: 'low',
-    permissionMode: setup.permissionMode,
-    planFirst: setup.planFirst ?? false,
-    isolation: 'worktree',
-  });
-  db.close();
-  const app = await launchApp(userData);
-  const page = await app.firstWindow();
-  await openTask(page, 'Исправить сложение');
-  const worktree = join(userData, 'worktrees', project.id, 'T-001');
-  return { app, page, worktree };
-}
-
-const card = (page: Page, text: string | RegExp) =>
-  page.locator('.fd-card').filter({ hasText: text }).first();
 
 for (const agent of agents) {
   test(`${agent}: asks before writing in "Спрашивать" and goes on after "Разрешить"`, async () => {
@@ -272,42 +211,6 @@ for (const agent of agents) {
   });
 }
 
-/** A 48×48 red PNG. */
-function redSquare(): Buffer {
-  const size = 48;
-  const raw = Buffer.alloc((size * 3 + 1) * size);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) raw.set([230, 40, 40], y * (size * 3 + 1) + 1 + x * 3);
-  }
-  const chunk = (type: string, data: Buffer) => {
-    const body = Buffer.concat([Buffer.from(type), data]);
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(body));
-    return Buffer.concat([len, body, crc]);
-  };
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(size, 0);
-  header.writeUInt32BE(size, 4);
-  header.set([8, 2, 0, 0, 0], 8);
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', header),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-function crc32(data: Buffer): number {
-  let c = ~0;
-  for (const byte of data) {
-    c ^= byte;
-    for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1;
-  }
-  return ~c >>> 0;
-}
-
 for (const agent of agents) {
   test(`${agent}: "Стоп" ends the running turn as stopped`, async () => {
     test.setTimeout(10 * 60_000);
@@ -316,9 +219,7 @@ for (const agent of agents) {
       page,
       'Выполни в терминале команду, которая ждёт 120 секунд (Start-Sleep -Seconds 120 или sleep 120), и только потом ответь.',
     );
-    await expect(page.locator('.fd-row').filter({ hasText: /sleep/i }).first()).toBeVisible({
-      timeout: 5 * 60_000,
-    });
+    await waitForCommand(page, /sleep/i);
     await page.getByRole('button', { name: 'Остановить агента' }).click();
     await expect(page.locator('.fd-bar').filter({ hasText: 'Остановлено' })).toBeVisible({
       timeout: 60_000,

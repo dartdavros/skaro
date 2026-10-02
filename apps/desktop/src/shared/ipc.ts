@@ -6,412 +6,49 @@ import type {
   AgentModel,
   AgentUserConfig,
   InteractionAnswer,
-  PermissionMode,
   TimelineEvent,
-  TimelineState,
 } from '@skaro/timeline';
 
-export type Locale = 'ru' | 'en';
-
-export type AgentId = 'claude-code' | 'codex';
-
-export interface AgentInfo {
-  id: AgentId;
-  installed: boolean;
-  /** Pinned version (set when installed). */
-  version?: string;
-  authenticated?: boolean;
-  /** E-mail or plan, as the agent reports it. */
-  account?: string;
-  /** Approximate download size, bytes. */
-  sizeBytes: number;
-  /** Download in progress. */
-  download?: { received: number; total?: number };
-  /** Status not known yet (first check at startup). */
-  checking?: boolean;
-  error?: string;
-}
-
-/** Downloaded and not signed out: the agent can take work. Without one Skaro does nothing. */
-export function agentReady(agent: AgentInfo): boolean {
-  return agent.installed && agent.authenticated !== false;
-}
-
-/** Default model and effort of an agent ("Настройки" → "Агенты"), app setting key. */
-/** App setting: merge a task on its own once every criterion is ticked (else the card asks). */
-export const AUTO_MERGE_KEY = 'merge.auto';
-
-export function agentDefaultsKey(agent: AgentId): string {
-  return `agents.${agent}.defaults`;
-}
-
-/** How the agent of a task works (agent modal, "Применится к следующему запросу"). */
-export interface AgentSettings {
-  agent: AgentId;
-  model?: string;
-  effort?: string;
-  permissionMode: PermissionMode;
-  planFirst: boolean;
-  isolation: 'worktree' | 'in-place';
-}
-
-/** Task status as the UI shows it (core DisplayStatus). */
-export type TaskStatus =
-  | 'todo'
-  | 'in_progress'
-  | 'review'
-  | 'done'
-  | 'failed'
-  | 'cancelled'
-  | 'blocked'
-  | 'queued'
-  | 'needs_answer';
-
-export interface TaskRef {
-  id: string;
-  title: string;
-  status: TaskStatus;
-}
-
-export interface TaskSummary extends TaskRef {
-  milestone?: { id: string; title: string };
-  archived: boolean;
-  /** Assigned agent, else the agent of the last run; undefined — not assigned. */
-  agent?: AgentId;
-  model?: string;
-  deps: string[];
-  /** Dependencies not done yet (a blocked task waits for them). */
-  waitsFor: string[];
-  /** Last change: the task file or its latest run. */
-  updatedAt: number;
-  /** Position inside its milestone. */
-  order?: number;
-  /** Specification the task implements (architecture.md 3.7). */
-  spec?: { id: string; title: string; path: string };
-}
-
-/** A milestone of the plan ("План", Plan mockup). */
-export interface MilestoneInfo {
-  id: string;
-  title: string;
-  order: number;
-  /** "Цель" and "Критерий готовности" sections of the milestone file. */
-  goal?: string;
-  criteria?: string;
-}
-
-/** A source of an import as the import modal shows it (architecture.md 12.1). */
-export interface ImportSource {
-  path: string;
-  /** "~/Docs/shop" */
-  display: string;
-  kind: 'folder' | 'file' | 'archive';
-  files: number;
-  readable: number;
-  unsupported: number;
-  /** Extensions Skaro does not read: ".vsdx". */
-  formats: string[];
-  missing?: boolean;
-}
-
-export type ImportItemType =
-  'brief' | 'architecture' | 'adr' | 'spec' | 'doc' | 'milestone' | 'task';
-
-/** An artifact on the import review screen (ImportReview mockup). */
-export interface ImportReviewItem {
-  key: string;
-  type: ImportItemType;
-  title: string;
-  /** Changes an existing artifact ("обновит"). */
-  update: boolean;
-  sources: string[];
-  /** Text in the Skaro format; for a task its body (goal, criteria, notes). */
-  body: string;
-  /** Text now, for an update. */
-  before?: string;
-  /** Task: milestone (staged key or id), dependencies and specification. */
-  milestone?: string;
-  dependsOn: string[];
-  spec?: string;
-  /** Keys of other staged artifacts it links to. */
-  refs: string[];
-  /** Milestone: goal and done criterion; task: goal and criteria. */
-  fields?: { goal?: string; doneWhen?: string; criteria?: string[] };
-}
-
-export interface ImportReview {
-  items: ImportReviewItem[];
-  /** Numbers new milestones get, by key: "M04". */
-  milestones: Record<string, string>;
-  skipped: { path: string; reason: string }[];
-  notes: string[];
-}
-
-/** A document of "Документы" (Documents mockup). */
-export interface DocEntry {
-  kind: 'brief' | 'architecture' | 'adr' | 'spec' | 'doc';
-  /** Relative to the project root: ".skaro/adr/0001-database.md". */
-  path: string;
-  /** ADR or specification title, or the file name of a free document. */
-  title: string;
-  /** Last change of the file on disk. */
-  editedAt: number;
-  adr?: DocRecord;
-  /** A specification (architecture.md 3.7): numbered and with a status, like an ADR. */
-  spec?: DocRecord;
-}
-
-/** Number, status, date and links of an ADR or a specification. */
-export interface DocRecord {
-  id: string;
-  status: 'proposed' | 'accepted' | 'superseded';
-  date?: string;
-  replaces?: string;
-  replacedBy?: string;
-}
-
-export interface MilestoneInput {
-  title: string;
-  goal: string;
-  criteria: string;
-}
-
-/** "Назначить агента" on the task board. */
-export interface TaskAssignment {
-  agent: AgentId;
-  model?: string;
-  effort?: string;
-}
-
-/** Parallel run slots (architecture.md 7.1). */
-export interface RunSlots {
-  total: number;
-  free: number;
-}
-
-export interface TaskDetail extends TaskSummary {
-  dependsOn: TaskRef[];
-  /** Tasks that wait for this one. */
-  blocks: TaskRef[];
-  branch?: string;
-  goal?: string;
-  criteria: { text: string; done: boolean }[];
-  notes?: string;
-  /** "Итог", filled by Skaro after the merge. */
-  summary?: string;
-  /** Requirements R-n of the task's specification, for criteria that name them. */
-  requirements?: { id: string; text: string }[];
-}
-
-export interface RunInfo {
-  id: string;
-  agent: AgentId;
-  startedAt: number;
-  worktree?: string;
-  branch?: string;
-  /** An agent process is attached now. */
-  live: boolean;
-}
-
-/** Everything the task screen needs to open. */
-export interface TaskView {
-  projectId: string;
-  task: TaskDetail;
-  settings: AgentSettings;
-  run?: RunInfo;
-  timeline?: TimelineState;
-  /** Number of events in the timeline; live batches continue from here. */
-  seq: number;
-  /** Waiting for a free slot (architecture.md 7.1). */
-  queued: boolean;
-  /** A new run would start now rather than wait in the queue. */
-  slotsFree: boolean;
-  /** Command status line under the composer: sandbox note (D-28). */
-  sandboxHolds?: boolean;
-}
-
-export interface MessageInput {
-  text: string;
-  /** Absolute paths of attached images. */
-  images?: string[];
-}
-
-export type MergeAction =
-  | { action: 'confirm'; message: string }
-  | { action: 'cancel' }
-  | { action: 'update_branch' }
-  | { action: 'resolve_with_agent' };
-
-/** How the agent of a chat works: the agent is fixed once the chat starts (D-24). */
-export interface ChatSettings {
-  agent: AgentId;
-  model?: string;
-  effort?: string;
-  /** "Спрашивать" by default; "Полный доступ" runs everything without asking (owner, 2026-09-29). */
-  permissionMode?: ChatPermissionMode;
-}
-
-/** A chat works in the project's main working copy: no "auto within the task" there. */
-export type ChatPermissionMode = Extract<PermissionMode, 'ask' | 'full'>;
-
-/** A project chat in the list ("Чат" section). */
-export interface ChatSummary {
-  id: string;
-  title: string;
-  agent: AgentId;
-  archived: boolean;
-  /** "Импорт документации" (architecture.md 12): the chat stages the import. */
-  kind?: 'import';
-  /** The agent is answering now. */
-  live: boolean;
-  updatedAt: number;
-}
-
-/** Everything the chat screen needs to open a chat. */
-export interface ChatView {
-  projectId: string;
-  chat: ChatSummary;
-  settings: ChatSettings;
-  timeline: TimelineState;
-  /** Number of events in the timeline; live batches continue from here. */
-  seq: number;
-}
-
-/** The user's decision on a proposal card (agent-output.md 5.4). */
-export type ProposalAction =
-  | {
-      action: 'apply';
-      /** Plan: refs of the tasks to create. */
-      tasks?: string[];
-      /** ADR: the text after "Изменить". */
-      adr?: { title: string; body: string };
-      /** Import: keys of the staged artifacts to write. */
-      import?: string[];
-    }
-  | { action: 'reject' }
-  /** An applied document goes back to its previous text. */
-  | { action: 'revert' };
-
-export interface PathSuggestion {
-  path: string;
-  kind: 'file' | 'folder';
-}
-
-export interface PickedFile {
-  path: string;
-  kind: 'image' | 'file' | 'folder';
-}
-
-export interface ProjectInfo {
-  id: string;
-  name: string;
-  path: string;
-  /** The folder is gone (moved or deleted). */
-  missing: boolean;
-  /** The logo picked in "Параметры проекта", a data: URL; without it — initials. */
-  logo?: string;
-}
-
-/** A project card on "Проекты" (Projects mockup): status, current milestone, running tasks. */
-export interface ProjectCard {
-  id: string;
-  name: string;
-  path: string;
-  /** The folder is gone (moved or deleted). */
-  missing: boolean;
-  logo?: string;
-  branch?: string;
-  /** The first milestone not done yet (or the last one when all are done). */
-  milestone?: { id: string; title: string; done: number; total: number };
-  counts: { working: number; needs: number; review: number; failed: number; blocked: number };
-  /** Tasks an agent works on now. */
-  running: { id: string; title: string; agent: AgentId; model?: string }[];
-  /** Default agent of the project. */
-  agent: AgentId;
-  model?: string;
-  /** Last activity: runs, chats, opening the project. */
-  activeAt: number;
-}
-
-/** "Параметры проекта" (ProjectSettings mockup): the project's .skaro/config.yaml. */
-export interface ProjectSettings {
-  defaultAgent: AgentId;
-  defaultModel?: string;
-  defaultEffort?: string;
-  permissionMode: PermissionMode;
-  baseBranch: string;
-  branchTemplate: string;
-  isolation: 'worktree' | 'in-place';
-  mergeStrategy: 'squash' | 'merge' | 'rebase';
-  deleteBranch: boolean;
-  autoAcceptDocs: boolean;
-  agentFiles: boolean;
-  agentInstructions: string;
-}
-
-/**
- * App-wide defaults of project settings ("Настройки"): a project uses them for what it does not
- * set itself. App setting `defaults.project`; instructions are added to the project's own.
- */
-export interface ProjectDefaults {
-  baseBranch: string;
-  branchTemplate: string;
-  isolation: 'worktree' | 'in-place';
-  mergeStrategy: 'squash' | 'merge' | 'rebase';
-  deleteBranch: boolean;
-  autoAcceptDocs: boolean;
-  agentFiles: boolean;
-  agentInstructions: string;
-}
-
-/** A logo is a small picture: larger files are refused ("Параметры проекта"). */
-export const LOGO_MAX_BYTES = 1024 * 1024;
-
-export const PROJECT_DEFAULTS_KEY = 'defaults.project';
-
-/** Built-in values while nothing is set in "Настройки". */
-export const BUILT_IN_DEFAULTS: ProjectDefaults = {
-  baseBranch: 'main',
-  branchTemplate: 'skaro/{id}-{slug}',
-  isolation: 'worktree',
-  mergeStrategy: 'squash',
-  deleteBranch: true,
-  autoAcceptDocs: true,
-  agentFiles: false,
-  agentInstructions: '',
-};
-
-/** A folder picked in the "Новый проект" modal. */
-export interface FolderInfo {
-  path: string;
-  name: string;
-  exists: boolean;
-  git: boolean;
-  branch?: string;
-}
-
-/** An app to open projects in ("Настройки" → "Проекты"), settings "apps.editor" and "apps.terminal". */
-export type ExternalApp =
-  | { kind: 'vscode' | 'cursor' | 'jetbrains' | 'system' | 'iterm2' | 'warp' }
-  | { kind: 'custom'; path: string };
-
-/** "О программе": the running version and a newer release, if any. */
-export interface UpdateInfo {
-  current: string;
-  latest?: string;
-  /** Release page. */
-  url?: string;
-}
-
-export interface TabsState {
-  /** Open project tabs in order. */
-  projects: string[];
-  /** Active project, or undefined for the home screen. */
-  active?: string;
-}
+import type {
+  Locale,
+  AgentId,
+  AgentInfo,
+  AgentSettings,
+  TaskSummary,
+  MilestoneInfo,
+  ImportSource,
+  ImportReview,
+  DocEntry,
+  MilestoneInput,
+  TaskAssignment,
+} from './ipc-entities';
+import type {
+  RunSlots,
+  TaskView,
+  MessageInput,
+  MergeAction,
+  ChatSettings,
+  ChatSummary,
+  ChatView,
+  ProposalAction,
+  PathSuggestion,
+  PickedFile,
+  ProjectInfo,
+  ProjectCard,
+  ProjectSettings,
+  ProjectDefaults,
+  FolderInfo,
+  TabsState,
+} from './ipc-sessions';
+import type { UpdateState } from './updates';
+import type { Diagnostics } from './diagnostics';
+export * from './ipc-entities';
+export * from './ipc-sessions';
+export type { UpdateState } from './updates';
 
 /** Methods the renderer may call: name → signature. */
 export interface Methods {
+  'task.revertMerge': (projectId: string, taskId: string, commit: string) => void;
   'window.minimize': () => void;
   'window.toggleMaximize': () => void;
   'window.close': () => void;
@@ -424,8 +61,11 @@ export interface Methods {
   'app.projectDefaults': () => ProjectDefaults;
   'app.setProjectDefaults': (defaults: ProjectDefaults) => void;
   'app.version': () => string;
-  /** Asks GitHub Releases for a newer Skaro (only on the user's click). */
-  'app.checkUpdate': () => UpdateInfo;
+  'diagnostics.export': () => Diagnostics;
+  'app.checkUpdate': () => UpdateState;
+  'updates.state': () => UpdateState;
+  'updates.download': () => UpdateState;
+  'updates.apply': () => UpdateState;
   /** "Другой…": an application picked by the user; undefined if cancelled. */
   'app.pickApp': () => string | undefined;
   'projects.list': () => ProjectInfo[];
@@ -577,6 +217,7 @@ export interface Methods {
 
 /** Events from the main process: name → payload. */
 export interface Events {
+  'updates.changed': UpdateState;
   'window.maximized': boolean;
   'agents.changed': AgentInfo[];
   /** Artifacts of a project changed (task list and task details). */
@@ -603,115 +244,7 @@ export interface Events {
 export type MethodName = keyof Methods;
 export type EventName = keyof Events;
 
-/** The whitelist the preload exposes; must list every key of `Methods`. */
-export const METHODS = [
-  'window.minimize',
-  'window.toggleMaximize',
-  'window.close',
-  'window.isMaximized',
-  'app.getLocale',
-  'app.setLocale',
-  'app.getSetting',
-  'app.setSetting',
-  'app.projectDefaults',
-  'app.setProjectDefaults',
-  'app.version',
-  'app.checkUpdate',
-  'app.pickApp',
-  'projects.list',
-  'projects.pickFolder',
-  'projects.inspect',
-  'projects.defaultParent',
-  'projects.add',
-  'projects.create',
-  'projects.remove',
-  'projects.overview',
-  'projects.relocate',
-  'projects.openIn',
-  'project.rename',
-  'project.pickLogo',
-  'project.removeLogo',
-  'project.settings',
-  'project.saveSettings',
-  'project.hasCode',
-  'import.scan',
-  'import.start',
-  'import.review',
-  'import.openSource',
-  'tabs.get',
-  'tabs.set',
-  'agents.list',
-  'agents.refresh',
-  'agents.install',
-  'agents.login',
-  'agents.models',
-  'agents.commands',
-  'agents.config',
-  'agents.openConfigDir',
-  'tasks.list',
-  'tasks.slots',
-  'tasks.run',
-  'tasks.archive',
-  'tasks.delete',
-  'tasks.move',
-  'tasks.unblock',
-  'tasks.assign',
-  'plan.milestones',
-  'plan.create',
-  'plan.update',
-  'plan.delete',
-  'plan.reorder',
-  'plan.placeTask',
-  'docs.list',
-  'docs.read',
-  'docs.write',
-  'docs.create',
-  'docs.createSpec',
-  'docs.setAdrStatus',
-  'docs.setSpecStatus',
-  'docs.reveal',
-  'task.open',
-  'task.send',
-  'task.respond',
-  'task.interrupt',
-  'task.rewind',
-  'task.stopBackground',
-  'task.setSettings',
-  'task.merge',
-  'task.toggleCriterion',
-  'chats.list',
-  'chats.defaults',
-  'chat.open',
-  'chat.create',
-  'chat.send',
-  'chat.respond',
-  'chat.interrupt',
-  'chat.rewind',
-  'chat.setSettings',
-  'chat.archive',
-  'chat.proposal',
-  'files.suggest',
-  'files.exist',
-  'files.open',
-  'files.pick',
-  'shell.openExternal',
-] as const satisfies readonly MethodName[];
-
-export const EVENTS = [
-  'window.maximized',
-  'agents.changed',
-  'project.changed',
-  'task.events',
-  'task.changed',
-  'chat.events',
-  'chats.changed',
-  'import.progress',
-] as const satisfies readonly EventName[];
-
-// Compile-time check that METHODS covers every method.
-type Missing = Exclude<MethodName, (typeof METHODS)[number]>;
-const _complete: Missing extends never ? true : Missing = true;
-void _complete;
+export { METHODS, EVENTS } from './ipc-channels';
 
 export const INVOKE_CHANNEL = 'skaro:invoke';
 export const EVENT_CHANNEL = 'skaro:event';

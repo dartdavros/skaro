@@ -3,6 +3,7 @@
   import { Icon, t, tn } from '@skaro/ui';
   import type { MergeAction } from '../../../shared/ipc';
   import { useFeed } from './context.svelte';
+  import './merge-card.css';
 
   /**
    * Merge confirmation in the task chat (D-27, architecture.md 8): what goes where, checks that
@@ -25,6 +26,7 @@
 
   const blocked = $derived(interaction.blockers.length > 0);
   const conflicts = $derived(interaction.blockers.includes('conflicts'));
+  const localChanges = $derived(interaction.localChanges ?? []);
 
   async function act(action: MergeAction): Promise<void> {
     if (busy) return;
@@ -43,7 +45,7 @@
   }
 </script>
 
-<div class="fd-card">
+<div class="fd-card fd-merge-card">
   <span class="fd-card-title">{t('card.merge.title')}</span>
   <div class="route">
     <Icon name="branch" size={12} stroke={1.9} />
@@ -62,6 +64,11 @@
       <span>{t(`card.merge.blocker.${blocker}`, { to: interaction.to })}</span>
     </div>
   {/each}
+  {#if localChanges.length}
+    <div class="files">
+      {#each localChanges as file (file)}<span>{file}</span>{/each}
+    </div>
+  {/if}
   {#if conflicts && interaction.conflicts.length}
     <div class="files">
       {#each interaction.conflicts as file (file)}<span>{file}</span>{/each}
@@ -128,82 +135,3 @@
     {/if}
   </div>
 </div>
-
-<style>
-  .route {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--sk-mono);
-    font-size: var(--sk-fs-4);
-    color: var(--sk-code);
-    min-width: 0;
-  }
-
-  .branch {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .arrow {
-    flex: none;
-    color: var(--sk-text-23);
-  }
-
-  .base {
-    flex: none;
-    color: var(--sk-text-7);
-  }
-
-  .stats {
-    font-family: var(--sk-mono);
-    font-size: var(--sk-fs-4);
-    color: var(--sk-text-19);
-    display: flex;
-    gap: 6px;
-  }
-
-  .line {
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    font-size: var(--sk-fs-4);
-    line-height: 1.45;
-  }
-
-  .line :global(svg) {
-    margin-top: 2px;
-  }
-
-  .line.bad {
-    color: var(--sk-error);
-  }
-
-  .line.warn {
-    color: var(--sk-warn);
-  }
-
-  .files {
-    margin-left: 19px;
-    display: flex;
-    flex-direction: column;
-    font-family: var(--sk-mono);
-    font-size: var(--sk-fs-4);
-    color: var(--sk-text-13);
-  }
-
-  .message {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  textarea.fd-input {
-    height: auto;
-    padding: 8px 11px;
-    line-height: 1.4;
-    resize: vertical;
-  }
-</style>

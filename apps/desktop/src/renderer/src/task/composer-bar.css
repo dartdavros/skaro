@@ -1,0 +1,131 @@
+.composer .bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.composer .spacer {
+  flex: 1;
+}
+.composer .pop-anchor {
+  position: relative;
+  flex: none;
+}
+.composer .round {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sk-text-19);
+  cursor: pointer;
+  padding: 0;
+}
+.composer .round:hover,
+.composer .round.on {
+  background: var(--sk-fill-32);
+  color: var(--sk-text-4);
+}
+.composer .pill {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--sk-text-10);
+  font: inherit;
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  cursor: pointer;
+}
+.composer .pill:hover,
+.composer .pill.on {
+  background: var(--sk-fill-32);
+}
+.composer .pill.warn {
+  background: var(--sk-warn-a10);
+  color: var(--sk-warn);
+}
+.composer .pill.static {
+  background: var(--sk-fill-32);
+  color: var(--sk-text-6);
+  cursor: default;
+}
+.composer .ctx {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.composer .ctx:hover {
+  background: var(--sk-fill-32);
+}
+.composer .model {
+  flex: none;
+  height: 28px;
+  padding: 0 10px 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--sk-text-10);
+  font: inherit;
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  cursor: pointer;
+}
+.composer .model:hover {
+  background: var(--sk-fill-32);
+  color: var(--sk-text-4);
+}
+.composer .send {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--sk-fill-32);
+  color: var(--sk-text-21);
+  cursor: default;
+  padding: 0;
+}
+.composer .send.ready {
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  cursor: pointer;
+}
+.composer .send.ready:hover {
+  background: var(--sk-accent-hover);
+}
+.composer .stop {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sk-text-6);
+  cursor: pointer;
+  padding: 0;
+}
+.composer .stop:hover {
+  background: var(--sk-fill-32);
+  color: var(--sk-text-1);
+}

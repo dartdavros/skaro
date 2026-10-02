@@ -1,89 +1,9 @@
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { git, GitService, MergeBlockedError } from './git.ts';
-
-let dir: string;
-let repo: string;
-let service: GitService;
-
-async function write(root: string, path: string, content: string): Promise<void> {
-  await mkdir(dirname(join(root, path)), { recursive: true });
-  await writeFile(join(root, path), content);
-}
-
-async function commit(root: string, message: string, files: Record<string, string>): Promise<void> {
-  for (const [path, content] of Object.entries(files)) await write(root, path, content);
-  await git(root, ['add', '-A']);
-  await git(root, ['commit', '-q', '-m', message]);
-}
-
-async function log(root: string, range = 'HEAD'): Promise<string[]> {
-  return (await git(root, ['log', '--format=%s', range])).stdout.trim().split('\n');
-}
-
-/** A task worktree with one commit on its branch. */
-async function taskWithChange(
-  files: Record<string, string>,
-  branch = 'skaro/T-001-a',
-): Promise<string> {
-  const worktree = join(dir, 'wt', branch.replaceAll('/', '_'));
-  await service.createWorktree({ path: worktree, branch, base: 'main' });
-  await commit(worktree, 'agent work', files);
-  return worktree;
-}
-
-beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'skaro-git-'));
-  repo = join(dir, 'repo');
-  await mkdir(repo);
-  await git(repo, ['init', '-q', '-b', 'main']);
-  for (const [k, v] of [
-    ['user.name', 'Test'],
-    ['user.email', 'test@skaro.dev'],
-    ['core.autocrlf', 'false'],
-    ['commit.gpgsign', 'false'],
-  ] as const) {
-    await git(repo, ['config', k, v]);
-  }
-  await commit(repo, 'init', {
-    'src/math.js': 'export const add = (a, b) => a - b;\n',
-    'README.md': '# calc\n',
-    '.skaro/tasks/T-001-a.md': '---\nid: T-001\nstatus: in_progress\n---\n',
-  });
-  service = new GitService(repo);
-});
-
-afterEach(async () => {
-  await git(repo, ['worktree', 'prune'], { allowFail: true });
-  await rm(dir, { recursive: true, force: true, maxRetries: 3 });
-});
-
-describe('worktrees', () => {
-  it('creates a branch from base, reuses it, and removes both', async () => {
-    const path = join(dir, 'wt1');
-    await service.createWorktree({ path, branch: 'skaro/T-001-a', base: 'main' });
-    expect(await service.currentBranch(path)).toBe('skaro/T-001-a');
-    await service.removeWorktree(path);
-    expect(existsSync(path)).toBe(false);
-    expect(await service.branchExists('skaro/T-001-a')).toBe(true);
-
-    await service.createWorktree({ path, branch: 'skaro/T-001-a', base: 'main' });
-    expect(await service.currentBranch(path)).toBe('skaro/T-001-a');
-    await service.removeWorktree(path, { deleteBranch: 'skaro/T-001-a' });
-    expect(await service.branchExists('skaro/T-001-a')).toBe(false);
-  });
-
-  it('removes a worktree with uncommitted changes and tolerates a missing one', async () => {
-    const path = await taskWithChange({ 'a.txt': 'a\n' });
-    await write(path, 'dirty.txt', 'x');
-    await service.removeWorktree(path);
-    expect(existsSync(path)).toBe(false);
-    await expect(service.removeWorktree(path)).resolves.toBeUndefined();
-  });
-});
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { git, MergeBlockedError } from './git.ts';
+import { repo, service, write, commit, taskWithChange, log } from './git-test-support.ts';
 
 describe('merge checks', () => {
   it('passes for a clean branch with changes', async () => {
@@ -101,8 +21,8 @@ describe('merge checks', () => {
     });
   });
 
-  it('blocks when the main working copy has uncommitted changes', async () => {
-    await taskWithChange({ 'a.txt': 'a\n' });
+  it('blocks when the merge would overwrite uncommitted changes', async () => {
+    await taskWithChange({ 'README.md': '# task\n' });
     await write(repo, 'README.md', '# edited\n');
     expect((await service.checkMerge('main', 'skaro/T-001-a')).blockers).toEqual(['dirty_base']);
   });
@@ -165,8 +85,9 @@ describe('merge', () => {
       branch: 'skaro/T-001-a',
       strategy: 'squash',
       message: 'T-001: fix add',
-      beforeCommit: async () => {
-        await write(repo, '.skaro/tasks/T-001-a.md', '---\nid: T-001\nstatus: done\n---\n');
+      managedPaths: ['.skaro/tasks/T-001-a.md'],
+      beforeCommit: async (checkout) => {
+        await write(checkout, '.skaro/tasks/T-001-a.md', '---\nid: T-001\nstatus: done\n---\n');
         return ['.skaro/tasks/T-001-a.md'];
       },
     });
@@ -251,7 +172,7 @@ describe('merge', () => {
   });
 
   it('refuses to merge when blocked', async () => {
-    await taskWithChange({ 'a.txt': 'a\n' });
+    await taskWithChange({ 'README.md': '# task\n' });
     await write(repo, 'README.md', '# dirty\n');
     const error = await service
       .merge({ base: 'main', branch: 'skaro/T-001-a', strategy: 'squash', message: 'm' })
@@ -355,27 +276,5 @@ describe('revert', () => {
     });
     await write(repo, 'README.md', '# dirty\n');
     await expect(service.revert(sha)).rejects.toThrow('uncommitted');
-  });
-});
-
-describe('snapshots', () => {
-  it('puts a worktree back: commits, edits and new files after the snapshot go away', async () => {
-    const worktree = await taskWithChange({ 'a.txt': 'a\n' });
-    await write(worktree, 'draft.txt', 'untracked before\n');
-    await write(worktree, 'a.txt', 'edited before\n');
-    const snap = await service.snapshot(worktree);
-    expect((await git(worktree, ['status', '--porcelain'])).stdout).toContain('draft.txt');
-
-    await commit(worktree, 'agent went on', { 'b.txt': 'b\n', 'a.txt': 'later\n' });
-    await write(worktree, 'c.txt', 'c\n');
-    await service.restoreSnapshot(worktree, snap);
-
-    expect(await readFile(join(worktree, 'a.txt'), 'utf8')).toBe('edited before\n');
-    expect(await readFile(join(worktree, 'draft.txt'), 'utf8')).toBe('untracked before\n');
-    expect(existsSync(join(worktree, 'b.txt'))).toBe(false);
-    expect(existsSync(join(worktree, 'c.txt'))).toBe(false);
-    expect(await log(worktree)).toEqual(['agent work', 'init']);
-    // Edits come back uncommitted, as they were.
-    expect((await git(worktree, ['diff', '--cached', '--name-only'])).stdout.trim()).toBe('');
   });
 });

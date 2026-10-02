@@ -7,7 +7,7 @@
 
   /* Surfaces */
   --sk-topbar: #0f0f0f; /* top bar, side panel */
-  --sk-bg: #121212; /* main background */
+  --sk-bg: var(--sk-fill-8); /* main background, matches the left sidebar */
   --sk-surface: #1a1a1a; /* cards */
   --sk-surface-hover: #222222;
   --sk-surface-2: #242424; /* secondary buttons, open menus */
@@ -302,8 +302,8 @@ code {
 
   /* Translucent */
   --sk-accent-a14: rgba(42, 82, 190, 0.14);
-  --sk-bg-a0: rgba(18, 18, 18, 0);
-  --sk-bg-a85: rgba(18, 18, 18, 0.85);
+  --sk-bg-a0: rgba(23, 23, 23, 0);
+  --sk-bg-a85: rgba(23, 23, 23, 0.85);
   --sk-black-a35: rgba(0, 0, 0, 0.35);
   --sk-black-a45: rgba(0, 0, 0, 0.45);
   --sk-black-a55: rgba(0, 0, 0, 0.55);

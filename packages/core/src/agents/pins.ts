@@ -4,14 +4,14 @@ export type AgentId = 'claude-code' | 'codex';
 
 /** Pinned versions. Bump together with adapter golden tests (agent-output.md, section 8). */
 export const AGENT_PINS: Record<AgentId, string> = {
-  'claude-code': '0.3.281', // @anthropic-ai/claude-agent-sdk (Claude Code 2.1.281)
-  codex: '0.156.1', // @openai/codex
+  'claude-code': '0.3.285', // @anthropic-ai/claude-agent-sdk (Claude Code 2.1.285)
+  codex: '0.159.2', // @openai/codex
 };
 
 /** The agent's own version, shown to the user ("Claude Code 2.1.281"): moves with the pins. */
 const SHOWN_VERSIONS: Record<AgentId, string> = {
-  'claude-code': '2.1.281',
-  codex: '0.156.1',
+  'claude-code': '2.1.285',
+  codex: '0.159.2',
 };
 
 export interface Platform {
@@ -70,11 +70,15 @@ export function currentPlatform(): Platform {
   return { os: process.platform, arch: process.arch, musl: isMusl() };
 }
 
-export function agentPackage(agent: AgentId, platform: Platform = currentPlatform()): AgentPackage {
+export function agentPackage(
+  agent: AgentId,
+  platform: Platform = currentPlatform(),
+  pin?: { version: string; shownVersion: string },
+): AgentPackage {
   const key = `${platform.os}-${platform.arch}`;
   const exe = platform.os === 'win32' ? '.exe' : '';
-  const version = AGENT_PINS[agent];
-  const shownVersion = SHOWN_VERSIONS[agent];
+  const version = pin?.version ?? AGENT_PINS[agent];
+  const shownVersion = pin?.shownVersion ?? SHOWN_VERSIONS[agent];
   if (agent === 'claude-code') {
     if (
       !['win32', 'darwin', 'linux'].includes(platform.os) ||

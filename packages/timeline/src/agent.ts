@@ -14,13 +14,22 @@ export interface UserInput {
   images?: string[];
 }
 
-export interface McpServer {
-  type: 'http';
-  url: string;
-  headers?: Record<string, string>;
+export type McpServer = (
+  | {
+      type: 'http';
+      url: string;
+      headers?: Record<string, string>;
+    }
+  | {
+      type: 'stdio';
+      command: string;
+      args: string[];
+      env?: Record<string, string>;
+    }
+) & {
   /** Its tools run without asking the user: Skaro's own server, whose tools confirm in cards. */
   trusted?: boolean;
-}
+};
 
 export interface SessionOptions {
   /** Worktree of the task, or the project root for chats. */

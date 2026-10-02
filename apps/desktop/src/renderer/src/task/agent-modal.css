@@ -1,0 +1,153 @@
+.agent-settings .models-loading {
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--sk-fill-23);
+}
+.agent-settings .skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 9px 9px 31px;
+}
+.agent-settings .models-loading .bar {
+  height: 9px;
+  border-radius: 4px;
+  background: var(--sk-fill-32);
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+.agent-settings .models-loading .bar.thin {
+  width: 70%;
+  height: 7px;
+  background: var(--sk-fill-27);
+}
+.agent-settings .models-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--sk-fill-23);
+}
+.agent-settings .models-error-text {
+  flex: 1;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-7);
+}
+.agent-settings .models-retry {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: var(--sk-fill-32);
+  color: var(--sk-text-6);
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+.agent-settings .models-retry:hover {
+  background: var(--sk-fill-35);
+  color: var(--sk-text-2);
+}
+.agent-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.agent-settings > .agents {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agent-settings .agent {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.agent-settings .agent:hover:not(:disabled) {
+  background: var(--sk-fill-20);
+}
+.agent-settings .agent.on {
+  background: var(--sk-fill-2);
+  cursor: default;
+}
+.agent-settings .agent:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.agent-settings > .agents .texts,
+.agent-settings > .plan-first .texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.agent-settings > .agents .name,
+.agent-settings > .plan-first .name {
+  font-size: var(--sk-fs-6);
+  font-weight: 600;
+  color: var(--sk-text-6);
+}
+.agent-settings .agent:not(.on) .name {
+  color: var(--sk-text-13);
+}
+.agent-settings .state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--sk-fs-3);
+}
+.agent-settings .link {
+  font-weight: 600;
+  color: var(--sk-accent);
+  cursor: pointer;
+}
+.agent-settings .link:hover {
+  color: var(--sk-link-hover);
+  text-decoration: underline;
+}
+.agent-settings .progress {
+  height: 4px;
+  border-radius: 3px;
+  background: var(--sk-fill-20);
+  overflow: hidden;
+}
+.agent-settings .progress span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--sk-fill-40);
+  transition: width 0.6s ease;
+}
+.agent-settings > .section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-settings > .plan-first {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--sk-fill-20);
+}
+.agent-settings .note-line {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}

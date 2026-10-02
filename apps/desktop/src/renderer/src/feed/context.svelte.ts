@@ -16,6 +16,7 @@ export interface FeedActions {
   stopBackground(id: string): void;
   respond(interactionId: string, answer: InteractionAnswer): Promise<void>;
   merge(interactionId: string, action: MergeAction): Promise<void>;
+  revertMerge?(commit: string): Promise<void>;
   /** Back to before a user message; with `resend`, sends again (edit, retry). */
   rewind(itemId: string, resend?: MessageInput): Promise<void>;
   /** Starts the run again from where it stopped. */

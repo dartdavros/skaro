@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { FileRow } from '@skaro/timeline';
   import { t } from '@skaro/ui';
+  import ActionIcon from './ActionIcon.svelte';
   import { useFeed } from './context.svelte';
   import { displayPath } from './format';
 
@@ -81,7 +82,7 @@
     data-tip={tip}
     onclick={() => hasDiff && (open = !open)}
   >
-    <span class="fd-glyph edit">✎</span>
+    <ActionIcon kind="file" />
     <span class="fd-main" class:struck={declined}>{label}</span>
     {#if pending}
       <span class="fd-wait-dot"></span>

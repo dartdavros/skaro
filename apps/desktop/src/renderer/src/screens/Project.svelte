@@ -1,20 +1,16 @@
 <script lang="ts">
+  import ProjectSection from './ProjectSection.svelte';
   import { NavPanel, t, tn, type NavItem } from '@skaro/ui';
   import { onDestroy } from 'svelte';
   import type { ProjectInfo } from '../../../shared/ipc';
   import { agents } from '../agents.svelte';
-  import ChatScreen from '../chat/ChatScreen.svelte';
-  import DocsScreen from '../docs/DocsScreen.svelte';
-  import PlanScreen from '../plan/PlanScreen.svelte';
-  import TaskScreen from '../task/TaskScreen.svelte';
   import { ProjectTasks } from '../tasks/data.svelte';
   import '../tasks/i18n';
   import { needsYou } from '../tasks/model';
-  import TasksScreen from '../tasks/TasksScreen.svelte';
-  import ProjectParams from '../params/ProjectParams.svelte';
   import ImportModal from '../import/ImportModal.svelte';
+  import { NavigationWidth } from './navigation-width.svelte';
 
-  /** A project tab: the section on the left, the sections panel on the right. */
+  /** A project tab: the sections panel on the left and the current section beside it. */
   let {
     project,
     section = $bindable('tasks'),
@@ -39,6 +35,8 @@
 
   /** A document to open when "Документы" shows next (a task's specification). */
   let doc = $state<string | undefined>();
+  const navigation = new NavigationWidth();
+  onDestroy(() => navigation.dispose());
 
   function openDoc(path: string): void {
     doc = path;
@@ -93,52 +91,35 @@
 </script>
 
 <div class="project">
-  {#if current.id === 'tasks' && task}
-    {#key task}
-      <TaskScreen
-        projectId={project.id}
-        taskId={task}
-        agents={agents.list}
-        ontasks={() => (task = undefined)}
-        onspec={openDoc}
-      />
-    {/key}
-  {:else if current.id === 'docs'}
-    <DocsScreen
-      projectId={project.id}
-      open={doc}
-      tasks={data}
-      onchat={newChat}
-      ontask={openTask}
-      onimport={() => (importing = true)}
-    />
-  {:else if current.id === 'plan'}
-    <PlanScreen projectId={project.id} {data} onopen={openTask} onchat={newChat} />
-  {:else if current.id === 'params'}
-    <ProjectParams {project} {onremove} {onchanged} />
-  {:else if current.id === 'chat'}
-    {#key project.id}
-      <ChatScreen
-        {project}
-        agents={agents.list}
-        bind:chat
-        onsection={go}
-        onimport={() => (importing = true)}
-      />
-    {/key}
-  {:else}
-    <TasksScreen projectId={project.id} {data} onopen={openTask} onnew={newChat} />
-  {/if}
   <NavPanel
     title={project.name}
     logo={project.logo}
     {items}
     active={current.id}
     bind:collapsed
+    bind:width={navigation.width}
+    onresize={() => navigation.save()}
     onselect={(id) => {
       if (id === 'tasks' && section === 'tasks') task = undefined;
       section = id;
     }}
+  />
+  <ProjectSection
+    {project}
+    section={current.id}
+    {task}
+    bind:chat
+    {doc}
+    {data}
+    agents={agents.list}
+    ontasks={() => (task = undefined)}
+    {openDoc}
+    {newChat}
+    {go}
+    {openTask}
+    {onremove}
+    {onchanged}
+    onimport={() => (importing = true)}
   />
 </div>
 

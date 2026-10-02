@@ -1,0 +1,88 @@
+.composer .attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 8px;
+}
+.composer .thumb {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--sk-fill-32);
+}
+.composer .thumb img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}
+.composer .thumb .warn {
+  position: absolute;
+  left: -4px;
+  bottom: -4px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--sk-fill-5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sk-warn);
+}
+.composer .remove-thumb {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--sk-fill-5);
+  color: var(--sk-text-13);
+  cursor: pointer;
+}
+.composer .remove-thumb:hover {
+  color: var(--sk-text-2);
+}
+.composer .chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 5px 0 10px;
+  border-radius: 999px;
+  background: var(--sk-fill-32);
+  color: var(--sk-text-7);
+}
+.composer .chip-label {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  white-space: nowrap;
+}
+.composer .chip-remove {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sk-text-19);
+  cursor: pointer;
+}
+.composer .chip-remove:hover {
+  background: var(--sk-fill-35);
+  color: var(--sk-text-2);
+}

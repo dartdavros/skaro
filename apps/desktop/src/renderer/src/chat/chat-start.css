@@ -1,0 +1,38 @@
+.chat > .main > .empty .empty-title {
+  font-size: var(--sk-fs-8);
+  font-weight: 600;
+  color: var(--sk-text-13);
+}
+.chat > .main > .empty .empty-text {
+  max-width: 340px;
+  font-size: var(--sk-fs-5);
+  line-height: 1.5;
+  color: var(--sk-text-21);
+  text-align: center;
+  text-wrap: pretty;
+}
+.chat > .main > .empty .chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+.chat > .main > .empty .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 29px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-fill-13);
+  color: var(--sk-text-7);
+  font: inherit;
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  cursor: pointer;
+}
+.chat > .main > .empty .chip:hover {
+  background: var(--sk-fill-20);
+  color: var(--sk-text-2);
+}

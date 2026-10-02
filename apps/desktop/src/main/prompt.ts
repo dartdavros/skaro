@@ -4,6 +4,8 @@
 import type { ProjectArtifacts, Task } from '@skaro/core';
 import { join } from 'node:path';
 import { taskSections } from './task-body';
+import { agentInteractionInstructions } from './agent-interaction-instructions';
+import { taskEnvironmentInstructions } from './task-environment-instructions';
 
 const LANGUAGES: Record<string, string> = { ru: 'Russian', en: 'English' };
 
@@ -86,6 +88,7 @@ export function chatInstructions(options: {
         ...terms(options.locale),
       ].join('\n'),
     instructionsOf(artifacts),
+    agentInteractionInstructions(),
   ];
   return parts.filter(Boolean).join('\n\n');
 }
@@ -150,6 +153,9 @@ export function taskInstructions(options: {
     '## Working with Skaro\n\n' +
       [
         '- The user talks to you in the task chat.',
+        '- Skaro supplies a task-local Playwright MCP server. Use its browser tools for UI ' +
+          'verification; a Codex desktop browser or personal Chrome connection is not required. ' +
+          'The browser uses an isolated profile. If Chrome is missing, report the blocker.',
         '- Keep the user informed while you work: before each step write one short sentence ' +
           'about what you are doing now. Work in small steps; do not think the whole task ' +
           'through in one long silent pass.',
@@ -171,12 +177,16 @@ export function taskInstructions(options: {
             ]
           : ['- When the work is done, summarize what you did.']),
         '- When the user asks to merge the task, call the merge_task tool of the skaro MCP ' +
-          'server with a short summary. Skaro shows the user a confirmation card and merges ' +
-          'after the user confirms; never merge into the base branch yourself. Skaro does not ' +
-          'merge while acceptance criteria are not ticked.',
+          'server with a short summary. Skaro follows the current merge setting: in automatic ' +
+          'mode it merges immediately when unblocked; in manual mode it shows a confirmation ' +
+          'card. If submit_result or merge_task reports the task already merged or completed, ' +
+          'report that status and do not call merge_task again to confirm it. Never merge into ' +
+          'the base branch yourself. Skaro does not merge while acceptance criteria are not ticked.',
         `- Write to the user in ${language}: replies, questions, plans and command descriptions.`,
         ...terms(options.locale),
       ].join('\n'),
+    agentInteractionInstructions(),
+    taskEnvironmentInstructions(),
   ];
   return parts.filter(Boolean).join('\n\n');
 }
@@ -248,6 +258,7 @@ export function importInstructions(options: {
         ...terms(options.locale),
       ].join('\n'),
     instructionsOf(artifacts),
+    agentInteractionInstructions(),
   ];
   return parts.filter(Boolean).join('\n\n');
 }

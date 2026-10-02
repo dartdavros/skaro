@@ -1,6 +1,12 @@
 <script lang="ts">
   /** Progress: shades of grey only; brighter when complete (milestone progress). */
-  let { done, total, id, label }: { done: number; total: number; id?: string; label?: string } =
+  let {
+    done,
+    total,
+    id,
+    label,
+    accessibleLabel,
+  }: { done: number; total: number; id?: string; label?: string; accessibleLabel?: string } =
     $props();
 
   const pct = $derived(total > 0 ? Math.round((done / total) * 100) : 0);
@@ -21,7 +27,7 @@
     aria-valuemin={0}
     aria-valuemax={total}
     aria-valuenow={done}
-    aria-label={label}
+    aria-label={accessibleLabel ?? label}
   >
     <div class="fill" class:complete style="width: {pct}%"></div>
   </div>

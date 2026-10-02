@@ -1,587 +1,93 @@
-import { watch, type FSWatcher } from 'node:fs';
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, sep } from 'node:path';
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import {
-  getFields,
-  parseMarkdown,
-  serializeMarkdown,
-  setFields,
-  type MarkdownFile,
-} from './frontmatter.ts';
-import {
-  DEFAULT_CONFIG,
-  TASK_STATUSES,
-  type Adr,
-  type AdrStatus,
-  type ArtifactProblem,
-  type Doc,
-  type Milestone,
-  type ProjectArtifacts,
-  type Spec,
-  type SpecStatus,
-  type ProjectConfig,
-  type Task,
-  type TaskStatus,
-  type ConfigDefaults,
-  type InheritableSetting,
+import { ArtifactFiles } from './files.ts';
+export { SKARO_DIR } from './files.ts';
+export type { NewTask, TaskPatch, NewAdr, NewSpec } from './inputs.ts';
+import * as tasks from './tasks.ts';
+import * as milestones from './milestones.ts';
+import * as documents from './documents.ts';
+import * as configOps from './config.ts';
+import * as load from './load.ts';
+import type {
+  Adr,
+  AdrStatus,
+  Doc,
+  Milestone,
+  ProjectArtifacts,
+  Spec,
+  SpecStatus,
+  ProjectConfig,
+  Task,
+  ConfigDefaults,
+  InheritableSetting,
 } from './model.ts';
+import type { NewTask, TaskPatch, NewAdr, NewSpec } from './inputs.ts';
 import { slugify } from './slug.ts';
 
-export const SKARO_DIR = '.skaro';
-
-export interface NewTask {
-  title: string;
-  milestone?: string;
-  dependsOn?: string[];
-  body?: string;
-  agent?: string;
-  model?: string;
-  order?: number;
-  spec?: string;
-  created?: string;
-}
-
-export type TaskPatch = Partial<
-  Pick<
-    Task,
-    | 'title'
-    | 'milestone'
-    | 'status'
-    | 'dependsOn'
-    | 'unblocked'
-    | 'archived'
-    | 'order'
-    | 'agent'
-    | 'model'
-    | 'branch'
-    | 'spec'
-    | 'body'
-  >
->;
-
-export interface NewAdr {
-  title: string;
-  body?: string;
-  status?: AdrStatus;
-  replaces?: string;
-  date?: string;
-}
-
-export type NewSpec = NewAdr;
-
-/**
- * Reads and writes the project's .skaro/ directory. Only Skaro writes here (D-17);
- * manual edits are picked up through `watch`.
- */
+/** Public artifact API; persistence operations are composed by responsibility. */
 export class ArtifactStore {
   readonly root: string;
-  private readonly dir: string;
-  /** Content Skaro wrote last, per absolute path, so the watcher ignores our own writes. */
-  private readonly ownWrites = new Map<string, string>();
-
+  private readonly files: ArtifactFiles;
   private readonly defaults: () => ConfigDefaults;
-
   constructor(projectRoot: string, defaults: () => ConfigDefaults = () => ({})) {
     this.root = projectRoot;
-    this.dir = join(projectRoot, SKARO_DIR);
+    this.files = new ArtifactFiles(projectRoot);
     this.defaults = defaults;
   }
-
-  // ── reading ──────────────────────────────────────────────────────────────
-
-  async load(): Promise<ProjectArtifacts> {
-    const problems: ArtifactProblem[] = [];
-    const config = await this.readConfig(problems);
-    const brief = await this.readDoc('brief.md', 'brief', problems);
-    const architecture = await this.readDoc('architecture.md', 'architecture', problems);
-    const docs: Doc[] = [];
-    for (const name of await this.list('docs')) {
-      const doc = await this.readDoc(`docs/${name}`, 'doc', problems);
-      if (doc) docs.push(doc);
-    }
-    const adrs = (await this.readAll('adr', problems, toAdr)).sort((a, b) =>
-      a.id.localeCompare(b.id),
-    );
-    const specs = (await this.readAll('specs', problems, toSpec)).sort((a, b) =>
-      a.id.localeCompare(b.id),
-    );
-    const milestones = (await this.readAll('milestones', problems, toMilestone)).sort(
-      (a, b) => a.order - b.order || a.id.localeCompare(b.id),
-    );
-    const tasks = (await this.readAll('tasks', problems, toTask)).sort((a, b) =>
-      a.id.localeCompare(b.id),
-    );
-    checkIds('task', tasks, problems);
-    checkIds('milestone', milestones, problems);
-    const taskIds = new Set(tasks.map((t) => t.id));
-    const milestoneIds = new Set(milestones.map((m) => m.id));
-    for (const task of tasks) {
-      for (const dep of task.dependsOn) {
-        if (!taskIds.has(dep))
-          problems.push({ path: task.path, message: `unknown dependency ${dep}` });
-      }
-      if (task.milestone && !milestoneIds.has(task.milestone)) {
-        problems.push({ path: task.path, message: `unknown milestone ${task.milestone}` });
-      }
-      if (task.spec && !specs.some((s) => s.id === task.spec)) {
-        problems.push({ path: task.path, message: `unknown specification ${task.spec}` });
-      }
-    }
-    return { config, brief, architecture, docs, adrs, specs, milestones, tasks, problems };
+  readTask(id: string): Promise<Task> {
+    return tasks.readTask(this.files, id);
   }
-
-  async readTask(id: string): Promise<Task> {
-    return (await this.findFile('tasks', id, toTask)).item;
+  createTask(input: NewTask): Promise<Task> {
+    return tasks.createTask(this.files, input);
   }
-
-  // ── tasks ────────────────────────────────────────────────────────────────
-
-  async createTask(input: NewTask): Promise<Task> {
-    const existing = await this.readAll('tasks', [], toTask);
-    const id = `T-${String(
-      nextNumber(
-        existing.map((t) => t.id),
-        /^T-(\d+)$/,
-      ),
-    ).padStart(3, '0')}`;
-    const path = `tasks/${id}-${slugify(input.title)}.md`;
-    const file = parseMarkdown('');
-    setFields(file, {
-      id,
-      title: input.title,
-      milestone: input.milestone,
-      status: 'todo',
-      depends_on: input.dependsOn ?? [],
-      order: input.order,
-      agent: input.agent,
-      model: input.model,
-      spec: input.spec,
-      created: input.created ?? new Date().toISOString().slice(0, 10),
-    });
-    file.body = input.body ?? '## Цель\n\n## Критерии приёмки\n';
-    await this.writeFile(path, serializeMarkdown(file));
-    return this.readTask(id);
+  updateTask(id: string, patch: TaskPatch): Promise<Task> {
+    return tasks.updateTask(this.files, id, patch);
   }
-
-  async updateTask(id: string, patch: TaskPatch): Promise<Task> {
-    const { file, path } = await this.findFile('tasks', id, toTask);
-    setFields(file, {
-      ...('title' in patch ? { title: patch.title } : {}),
-      ...('milestone' in patch ? { milestone: patch.milestone } : {}),
-      ...('status' in patch ? { status: patch.status } : {}),
-      ...('dependsOn' in patch ? { depends_on: patch.dependsOn } : {}),
-      // Flags are written only while set, so ordinary task files stay short.
-      ...('unblocked' in patch ? { unblocked: patch.unblocked || undefined } : {}),
-      ...('archived' in patch ? { archived: patch.archived || undefined } : {}),
-      ...('order' in patch ? { order: patch.order } : {}),
-      ...('agent' in patch ? { agent: patch.agent } : {}),
-      ...('model' in patch ? { model: patch.model } : {}),
-      ...('branch' in patch ? { branch: patch.branch } : {}),
-      ...('spec' in patch ? { spec: patch.spec } : {}),
-    });
-    if (patch.body !== undefined) file.body = patch.body;
-    await this.writeFile(path, serializeMarkdown(file));
-    return this.readTask(id);
+  deleteTask(id: string): Promise<void> {
+    return tasks.deleteTask(this.files, id);
   }
-
-  /** Deletes the task file and removes the task from other tasks' dependencies. */
-  async deleteTask(id: string): Promise<void> {
-    const { path } = await this.findFile('tasks', id, toTask);
-    await rm(join(this.dir, path));
-    this.ownWrites.delete(join(this.dir, path));
-    for (const task of await this.readAll('tasks', [], toTask)) {
-      if (task.dependsOn.includes(id)) {
-        await this.updateTask(task.id, { dependsOn: task.dependsOn.filter((d) => d !== id) });
-      }
-    }
+  createMilestone(input: { title: string; body?: string; order?: number }): Promise<Milestone> {
+    return milestones.createMilestone(this.files, input);
   }
-
-  // ── milestones ───────────────────────────────────────────────────────────
-
-  async createMilestone(input: {
-    title: string;
-    body?: string;
-    order?: number;
-  }): Promise<Milestone> {
-    const existing = await this.readAll('milestones', [], toMilestone);
-    const id = `M${String(
-      nextNumber(
-        existing.map((m) => m.id),
-        /^M(\d+)$/,
-      ),
-    ).padStart(2, '0')}`;
-    const order = input.order ?? Math.max(0, ...existing.map((m) => m.order)) + 1;
-    const file = parseMarkdown('');
-    setFields(file, { id, title: input.title, order });
-    file.body = input.body ?? '## Цель\n\n## Критерий готовности\n';
-    await this.writeFile(`milestones/${id}-${slugify(input.title)}.md`, serializeMarkdown(file));
-    return (await this.findFile('milestones', id, toMilestone)).item;
-  }
-
-  async updateMilestone(
+  updateMilestone(
     id: string,
     patch: Partial<Pick<Milestone, 'title' | 'order' | 'body'>>,
   ): Promise<Milestone> {
-    const { file, path } = await this.findFile('milestones', id, toMilestone);
-    setFields(file, {
-      ...('title' in patch ? { title: patch.title } : {}),
-      ...('order' in patch ? { order: patch.order } : {}),
-    });
-    if (patch.body !== undefined) file.body = patch.body;
-    await this.writeFile(path, serializeMarkdown(file));
-    return (await this.findFile('milestones', id, toMilestone)).item;
+    return milestones.updateMilestone(this.files, id, patch);
   }
-
-  /** Deletes a milestone; its tasks move to `moveTasksTo` or become unassigned. */
-  async deleteMilestone(id: string, moveTasksTo?: string): Promise<void> {
-    const { path } = await this.findFile('milestones', id, toMilestone);
-    for (const task of await this.readAll('tasks', [], toTask)) {
-      if (task.milestone === id) await this.updateTask(task.id, { milestone: moveTasksTo });
-    }
-    await rm(join(this.dir, path));
+  deleteMilestone(id: string, moveTasksTo?: string): Promise<void> {
+    return milestones.deleteMilestone(this.files, id, moveTasksTo);
   }
-
-  // ── ADR and documents ────────────────────────────────────────────────────
-
-  async createAdr(input: NewAdr): Promise<Adr> {
-    const existing = await this.readAll('adr', [], toAdr);
-    const id = String(
-      nextNumber(
-        existing.map((a) => a.id),
-        /^(\d+)$/,
-      ),
-    ).padStart(4, '0');
-    const file = parseMarkdown('');
-    setFields(file, {
-      id,
-      title: input.title,
-      status: input.status ?? 'proposed',
-      date: input.date ?? new Date().toISOString().slice(0, 10),
-      replaces: input.replaces,
-    });
-    file.body = input.body ?? '## Контекст\n\n## Решение\n\n## Последствия\n';
-    await this.writeFile(`adr/${id}-${slugify(input.title)}.md`, serializeMarkdown(file));
-    if (input.replaces && input.status === 'accepted') await this.supersede(input.replaces, id);
-    return (await this.findFile('adr', id, toAdr)).item;
+  createAdr(input: NewAdr): Promise<Adr> {
+    return documents.createAdr(this.files, input);
   }
-
-  /** Accepting an ADR that replaces another marks the old one superseded. */
-  async setAdrStatus(id: string, status: AdrStatus): Promise<Adr> {
-    const { file, path, item } = await this.findFile('adr', id, toAdr);
-    setFields(file, { status });
-    await this.writeFile(path, serializeMarkdown(file));
-    if (status === 'accepted' && item.replaces) await this.supersede(item.replaces, id);
-    return (await this.findFile('adr', id, toAdr)).item;
+  setAdrStatus(id: string, status: AdrStatus): Promise<Adr> {
+    return documents.setAdrStatus(this.files, id, status);
   }
-
-  /** Replaces the text of an ADR; its frontmatter (status, date, links) stays. */
-  async writeAdr(id: string, body: string): Promise<Adr> {
-    const { file, path } = await this.findFile('adr', id, toAdr);
-    file.body = body;
-    await this.writeFile(path, serializeMarkdown(file));
-    return (await this.findFile('adr', id, toAdr)).item;
+  writeAdr(id: string, body: string): Promise<Adr> {
+    return documents.writeAdr(this.files, id, body);
   }
-
-  // ── specifications (like ADR: number, status, replaces) ───────────────────
-
-  async createSpec(input: NewSpec): Promise<Spec> {
-    const existing = await this.readAll('specs', [], toSpec);
-    const id = String(
-      nextNumber(
-        existing.map((s) => s.id),
-        /^(\d+)$/,
-      ),
-    ).padStart(4, '0');
-    const file = parseMarkdown('');
-    setFields(file, {
-      id,
-      title: input.title,
-      status: input.status ?? 'proposed',
-      date: input.date ?? new Date().toISOString().slice(0, 10),
-      replaces: input.replaces,
-    });
-    file.body =
-      input.body ??
-      '## Проблема\n\n\n## Сценарии\n- \n\n## Требования\n- R-1 \n\n## Не входит\n- \n\n## Открытые вопросы\n- \n';
-    await this.writeFile(`specs/${id}-${slugify(input.title)}.md`, serializeMarkdown(file));
-    if (input.replaces && input.status === 'accepted') {
-      await this.supersedeIn('specs', toSpec, input.replaces, id);
-    }
-    return (await this.findFile('specs', id, toSpec)).item;
+  createSpec(input: NewSpec): Promise<Spec> {
+    return documents.createSpec(this.files, input);
   }
-
-  /** Accepting a specification that replaces another marks the old one superseded. */
-  async setSpecStatus(id: string, status: SpecStatus): Promise<Spec> {
-    const { file, path, item } = await this.findFile('specs', id, toSpec);
-    setFields(file, { status });
-    await this.writeFile(path, serializeMarkdown(file));
-    if (status === 'accepted' && item.replaces) {
-      await this.supersedeIn('specs', toSpec, item.replaces, id);
-    }
-    return (await this.findFile('specs', id, toSpec)).item;
+  setSpecStatus(id: string, status: SpecStatus): Promise<Spec> {
+    return documents.setSpecStatus(this.files, id, status);
   }
-
-  /** Replaces the text of a specification; its frontmatter stays. */
-  async writeSpec(id: string, body: string): Promise<Spec> {
-    const { file, path } = await this.findFile('specs', id, toSpec);
-    file.body = body;
-    await this.writeFile(path, serializeMarkdown(file));
-    return (await this.findFile('specs', id, toSpec)).item;
+  writeSpec(id: string, body: string): Promise<Spec> {
+    return documents.writeSpec(this.files, id, body);
   }
-
-  /** Writes brief.md, architecture.md or docs/<name>.md, keeping existing frontmatter. */
-  async writeDoc(path: string, body: string): Promise<Doc> {
-    if (!/^(brief\.md|architecture\.md|docs\/[^/]+\.md)$/.test(path))
-      throw new Error(`not a document path: ${path}`);
-    let file: MarkdownFile;
-    try {
-      file = parseMarkdown(await readFile(join(this.dir, path), 'utf8'));
-    } catch {
-      file = { doc: parseMarkdown('').doc, body: '' };
-    }
-    file.body = body;
-    const hasFrontmatter = Object.keys(getFields(file)).length > 0;
-    await this.writeFile(path, hasFrontmatter ? serializeMarkdown(file) : body);
-    const kind =
-      path === 'brief.md' ? 'brief' : path === 'architecture.md' ? 'architecture' : 'doc';
-    const doc = await this.readDoc(path, kind, []);
-    if (!doc) throw new Error(`failed to write ${path}`);
-    return doc;
+  writeDoc(path: string, body: string): Promise<Doc> {
+    return documents.writeDoc(this.files, path, body);
   }
-
-  /** Removes brief.md, architecture.md or docs/<name>.md (undoing a document Skaro created). */
-  async deleteDoc(path: string): Promise<void> {
-    if (!/^(brief\.md|architecture\.md|docs\/[^/]+\.md)$/.test(path))
-      throw new Error(`not a document path: ${path}`);
-    const abs = join(this.dir, path);
-    await rm(abs, { force: true });
-    this.ownWrites.delete(abs);
+  deleteDoc(path: string): Promise<void> {
+    return documents.deleteDoc(this.files, path);
   }
-
-  /** Writes config.yaml; `inherited` settings are left out, so the app-wide defaults apply. */
-  async writeConfig(config: ProjectConfig, inherited: InheritableSetting[] = []): Promise<void> {
-    const own = <T>(key: InheritableSetting, value: T): T | undefined =>
-      inherited.includes(key) ? undefined : value;
-    const merge = {
-      strategy: own('mergeStrategy', config.merge.strategy),
-      delete_branch: own('deleteBranch', config.merge.deleteBranch),
-    };
-    const autoAccept = own('autoAcceptDocs', config.chat.autoAcceptDocs);
-    const yaml = stringifyYaml({
-      default_agent: config.defaultAgent,
-      default_model: config.defaultModel,
-      default_effort: config.defaultEffort,
-      permission_mode: config.permissionMode,
-      base_branch: own('baseBranch', config.baseBranch),
-      branch_template: own('branchTemplate', config.branchTemplate),
-      isolation: own('isolation', config.isolation),
-      merge: merge.strategy === undefined && merge.delete_branch === undefined ? undefined : merge,
-      chat: autoAccept === undefined ? undefined : { auto_accept_docs: autoAccept },
-      agent_files: own('agentFiles', config.agentFiles),
-      agent_instructions: config.agentInstructions,
-    });
-    await this.writeFile('config.yaml', yaml);
+  writeConfig(config: ProjectConfig, inherited: InheritableSetting[] = []): Promise<void> {
+    return configOps.writeConfig(this.files, config, inherited);
   }
-
-  // ── watching ─────────────────────────────────────────────────────────────
-
-  /**
-   * Reports paths (relative to .skaro/) changed outside Skaro, debounced.
-   * Skaro's own writes are not reported.
-   */
+  load(): Promise<ProjectArtifacts> {
+    return load.load(this.files, this.defaults);
+  }
   watch(onChange: (paths: string[]) => void, debounceMs = 150): () => void {
-    const pending = new Set<string>();
-    let timer: NodeJS.Timeout | undefined;
-    const flush = async () => {
-      timer = undefined;
-      const changed: string[] = [];
-      for (const path of pending) {
-        const abs = join(this.dir, path);
-        const own = this.ownWrites.get(abs);
-        if (own !== undefined) {
-          const now = await readFile(abs, 'utf8').catch(() => undefined);
-          if (now === own) continue;
-          this.ownWrites.delete(abs);
-        }
-        changed.push(path.split(sep).join('/'));
-      }
-      pending.clear();
-      if (changed.length) onChange(changed.sort());
-    };
-    let watcher: FSWatcher;
-    try {
-      watcher = watch(this.dir, { recursive: true }, (_event, name) => {
-        if (!name) return;
-        pending.add(name.toString());
-        clearTimeout(timer);
-        timer = setTimeout(() => void flush(), debounceMs);
-      });
-    } catch {
-      return () => undefined; // no .skaro/ yet
-    }
-    return () => {
-      clearTimeout(timer);
-      watcher.close();
-    };
-  }
-
-  // ── helpers ──────────────────────────────────────────────────────────────
-
-  private async writeFile(path: string, content: string): Promise<void> {
-    const abs = join(this.dir, path);
-    await mkdir(dirname(abs), { recursive: true });
-    this.ownWrites.set(abs, content);
-    await writeFile(abs, content);
-  }
-
-  private async list(sub: string): Promise<string[]> {
-    try {
-      return (await readdir(join(this.dir, sub))).filter((n) => n.endsWith('.md')).sort();
-    } catch {
-      return [];
-    }
-  }
-
-  private async readAll<T>(
-    sub: string,
-    problems: ArtifactProblem[],
-    convert: (
-      fields: Record<string, unknown>,
-      body: string,
-      path: string,
-      problems: ArtifactProblem[],
-    ) => T | undefined,
-  ): Promise<T[]> {
-    const out: T[] = [];
-    for (const name of await this.list(sub)) {
-      const path = `${sub}/${name}`;
-      try {
-        const file = parseMarkdown(await readFile(join(this.dir, path), 'utf8'));
-        const item = convert(getFields(file), file.body, `${SKARO_DIR}/${path}`, problems);
-        if (item) out.push(item);
-      } catch (error) {
-        problems.push({
-          path: `${SKARO_DIR}/${path}`,
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-    return out;
-  }
-
-  private async findFile<T extends { id: string }>(
-    sub: string,
-    id: string,
-    convert: (
-      fields: Record<string, unknown>,
-      body: string,
-      path: string,
-      problems: ArtifactProblem[],
-    ) => T | undefined,
-  ): Promise<{ file: MarkdownFile; path: string; item: T }> {
-    for (const name of await this.list(sub)) {
-      const path = `${sub}/${name}`;
-      let file: MarkdownFile;
-      try {
-        file = parseMarkdown(await readFile(join(this.dir, path), 'utf8'));
-      } catch {
-        continue;
-      }
-      const item = convert(getFields(file), file.body, `${SKARO_DIR}/${path}`, []);
-      if (item?.id === id) return { file, path, item };
-    }
-    throw new Error(`${sub}: ${id} not found`);
-  }
-
-  private async readDoc(
-    path: string,
-    kind: Doc['kind'],
-    problems: ArtifactProblem[],
-  ): Promise<Doc | undefined> {
-    let text: string;
-    try {
-      text = await readFile(join(this.dir, path), 'utf8');
-    } catch {
-      return undefined;
-    }
-    let body = text;
-    let title: string | undefined;
-    try {
-      const file = parseMarkdown(text);
-      body = file.body;
-      title = str(getFields(file)['title']);
-    } catch (error) {
-      problems.push({
-        path: `${SKARO_DIR}/${path}`,
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-    title ??= /^#\s+(.+)$/m.exec(body)?.[1]?.trim() ?? path.split('/').pop()!.replace(/\.md$/, '');
-    return { kind, title, body, path: `${SKARO_DIR}/${path}` };
-  }
-
-  private async readConfig(problems: ArtifactProblem[]): Promise<ProjectConfig> {
-    let raw: Record<string, unknown> = {};
-    try {
-      const parsed = parseYaml(await readFile(join(this.dir, 'config.yaml'), 'utf8')) as unknown;
-      if (parsed && typeof parsed === 'object') raw = parsed as Record<string, unknown>;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        problems.push({ path: `${SKARO_DIR}/config.yaml`, message: String(error) });
-      }
-    }
-    const merge = obj(raw['merge']);
-    const chat = obj(raw['chat']);
-    const strategy = str(merge['strategy']);
-    const isolation = str(raw['isolation']) ?? this.defaults().isolation;
-    const permission = str(raw['permission_mode']);
-    const app = this.defaults();
-    const bool = (value: unknown, fallback: boolean | undefined, base: boolean): boolean =>
-      typeof value === 'boolean' ? value : (fallback ?? base);
-    return {
-      defaultAgent: str(raw['default_agent']) ?? DEFAULT_CONFIG.defaultAgent,
-      defaultModel: str(raw['default_model']),
-      defaultEffort: str(raw['default_effort']),
-      permissionMode: permission === 'ask' || permission === 'full' ? permission : 'auto',
-      baseBranch: str(raw['base_branch']) ?? app.baseBranch ?? DEFAULT_CONFIG.baseBranch,
-      branchTemplate:
-        str(raw['branch_template']) ?? app.branchTemplate ?? DEFAULT_CONFIG.branchTemplate,
-      isolation: isolation === 'in-place' ? 'in-place' : 'worktree',
-      merge: {
-        strategy:
-          strategy === 'merge' || strategy === 'rebase' || strategy === 'squash'
-            ? strategy
-            : (app.mergeStrategy ?? 'squash'),
-        deleteBranch: bool(merge['delete_branch'], app.deleteBranch, true),
-      },
-      chat: { autoAcceptDocs: bool(chat['auto_accept_docs'], app.autoAcceptDocs, true) },
-      agentFiles: bool(raw['agent_files'], app.agentFiles, false),
-      agentInstructions: str(raw['agent_instructions']),
-      ...(app.agentInstructions?.trim()
-        ? { globalInstructions: app.agentInstructions.trim() }
-        : {}),
-    };
-  }
-
-  private async supersede(oldId: string, newId: string): Promise<void> {
-    await this.supersedeIn('adr', toAdr, oldId, newId);
-  }
-
-  private async supersedeIn<T extends { id: string }>(
-    sub: string,
-    convert: (
-      fields: Record<string, unknown>,
-      body: string,
-      path: string,
-      problems: ArtifactProblem[],
-    ) => T | undefined,
-    oldId: string,
-    newId: string,
-  ): Promise<void> {
-    const { file, path } = await this.findFile(sub, oldId, convert);
-    setFields(file, { status: 'superseded', replaced_by: newId });
-    await this.writeFile(path, serializeMarkdown(file));
+    return this.files.watch(onChange, debounceMs);
   }
 }
 
@@ -590,157 +96,4 @@ export function taskBranch(config: ProjectConfig, task: Pick<Task, 'id' | 'title
   return config.branchTemplate
     .replaceAll('{id}', task.id)
     .replaceAll('{slug}', slugify(task.title, 30));
-}
-
-// ── conversion ─────────────────────────────────────────────────────────────
-
-function toTask(
-  f: Record<string, unknown>,
-  body: string,
-  path: string,
-  problems: ArtifactProblem[],
-): Task | undefined {
-  const id = str(f['id']);
-  if (!id) {
-    problems.push({ path, message: 'task without id' });
-    return undefined;
-  }
-  let status = str(f['status']) as TaskStatus | undefined;
-  if (!status || !TASK_STATUSES.includes(status)) {
-    if (status) problems.push({ path, message: `unknown status "${status}"` });
-    status = 'todo';
-  }
-  return {
-    id,
-    title: str(f['title']) ?? id,
-    milestone: str(f['milestone']),
-    status,
-    dependsOn: strings(f['depends_on']),
-    unblocked: f['unblocked'] === true,
-    archived: f['archived'] === true,
-    order: num(f['order']),
-    agent: str(f['agent']),
-    model: str(f['model']),
-    branch: str(f['branch']),
-    spec: specId(f['spec']),
-    created: str(f['created']) ?? dateString(f['created']),
-    body,
-    path,
-  };
-}
-
-function toMilestone(
-  f: Record<string, unknown>,
-  body: string,
-  path: string,
-  problems: ArtifactProblem[],
-): Milestone | undefined {
-  const id = str(f['id']);
-  if (!id) {
-    problems.push({ path, message: 'milestone without id' });
-    return undefined;
-  }
-  return { id, title: str(f['title']) ?? id, order: num(f['order']) ?? 0, body, path };
-}
-
-function toAdr(
-  f: Record<string, unknown>,
-  body: string,
-  path: string,
-  problems: ArtifactProblem[],
-): Adr | undefined {
-  const id =
-    str(f['id']) ?? (typeof f['id'] === 'number' ? String(f['id']).padStart(4, '0') : undefined);
-  if (!id) {
-    problems.push({ path, message: 'ADR without id' });
-    return undefined;
-  }
-  const status = str(f['status']);
-  return {
-    id,
-    title: str(f['title']) ?? id,
-    status: status === 'accepted' || status === 'superseded' ? status : 'proposed',
-    replaces: str(f['replaces']),
-    replacedBy: str(f['replaced_by']),
-    date: str(f['date']) ?? dateString(f['date']),
-    body,
-    path,
-  };
-}
-
-function toSpec(
-  f: Record<string, unknown>,
-  body: string,
-  path: string,
-  problems: ArtifactProblem[],
-): Spec | undefined {
-  const id = specId(f['id']);
-  if (!id) {
-    problems.push({ path, message: 'specification without id' });
-    return undefined;
-  }
-  const status = str(f['status']);
-  return {
-    id,
-    title: str(f['title']) ?? id,
-    status: status === 'accepted' || status === 'superseded' ? status : 'proposed',
-    replaces: specId(f['replaces']),
-    replacedBy: specId(f['replaced_by']),
-    date: str(f['date']) ?? dateString(f['date']),
-    body,
-    path,
-  };
-}
-
-/** "0003", 3 (YAML number) or "SPEC-0003" as "0003". */
-function specId(value: unknown): string | undefined {
-  const raw = typeof value === 'number' ? String(value) : str(value);
-  const digits = raw ? /^(?:SPEC-)?(\d+)$/i.exec(raw.trim())?.[1] : undefined;
-  return digits ? digits.padStart(4, '0') : undefined;
-}
-
-function checkIds(
-  kind: string,
-  items: { id: string; path: string }[],
-  problems: ArtifactProblem[],
-): void {
-  const seen = new Map<string, string>();
-  for (const item of items) {
-    const first = seen.get(item.id);
-    if (first)
-      problems.push({
-        path: item.path,
-        message: `duplicate ${kind} id ${item.id} (also in ${first})`,
-      });
-    else seen.set(item.id, item.path);
-  }
-}
-
-function nextNumber(ids: string[], pattern: RegExp): number {
-  let max = 0;
-  for (const id of ids) max = Math.max(max, Number(pattern.exec(id)?.[1] ?? 0));
-  return max + 1;
-}
-
-function str(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
-}
-
-function num(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
-
-function strings(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map((v) => String(v)).filter(Boolean);
-  if (typeof value === 'string' && value.trim()) return value.split(',').map((s) => s.trim());
-  return [];
-}
-
-function obj(value: unknown): Record<string, unknown> {
-  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
-}
-
-/** YAML turns `2026-09-18` into a Date. */
-function dateString(value: unknown): string | undefined {
-  return value instanceof Date ? value.toISOString().slice(0, 10) : undefined;
 }

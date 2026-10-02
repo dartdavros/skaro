@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TimelineEvent } from './model.ts';
+import type { Interaction, TimelineEvent } from './model.ts';
 import type { Emit } from './projection.ts';
 import { replayRunLog, type RawLine } from './replay.ts';
 import { Timeline } from './state.ts';
@@ -19,6 +19,48 @@ const message = (id: string, text: string, turnId = 't1'): TimelineEvent => ({
 });
 
 describe('Timeline', () => {
+  const merge: Interaction = {
+    id: 'merge',
+    kind: 'merge',
+    from: 'task',
+    to: 'main',
+    files: 1,
+    added: 1,
+    removed: 0,
+    blockers: [],
+    baseAhead: 0,
+    skaroChanges: [],
+    conflicts: [],
+  };
+
+  it.each(['done', 'interrupted', 'failed'] as const)(
+    'keeps a %s turn idle when a later merge card is closed',
+    (outcome) => {
+      const timeline = Timeline.from([
+        { t: 'turn.started', turnId: 't1' },
+        { t: 'turn.completed', turnId: 't1', outcome },
+        {
+          t: 'interaction.opened',
+          interaction: merge,
+        },
+        { t: 'interaction.closed', id: 'merge', resolution: 'answered' },
+      ]);
+      expect(timeline.state.status).toBe('idle');
+    },
+  );
+
+  it('continues an unfinished turn after its last interaction closes', () => {
+    const timeline = Timeline.from([
+      { t: 'turn.started', turnId: 't1' },
+      {
+        t: 'interaction.opened',
+        interaction: merge,
+      },
+      { t: 'interaction.closed', id: 'merge', resolution: 'answered' },
+    ]);
+    expect(timeline.state.status).toBe('working');
+  });
+
   it('continues from a snapshot as if it had seen every event', () => {
     const events: TimelineEvent[] = [
       { t: 'turn.started', turnId: 't1' },

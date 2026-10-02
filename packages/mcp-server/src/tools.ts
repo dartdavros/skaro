@@ -121,8 +121,8 @@ export function submitResultTool(
 
 /**
  * `merge_task` (D-27): the user asks in the task chat to merge, the agent calls this tool, Skaro
- * shows a confirmation card in the feed and merges after the user confirms. The tool does not wait
- * for the decision: it answers right away and the turn goes on (agent-output.md 5.4).
+ * follows the automatic/manual setting. Completed tasks return their status without a new card.
+ * In manual mode the tool does not wait for the card decision (agent-output.md 5.4).
  */
 export function mergeTaskTool(
   handler: (args: MergeTaskArgs, scope: SkaroScope) => Promise<ToolResult>,
@@ -131,10 +131,11 @@ export function mergeTaskTool(
     name: 'merge_task',
     description:
       'Ask Skaro to merge this task branch into the base branch. Call it only when the user asks ' +
-      'to merge. Skaro commits anything left uncommitted in the worktree, checks the merge and ' +
-      'shows the user a confirmation card; the merge happens only after the user confirms, so do ' +
-      'not wait for it and do not merge, push or switch branches yourself. If the result reports ' +
-      'blockers such as conflicts, tell the user what they are.',
+      'to merge. Skaro follows the current merge setting: automatic mode merges immediately ' +
+      'when unblocked; manual mode shows a confirmation card without waiting for the decision. ' +
+      'An already merged or completed task returns its status without another card or Git changes. ' +
+      'Do not call this tool to reconfirm a merge reported by submit_result. Do not merge, push ' +
+      'or switch branches yourself. If the result reports blockers such as conflicts, tell the user.',
     inputSchema: {
       type: 'object',
       properties: {

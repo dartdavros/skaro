@@ -9,6 +9,8 @@ const ci = !!process.env['CI'];
 
 /** Packaged binary produced by `electron-builder --dir` for the current OS. */
 function packagedExecutable(): string {
+  const explicit = process.env['SKARO_E2E_EXECUTABLE'];
+  if (explicit) return explicit;
   const release = join(appDir, 'release');
   switch (process.platform) {
     case 'win32':

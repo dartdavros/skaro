@@ -3,6 +3,8 @@
 
 import type { FileChange, InteractionAnswer, Item } from './model.ts';
 import type { TimelineState, TurnState } from './state.ts';
+import { isAsyncQuestion, type AsyncQuestion } from './async-question.ts';
+import { questionHistory } from './feed-questions.ts';
 
 type Of<K extends Item['kind']> = Extract<Item, { kind: K }>;
 
@@ -21,8 +23,9 @@ export interface FileRow {
 }
 
 export type FeedRow =
-  | { type: 'user'; id: string; item: Of<'message'>; images: Of<'image'>[] }
+  | { type: 'user'; id: string; item: Of<'message'>; images: Of<'image'>[]; hidden?: boolean }
   | { type: 'agent'; id: string; item: Of<'message'>; final: boolean }
+  | { type: 'question'; id: string; item: Of<'message'>; interaction: AsyncQuestion }
   | { type: 'reasoning'; id: string; item: Of<'reasoning'> }
   | { type: 'explore'; id: string; items: Of<'explore'>[] }
   | FileRow
@@ -73,7 +76,8 @@ function isUserImage(item: Item): item is Of<'image'> {
 
 /** Rows of the main feed (or of one subagent when `parentId` is given). */
 export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
-  const items = state.items.filter((i) => i.parentId === parentId && !hidden(i));
+  const { items: history, cardAnswers } = questionHistory(state.items);
+  const items = history.filter((i) => i.parentId === parentId && !hidden(i));
   const rows: FeedRow[] = [];
   const turnEnds = new Map<string, TurnState>();
   for (const turn of state.turns) if (turn.outcome) turnEnds.set(turn.id, turn);
@@ -85,14 +89,22 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
     switch (item.kind) {
       case 'message':
         if (item.role === 'user') {
-          const text = withoutSkaroNote(item.text);
+          const text = cardAnswers.get(item.id) ?? withoutSkaroNote(item.text);
           rows.push({
             type: 'user',
             id: item.id,
             item: text === item.text ? item : { ...item, text },
             images: [],
+            ...(cardAnswers.has(item.id) ? { hidden: true } : {}),
           });
-        } else rows.push({ type: 'agent', id: item.id, item, final: item.phase === 'final' });
+        } else {
+          const question = state.interactions.find(
+            (i) => isAsyncQuestion(i) && i.itemId === item.id,
+          );
+          if (isAsyncQuestion(question))
+            rows.push({ type: 'question', id: item.id, item, interaction: question });
+          else rows.push({ type: 'agent', id: item.id, item, final: item.phase === 'final' });
+        }
         break;
       case 'image':
         if (isUserImage(item) && prev?.type === 'user') prev.images.push(item);

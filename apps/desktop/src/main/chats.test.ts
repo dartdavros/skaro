@@ -142,7 +142,7 @@ describe('project chats', () => {
     const { chatId } = await startChat();
     expect(started).toMatchObject({ cwd: root, permissionMode: 'ask', model: 'm', effort: 'e' });
     expect(started?.readOnly).toBeUndefined();
-    expect(started?.mcpServers?.['skaro']?.url).toBe(mcp.url);
+    expect(started?.mcpServers?.['skaro']).toMatchObject({ type: 'http', url: mcp.url });
     expect(chats.list(projectId)).toMatchObject([{ id: chatId, title: 'Дальше делаем платежи' }]);
   });
 

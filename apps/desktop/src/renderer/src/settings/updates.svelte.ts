@@ -1,25 +1,74 @@
 // "О программе": the running version and what "Проверить обновления" found.
 
-import type { UpdateInfo } from '../../../shared/ipc';
+import type { UpdateState } from '../../../shared/updates';
 
 class Updates {
-  info = $state<UpdateInfo | undefined>();
-  checked = $state(false);
-  failed = $state(false);
+  state = $state<UpdateState | undefined>();
+  open = $state(false);
+  private fallbackCurrent = $state('');
+  private unavailable = $state(false);
+  available = $derived((this.state?.components.length ?? 0) > 0);
+  checked = $derived(this.state?.checked ?? false);
+  failed = $derived(this.unavailable || this.state?.phase === 'error');
+  info = $derived({
+    current: this.state?.current ?? this.fallbackCurrent,
+    latest: this.state?.components.find((c) => c.id === 'skaro')?.latest,
+  });
+  private watching = false;
 
   async load(): Promise<void> {
-    if (this.info) return;
-    this.info = { current: await window.skaro.invoke('app.version') };
+    try {
+      if (!this.watching) {
+        window.skaro.on('updates.changed', (state) => {
+          this.state = state;
+        });
+        this.watching = true;
+      }
+      this.state = await window.skaro.invoke('updates.state');
+      this.unavailable = false;
+    } catch {
+      /* The running dev main may predate this renderer; never invent an update. */
+      this.fallbackCurrent = await window.skaro.invoke('app.version').catch(() => '');
+    }
   }
 
   async check(): Promise<void> {
-    try {
-      this.info = await window.skaro.invoke('app.checkUpdate');
-      this.failed = false;
-    } catch {
-      this.failed = true;
+    if (!this.state) await this.load();
+    if (!this.state) {
+      this.unavailable = true;
+      return;
     }
-    this.checked = true;
+    try {
+      this.state = await window.skaro.invoke('app.checkUpdate');
+      if (this.available || this.failed) this.open = true;
+    } catch {
+      if (this.state)
+        this.state = {
+          ...this.state,
+          phase: 'error',
+          error: 'UPDATES_UNAVAILABLE',
+          retry: 'check',
+        };
+    }
+  }
+
+  async act(): Promise<void> {
+    const method =
+      this.state?.phase === 'ready' || this.state?.retry === 'apply'
+        ? 'updates.apply'
+        : this.state?.retry === 'check'
+          ? 'app.checkUpdate'
+          : 'updates.download';
+    try {
+      this.state = await window.skaro.invoke(method);
+    } catch (error) {
+      if (this.state)
+        this.state = {
+          ...this.state,
+          phase: 'error',
+          error: error instanceof Error ? error.message : String(error),
+        };
+    }
   }
 }
 

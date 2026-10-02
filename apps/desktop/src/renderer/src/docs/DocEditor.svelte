@@ -228,7 +228,7 @@
   }
 
   .seg button.active {
-    background: var(--sk-fill-5);
+    background: var(--sk-bg);
     color: var(--sk-text-2);
     box-shadow: 0 1px 2px var(--sk-black-a35);
   }

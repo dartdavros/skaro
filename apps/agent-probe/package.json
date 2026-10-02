@@ -9,8 +9,8 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.3.281",
-    "@openai/codex": "0.156.1",
+    "@anthropic-ai/claude-agent-sdk": "0.3.285",
+    "@openai/codex": "0.159.2",
     "@skaro/adapter-claude": "workspace:*",
     "@skaro/adapter-codex": "workspace:*",
     "@skaro/timeline": "workspace:*"

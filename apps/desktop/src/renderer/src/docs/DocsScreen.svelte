@@ -283,7 +283,7 @@
     flex: 1;
     min-width: 0;
     display: flex;
-    background: var(--sk-fill-5);
+    background: var(--sk-bg);
   }
 
   .main {

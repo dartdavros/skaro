@@ -77,6 +77,13 @@ describe('display status and start', () => {
     expect(displayStatus(task('T-3', { status: 'review' }), idx)).toBe('review');
   });
 
+  it('keeps completed tasks done regardless of retained runtime state', () => {
+    const completed = task('T-2', { status: 'done' });
+    const idx = indexTasks([completed]);
+    for (const runtime of ['idle', 'running', 'waiting', 'queued'] as const)
+      expect(displayStatus(completed, idx, runtime)).toBe('done');
+  });
+
   it('refuses to start archived, done or running tasks', () => {
     expect(startBlocker(task('A', { archived: true }), index)).toBe('archived');
     expect(startBlocker(task('B', { status: 'done' }), index)).toBe('already_done');

@@ -1,5 +1,7 @@
 <script lang="ts">
-  import type { FeedRow } from '@skaro/timeline';
+  import { groupFeedRows, type FeedRow } from '@skaro/timeline';
+  import './action-rows.css';
+  import ActionGroup from './ActionGroup.svelte';
   import AgentMessage from './AgentMessage.svelte';
   import CommandRow from './CommandRow.svelte';
   import DecisionRow from './DecisionRow.svelte';
@@ -9,11 +11,13 @@
   import ImportPrepRow from './ImportPrepRow.svelte';
   import NoticeRow from './NoticeRow.svelte';
   import ProposalCard from './ProposalCard.svelte';
+  import QuestionCard from './QuestionCard.svelte';
   import Reasoning from './Reasoning.svelte';
   import TaskRow from './TaskRow.svelte';
   import ToolRow from './ToolRow.svelte';
   import TurnEnd from './TurnEnd.svelte';
   import UserMessage from './UserMessage.svelte';
+  import UnknownRow from './UnknownRow.svelte';
 
   /** Rows of a feed; the main feed and each subagent use it. */
   let {
@@ -72,22 +76,14 @@
   );
   const lastTurnEnd = $derived(rows.findLast((r) => r.type === 'turn_end')?.id);
 
-  /** Edits and commands in a row form one tight block (mockup 1a); the rest stand alone. */
-  const blocks = $derived.by(() => {
-    const out: { id: string; rows: FeedRow[]; events: boolean }[] = [];
-    for (const row of rows) {
-      const event = row.type === 'file' || row.type === 'command';
-      const last = out.at(-1);
-      if (event && last?.events) last.rows.push(row);
-      else out.push({ id: row.id, rows: [row], events: event });
-    }
-    return out;
-  });
+  const blocks = $derived(groupFeedRows(rows));
 </script>
 
 {#snippet single(row: FeedRow)}
   {#if row.type === 'user'}
-    <UserMessage {row} />
+    {#if !row.hidden}<UserMessage {row} />{/if}
+  {:else if row.type === 'question'}
+    <QuestionCard interaction={row.interaction} />
   {:else if row.type === 'agent'}
     <AgentMessage
       {row}
@@ -110,6 +106,8 @@
     <ImageRow {row} />
   {:else if row.type === 'notice'}
     <NoticeRow {row} last={row.id === rows.at(-1)?.id} />
+  {:else if row.type === 'unknown'}
+    <UnknownRow {row} />
   {:else if row.type === 'turn_end'}
     <TurnEnd {row} last={row.id === lastTurnEnd} reply={replyBeforeEnd[row.id]} />
   {:else if row.type === 'decision'}
@@ -122,11 +120,11 @@
 {/snippet}
 
 {#each blocks as block (block.id)}
-  {#if block.events}
-    <div class="fd-block">
-      {#each block.rows as row (row.id)}{@render single(row)}{/each}
-    </div>
+  {#if block.type === 'actions'}
+    <ActionGroup group={block} {waiting}>
+      {#snippet children(row)}{@render single(row)}{/snippet}
+    </ActionGroup>
   {:else}
-    {@render single(block.rows[0]!)}
+    {@render single(block.row)}
   {/if}
 {/each}
