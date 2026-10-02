@@ -49,7 +49,12 @@
   </label>
   {#snippet footer()}
     <button type="button" class="cancel" onclick={onclose}>{t('ui.cancel')}</button>
-    <button type="button" class="save" class:ok disabled={!ok} onclick={() => onsave(form)}
+    <button
+      type="button"
+      class="save"
+      class:ok
+      disabled={!ok}
+      onclick={() => onsave($state.snapshot(form))}
       >{milestone ? t('plan.modal.save') : t('plan.modal.create')}</button
     >
   {/snippet}

@@ -2,8 +2,25 @@ import { expect, type Locator } from '@playwright/test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 /** Compare native computed styles and element state, ignoring compiler-generated scope hashes. */
-export async function compareBaseline(root: Locator, prefix: string | undefined, name: string) {
+export async function compareBaseline(
+  root: Locator,
+  prefix: string | undefined,
+  name: string,
+  settleTransitions = false,
+) {
   if (!prefix) return;
+  if (settleTransitions) {
+    await root.evaluate(async (root) => {
+      const animations = root
+        .getAnimations({ subtree: true })
+        .filter(
+          (animation) =>
+            animation.playState === 'running' &&
+            (animation.effect?.getComputedTiming().iterations ?? 1) < Infinity,
+        );
+      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+    });
+  }
   const layout = await root.evaluate((root) => {
     const props = [
       'display',
@@ -39,6 +56,7 @@ export async function compareBaseline(root: Locator, prefix: string | undefined,
     });
   });
   const path = `${prefix}-${name}.json`;
-  if (existsSync(path)) expect(layout).toEqual(JSON.parse(readFileSync(path, 'utf8')));
+  if (existsSync(path))
+    expect(JSON.parse(JSON.stringify(layout))).toEqual(JSON.parse(readFileSync(path, 'utf8')));
   else writeFileSync(path, JSON.stringify(layout, null, 2));
 }

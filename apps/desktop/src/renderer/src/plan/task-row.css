@@ -1,0 +1,133 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.row[data-plan-task] {
+  display: grid;
+  grid-template-columns: 14px 16px 52px minmax(0, 1fr) auto 20px 64px;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px 0 0;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.row.self[data-plan-task] {
+  background: var(--sk-fill-18);
+}
+
+.row.related[data-plan-task] {
+  background: var(--sk-accent-a14);
+}
+
+.row.faded[data-plan-task] {
+  opacity: 0.45;
+}
+
+.row.dragged[data-plan-task] {
+  opacity: 0.4;
+}
+
+.row.drop[data-plan-task] {
+  box-shadow: inset 0 2px 0 var(--sk-accent);
+}
+
+.grip[data-plan-task] {
+  display: inline-flex;
+  justify-content: center;
+  color: var(--sk-text-29);
+  cursor: grab;
+}
+
+.st[data-plan-task] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.dot[data-plan-task] {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sk-accent);
+}
+
+.dot.working[data-plan-task] {
+  background: var(--sk-fill-41);
+}
+
+.dot.error[data-plan-task] {
+  background: var(--sk-error);
+}
+
+.dot.pulse[data-plan-task] {
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+
+.ring[data-plan-task] {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--sk-fill-36);
+}
+
+.id[data-plan-task] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-19);
+}
+
+.title[data-plan-task] {
+  min-width: 0;
+  font-size: var(--sk-fs-6);
+  color: var(--sk-text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title.muted[data-plan-task] {
+  color: var(--sk-text-21);
+}
+
+.title.strike[data-plan-task] {
+  text-decoration: line-through;
+}
+
+.rels[data-plan-task] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rel[data-plan-task] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-link);
+}
+
+.dep[data-plan-task] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-13);
+}
+
+.dep.met[data-plan-task] {
+  color: var(--sk-text-26);
+}
+
+.agent[data-plan-task] {
+  display: inline-flex;
+  justify-content: center;
+  color: var(--sk-text-7);
+}
+
+.time[data-plan-task] {
+  text-align: right;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+}
