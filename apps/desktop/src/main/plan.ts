@@ -9,7 +9,8 @@ import { headings } from './task-body';
 interface Deps {
   projects: Projects;
   emit: <E extends EventName>(event: E, payload: Events[E]) => void;
-  locale: () => string;
+  /** Deletes tasks with their branches and worktrees (TaskBoard.delete). */
+  deleteTasks: (projectId: string, taskIds: string[]) => Promise<void>;
 }
 
 const GOAL = new Set(['цель', 'goal']);
@@ -54,30 +55,21 @@ export class Plan {
     return [...milestones].sort((a, b) => a.order - b.order).map(info);
   }
 
-  async create(projectId: string, input: MilestoneInput): Promise<MilestoneInfo> {
-    const { store } = this.deps.projects.get(projectId);
-    const created = await store.createMilestone({
-      title: input.title.trim(),
-      body: milestoneBody(input, this.deps.locale()),
-    });
-    this.changed(projectId);
-    return info(created);
-  }
-
-  async update(projectId: string, milestoneId: string, input: MilestoneInput): Promise<void> {
-    await this.deps.projects.get(projectId).store.updateMilestone(milestoneId, {
-      title: input.title.trim(),
-      body: milestoneBody(input, this.deps.locale()),
-    });
-    this.changed(projectId);
-  }
-
-  /** Deletes a milestone; its tasks go to the previous milestone (the next one for the first). */
+  /**
+   * Deletes a milestone that has no started task, together with its tasks. A milestone with
+   * started work is archived instead: it leaves the plan when all its tasks are archived.
+   */
   async delete(projectId: string, milestoneId: string): Promise<void> {
-    const order = (await this.milestones(projectId)).map((m) => m.id);
-    const i = order.indexOf(milestoneId);
-    const heir = i > 0 ? order[i - 1] : order[i + 1];
-    await this.deps.projects.get(projectId).store.deleteMilestone(milestoneId, heir);
+    const context = this.deps.projects.get(projectId);
+    const own = (await context.load()).tasks.filter((t) => t.milestone === milestoneId);
+    if (own.some((t) => t.status !== 'todo'))
+      throw new Error(`milestone ${milestoneId} has started tasks`);
+    if (own.length)
+      await this.deps.deleteTasks(
+        projectId,
+        own.map((t) => t.id),
+      );
+    await context.store.deleteMilestone(milestoneId);
     this.changed(projectId);
   }
 
@@ -96,10 +88,10 @@ export class Plan {
   ): Promise<void> {
     const context = this.deps.projects.get(projectId);
     const { tasks } = await context.load();
-    // "" is "Без этапа": the task leaves its milestone.
+    // "" is "Без этапа": the task leaves its milestone. Archived tasks are not on the plan.
     const target = milestoneId || undefined;
     const siblings = tasks
-      .filter((t) => t.milestone === target && t.id !== taskId)
+      .filter((t) => t.milestone === target && t.id !== taskId && !t.archived)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     const moved = tasks.find((t) => t.id === taskId);
     if (!moved) throw new Error(`unknown task ${taskId}`);

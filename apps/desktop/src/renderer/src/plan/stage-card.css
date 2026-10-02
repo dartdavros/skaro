@@ -7,12 +7,28 @@
   transition: box-shadow 0.12s;
 }
 
-.stage.ring[data-plan-stage] {
-  box-shadow: inset 0 2px 0 var(--sk-accent);
+/* A task from another milestone would land here (the board's column under a card). */
+.stage.over[data-plan-stage] {
+  background: var(--sk-fill-9);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-25);
 }
 
-.stage.dragged[data-plan-stage] {
-  opacity: 0.45;
+/* The copy under the pointer: lifted and tilted like a board card. */
+.stage.ghost[data-plan-stage] {
+  background: var(--sk-fill-20);
+  box-shadow:
+    0 18px 40px var(--sk-black-a60),
+    0 0 0 1px var(--sk-white-a6);
+  transform: rotate(0.5deg) scale(1.01);
+  animation: skPlanLift 0.14s ease-out;
+}
+
+.stage.ghost[data-plan-stage] .head {
+  cursor: grabbing;
+}
+
+.stage.dropped[data-plan-stage] {
+  animation: skDrop 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .head[data-plan-stage] {
@@ -24,6 +40,12 @@
   border-radius: 10px;
   cursor: pointer;
   outline: none;
+  user-select: none;
+  touch-action: none;
+}
+
+.head[data-plan-stage]:focus-visible {
+  box-shadow: 0 0 0 1.5px var(--sk-accent);
 }
 
 .head[data-plan-stage]:hover {
@@ -146,8 +168,9 @@
 
 .count[data-plan-stage] {
   flex: none;
-  width: 44px;
+  min-width: 44px;
   text-align: right;
+  white-space: nowrap;
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-3);
   color: var(--sk-text-17);
@@ -208,12 +231,20 @@
   color: var(--sk-text-23);
 }
 
-.end[data-plan-stage] {
-  height: 6px;
-  border-radius: 3px;
+.slot[data-plan-stage] {
+  flex: none;
+  border-radius: 8px;
+  background: var(--sk-accent-a14);
+  box-shadow: inset 0 0 0 1px var(--sk-accent-a55);
+  animation: skSlot 0.16s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.empty.drop[data-plan-stage],
-.end.drop[data-plan-stage] {
-  box-shadow: inset 0 2px 0 var(--sk-accent);
+.slot[data-plan-stage] > span {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sk-accent-a55);
 }

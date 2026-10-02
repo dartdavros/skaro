@@ -35,12 +35,6 @@ export const tasksHandlers = {
     boardChanged(projectId, () => docs.setSpecStatus(id, status)),
   'docs.reveal': () => undefined,
   'plan.milestones': () => milestones.map((m) => ({ ...m })),
-  'plan.create': (projectId, input) => {
-    const created = plan.create(input);
-    emit('project.changed', { projectId });
-    return created;
-  },
-  'plan.update': (projectId, id, input) => boardChanged(projectId, () => plan.update(id, input)),
   'plan.delete': (projectId, id) => boardChanged(projectId, () => plan.delete(id)),
   'plan.reorder': (projectId, ids) => boardChanged(projectId, () => plan.reorder(ids)),
   'plan.placeTask': (projectId, taskId, milestoneId, index) =>
@@ -93,8 +87,6 @@ export const tasksHandlers = {
   | 'docs.setSpecStatus'
   | 'docs.reveal'
   | 'plan.milestones'
-  | 'plan.create'
-  | 'plan.update'
   | 'plan.delete'
   | 'plan.reorder'
   | 'plan.placeTask'

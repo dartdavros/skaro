@@ -1,32 +1,50 @@
 import { t } from '@skaro/ui';
-import type { MilestoneInfo, MilestoneInput } from '../../../shared/ipc';
-import { relations, stages, type Drag, type Over } from './model';
+import type { MilestoneInfo } from '../../../shared/ipc';
+import { archive, relations, stages, type Stage } from './model';
+import { createPlanDrag, type PlanDrag } from './plan-drag.svelte';
 import type { PlanProps } from './plan-props';
 
 export function createPlanController(getProps: () => PlanProps) {
   const p = $derived(getProps());
-  let hideDone = $state(false);
+  /** "Архив этапов": archived tasks under their milestones instead of the plan. */
+  let archiveView = $state(false);
   let openMap = $state<Record<string, boolean> | undefined>();
   let hovered = $state<string | undefined>();
-  let drag = $state<Drag | undefined>();
-  let over = $state<Over | undefined>();
-  let modal = $state<{ kind: 'new' } | { kind: 'edit' | 'delete'; milestone: MilestoneInfo }>();
+  let modal = $state<{ kind: 'delete'; milestone: MilestoneInfo }>();
+  let root = $state<HTMLElement | undefined>();
   let now = $state(Date.now());
 
-  const list = $derived(stages(p.data.milestones, p.data.tasks, t('plan.loose')));
+  const plan = $derived(stages(p.data.milestones, p.data.tasks, t('plan.loose')));
+  const archived = $derived(archive(p.data.milestones, p.data.tasks, t('plan.loose')));
+  const list = $derived(archiveView ? archived : plan);
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- Read-only lookup rebuilt when tasks change.
   const byId = $derived(new Map(p.data.tasks.map((x) => [x.id, x])));
   const rel = $derived(relations(hovered ? byId.get(hovered) : undefined, p.data.tasks));
   const anyOpen = $derived(list.some((s) => openMap?.[s.milestone.id]));
   const done = $derived(list.reduce((n, s) => n + s.done, 0));
   const total = $derived(list.reduce((n, s) => n + s.total, 0));
+  const archiveTip = $derived(
+    archiveView ? t('plan.archive.close') : t('plan.archive.open', { n: archived.length }),
+  );
+
+  const dnd = createPlanDrag({
+    root: () => root,
+    stages: () => plan,
+    reveal: (id) => (openMap = { ...openMap, [id]: true }),
+    ondrop: drop,
+  });
 
   // At first the milestones still in work are open.
   $effect(() => {
     if (openMap || !p.data.loaded) return;
     openMap = Object.fromEntries(
-      list.map((s) => [s.milestone.id, s.total === 0 || s.done < s.total]),
+      plan.map((s) => [s.milestone.id, s.total === 0 || s.done < s.total]),
     );
+  });
+
+  // The last group restored from the archive brings the plan back.
+  $effect(() => {
+    if (archiveView && !archived.length) archiveView = false;
   });
 
   $effect(() => {
@@ -38,38 +56,28 @@ export function createPlanController(getProps: () => PlanProps) {
     openMap = { ...openMap, [id]: !openMap?.[id] };
   }
 
-  function drop(): void {
-    const d = drag;
-    const o = over;
-    drag = undefined;
-    over = undefined;
-    if (!d || !o) return;
-    if (d.kind === 'stage' && o.kind === 'stage') {
+  function drop(d: PlanDrag): void {
+    if (d.kind === 'stage') {
       // "Без этапа" always closes the plan; only milestones are reordered.
-      const ids = list.filter((s) => !s.loose).map((s) => s.milestone.id);
-      const from = ids.indexOf(d.id);
-      ids.splice(from, 1);
-      ids.splice(from < o.index ? o.index - 1 : o.index, 0, d.id);
+      const ids = plan
+        .filter((s) => !s.loose && s.milestone.id !== d.id)
+        .map((s) => s.milestone.id);
+      ids.splice(d.index, 0, d.id);
       void window.skaro.invoke('plan.reorder', p.projectId, ids);
-    }
-    if (d.kind === 'task' && o.kind === 'task') {
-      const from = list.find((s) => s.tasks.some((x) => x.id === d.id));
-      const old = from?.tasks.findIndex((x) => x.id === d.id) ?? -1;
-      const index = from?.milestone.id === o.stage && old < o.index ? o.index - 1 : o.index;
-      openMap = { ...openMap, [o.stage]: true };
-      void window.skaro.invoke('plan.placeTask', p.projectId, d.id, o.stage, index);
+    } else {
+      openMap = { ...openMap, [d.to]: true };
+      void window.skaro.invoke('plan.placeTask', p.projectId, d.id, d.to, d.index);
     }
   }
 
-  async function save(input: MilestoneInput): Promise<void> {
-    const m = modal;
-    modal = undefined;
-    if (m?.kind === 'edit')
-      await window.skaro.invoke('plan.update', p.projectId, m.milestone.id, input);
-    else {
-      const created = await window.skaro.invoke('plan.create', p.projectId, input);
-      openMap = { ...openMap, [created.id]: true };
-    }
+  /** "В архив" on the plan, "Вернуть из архива" in the archive: all tasks of the group. */
+  function setArchived(stage: Stage, value: boolean): void {
+    const ids = stage.tasks.map((x) => x.id);
+    void window.skaro.invoke('tasks.archive', p.projectId, ids, value);
+  }
+
+  function restoreTask(id: string): void {
+    void window.skaro.invoke('tasks.archive', p.projectId, [id], false);
   }
 
   async function remove(milestone: MilestoneInfo): Promise<void> {
@@ -81,11 +89,11 @@ export function createPlanController(getProps: () => PlanProps) {
     get p() {
       return p;
     },
-    get hideDone() {
-      return hideDone;
+    get archiveView() {
+      return archiveView;
     },
-    set hideDone(value: typeof hideDone) {
-      hideDone = value;
+    set archiveView(value: boolean) {
+      archiveView = value;
     },
     get openMap() {
       return openMap;
@@ -99,26 +107,26 @@ export function createPlanController(getProps: () => PlanProps) {
     set hovered(value: typeof hovered) {
       hovered = value;
     },
-    get drag() {
-      return drag;
-    },
-    set drag(value: typeof drag) {
-      drag = value;
-    },
-    get over() {
-      return over;
-    },
-    set over(value: typeof over) {
-      over = value;
-    },
     get modal() {
       return modal;
     },
     set modal(value: typeof modal) {
       modal = value;
     },
+    get root() {
+      return root;
+    },
+    set root(value: HTMLElement | undefined) {
+      root = value;
+    },
     get now() {
       return now;
+    },
+    get plan() {
+      return plan;
+    },
+    get archived() {
+      return archived;
     },
     get list() {
       return list;
@@ -138,9 +146,13 @@ export function createPlanController(getProps: () => PlanProps) {
     get total() {
       return total;
     },
+    get archiveTip() {
+      return archiveTip;
+    },
+    dnd,
     toggle,
-    drop,
-    save,
+    setArchived,
+    restoreTask,
     remove,
   };
 }

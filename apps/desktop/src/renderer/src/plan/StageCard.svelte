@@ -11,14 +11,13 @@
 <div
   data-plan-stage
   class="stage"
-  class:ring={model.stageOver}
-  class:dragged={model.p.drag?.kind === 'stage' && model.p.drag.id === model.m.id}
+  class:over={model.over}
+  class:ghost={model.p.ghost}
+  class:dropped={model.p.dropped === model.m.id}
   role="listitem"
-  ondragover={model.overStage}
-  ondrop={(e) => {
-    e.preventDefault();
-    model.p.ondrop();
-  }}
+  aria-hidden={model.p.ghost || undefined}
+  data-stage={model.movable ? model.m.id : undefined}
+  data-drop={model.p.ghost || model.p.archived ? undefined : model.m.id}
 >
   <StageHeader {model} />
   {#if model.p.open}

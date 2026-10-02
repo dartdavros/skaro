@@ -32,7 +32,7 @@ describe('milestone sections', () => {
   });
 });
 
-describe('placing a task', () => {
+describe('plan changes', () => {
   let root: string;
   let db: AppDb;
   let projects: Projects;
@@ -49,13 +49,22 @@ describe('placing a task', () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  const planOf = () =>
+    new Plan({
+      projects,
+      emit: () => undefined,
+      deleteTasks: async (projectId, ids) => {
+        for (const id of ids) await projects.get(projectId).store.deleteTask(id);
+      },
+    });
+
   it('takes a task out of its milestone into "Без этапа" and back', async () => {
     const store = new ArtifactStore(root);
     const m = await store.createMilestone({ title: 'API' });
     const a = await store.createTask({ title: 'A', milestone: m.id });
     const b = await store.createTask({ title: 'B' });
     const project = db.addProject({ name: 'Shop', path: root });
-    const plan = new Plan({ projects, emit: () => undefined, locale: () => 'ru' });
+    const plan = planOf();
 
     await plan.placeTask(project.id, a.id, '', 0);
     let tasks = (await new ArtifactStore(root).load()).tasks;
@@ -67,5 +76,22 @@ describe('placing a task', () => {
     await plan.placeTask(project.id, b.id, m.id, 0);
     tasks = (await new ArtifactStore(root).load()).tasks;
     expect(tasks.find((t) => t.id === b.id)?.milestone).toBe(m.id);
+  });
+
+  it('deletes a milestone with its tasks only while none of them is started', async () => {
+    const store = new ArtifactStore(root);
+    const fresh = await store.createMilestone({ title: 'Fresh' });
+    const begun = await store.createMilestone({ title: 'Begun' });
+    await store.createTask({ title: 'A', milestone: fresh.id });
+    const b = await store.createTask({ title: 'B', milestone: begun.id });
+    await store.updateTask(b.id, { status: 'done', archived: true });
+    const project = db.addProject({ name: 'Shop', path: root });
+    const plan = planOf();
+
+    await expect(plan.delete(project.id, begun.id)).rejects.toThrow('started tasks');
+    await plan.delete(project.id, fresh.id);
+    const left = await new ArtifactStore(root).load();
+    expect(left.milestones.map((m) => m.id)).toEqual([begun.id]);
+    expect(left.tasks.map((t) => t.id)).toEqual([b.id]);
   });
 });

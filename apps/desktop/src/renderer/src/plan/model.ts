@@ -27,7 +27,7 @@ export interface Stage {
   milestone: MilestoneInfo;
   /** "Без этапа": tasks without a milestone; no goal, no menu, not dragged (D-32). */
   loose?: boolean;
-  /** All tasks of the milestone in order. */
+  /** The tasks of the milestone in order: live ones on the plan, archived ones in the archive. */
   tasks: TaskSummary[];
   done: number;
   /** Tasks that count: all but cancelled. */
@@ -37,34 +37,79 @@ export interface Stage {
   errors: number;
 }
 
+function group(
+  milestones: MilestoneInfo[],
+  tasks: TaskSummary[],
+  looseTitle: string,
+  keep: (milestone: MilestoneInfo, own: TaskSummary[]) => boolean,
+): Stage[] {
+  // Tasks without a milestone close the list as "Без этапа"; the block is shown only with tasks.
+  const loose = tasks.some((x) => !x.milestone)
+    ? [{ id: '', title: looseTitle, order: Number.MAX_SAFE_INTEGER }]
+    : [];
+  return [...milestones, ...loose].flatMap((milestone) => {
+    const own = tasks
+      .filter((x) => (x.milestone?.id ?? '') === milestone.id)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (!keep(milestone, own)) return [];
+    const count = (...kinds: RowStatus[]) =>
+      own.filter((x) => kinds.includes(rowStatus(x.status))).length;
+    return [
+      {
+        milestone,
+        ...(milestone.id === '' ? { loose: true } : {}),
+        tasks: own,
+        done: count('done'),
+        total: own.length - count('cancel'),
+        working: count('working'),
+        attention: count('need', 'review'),
+        errors: count('error'),
+      },
+    ];
+  });
+}
+
+/**
+ * The plan: milestones with their live tasks. A milestone is archived when all its tasks are —
+ * it is not stored, so the plan and the board cannot disagree. A milestone without tasks stays.
+ */
 export function stages(
   milestones: MilestoneInfo[],
   tasks: TaskSummary[],
   looseTitle = '',
 ): Stage[] {
   const live = tasks.filter((x) => !x.archived);
-  // Tasks without a milestone close the plan as "Без этапа"; the block is shown only with tasks.
-  const loose = live.some((x) => !x.milestone)
-    ? [{ id: '', title: looseTitle, order: Number.MAX_SAFE_INTEGER }]
-    : [];
-  return [...milestones, ...loose].map((milestone) => {
-    const own = live
-      .filter((x) => (x.milestone?.id ?? '') === milestone.id)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    const count = (...kinds: RowStatus[]) =>
-      own.filter((x) => kinds.includes(rowStatus(x.status))).length;
-    return {
-      milestone,
-      ...(milestone.id === '' ? { loose: true } : {}),
-      tasks: own,
-      done: count('done'),
-      total: own.length - count('cancel'),
-      working: count('working'),
-      attention: count('need', 'review'),
-      errors: count('error'),
-    };
-  });
+  return group(
+    milestones,
+    live,
+    looseTitle,
+    (m, own) => own.length > 0 || m.id === '' || !tasks.some((x) => x.milestone?.id === m.id),
+  );
 }
+
+/** The archive: archived tasks under their milestones, also under one still on the plan. */
+export function archive(
+  milestones: MilestoneInfo[],
+  tasks: TaskSummary[],
+  looseTitle = '',
+): Stage[] {
+  return group(
+    milestones,
+    tasks.filter((x) => x.archived),
+    looseTitle,
+    (_m, own) => own.length > 0,
+  );
+}
+
+/** "В архив": a milestone whose tasks are all done or cancelled. */
+export const canArchive = (stage: Stage): boolean =>
+  stage.tasks.length > 0 && stage.tasks.every((x) => doneLike(rowStatus(x.status)));
+
+/** "Удалить этап": only while no task of it (archived ones too) has been started. */
+export const canDelete = (milestoneId: string, tasks: TaskSummary[]): boolean =>
+  tasks
+    .filter((x) => x.milestone?.id === milestoneId)
+    .every((x) => x.stage === 'todo' && (x.status === 'todo' || x.status === 'blocked'));
 
 /** Hovering a task lights up what it needs (upstream) and what needs it (downstream). */
 export function relations(
@@ -77,18 +122,3 @@ export function relations(
     down: new Set(tasks.filter((x) => x.deps.includes(hovered.id)).map((x) => x.id)),
   };
 }
-
-/** Where a milestone's tasks go when it is deleted: the previous one, the next for the first. */
-export function heirOf(milestones: MilestoneInfo[], id: string): MilestoneInfo | undefined {
-  const i = milestones.findIndex((m) => m.id === id);
-  return i > 0 ? milestones[i - 1] : milestones[i + 1];
-}
-
-/** What is being dragged on the plan and where it would land. */
-export interface Drag {
-  kind: 'stage' | 'task';
-  id: string;
-}
-
-export type Over =
-  { kind: 'stage'; index: number } | { kind: 'task'; stage: string; index: number };

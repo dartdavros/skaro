@@ -90,29 +90,6 @@ h1[data-plan-screen] {
   gap: 16px;
 }
 
-.hide[data-plan-screen] {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  height: 30px;
-  padding: 0 10px 0 8px;
-  border-radius: 8px;
-  font-size: var(--sk-fs-5);
-  color: var(--sk-text-10);
-  cursor: pointer;
-  outline: none;
-}
-
-.hide[data-plan-screen]:hover {
-  background: var(--sk-hover);
-  color: var(--sk-text-6);
-}
-
-.box[data-plan-screen] {
-  display: inline-flex;
-  pointer-events: none;
-}
-
 .spacer[data-plan-screen] {
   flex: 1;
 }
@@ -130,6 +107,7 @@ h1[data-plan-screen] {
   cursor: pointer;
 }
 
+.all.on[data-plan-screen],
 .all[data-plan-screen]:hover {
   background: var(--sk-hover);
   color: var(--sk-text-2);
@@ -143,6 +121,52 @@ h1[data-plan-screen] {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Where a dragged milestone lands (the board's slot). */
+.slot[data-plan-screen] {
+  flex: none;
+  border-radius: 10px;
+  background: var(--sk-accent-a14);
+  box-shadow: inset 0 0 0 1px var(--sk-accent-a55);
+  animation: skSlot 0.16s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot[data-plan-screen] > span {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sk-accent-a55);
+}
+
+/* The dragged milestone or task follows the pointer above everything. */
+.ghost[data-plan-screen] {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.live[data-plan-screen] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The board's lift (skLift), tilted less: a milestone is several times wider than a card. */
+@keyframes skPlanLift {
+  from {
+    transform: rotate(0deg) scale(1);
+    box-shadow: none;
+  }
+  to {
+    transform: rotate(0.5deg) scale(1.01);
+  }
 }
 
 .empty[data-plan-screen] {

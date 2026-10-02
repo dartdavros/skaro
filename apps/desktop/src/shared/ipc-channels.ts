@@ -61,8 +61,6 @@ export const METHODS = [
   'tasks.merge',
   'tasks.assign',
   'plan.milestones',
-  'plan.create',
-  'plan.update',
   'plan.delete',
   'plan.reorder',
   'plan.placeTask',

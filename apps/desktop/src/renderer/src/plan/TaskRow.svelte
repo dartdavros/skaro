@@ -6,37 +6,42 @@
   import { agentLine } from '../tasks/model';
   import { doneLike, rowStatus } from './model';
 
-  /** A task row of a milestone (Plan mockup): drag grip, status, id, title, relations, deps, agent, time. */
+  /**
+   * A task row of a milestone (Plan mockup): drag grip, status, id, title, relations, deps, agent,
+   * time. It is dragged like a board card: by the pointer (`ondown`) or taken with Space (`onkey`);
+   * `ghost` is the copy under the pointer, `dropped` plays the landing. In the archive it is not
+   * dragged and can be brought back (`onrestore`).
+   */
   let {
     task,
     byId,
     relation,
-    faded,
-    dragged,
-    dropLine,
+    faded = false,
+    ghost = false,
+    dropped = false,
+    archived = false,
     now,
     onenter,
     onleave,
     onopen,
-    ondragstart,
-    ondragover,
-    ondrop,
-    ondragend,
+    onrestore,
+    ondown,
+    onkey,
   }: {
     task: TaskSummary;
     byId: Map<string, TaskSummary>;
     relation?: 'up' | 'down' | 'self';
-    faded: boolean;
-    dragged: boolean;
-    dropLine: boolean;
+    faded?: boolean;
+    ghost?: boolean;
+    dropped?: boolean;
+    archived?: boolean;
     now: number;
-    onenter: () => void;
-    onleave: () => void;
-    onopen: () => void;
-    ondragstart: (e: DragEvent) => void;
-    ondragover: (e: DragEvent) => void;
-    ondrop: (e: DragEvent) => void;
-    ondragend: () => void;
+    onenter?: () => void;
+    onleave?: () => void;
+    onopen?: () => void;
+    onrestore?: () => void;
+    ondown?: (e: PointerEvent) => void;
+    onkey?: (e: KeyboardEvent) => void;
   } = $props();
 
   const st = $derived(rowStatus(task.status));
@@ -54,23 +59,30 @@
   class:self={relation === 'self'}
   class:related={relation === 'up' || relation === 'down'}
   class:faded
-  class:dragged
-  class:drop={dropLine}
+  class:ghost
+  class:dropped
+  class:fixed={archived}
   role="link"
-  tabindex="0"
-  draggable="true"
-  onclick={onopen}
-  onkeydown={(e) => e.key === 'Enter' && onopen()}
-  onmouseenter={onenter}
-  onmouseleave={onleave}
-  {ondragstart}
-  {ondragover}
-  {ondrop}
-  {ondragend}
+  tabindex={ghost ? -1 : 0}
+  aria-hidden={ghost || undefined}
+  aria-roledescription={ghost || archived ? undefined : t('plan.dnd.task')}
+  data-row={ghost ? undefined : task.id}
+  onclick={() => onopen?.()}
+  onkeydown={(e) => {
+    if (e.key === 'Enter') onopen?.();
+    else onkey?.(e);
+  }}
+  onmouseenter={() => onenter?.()}
+  onmouseleave={() => onleave?.()}
+  onpointerdown={(e) => ondown?.(e)}
 >
-  <span data-plan-task class="grip" data-tip={t('plan.dragTask')}
-    ><Icon name="grip" size={13} stroke={2} /></span
-  >
+  {#if archived}
+    <span data-plan-task class="grip-space"></span>
+  {:else}
+    <span data-plan-task class="grip" data-tip={t('plan.dragTask')}
+      ><Icon name="grip" size={13} stroke={2} /></span
+    >
+  {/if}
   <span data-plan-task class="st" data-tip={tip}>
     {#if st === 'working' || st === 'need' || st === 'review' || st === 'error'}
       <span data-plan-task class="dot {st}" class:pulse={task.status === 'in_progress'}></span>
@@ -108,4 +120,17 @@
     {#if task.agent}<AgentLogo agent={task.agent} size={16} />{/if}
   </span>
   <span data-plan-task class="time">{time}</span>
+  {#if archived}
+    <button
+      data-plan-task
+      type="button"
+      class="restore"
+      data-tip={t('plan.task.restore')}
+      aria-label={t('plan.task.restore')}
+      onclick={(e) => {
+        e.stopPropagation();
+        onrestore?.();
+      }}><Icon name="unarchive" size={14} stroke={1.8} /></button
+    >
+  {/if}
 </div>

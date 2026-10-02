@@ -13,7 +13,15 @@
     width = 214,
   }: {
     items: (
-      | { label: string; onselect: () => void; danger?: boolean; icon?: IconName; tip?: string }
+      | {
+          label: string;
+          onselect: () => void;
+          danger?: boolean;
+          icon?: IconName;
+          tip?: string;
+          /** Shown but not chosen; `tip` says why. */
+          disabled?: boolean;
+        }
       | 'separator'
     )[];
     tip?: string;
@@ -55,15 +63,18 @@
         <div
           class="item"
           class:danger={item.danger}
+          class:disabled={item.disabled}
           data-tip={item.tip}
           role="menuitem"
           tabindex="-1"
+          aria-disabled={item.disabled || undefined}
           onclick={() => {
+            if (item.disabled) return;
             close();
             item.onselect();
           }}
           onkeydown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !item.disabled) {
               close();
               item.onselect();
             }
@@ -141,6 +152,17 @@
   .item.danger:hover {
     background: var(--sk-error-a12);
     color: var(--sk-error);
+  }
+
+  .item.disabled,
+  .item.disabled:hover {
+    background: transparent;
+    color: var(--sk-text-23);
+    cursor: default;
+  }
+
+  .item.disabled .icon {
+    color: inherit;
   }
 
   .sep {

@@ -19,7 +19,6 @@ import type {
   ImportSource,
   ImportReview,
   DocEntry,
-  MilestoneInput,
   TaskAssignment,
 } from './ipc-entities';
 import type {
@@ -137,9 +136,7 @@ export interface Methods {
   'tasks.assign': (projectId: string, taskIds: string[], assignment: TaskAssignment) => void;
   /** Milestones in plan order. */
   'plan.milestones': (projectId: string) => MilestoneInfo[];
-  'plan.create': (projectId: string, input: MilestoneInput) => MilestoneInfo;
-  'plan.update': (projectId: string, milestoneId: string, input: MilestoneInput) => void;
-  /** Deletes a milestone; its tasks go to the previous one (the next one for the first). */
+  /** Deletes a milestone without started tasks, together with its tasks. */
   'plan.delete': (projectId: string, milestoneId: string) => void;
   /** New order of milestones (drag on "План"). */
   'plan.reorder': (projectId: string, milestoneIds: string[]) => void;

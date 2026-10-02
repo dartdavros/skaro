@@ -1,6 +1,12 @@
 // Tasks of the in-memory bridge: the data of the Tasks mockup, changed by the board's actions.
 
-import type { AgentId, MilestoneInfo, TaskStage, TaskStatus, TaskSummary } from '../../../shared/ipc';
+import type {
+  AgentId,
+  MilestoneInfo,
+  TaskStage,
+  TaskStatus,
+  TaskSummary,
+} from '../../../shared/ipc';
 
 const MS: Record<string, string> = { M01: 'Базовый API', M02: 'Платежи', M03: 'Админка' };
 const MIN = 60_000;
@@ -98,28 +104,14 @@ export const milestones: MilestoneInfo[] = [
 tasks.forEach((task, i) => (task.order = i + 1));
 
 export const plan = {
-  create(input: { title: string; goal: string; criteria: string }): MilestoneInfo {
-    const id = `M${String(milestones.length + 1).padStart(2, '0')}`;
-    const created = { id, order: milestones.length + 1, ...input };
-    milestones.push(created);
-    MS[id] = input.title;
-    return created;
-  },
-  update(id: string, input: { title: string; goal: string; criteria: string }): void {
-    const m = milestones.find((x) => x.id === id);
-    if (m) Object.assign(m, input);
-    MS[id] = input.title;
-    for (const task of tasks) if (task.milestone?.id === id) task.milestone.title = input.title;
-  },
+  /** Only a milestone without started tasks; its tasks go with it. */
   delete(id: string): void {
-    const i = milestones.findIndex((m) => m.id === id);
-    const heir = milestones[i > 0 ? i - 1 : i + 1];
-    milestones.splice(i, 1);
-    for (const task of tasks) {
-      if (task.milestone?.id !== id) continue;
-      if (heir) task.milestone = { id: heir.id, title: heir.title };
-      else delete task.milestone;
-    }
+    milestones.splice(
+      milestones.findIndex((m) => m.id === id),
+      1,
+    );
+    for (const task of tasks.filter((t) => t.milestone?.id === id))
+      tasks.splice(tasks.indexOf(task), 1);
   },
   reorder(ids: string[]): void {
     for (const m of milestones) m.order = ids.indexOf(m.id) + 1;
@@ -131,7 +123,7 @@ export const plan = {
     if (milestoneId) task.milestone = { id: milestoneId, title: MS[milestoneId] ?? '' };
     else delete task.milestone;
     const siblings = tasks
-      .filter((t) => (t.milestone?.id ?? '') === milestoneId && t !== task)
+      .filter((t) => (t.milestone?.id ?? '') === milestoneId && t !== task && !t.archived)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     siblings.splice(index, 0, task);
     siblings.forEach((t, i) => (t.order = i + 1));

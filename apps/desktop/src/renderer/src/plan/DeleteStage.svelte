@@ -1,18 +1,16 @@
 <script lang="ts">
-  import { Icon, t } from '@skaro/ui';
+  import { Icon, t, tn } from '@skaro/ui';
   import type { MilestoneInfo } from '../../../shared/ipc';
 
-  /** "Удалить этап M02 · Платежи?" (Plan mockup): where its tasks go. */
+  /** "Удалить этап M02 · Платежи?" (Plan mockup): only without started tasks, they go with it. */
   let {
     milestone,
     tasks,
-    heir,
     onconfirm,
     onclose,
   }: {
     milestone: MilestoneInfo;
     tasks: number;
-    heir?: MilestoneInfo;
     onconfirm: () => void;
     onclose: () => void;
   } = $props();
@@ -35,11 +33,7 @@
         <span class="title"
           >{t('plan.delete.title', { id: milestone.id, title: milestone.title })}</span
         >
-        <span class="text"
-          >{tasks && heir
-            ? t('plan.delete.moves', { n: tasks, id: heir.id, title: heir.title })
-            : t('plan.delete.empty')}</span
-        >
+        <span class="text">{tasks ? tn('plan.delete.tasks', tasks) : t('plan.delete.empty')}</span>
       </div>
     </div>
     <div class="footer">

@@ -1,9 +1,22 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { launchApp, tempUserData } from './launch';
 import { planProject } from './plan-test-support';
 import { compareBaseline } from './layout-baseline';
 
-test('preserves plan layout, filtering, relations, milestone edits and native dragging', async () => {
+/** A pointer drag like the board's: press, pass the 5px threshold, move, check, release. */
+async function dragTo(page: Page, from: Locator, to: Locator, during?: () => Promise<void>) {
+  const source = (await from.boundingBox())!;
+  const target = (await to.boundingBox())!;
+  await page.mouse.move(source.x + 150, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + 160, source.y + source.height / 2, { steps: 5 });
+  await page.mouse.move(target.x + 150, target.y + 8, { steps: 10 });
+  await page.mouse.move(target.x + 155, target.y + 8);
+  await during?.();
+  await page.mouse.up();
+}
+
+test('keeps the plan layout and relations, archives milestones and drags like the board', async () => {
   const userData = tempUserData();
   const store = await planProject(userData);
   const app = await launchApp(userData);
@@ -22,11 +35,21 @@ test('preserves plan layout, filtering, relations, milestone edits and native dr
     const second = stage('Second milestone');
     const empty = stage('Empty milestone');
     const loose = stage('Без этапа');
+    const menu = async (s: Locator) =>
+      s.getByRole('button', { name: 'Действия с этапом', exact: true }).click();
+    const item = (name: string) => page.getByRole('menuitem', { name, exact: true });
+    const archive = plan.locator('button.all[aria-pressed]');
     const compare = (name: string) =>
       compareBaseline(plan, process.env['SKARO_E2E_PLAN_LAYOUT'], name, true);
+
     await expect(plan.locator('.stage')).toHaveCount(4);
     await expect(first.locator('.body')).toHaveCount(0);
     await expect(second.locator('.rows > .row')).toHaveCount(1);
+    // One way to change the plan: the chat with the agent.
+    await expect(plan.locator('.actions button')).toHaveText(['Обсудить с агентом']);
+    await expect(archive).toHaveCount(0);
+    // "1 из 1" stays on one line.
+    expect((await first.locator('.count').boundingBox())!.height).toBeLessThan(20);
     await compare('initial');
     if (process.env['SKARO_E2E_PLAN_SCREENSHOT']) {
       await page.screenshot({ path: process.env['SKARO_E2E_PLAN_SCREENSHOT'] });
@@ -35,71 +58,75 @@ test('preserves plan layout, filtering, relations, milestone edits and native dr
     await second.locator('.rows > .row').hover();
     await expect(first.locator('.rows > .row')).toHaveClass(/related/);
     await compare('related');
-    await plan.getByRole('checkbox', { name: 'Скрыть готовые' }).click();
-    await expect(first.locator('.empty')).toContainText('скрыто 1');
-    await compare('hidden');
-    await plan.getByRole('checkbox', { name: 'Скрыть готовые' }).click();
-    await plan.locator('button.all').click();
-    await expect(plan.locator('.body')).toHaveCount(0);
-    await compare('collapsed');
-    await plan.locator('button.all').click();
-    await plan.getByRole('button', { name: 'Новый этап', exact: true }).click();
-    const modal = page.getByRole('dialog');
-    await expect(modal.getByRole('button', { name: 'Создать этап', exact: true })).toBeDisabled();
-    await modal.getByLabel('Название', { exact: true }).fill('Created milestone');
-    await modal.getByLabel('Цель', { exact: true }).fill('Created goal');
-    await modal.getByLabel('Критерий готовности', { exact: true }).fill('Created criterion');
-    await compareBaseline(modal, process.env['SKARO_E2E_PLAN_LAYOUT'], 'create', true);
-    await modal.getByRole('button', { name: 'Создать этап', exact: true }).click();
-    await expect(stage('Created milestone')).toBeVisible();
-    await expect
-      .poll(
-        async () =>
-          (await store.load()).milestones.find((m) => m.title === 'Created milestone')?.body,
-      )
-      .toContain('Created criterion');
-    await second.getByRole('button', { name: 'Действия с этапом', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Редактировать', exact: true }).click();
-    await expect(modal.getByLabel('Название', { exact: true })).toHaveValue('Second milestone');
-    await modal.getByLabel('Название', { exact: true }).fill('Edited milestone');
-    await modal.getByRole('button', { name: 'Сохранить', exact: true }).click();
-    const edited = stage('Edited milestone');
-    await expect(edited).toBeVisible();
-    await loose.locator('.rows > .row').dragTo(empty.locator('.empty'));
+
+    // A task goes to another milestone with a ghost under the pointer and a slot where it lands.
+    await dragTo(page, loose.locator('.rows > .row'), empty.locator('.rows'), async () => {
+      await expect(plan.locator('.ghost .row')).toBeVisible();
+      await expect(empty.locator('.slot')).toBeVisible();
+      await expect(empty).toHaveClass(/over/);
+    });
     await expect
       .poll(async () => (await store.readTask('T-003').catch(() => undefined))?.milestone)
       .toBe('M03');
     await expect(empty.locator('.rows > .row')).toHaveCount(1);
-    await first.locator('.head').scrollIntoViewIfNeeded();
-    const source = (await empty.locator('.head').boundingBox())!;
-    const target = (await first.locator('.head').boundingBox())!;
-    await page.mouse.move(source.x + 150, source.y + 15);
-    await page.mouse.down();
-    await page.mouse.move(source.x + 165, source.y + 15, { steps: 5 });
-    await page.mouse.move(target.x + 150, target.y + 15, { steps: 10 });
-    await page.mouse.move(target.x + 155, target.y + 15);
-    await page.mouse.up();
+    await expect(loose).toHaveCount(0);
+
+    // A milestone changes its place the same way.
+    await plan.locator('button.all').click();
+    await expect(plan.locator('.body')).toHaveCount(0);
+    await compare('collapsed');
+    await dragTo(page, empty.locator('.head'), first.locator('.head'), async () => {
+      await expect(plan.locator('.ghost .stage')).toBeVisible();
+      await expect(plan.locator('.stages > .slot')).toBeVisible();
+    });
     await expect
       .poll(async () => (await store.load()).milestones.find((m) => m.id === 'M03')?.order)
       .toBe(1);
     await expect(plan.locator('.stage .name').first()).toHaveText('Empty milestone');
-    await edited.getByRole('button', { name: 'Действия с этапом', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Удалить этап…', exact: true }).click();
+
+    // Started work is archived, not deleted; a milestone with work left is not archived.
+    await menu(first);
+    await expect(item('Удалить этап…')).toHaveAttribute('aria-disabled', 'true');
+    await expect(item('В архив')).not.toHaveAttribute('aria-disabled', 'true');
+    await item('В архив').click();
+    await expect(first).toHaveCount(0);
+    await expect.poll(async () => (await store.readTask('T-001')).archived).toBe(true);
+    await menu(second);
+    await expect(item('В архив')).toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
+
+    // The archive: archived tasks under their milestone, brought back with the milestone.
+    await expect(archive).toHaveAttribute('aria-label', 'Архив этапов · 1');
+    await archive.click();
+    await expect(plan.locator('.stage')).toHaveCount(1);
+    await first.locator('.head').click();
+    await expect(first.locator('.rows > .row')).toContainText('Исправить сложение');
+    await compare('archive');
+    await menu(first);
+    await item('Вернуть из архива').click();
+    await expect(archive).toHaveCount(0);
+    await expect(first).toBeVisible();
+    await expect.poll(async () => (await store.readTask('T-001')).archived).toBe(false);
+
+    // A milestone without started tasks is deleted together with them.
+    await menu(second);
+    await item('Удалить этап…').click();
     const confirm = page.getByRole('alertdialog');
-    await expect(confirm).toContainText('Задачи этапа (1) не удалятся');
+    await expect(confirm).toContainText('Вместе с этапом удалится его задача');
     await compareBaseline(confirm, process.env['SKARO_E2E_PLAN_LAYOUT'], 'delete', true);
     await confirm.getByRole('button', { name: 'Отмена', exact: true }).click();
-    await expect(edited).toBeVisible();
-    await edited.getByRole('button', { name: 'Действия с этапом', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Удалить этап…', exact: true }).click();
+    await expect(second).toBeVisible();
+    await menu(second);
+    await item('Удалить этап…').click();
     await confirm.getByRole('button', { name: 'Удалить этап', exact: true }).click();
-    await expect(edited).toHaveCount(0);
+    await expect(second).toHaveCount(0);
     await expect
-      .poll(async () => (await store.readTask('T-002').catch(() => undefined))?.milestone)
-      .toBe('M01');
-    await first.locator('.rows > .row').filter({ hasText: 'Добавить умножение' }).click();
+      .poll(async () => (await store.readTask('T-002').catch(() => undefined))?.id)
+      .toBe(undefined);
+
+    await first.locator('.rows > .row').filter({ hasText: 'Исправить сложение' }).click();
     await expect(
-      page.getByRole('heading', { name: 'Добавить умножение', exact: true }),
+      page.getByRole('heading', { name: 'Исправить сложение', exact: true }),
     ).toBeVisible();
     expect(errors).toEqual([]);
   } finally {
@@ -107,7 +134,7 @@ test('preserves plan layout, filtering, relations, milestone edits and native dr
   }
 });
 
-test('shows an empty plan and transitions to the first created milestone', async () => {
+test('shows an empty plan with the way to make one', async () => {
   const userData = tempUserData();
   await planProject(userData, true);
   const app = await launchApp(userData);
@@ -115,16 +142,10 @@ test('shows an empty plan and transitions to the first created milestone', async
     const page = await app.firstWindow();
     await page.getByRole('navigation').getByText('План', { exact: true }).click();
     await expect(page.getByText('Плана пока нет', { exact: true })).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Обсудить с агентом', exact: true }),
-    ).toBeVisible();
-    await page.getByRole('button', { name: 'Новый этап', exact: true }).click();
-    const modal = page.getByRole('dialog');
-    await modal.getByLabel('Название', { exact: true }).fill('First stage');
-    await modal.getByRole('button', { name: 'Создать этап', exact: true }).click();
-    await expect(page.locator('.stage .name')).toHaveText('First stage');
-    await expect(page.getByText('Плана пока нет', { exact: true })).toHaveCount(0);
-    await expect(page.locator('.stage .empty')).toContainText('В этапе пока нет задач');
+    await expect(page.getByRole('button', { name: 'Обсудить с агентом', exact: true })).toHaveCount(
+      1,
+    );
+    await expect(page.getByRole('button', { name: 'Новый этап', exact: true })).toHaveCount(0);
   } finally {
     await app.close();
   }

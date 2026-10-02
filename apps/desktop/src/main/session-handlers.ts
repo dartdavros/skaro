@@ -28,8 +28,6 @@ export function sessionHandlers({
   | 'docs.setSpecStatus'
   | 'docs.reveal'
   | 'plan.milestones'
-  | 'plan.create'
-  | 'plan.update'
   | 'plan.delete'
   | 'plan.reorder'
   | 'plan.placeTask'
@@ -76,8 +74,6 @@ export function sessionHandlers({
     'docs.setSpecStatus': (projectId, id, status) => docs.setSpecStatus(projectId, id, status),
     'docs.reveal': (projectId, path) => docs.reveal(projectId, path),
     'plan.milestones': (projectId) => plan.milestones(projectId),
-    'plan.create': (projectId, input) => plan.create(projectId, input),
-    'plan.update': (projectId, id, input) => plan.update(projectId, id, input),
     'plan.delete': (projectId, id) => plan.delete(projectId, id),
     'plan.reorder': (projectId, ids) => plan.reorder(projectId, ids),
     'plan.placeTask': (projectId, taskId, milestoneId, index) =>

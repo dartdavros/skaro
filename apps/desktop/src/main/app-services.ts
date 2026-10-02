@@ -85,7 +85,11 @@ export async function createServices(
     event: (projectId, kind, data) => db.addEvent(projectId, kind, data),
   });
   const docs = new Docs({ projects, emit, reveal: (path) => shell.showItemInFolder(path) });
-  const plan = new Plan({ projects, emit, locale: () => appState.getLocale(app.getLocale()) });
+  const plan = new Plan({
+    projects,
+    emit,
+    deleteTasks: (projectId, ids) => board.delete(projectId, ids),
+  });
   const chats: ChatSessions = new ChatSessions({
     db,
     dataDir,
