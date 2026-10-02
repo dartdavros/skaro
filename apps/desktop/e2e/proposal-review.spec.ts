@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp, tempUserData } from './launch';
 import { proposalProject } from './proposal-test-support';
+import { ArtifactStore } from '@skaro/core';
 
 async function compareLayout(root: Locator, name: string) {
   const prefix = process.env['SKARO_E2E_PROPOSAL_LAYOUT'];
@@ -79,6 +80,31 @@ test('preserves proposal cards, document decisions and import selection/applicat
     expect(readFileSync(join(repo, '.skaro', 'brief.md'), 'utf8')).toContain('Imported brief');
     expect(readFileSync(join(repo, '.skaro', 'architecture.md'), 'utf8')).toContain('Architecture');
     expect(existsSync(join(repo, '.skaro', 'docs', 'glossary.md'))).toBe(true);
+    const store = new ArtifactStore(repo);
+    await adr.getByRole('button', { name: 'Принять', exact: true }).click();
+    const spec = page.locator('.proposal').filter({ hasText: 'Feature specification' });
+    await spec.getByRole('button', { name: 'Принять', exact: true }).click();
+    await expect
+      .poll(async () => (await store.load()).adrs.find((a) => a.title === 'Module decision')?.id)
+      .toBe('0002');
+    await expect
+      .poll(
+        async () => (await store.load()).specs.find((s) => s.title === 'Feature specification')?.id,
+      )
+      .toBe('0002');
+    const plan = page.locator('.proposal').filter({ hasText: 'Proposed task' });
+    await plan.getByRole('checkbox').click();
+    await expect(plan.locator('.btn.primary')).toBeDisabled();
+    await plan.getByRole('checkbox').click();
+    await plan.locator('.btn.primary').click();
+    await expect
+      .poll(
+        async () => (await store.load()).tasks.find((t) => t.title === 'Proposed task')?.milestone,
+      )
+      .toBe('M01');
+    expect((await store.load()).milestones.find((m) => m.id === 'M01')?.title).toBe(
+      'Proposed milestone',
+    );
     expect(errors).toEqual([]);
   } finally {
     await app.close();
