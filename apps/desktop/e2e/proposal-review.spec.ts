@@ -57,7 +57,10 @@ test('preserves proposal cards, document decisions and import selection/applicat
     const doc = page.locator('.proposal').filter({ hasText: 'brief.md' });
     await doc.getByRole('button', { name: 'Применить', exact: true }).click();
     await expect
-      .poll(() => readFileSync(join(repo, '.skaro', 'brief.md'), 'utf8'))
+      .poll(() => {
+        const path = join(repo, '.skaro', 'brief.md');
+        return existsSync(path) ? readFileSync(path, 'utf8') : undefined;
+      })
       .toContain('Proposal brief');
     await doc.getByRole('button', { name: 'Откатить', exact: true }).click();
     await expect.poll(() => existsSync(join(repo, '.skaro', 'brief.md'))).toBe(false);

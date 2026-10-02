@@ -1,0 +1,72 @@
+import { expect, test } from '@playwright/test';
+import { launchApp, tempUserData } from './launch';
+import { questionProject } from './question-state-support';
+import { compareBaseline } from './layout-baseline';
+
+test('preserves question choices, steps, custom answers, previews and secret input', async () => {
+  const userData = tempUserData();
+  questionProject(userData);
+  const app = await launchApp(userData);
+  try {
+    const page = await app.firstWindow();
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.getByRole('navigation').getByText('Чат', { exact: true }).click();
+    await page.locator('.sessions .row').filter({ hasText: 'Question states' }).click();
+    const card = page.locator('.fd-card').filter({ has: page.locator('.fd-card-q') });
+    const answer = card.getByRole('button', { name: 'Ответить', exact: true });
+    const next = card.getByRole('button', { name: 'Следующий вопрос', exact: true });
+    const prev = card.getByRole('button', { name: 'Предыдущий вопрос', exact: true });
+    const baseline = (name: string) =>
+      compareBaseline(card, process.env['SKARO_E2E_QUESTION_LAYOUT'], name);
+    await expect(card).toBeVisible();
+    await expect(prev).toBeDisabled();
+    await expect(answer).toBeDisabled();
+    await expect(card.locator('.preview')).toHaveText('first preview');
+    await baseline('initial');
+    await card.locator('.fd-option').filter({ hasText: 'Second' }).click();
+    await expect(card.locator('.fd-option.on .title')).toHaveText('Second');
+    await expect(card.locator('.preview')).toHaveText('second preview');
+    await baseline('single');
+    await card.getByPlaceholder('Свой вариант…').fill('Own single');
+    await expect(card.locator('.fd-option.on')).toHaveCount(0);
+    await baseline('custom');
+    await next.click();
+    await card.locator('.fd-option').filter({ hasText: 'Alpha' }).click();
+    await card.locator('.fd-option').filter({ hasText: 'Beta' }).click();
+    await card.getByPlaceholder('Свой вариант…').fill('Own multiple');
+    await expect(card.locator('.fd-option.on')).toHaveCount(2);
+    await baseline('multiple');
+    await card.getByRole('button', { name: 'Свой вариант…', exact: true }).click();
+    await expect(card.locator('.custom.on')).toHaveCount(0);
+    await next.click();
+    await card.getByPlaceholder('Свой вариант…').fill('Free text');
+    await baseline('text');
+    await next.click();
+    await expect(next).toBeDisabled();
+    const secret = card.locator('.secret input');
+    await expect(secret).toHaveAttribute('type', 'password');
+    await secret.fill('test-only-secret');
+    await expect(answer).toBeEnabled();
+    await baseline('secret');
+    await card.locator('.eye').click();
+    await expect(secret).toHaveAttribute('type', 'text');
+    await baseline('revealed');
+    await prev.click();
+    await expect(card.getByPlaceholder('Свой вариант…')).toHaveValue('Free text');
+    await prev.click();
+    await expect(card.locator('.fd-option.on')).toHaveCount(2);
+    await expect(card.getByPlaceholder('Свой вариант…')).toHaveValue('Own multiple');
+    await prev.click();
+    await expect(card.getByPlaceholder('Свой вариант…')).toHaveValue('Own single');
+    await next.click();
+    await next.click();
+    await next.click();
+    await expect(secret).toHaveAttribute('type', 'text');
+    await expect(secret).toHaveValue('test-only-secret');
+    await expect(answer).toBeEnabled();
+    expect(errors).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});
