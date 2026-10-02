@@ -79,6 +79,8 @@
             running={controller.running}
             agent={agentInfo?.id ?? settings.agent}
             model={controller.modelLabel}
+            effort={controller.effort.effort}
+            efforts={controller.effort.efforts}
             {...timeline?.usage?.contextUsedPct !== undefined
               ? { contextPct: timeline.usage.contextUsedPct }
               : {}}

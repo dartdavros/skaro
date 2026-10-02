@@ -6,7 +6,7 @@ export function createAgentsSettingsController(p: AgentsSettingsProps) {
   const defaults = $state<Partial<Record<AgentId, { model?: string; effort?: string }>>>({});
   const spin = $state<Partial<Record<AgentId, number>>>({});
   const busy = $state<Partial<Record<AgentId, boolean>>>({});
-  /** "Ваши настройки агента", read for the install state it was read with. */
+  /** "Настройки агента", read for the install state it was read with. */
   const configs = $state<
     Partial<Record<AgentId, { installed: boolean; value?: AgentUserConfig; failed?: boolean }>>
   >({});

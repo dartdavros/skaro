@@ -9,7 +9,7 @@ import type {
   ProposalAction,
 } from '../../../shared/ipc';
 import { provideFeed } from '../feed/context.svelte';
-import { modelName } from '../feed/format';
+import { modelEffort, modelName } from '../feed/format';
 import { ChatSession } from './session.svelte';
 export function createChatController(
   projectId: string,
@@ -66,6 +66,9 @@ export function createChatController(
       .catch(() => (models = []));
   });
   const modelLabel = $derived(modelName(timeline?.session?.model || settings?.model, models));
+  const effort = $derived(
+    modelEffort(timeline?.session?.model || settings?.model, settings?.effort, models),
+  );
   /** The modal's settings; the same object until they change, so an open modal keeps its draft. */
   const modalSettings = $derived<AgentSettings | undefined>(
     settings && {
@@ -175,6 +178,7 @@ export function createChatController(
         () => undefined,
       ),
     existing: (paths) => window.skaro.invoke('files.exist', projectId, '', paths).catch(() => []),
+    fileDiff: (path) => window.skaro.invoke('files.diff', projectId, '', path),
     openExternal: (url) => void window.skaro.invoke('shell.openExternal', url),
     viewImage: (src) => (viewer = src),
     stopBackground: () => undefined,
@@ -217,6 +221,10 @@ export function createChatController(
     },
     get modelLabel() {
       return modelLabel;
+    },
+    /** The effort and the model's levels, for the composer's model button. */
+    get effort() {
+      return effort;
     },
     get modalSettings() {
       return modalSettings;

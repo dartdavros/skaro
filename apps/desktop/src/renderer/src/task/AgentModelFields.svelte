@@ -1,27 +1,28 @@
 <script lang="ts">
-  import { EffortSlider, Icon, Select, t } from '@skaro/ui';
+  import { EffortSlider, Icon, t } from '@skaro/ui';
   import type { AgentModalController } from './agent-modal-controller.svelte';
+  import ModelList from './ModelList.svelte';
   let { controller }: { controller: AgentModalController } = $props();
 </script>
 
 <div class="section">
-  <span class="sk-label">{t('agent.model')}</span>
+  <span class="label-line"
+    ><span class="sk-label">{t('agent.model')}</span><span class="label-hint"
+      >{t('agent.model.hint')}</span
+    ></span
+  >
   {#if controller.models && controller.models.length}
-    <div data-tip={t('agent.model.tip')}>
-      <Select
-        variant="model"
-        width="100%"
-        menuWidth="100%"
-        label={t('agent.model')}
-        bind:value={() => controller.model?.id ?? '', (v) => (controller.draft.model = v)}
-        options={controller.models.map((m) => ({
-          value: m.id,
-          label: m.name,
-          description: m.description,
-          ...(m.isDefault ? { tag: t('agent.model.default') } : {}),
-        }))}
-      />
-    </div>
+    <ModelList
+      models={controller.models}
+      value={controller.model?.id}
+      onpick={(id) => {
+        controller.draft.model = id;
+        // The effort carries over when the new model has it, else the model's default applies.
+        const model = controller.models?.find((m) => m.id === id);
+        if (!model?.efforts.some((e) => e.id === controller.draft.effort))
+          delete controller.draft.effort;
+      }}
+    />
   {:else if controller.modelsError || (controller.info && !controller.info.installed && !controller.info.download && controller.info.error)}
     <div class="models-error">
       <Icon name="error" size={14} stroke={2} color="var(--sk-error)" />

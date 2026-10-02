@@ -18,11 +18,13 @@
   import './nav-panel.css';
   import { t } from '../i18n.svelte.ts';
   import Icon from './Icon.svelte';
+  import NavActiveTasks, { type NavTask } from './NavActiveTasks.svelte';
   import PanelResizer from './PanelResizer.svelte';
 
   /**
    * Left panel with the project sections; collapses into a rail. "Чат" is separated by a line.
-   * Counters live only here (tasks needing attention), never in tabs.
+   * Counters live only here (tasks needing attention), never in tabs. Below the sections —
+   * the tasks that need the user or run ("Активные").
    */
 
   let {
@@ -32,8 +34,10 @@
     active,
     collapsed = $bindable(false),
     width = $bindable(216),
+    tasks = [],
     onresize,
     onselect,
+    ontask,
   }: {
     title: string;
     /** The project's logo (a data: URL), before the title. */
@@ -42,8 +46,11 @@
     active: string;
     collapsed?: boolean;
     width?: number;
+    /** "Активные": needs an answer, then in review, then in progress. */
+    tasks?: NavTask[];
     onresize?: () => void;
     onselect: (id: string) => void;
+    ontask?: (id: string) => void;
   } = $props();
   const id = $props.id();
 </script>
@@ -73,11 +80,13 @@
         aria-current={item.id === active ? 'page' : undefined}
         onclick={() => onselect(item.id)}
       >
-        <span class="icon"><Icon name={item.icon} size={17} /></span>
+        <span class="icon"><Icon name={item.icon} size={16} /></span>
         <span class="label">{item.label}</span>
         {#if item.count}<span class="count" data-tip={item.countTip}>{item.count}</span>{/if}
       </button>
     {/each}
+    <span class="spacer"></span>
+    {#if tasks.length}<NavActiveTasks {tasks} onopen={(id) => ontask?.(id)} />{/if}
   </nav>
   <PanelResizer
     {width}
@@ -111,9 +120,11 @@
         aria-current={item.id === active ? 'page' : undefined}
         onclick={() => onselect(item.id)}
       >
-        <Icon name={item.icon} size={17} />
+        <Icon name={item.icon} size={16} />
         {#if item.count}<span class="badge"></span>{/if}
       </button>
     {/each}
+    <span class="spacer"></span>
+    {#if tasks.length}<NavActiveTasks {tasks} rail onopen={(id) => ontask?.(id)} />{/if}
   </nav>
 {/if}

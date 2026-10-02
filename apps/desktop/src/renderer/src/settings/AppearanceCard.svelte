@@ -1,6 +1,7 @@
 <script lang="ts">
   import { i18n, Segmented, setLocale, t, type Locale } from '@skaro/ui';
-  import Card from './Card.svelte';
+  import Row from './Row.svelte';
+  import Section from './Section.svelte';
   import { applyFeedFont, Setting } from './setting.svelte';
 
   /** "Внешний вид": the interface language and the font of the agent feed. */
@@ -18,9 +19,8 @@
   }
 </script>
 
-<Card label={t('settings.appearance')}>
-  <div class="grid">
-    <span class="key">{t('settings.language')}</span>
+<Section title={t('settings.appearance')}>
+  <Row title={t('settings.language')}>
     <Segmented
       label={t('settings.language')}
       bind:value={() => i18n.locale, setLanguage}
@@ -29,7 +29,8 @@
         { value: 'en', label: 'English' },
       ]}
     />
-    <span class="key">{t('settings.font')}</span>
+  </Row>
+  <Row title={t('settings.font')}>
     <Segmented
       label={t('settings.font')}
       bind:value={() => font.value, setFont}
@@ -39,5 +40,5 @@
         { value: 'large', label: t('settings.font.large') },
       ]}
     />
-  </div>
-</Card>
+  </Row>
+</Section>

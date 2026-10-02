@@ -40,6 +40,7 @@
     "mammoth": "^1.13.0",
     "marked": "^18.0.14",
     "mermaid": "^12.0.0",
+    "shiki": "^4.5.0",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",
     "turndown": "^7.2.4",

@@ -11,8 +11,8 @@ export const STATUS_META: Record<BoardStatus, { label: string; color: string }> 
   todo: { label: 'task.status.todo', color: 'var(--sk-text-15)' },
   blocked: { label: 'task.status.blocked', color: 'var(--sk-text-15)' },
   working: { label: 'task.status.in_progress', color: 'var(--sk-blue-3)' },
-  need: { label: 'task.status.needs_answer', color: 'var(--sk-accent-hover)' },
-  review: { label: 'task.status.review', color: 'var(--sk-link)' },
+  need: { label: 'task.status.needs_answer', color: 'var(--sk-accent)' },
+  review: { label: 'task.status.review', color: 'var(--sk-accent)' },
   done: { label: 'task.status.done', color: 'var(--sk-text-15)' },
   error: { label: 'task.status.failed', color: 'var(--sk-red-2)' },
   cancelled: { label: 'task.status.cancelled', color: 'var(--sk-text-22)' },
@@ -87,7 +87,7 @@ export interface Column {
  * The column a task belongs to; a failed task stays where it failed (in progress, in review).
  * A cancelled task has no column.
  */
-function columnOf(task: TaskSummary): Column['key'] | undefined {
+export function columnOf(task: TaskSummary): Column['key'] | undefined {
   switch (boardStatus(task.status)) {
     case 'cancelled':
       return undefined;
@@ -105,9 +105,15 @@ function columnOf(task: TaskSummary): Column['key'] | undefined {
   }
 }
 
-/** Four columns: not started (with blocked), in progress, in review, done. */
-export function columns(tasks: TaskSummary[]): Column[] {
-  const of = (key: Column['key']) => tasks.filter((x) => columnOf(x) === key);
+/**
+ * Four columns: not started (with blocked), in progress, in review, done. `moved` puts tasks
+ * dropped on another column there until their status catches up (or the move fails).
+ */
+export function columns(
+  tasks: TaskSummary[],
+  moved: Partial<Record<string, Column['key']>> = {},
+): Column[] {
+  const of = (key: Column['key']) => tasks.filter((x) => (moved[x.id] ?? columnOf(x)) === key);
   return [
     { key: 'todo', color: 'var(--sk-text-13)', tasks: of('todo') },
     { key: 'working', color: 'var(--sk-text-13)', tasks: of('working') },
@@ -148,16 +154,36 @@ export function groups(
     .filter((g) => g.tasks.length > 0);
 }
 
-/**
- * Starts now when launched; a blocked task waits for its dependencies instead. A task that
- * failed mid-work goes on from its feed ("Перезапустить"), not from here.
- */
-export function canStart(task: TaskSummary): boolean {
-  return task.status === 'todo' || task.status === 'cancelled' || task.stage === 'failed';
-}
+export { canStart } from './task-rules';
 
 export function needsYou(task: TaskSummary): boolean {
   return task.status === 'needs_answer' || task.status === 'review';
+}
+
+const ACTIVE_ORDER = { need: 0, review: 1, working: 2 } as const;
+
+/**
+ * "Активные" of the left panel: tasks that need an answer, then in review, then running or
+ * queued; archived ones are left out.
+ */
+export function activeTasks(
+  tasks: TaskSummary[],
+): { task: TaskSummary; kind: keyof typeof ACTIVE_ORDER }[] {
+  const kindOf = (task: TaskSummary): keyof typeof ACTIVE_ORDER | undefined =>
+    task.status === 'needs_answer'
+      ? 'need'
+      : task.status === 'review'
+        ? 'review'
+        : task.status === 'in_progress' || task.status === 'queued'
+          ? 'working'
+          : undefined;
+  return tasks
+    .filter((task) => !task.archived)
+    .flatMap((task) => {
+      const kind = kindOf(task);
+      return kind ? [{ task, kind }] : [];
+    })
+    .sort((a, b) => ACTIVE_ORDER[a.kind] - ACTIVE_ORDER[b.kind]);
 }
 
 export type BulkKind = 'delete' | 'archive' | 'move' | 'unblock';

@@ -66,6 +66,24 @@ export function modelName(id: string | undefined, models: AgentModel[]): string 
   return id && id !== 'default' ? prettyModel(id) : '';
 }
 
+/** The effort a model runs with and its levels in order; the model's default when unset. */
+export function modelEffort(
+  id: string | undefined,
+  effort: string | undefined,
+  models: AgentModel[],
+): { effort?: string; efforts: string[] } {
+  const model =
+    models.find((m) => m.id === id) ??
+    (!id || id === 'default' ? models.find((m) => m.isDefault) : undefined);
+  if (!model) return { efforts: [] };
+  const efforts = model.efforts.map((e) => e.id);
+  const chosen =
+    (effort && efforts.includes(effort) ? effort : undefined) ??
+    model.defaultEffort ??
+    efforts[Math.floor(efforts.length / 2)];
+  return { ...(chosen ? { effort: chosen } : {}), efforts };
+}
+
 /** URL of an image for <img>: stored attachment or a file Skaro may show. */
 export function imageUrl(ref: { id: string; mime: string; path?: string }): string {
   if (/^[a-f0-9]{64}$/.test(ref.id)) {

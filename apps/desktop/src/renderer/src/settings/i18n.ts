@@ -2,6 +2,15 @@ import { addMessages } from '@skaro/ui';
 
 // "Настройки" (Settings mockup): everything below "Агенты".
 addMessages('ru', {
+  'settings.cat.agents': 'Агенты',
+  'settings.cat.work': 'Задачи и ветки',
+  'settings.cat.projects': 'Проекты',
+  'settings.cat.notify': 'Уведомления',
+  'settings.cat.appearance': 'Внешний вид',
+  'settings.cat.about': 'О программе',
+  'settings.agents.note': 'Модель и усилие по умолчанию для новых задач и чатов',
+  'settings.branches.note': 'Значения по умолчанию; проект может задать свои в «Параметрах»',
+  'settings.notify.note': 'Какие события задач показывают системное уведомление',
   'settings.runs': 'Выполнение',
   'settings.runs.slots': 'Одновременных запусков',
   'settings.runs.note': 'Задачи сверх лимита встают в очередь',
@@ -45,6 +54,15 @@ addMessages('ru', {
 });
 
 addMessages('en', {
+  'settings.cat.agents': 'Agents',
+  'settings.cat.work': 'Tasks and branches',
+  'settings.cat.projects': 'Projects',
+  'settings.cat.notify': 'Notifications',
+  'settings.cat.appearance': 'Appearance',
+  'settings.cat.about': 'About',
+  'settings.agents.note': 'Default model and effort for new tasks and chats',
+  'settings.branches.note': 'Defaults; a project can set its own in “Parameters”',
+  'settings.notify.note': 'Which task events show a system notification',
   'settings.runs': 'Runs',
   'settings.runs.slots': 'Parallel runs',
   'settings.runs.note': 'Tasks over the limit wait in the queue',

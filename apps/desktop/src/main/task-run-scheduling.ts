@@ -38,11 +38,41 @@ export class TaskRunScheduling {
       const blocker = startBlocker(task, index);
       // A blocked task starts on its own once its dependencies are merged.
       if (blocker === 'blocked') awaiting[id] = { message, ...(assignment ? { assignment } : {}) };
-      if (this.ctx.active.has(key(projectId, id)) || blocker) continue;
+      if (blocker) continue;
+      const active = this.ctx.active.has(key(projectId, id));
+      if (active && task.status !== 'todo') continue;
       if (assignment) await this.ctx.views.assign(projectId, id, assignment);
+      // A task taken back to "Не начата" keeps its run: starting it again goes on in that session.
+      if (
+        task.status === 'todo' &&
+        (active || this.ctx.deps.db.listRuns(projectId, id).length > 0)
+      ) {
+        await this.ctx.project(projectId).store.updateTask(id, { status: 'in_progress' });
+        this.ctx.project(projectId).invalidate();
+      }
       await this.ctx.messages.send(projectId, id, { text: message });
     }
     this.ctx.deps.db.setSetting(awaitingKey(projectId), awaiting);
+  }
+
+  /**
+   * "В работе" → "Не начата" on the board: the agent stops (or the task leaves the queue) and the
+   * task is not started again; its run, branch and feed stay for the next start.
+   */
+  async cancel(projectId: string, taskId: string): Promise<void> {
+    const context = this.ctx.project(projectId);
+    const task = findTask(await context.load(), taskId);
+    if (task.status !== 'in_progress' && task.status !== 'todo')
+      throw new Error('Only a task in progress can be taken back');
+    await this.ctx.messages.interrupt(projectId, taskId);
+    const awaiting = this.awaiting(projectId);
+    if (awaiting[taskId]) {
+      delete awaiting[taskId];
+      this.ctx.deps.db.setSetting(awaitingKey(projectId), awaiting);
+    }
+    if (task.status !== 'todo') await context.store.updateTask(taskId, { status: 'todo' });
+    context.invalidate();
+    this.ctx.changed(projectId, taskId);
   }
 
   awaiting(projectId: string): Record<string, { message: string; assignment?: TaskAssignment }> {

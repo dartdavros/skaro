@@ -17,6 +17,8 @@
     agent,
     model,
     modelTip,
+    effort,
+    efforts,
     contextPct,
     permissionMode,
     permissionModes = ['ask', 'auto', 'full'],
@@ -35,6 +37,9 @@
     model: string;
     /** Tip of the model button; the chat says the agent is fixed. */
     modelTip?: string;
+    /** The effort the model runs with and the model's levels, shown on the model button. */
+    effort?: string | undefined;
+    efforts?: string[];
     contextPct?: number;
     permissionMode?: PermissionMode;
     permissionModes?: readonly PermissionMode[];
@@ -77,6 +82,8 @@
     {agent}
     {model}
     {modelTip}
+    {effort}
+    {efforts}
     {contextPct}
     {permissionMode}
     {permissionModes}

@@ -93,6 +93,7 @@ export const systemHandlers = {
   'files.exist': (_p, _t, paths) =>
     paths.filter((p) => p.startsWith('src/') || p.startsWith('docs/')),
   'files.open': () => undefined,
+  'files.diff': () => ({ status: 'unchanged', diff: '' }),
   'files.pick': (kind) =>
     kind === 'folder'
       ? [{ path: 'C:/Users/dev/Docs/shop', kind: 'folder' }]
@@ -124,6 +125,7 @@ export const systemHandlers = {
   | 'files.suggest'
   | 'files.exist'
   | 'files.open'
+  | 'files.diff'
   | 'files.pick'
   | 'shell.openExternal'
 >;

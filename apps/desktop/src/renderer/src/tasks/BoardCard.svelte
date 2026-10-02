@@ -8,19 +8,29 @@
   /**
    * A task card of the board (Tasks mockup): checkbox, title, lock or status dot; milestone;
    * time and agent logo. The column already says the status, the card does not repeat it.
+   * It is dragged by the pointer (`ondragstart`) or taken with Space (`onkey`); `ghost` is the
+   * copy that follows the pointer, `dropped` plays the landing.
    */
   let {
     task,
     selected,
     now,
+    ghost = false,
+    dropped = false,
     onselect,
     onopen,
+    ondragstart,
+    onkey,
   }: {
     task: TaskSummary;
     selected: boolean;
     now: number;
-    onselect: (on: boolean) => void;
-    onopen: () => void;
+    ghost?: boolean;
+    dropped?: boolean;
+    onselect?: (on: boolean) => void;
+    onopen?: () => void;
+    ondragstart?: (e: PointerEvent) => void;
+    onkey?: (e: KeyboardEvent) => void;
   } = $props();
 
   const shortId = $derived(task.id.replace(/^T-0*(\d+)$/, 'T$1'));
@@ -43,19 +53,29 @@
 <div
   class="card board-card"
   class:selected
-  class:dim={kind === 'blocked'}
+  class:ghost
+  class:dropped
+  class:dim={kind === 'blocked' && !ghost}
   role="button"
-  tabindex="0"
-  data-tip={t('board.open')}
-  onclick={onopen}
-  onkeydown={(e) => e.key === 'Enter' && onopen()}
+  tabindex={ghost ? -1 : 0}
+  aria-hidden={ghost || undefined}
+  data-card={ghost ? undefined : task.id}
+  data-tip={ghost ? undefined : t('board.open')}
+  aria-roledescription={ghost ? undefined : t('board.dnd.card')}
+  onclick={() => onopen?.()}
+  onpointerdown={(e) => ondragstart?.(e)}
+  onkeydown={(e) => {
+    if (e.key === 'Enter') onopen?.();
+    else onkey?.(e);
+  }}
 >
   <div class="top">
-    <span class="check">
+    <!-- The checkbox selects; it never starts a drag. -->
+    <span class="check" role="presentation" onpointerdown={(e) => e.stopPropagation()}>
       <Checkbox
         checked={selected}
         tip={selected ? t('board.unselect') : t('board.select')}
-        onchange={onselect}
+        onchange={(on) => onselect?.(on)}
       />
     </span>
     <span class="title" class:muted>{shortId} · {task.title}</span>

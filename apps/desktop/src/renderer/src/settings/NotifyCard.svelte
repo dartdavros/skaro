@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Checkbox, t, Toggle } from '@skaro/ui';
-  import Card from './Card.svelte';
+  import Row from './Row.svelte';
+  import Section from './Section.svelte';
   import { Setting } from './setting.svelte';
 
   /** "Уведомления": which task events show a system notification, with or without sound. */
@@ -17,33 +18,42 @@
   const sound = new Setting<boolean>('notify.sound', true);
 </script>
 
-<Card label={t('settings.notify')}>
-  <div class="list">
+<Section title={t('settings.notify')} note={t('settings.notify.note')}>
+  <div class="kinds">
     {#each kinds as { kind, setting } (kind)}
-      <Checkbox
-        checked={setting.value}
-        label={t(`settings.notify.${kind}`)}
-        onchange={(on) => setting.set(on)}
-      />
+      <div class="kind">
+        <Checkbox
+          checked={setting.value}
+          label={t(`settings.notify.${kind}`)}
+          onchange={(on) => setting.set(on)}
+        />
+      </div>
     {/each}
-    <div class="line"></div>
+  </div>
+  <Row tall title={t('settings.notify.sound')}>
     <Toggle
-      label={t('settings.notify.sound')}
+      ariaLabel={t('settings.notify.sound')}
       bind:checked={() => sound.value, (on) => sound.set(on)}
     />
-  </div>
-</Card>
+  </Row>
+</Section>
 
 <style>
-  .list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  .kinds {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px;
   }
 
-  .line {
-    height: 1px;
-    margin: 2px 0;
-    background: var(--sk-line-strong);
+  /* The whole cell is the checkbox: 36px, lit on hover. */
+  .kind :global(.row) {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 8px;
+  }
+
+  .kind :global(.row:hover) {
+    background: var(--sk-fill-20);
   }
 </style>

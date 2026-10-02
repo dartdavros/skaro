@@ -76,6 +76,12 @@ export class TaskRuns {
   interrupt(projectId: string, taskId: string): Promise<void> {
     return this.engine.messages.interrupt(projectId, taskId);
   }
+  cancel(projectId: string, taskId: string): Promise<void> {
+    return this.engine.scheduling.cancel(projectId, taskId);
+  }
+  mergeFromBoard(projectId: string, taskId: string): Promise<'merged' | 'open'> {
+    return this.engine.mergeActions.mergeFromBoard(projectId, taskId);
+  }
   stopBackground(projectId: string, taskId: string, backgroundId: string): Promise<void> {
     return this.engine.messages.stopBackground(projectId, taskId, backgroundId);
   }

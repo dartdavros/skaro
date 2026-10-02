@@ -60,6 +60,7 @@ export class UpdateActivity {
           'task.send',
           'task.respond',
           'task.merge',
+          'tasks.merge',
           'chat.create',
           'chat.send',
           'chat.respond',

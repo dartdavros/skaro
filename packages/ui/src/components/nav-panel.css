@@ -1,15 +1,12 @@
 .project-nav.panel {
   flex: none;
   width: 216px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 18px 8px 14px;
+  gap: 1px;
+  padding: 18px 8px 12px;
   background: var(--sk-fill-8);
-}
-
-.project-nav.panel + .sk-panel-resizer[data-panel-side='left'] {
-  background: var(--sk-line);
 }
 
 .project-nav .head {
@@ -66,10 +63,11 @@
 }
 
 .project-nav .item {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 11px;
-  height: 32px;
+  height: 30px;
   padding: 0 10px;
   border: none;
   border-radius: 6px;
@@ -102,6 +100,11 @@
   color: var(--sk-text);
 }
 
+.project-nav .spacer {
+  flex: 1;
+  min-height: 12px;
+}
+
 .project-nav .label {
   flex: 1;
   min-width: 0;
@@ -117,6 +120,7 @@
 .project-nav.rail {
   flex: none;
   width: 56px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;

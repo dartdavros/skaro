@@ -1,7 +1,8 @@
 <script lang="ts">
   import { t, Toggle } from '@skaro/ui';
   import { AUTO_MERGE_KEY } from '../../../shared/ipc';
-  import Card from './Card.svelte';
+  import Row from './Row.svelte';
+  import Section from './Section.svelte';
   import { Setting } from './setting.svelte';
 
   /**
@@ -12,12 +13,8 @@
   const autoMerge = new Setting<boolean>(AUTO_MERGE_KEY, false);
 </script>
 
-<Card label={t('settings.runs')}>
-  <div class="row">
-    <div class="texts">
-      <span class="title">{t('settings.runs.slots')}</span>
-      <span class="note">{t('settings.runs.note')}</span>
-    </div>
+<Section title={t('settings.runs')}>
+  <Row tall title={t('settings.runs.slots')} note={t('settings.runs.note')}>
     <div class="stepper">
       <button
         type="button"
@@ -31,41 +28,18 @@
         onclick={() => slots.set(Math.min(8, slots.value + 1))}>+</button
       >
     </div>
-  </div>
-  <div class="row">
-    <div class="texts">
-      <span class="title">{t('settings.autoMerge')}</span>
-      <span class="note">{t('settings.autoMerge.note')}</span>
-    </div>
-    <Toggle bind:checked={() => autoMerge.value, (on) => autoMerge.set(on)} />
-  </div>
-</Card>
+  </Row>
+  <Row tall title={t('settings.autoMerge')} note={t('settings.autoMerge.note')}>
+    <Toggle
+      ariaLabel={t('settings.autoMerge')}
+      bind:checked={() => autoMerge.value, (on) => autoMerge.set(on)}
+    />
+  </Row>
+</Section>
 
 <style>
-  .row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .texts {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .title {
-    font-size: var(--sk-fs-6);
-    color: var(--sk-text-7);
-  }
-
-  .note {
-    font-size: var(--sk-fs-3);
-    color: var(--sk-text-21);
-  }
-
   .stepper {
+    flex: none;
     display: flex;
     align-items: center;
     gap: 2px;

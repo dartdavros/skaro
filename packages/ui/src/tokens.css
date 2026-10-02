@@ -44,6 +44,11 @@
   --sk-error: #ef6a63;
   --sk-warn: #e0a33c;
   --sk-diff-add: #4caf50;
+  /* "Отредактировал N файлов" at the end of a reply, as bright as the agent's own colours. */
+  --sk-diff-icon: #878581;
+  --sk-diff-plus: #27d74b;
+  --sk-diff-minus: #ff2834;
+  --sk-diff-chevron: #c3c0b4;
 
   /* Text: pure white is never used; headings and active items stay muted, #e0e0e0 at most */
   --sk-text-bright: #e0e0e0;
@@ -161,10 +166,52 @@ code {
   }
 }
 
+@keyframes skFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Drag and drop on the board: the landing slot, the lifted ghost, the dropped card. */
+@keyframes skSlot {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes skLift {
+  from {
+    transform: rotate(0deg) scale(1);
+    box-shadow: none;
+  }
+  to {
+    transform: rotate(2deg) scale(1.03);
+  }
+}
+
+@keyframes skDrop {
+  0% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 1.5px var(--sk-accent);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 0 0 var(--sk-accent-a0);
+  }
+}
+
 /* Type scale (02 · Типографика) */
 .sk-title {
   margin: 0;
-  font-size: var(--sk-fs-16);
+  font-size: var(--sk-fs-13);
   font-weight: 700;
   color: var(--sk-text-5);
   letter-spacing: -0.01em;
@@ -308,15 +355,22 @@ code {
   --sk-teal-3: #141a19;
 
   /* Translucent */
+  --sk-accent-a0: rgba(42, 82, 190, 0);
   --sk-accent-a14: rgba(42, 82, 190, 0.14);
+  --sk-accent-a18: rgba(42, 82, 190, 0.18);
+  --sk-accent-a55: rgba(42, 82, 190, 0.55);
   --sk-bg-a0: rgba(23, 23, 23, 0);
   --sk-bg-a85: rgba(23, 23, 23, 0.85);
   --sk-black-a35: rgba(0, 0, 0, 0.35);
+  --sk-black-a12: rgba(0, 0, 0, 0.12);
   --sk-black-a45: rgba(0, 0, 0, 0.45);
+  --sk-black-a50: rgba(0, 0, 0, 0.5);
   --sk-black-a55: rgba(0, 0, 0, 0.55);
   --sk-black-a60: rgba(0, 0, 0, 0.6);
   --sk-black-a65: rgba(0, 0, 0, 0.65);
   --sk-black-a78: rgba(0, 0, 0, 0.78);
+  --sk-green-a10: rgba(88, 180, 124, 0.1);
+  --sk-green-a14: rgba(88, 180, 124, 0.14);
   --sk-error-a10: rgba(239, 106, 99, 0.1);
   --sk-error-a12: rgba(239, 106, 99, 0.12);
   --sk-error-a14: rgba(239, 106, 99, 0.14);

@@ -3,7 +3,7 @@ import { t } from '@skaro/ui';
 import { onDestroy } from 'svelte';
 import type { AgentInfo, AgentSettings, MergeAction, MessageInput } from '../../../shared/ipc';
 import { provideFeed } from '../feed/context.svelte';
-import { modelName } from '../feed/format';
+import { modelEffort, modelName } from '../feed/format';
 import { TaskSession } from './session.svelte';
 
 export function createTaskController(
@@ -44,6 +44,9 @@ export function createTaskController(
       .catch(() => (models = []));
   });
   const modelLabel = $derived(modelName(timeline?.session?.model || settings?.model, models));
+  const effort = $derived(
+    modelEffort(timeline?.session?.model || settings?.model, settings?.effort, models),
+  );
 
   const placeholder = $derived(
     openQuestion || openApproval
@@ -110,6 +113,7 @@ export function createTaskController(
       ),
     existing: (paths) =>
       window.skaro.invoke('files.exist', projectId, taskId, paths).catch(() => []),
+    fileDiff: (path) => window.skaro.invoke('files.diff', projectId, taskId, path),
     openExternal: (url) => void window.skaro.invoke('shell.openExternal', url),
     viewImage: (src) => (viewer = src),
     stopBackground: (id) =>
@@ -152,6 +156,10 @@ export function createTaskController(
     },
     get modelLabel() {
       return modelLabel;
+    },
+    /** The effort and the model's levels, for the composer's model button. */
+    get effort() {
+      return effort;
     },
     get mergeMessage() {
       return mergeMessage;

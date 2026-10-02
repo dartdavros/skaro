@@ -1,84 +1,27 @@
-/* Baseline scope and specificity retained across composed views. */
-
-.card[data-project-rules] {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 15px;
-  border-radius: 10px;
-  background: var(--sk-fill-16);
-}
-
-.card.tight[data-project-rules] {
-  gap: 4px;
-}
-
-.card.mid[data-project-rules] {
-  gap: 9px;
-}
-
-.label[data-project-rules] {
-  font-size: var(--sk-fs-2);
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--sk-text-23);
-}
-
-.label.pad[data-project-rules] {
-  padding-bottom: 6px;
-}
-
-.fields[data-project-rules] {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.field[data-project-rules] {
-  flex: 1;
-  min-width: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.choices[data-project-rules] {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.choice[data-project-rules] {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.key[data-project-rules] {
-  font-size: var(--sk-fs-3);
-  color: var(--sk-text-19);
-}
+/* Fields of "Ветки и слияние" and "Инструкции агенту" (Settings mockup). */
 
 input[data-project-rules] {
+  flex: none;
+  width: 280px;
   height: 32px;
   padding: 0 11px;
   border: none;
   border-radius: 8px;
-  background: var(--sk-fill-3);
+  background: var(--sk-field);
   color: var(--sk-text-6);
   font-size: var(--sk-fs-5);
   outline: none;
-  box-shadow: inset 0 0 0 1px var(--sk-fill-25);
+  box-shadow: inset 0 0 0 1px var(--sk-field-ring);
 }
 
 .mono[data-project-rules] {
   font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
 }
 
 input[data-project-rules]:hover {
   background: var(--sk-field-hover);
-  box-shadow: inset 0 0 0 1px var(--sk-fill-31);
+  box-shadow: inset 0 0 0 1px var(--sk-field-ring-hover);
 }
 
 input[data-project-rules]:focus {
@@ -86,24 +29,18 @@ input[data-project-rules]:focus {
   box-shadow: inset 0 0 0 1px var(--sk-accent);
 }
 
-.note[data-project-rules] {
-  font-size: var(--sk-fs-3);
-  line-height: 1.45;
-  color: var(--sk-text-21);
-  text-wrap: pretty;
-}
-
 textarea[data-project-rules] {
-  min-height: 84px;
-  padding: 10px 12px;
+  min-height: 96px;
+  padding: 12px 14px;
   border: none;
-  border-radius: 9px;
-  background: var(--sk-surface-2);
+  border-radius: 10px;
+  background: var(--sk-surface);
   color: var(--sk-text-6);
   font-size: var(--sk-fs-5);
   line-height: 1.55;
   resize: vertical;
   outline: none;
+  box-shadow: inset 0 0 0 1px var(--sk-field-ring);
 }
 
 textarea[data-project-rules]:focus {

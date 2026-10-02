@@ -1,5 +1,6 @@
 import { dialog, shell, type BrowserWindow } from 'electron';
 import type { PickedFile } from '../shared/ipc';
+import { fileDiff } from './file-diff';
 import { existingPaths, isImagePath, resolveInside, suggestPaths } from './files';
 import type { Handlers } from './ipc';
 import type { Services } from './app-services';
@@ -10,7 +11,12 @@ export function fileHandlers(
   picked: Set<string>,
 ): Pick<
   Handlers,
-  'files.suggest' | 'files.exist' | 'files.open' | 'files.pick' | 'shell.openExternal'
+  | 'files.suggest'
+  | 'files.exist'
+  | 'files.open'
+  | 'files.diff'
+  | 'files.pick'
+  | 'shell.openExternal'
 > {
   return {
     'files.suggest': (projectId, taskId, query) =>
@@ -21,6 +27,7 @@ export function fileHandlers(
       const error = await shell.openPath(resolveInside(runs.workdir(projectId, taskId), path));
       if (error) throw new Error(error);
     },
+    'files.diff': (projectId, taskId, path) => fileDiff(runs.workdir(projectId, taskId), path),
     'files.pick': async (kind) => {
       const options: Electron.OpenDialogOptions = {
         properties: kind === 'folder' ? ['openDirectory'] : ['openFile', 'multiSelections'],

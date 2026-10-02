@@ -1,12 +1,12 @@
 <script lang="ts">
   import ProjectSection from './ProjectSection.svelte';
-  import { NavPanel, t, tn, type NavItem } from '@skaro/ui';
+  import { NavPanel, t, tn, type NavItem, type NavTask } from '@skaro/ui';
   import { onDestroy } from 'svelte';
   import type { ProjectInfo } from '../../../shared/ipc';
   import { agents } from '../agents.svelte';
   import { ProjectTasks } from '../tasks/data.svelte';
   import '../tasks/i18n';
-  import { needsYou } from '../tasks/model';
+  import { activeTasks, needsYou, statusLabel } from '../tasks/model';
   import ImportModal from '../import/ImportModal.svelte';
   import { NavigationWidth } from './navigation-width.svelte';
 
@@ -73,6 +73,18 @@
   ]);
   const current = $derived(items.find((i) => i.id === section) ?? items[0]!);
 
+  const navTasks = $derived<NavTask[]>(
+    activeTasks(data.tasks).map(({ task, kind }) => ({
+      id: task.id,
+      title: task.title,
+      tip: `${task.id.replace(/^T-0*(\d+)$/, 'T$1')} · ${task.title}`,
+      sub: `${statusLabel(task.status)} · ${
+        task.milestone ? `${task.milestone.id} · ${task.milestone.title}` : t('board.loose')
+      }`,
+      kind,
+    })),
+  );
+
   function go(id: string): void {
     if (id === 'tasks') task = undefined;
     section = id;
@@ -99,6 +111,8 @@
     bind:collapsed
     bind:width={navigation.width}
     onresize={() => navigation.save()}
+    tasks={navTasks}
+    ontask={openTask}
     onselect={(id) => {
       if (id === 'tasks' && section === 'tasks') task = undefined;
       section = id;

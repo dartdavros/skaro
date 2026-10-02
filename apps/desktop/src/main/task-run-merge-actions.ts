@@ -73,6 +73,29 @@ export class TaskRunMergeActions {
     }
   }
 
+  /**
+   * "На ревью" → "Готово" on the board: merges with the task's open merge card and its message.
+   * Without a card, or with a blocked one, the user decides in the task's feed.
+   */
+  async mergeFromBoard(projectId: string, taskId: string): Promise<'merged' | 'open'> {
+    const active =
+      this.ctx.active.get(key(projectId, taskId)) ??
+      (await this.ctx.history.restore(projectId, taskId));
+    const card = active?.timeline.state.interactions.find(
+      (i): i is MergeInteraction => i.kind === 'merge',
+    );
+    if (!active || !card || card.blockers.length) return 'open';
+    const context = this.ctx.project(projectId);
+    const task = (await context.load()).tasks.find((t) => t.id === taskId);
+    await this.confirmMerge(
+      active,
+      context,
+      card,
+      card.message ?? `${taskId}: ${task?.title ?? ''}`,
+    );
+    return 'merged';
+  }
+
   confirmMerge(
     active: ActiveRun,
     context: ProjectContext,

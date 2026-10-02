@@ -2,7 +2,7 @@
 
 import type { InteractionAnswer } from '@skaro/timeline';
 import { getContext, setContext } from 'svelte';
-import type { MergeAction, ProposalAction } from '../../../shared/ipc';
+import type { FileDiff, MergeAction, ProposalAction } from '../../../shared/ipc';
 
 export interface FeedActions {
   /** Working folder of the agent: paths are shown relative to it. */
@@ -10,6 +10,8 @@ export interface FeedActions {
   /** The agent session can take commands now (not after the task is done). */
   readonly interactive: boolean;
   openPath(path: string): void;
+  /** Current changes of a file in the working folder ("Обновить" in the diff window). */
+  fileDiff(path: string): Promise<FileDiff>;
   existing(paths: string[]): Promise<string[]>;
   openExternal(url: string): void;
   viewImage(src: string): void;

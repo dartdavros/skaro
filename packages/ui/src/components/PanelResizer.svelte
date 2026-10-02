@@ -20,6 +20,8 @@
     oncommit: () => void;
   } = $props();
   let stopDrag: (() => void) | undefined;
+  /** While dragging the line and the pill stay lit, even with the pointer off the grip. */
+  let dragging = $state(false);
   const clamp = (value: number) => Math.max(min, Math.min(max, value));
   onDestroy(() => stopDrag?.());
 
@@ -29,6 +31,8 @@
     stopDrag?.();
     const startX = event.clientX;
     const startWidth = width;
+    dragging = true;
+    document.body.style.cursor = 'col-resize';
     const direction = side === 'left' ? 1 : -1;
     const move = (next: PointerEvent) => {
       if (next.pointerId === event.pointerId)
@@ -43,6 +47,8 @@
       window.removeEventListener('pointercancel', end);
       window.removeEventListener('blur', finish);
       stopDrag = undefined;
+      dragging = false;
+      document.body.style.cursor = '';
       oncommit();
     };
     stopDrag = finish;
@@ -68,7 +74,7 @@
   }
 </script>
 
-<div class="resizer sk-panel-resizer" data-panel-side={side}>
+<div class="resizer sk-panel-resizer" class:dragging data-panel-side={side}>
   <!-- A focusable separator implements the ARIA window splitter widget. -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
   <div
@@ -85,6 +91,7 @@
     onpointerdown={resize}
     onkeydown={resizeWithKey}
   ></div>
+  <span class="pill"></span>
 </div>
 
 <style>
@@ -94,6 +101,7 @@
     width: 1px;
     background: var(--sk-line);
     z-index: 5;
+    transition: background 0.15s;
   }
   .grip {
     position: absolute;
@@ -104,13 +112,31 @@
     cursor: col-resize;
     touch-action: none;
   }
-  .grip:hover {
-    background: linear-gradient(
-      90deg,
-      transparent 3px,
-      var(--sk-accent) 3px,
-      var(--sk-accent) 6px,
-      transparent 6px
-    );
+  .pill {
+    position: absolute;
+    top: 50%;
+    left: -2px;
+    width: 5px;
+    height: 32px;
+    margin-top: -16px;
+    border-radius: 3px;
+    background: var(--sk-fill-36);
+    box-shadow: 0 0 0 2px var(--sk-bg);
+    opacity: 0;
+    transition:
+      opacity 0.15s,
+      background 0.15s;
+    pointer-events: none;
+  }
+  .resizer:has(.grip:hover),
+  .resizer.dragging {
+    background: var(--sk-fill-28);
+  }
+  .resizer:has(.grip:hover) .pill,
+  .resizer.dragging .pill {
+    opacity: 1;
+  }
+  .resizer.dragging .pill {
+    background: var(--sk-fill-39);
   }
 </style>

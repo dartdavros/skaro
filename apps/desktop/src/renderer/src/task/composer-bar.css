@@ -72,7 +72,7 @@
 .composer .model {
   flex: none;
   height: 28px;
-  padding: 0 10px 0 9px;
+  padding: 0 9px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -88,6 +88,14 @@
 .composer .model:hover {
   background: var(--sk-fill-32);
   color: var(--sk-text-4);
+}
+.composer .model-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--sk-fill-35);
+}
+.composer .model-effort {
+  color: var(--sk-text-14);
 }
 .composer .send {
   flex: none;

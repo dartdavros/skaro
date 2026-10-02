@@ -1,5 +1,6 @@
 <script lang="ts">
   import { EffortSlider, Select, t } from '@skaro/ui';
+  import Row from '../settings/Row.svelte';
   import { effortLabel } from './agent-settings-presentation';
   import type { AgentSettingsCardProps } from './agent-settings-card-props';
   let { a, state }: AgentSettingsCardProps = $props();
@@ -9,8 +10,7 @@
   );
 </script>
 
-<div data-agents-settings class="grid">
-  <span data-agents-settings class="key">{t('settings.agent.account')}</span>
+<Row title={t('settings.agent.account')}>
   <div data-agents-settings class="value">
     {#if a.installed && a.authenticated !== false}
       <span data-agents-settings class="account"
@@ -32,7 +32,8 @@
       >
     {/if}
   </div>
-  <span data-agents-settings class="key">{t('settings.agent.model')}</span>
+</Row>
+<Row title={t('settings.agent.model')}>
   {#if state.models[a.id]?.length}
     <Select
       variant="model"
@@ -50,7 +51,8 @@
   {:else}
     <span data-agents-settings class="field-off">{t('settings.agent.model.off')}</span>
   {/if}
-  <span data-agents-settings class="key">{t('settings.agent.effort')}</span>
+</Row>
+<Row title={t('settings.agent.effort')}>
   {#if efforts.length > 1}
     {@const effortDefault = model?.defaultEffort ?? efforts[Math.floor(efforts.length / 2)]!.id}
     <div data-agents-settings class="field-width">
@@ -73,4 +75,4 @@
   {:else}
     <span data-agents-settings class="field-off">{t('settings.agent.model.off')}</span>
   {/if}
-</div>
+</Row>

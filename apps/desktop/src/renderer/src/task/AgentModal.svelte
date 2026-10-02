@@ -2,6 +2,7 @@
   import type { PermissionMode } from '@skaro/timeline';
   import { Button, Modal, RadioCards, t, Toggle } from '@skaro/ui';
   import type { AgentInfo, AgentSettings } from '../../../shared/ipc';
+  import { agentName } from '../feed/format';
   import { createAgentModalController } from './agent-modal-controller.svelte';
   import AgentPicker from './AgentPicker.svelte';
   import AgentModelFields from './AgentModelFields.svelte';
@@ -66,10 +67,24 @@
     },
     onsave: (next) => onsave(next),
   });
+
+  /** "Claude Code · Opus 4.1 · Высокое": what saving applies. */
+  const summary = $derived(
+    [
+      agentName(controller.draft.agent),
+      controller.model?.name,
+      controller.efforts.find((e) => e.id === (controller.draft.effort ?? controller.effortDefault))
+        ?.label ?? controller.efforts.find((e) => e.id === controller.effortDefault)?.label,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  );
 </script>
 
 <Modal
   bind:open
+  flush
+  width={480}
   title={kind === 'chat' ? t('chat.agent.title') : t('agent.modal.title')}
   subtitle={kind === 'chat'
     ? locked
@@ -80,7 +95,10 @@
       : t('agent.modal.subtitle')}
 >
   <div class="body agent-settings">
-    <AgentPicker {agents} draft={controller.draft} {locked} />
+    <div class="section">
+      <span class="sk-label">{t('agent.agent')}</span>
+      <AgentPicker {agents} draft={controller.draft} {locked} />
+    </div>
 
     <AgentModelFields {controller} />
 
@@ -113,6 +131,7 @@
     {/if}
   </div>
   {#snippet footer()}
+    <span class="agent-summary">{summary}</span>
     <Button onclick={() => (open = false)}>{t('agent.cancel')}</Button>
     <Button variant="primary" disabled={controller.saving} onclick={() => void controller.save()}
       >{t('agent.save')}</Button

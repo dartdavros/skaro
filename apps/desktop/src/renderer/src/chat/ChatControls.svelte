@@ -46,6 +46,8 @@
       agent={controller.agentInfo?.id ?? controller.settings.agent}
       model={controller.modelLabel}
       modelTip={t('chat.model.tip')}
+      effort={controller.effort.effort}
+      efforts={controller.effort.efforts}
       {...controller.timeline?.usage?.contextUsedPct !== undefined
         ? { contextPct: controller.timeline.usage.contextUsedPct }
         : {}}

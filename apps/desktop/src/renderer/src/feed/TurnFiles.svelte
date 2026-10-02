@@ -1,12 +1,20 @@
 <script lang="ts">
   import { ChevronRight, CodeXml, File } from '@lucide/svelte';
   import type { TurnFile } from '@skaro/timeline';
-  import { Icon, tn } from '@skaro/ui';
+  import { Icon, t, tn } from '@skaro/ui';
+  import { useFeed } from './context.svelte';
+  import DiffModal from './DiffModal.svelte';
+  import { isCodePath } from './diff-modal-controller.svelte';
 
-  /** "Отредактировал N файлов" and one line per file with its +/− lines, at the end of a turn. */
+  /**
+   * "Отредактировал N файлов" and one line per file with its +/− lines, at the end of a turn.
+   * A file opens its changes in the diff window; the heading opens the first file.
+   */
   let { files }: { files: TurnFile[] } = $props();
 
-  const CODE = /\.(c|cc|cjs|cpp|cs|css|go|h|hpp|html|java|js|json|jsx|kt|mjs|php|py|rb|rs|scss|sh|sql|swift|ts|tsx)$/i;
+  const feed = useFeed();
+  /** The file shown in the diff window, if it is open. */
+  let opened = $state<number | undefined>();
 
   const added = $derived(files.reduce((sum, f) => sum + (f.added ?? 0), 0));
   const removed = $derived(files.reduce((sum, f) => sum + (f.removed ?? 0), 0));
@@ -22,40 +30,62 @@
 {/snippet}
 
 <div class="fd-turn-files">
-  <div class="line">
+  <button type="button" class="line" onclick={() => (opened = 0)}>
     <span class="icon"><Icon name="diffSquare" size={14} stroke={2} /></span>
     <span class="name">{tn('feed.end.files', files.length)}</span>
     {@render counts(added, removed, files.some(counted))}
-  </div>
-  {#each files as file (file.path)}
-    <div class="line">
+  </button>
+  {#each files as file, index (file.path)}
+    <button type="button" class="line" data-tip={t('diff.open')} onclick={() => (opened = index)}>
       <span class="icon">
-        {#if CODE.test(file.path)}<CodeXml size={16} strokeWidth={2} />{:else}<File
+        {#if isCodePath(file.path)}<CodeXml size={16} strokeWidth={2} />{:else}<File
             size={14}
             strokeWidth={2}
           />{/if}
       </span>
       <span class="name">{name(file.path)}</span>
       {@render counts(file.added ?? 0, file.removed ?? 0, counted(file))}
-    </div>
+    </button>
   {/each}
 </div>
+
+{#if opened !== undefined}
+  <DiffModal
+    {files}
+    start={opened}
+    cwd={feed.cwd}
+    load={(path) => feed.fileDiff(path)}
+    onclose={() => (opened = undefined)}
+  />
+{/if}
 
 <style>
   .fd-turn-files {
     display: flex;
     flex-direction: column;
-    padding: 3px 6px 3px 7px;
-    border: 1px solid #2d2d2d;
+    padding: 3px;
+    border: 1px solid var(--sk-fill-27);
     border-radius: 8px;
     font-size: 14px;
-    color: #f0efec;
+    color: var(--sk-text-reply);
   }
 
   .line {
     display: flex;
     align-items: center;
     height: 28px;
+    padding: 0 6px 0 7px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .line:hover {
+    background: var(--sk-surface);
   }
 
   .icon {
@@ -65,7 +95,7 @@
     justify-content: center;
     width: 16px;
     margin-right: 6px;
-    color: #878581;
+    color: var(--sk-diff-icon);
   }
 
   .name {
@@ -84,17 +114,17 @@
   }
 
   .plus {
-    color: #27d74b;
+    color: var(--sk-diff-plus);
   }
 
   .minus {
-    color: #ff2834;
+    color: var(--sk-diff-minus);
   }
 
   .chevron {
     flex: none;
     display: inline-flex;
     margin-left: 10px;
-    color: #c3c0b4;
+    color: var(--sk-diff-chevron);
   }
 </style>

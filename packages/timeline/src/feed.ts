@@ -22,11 +22,18 @@ export interface FileRow {
   items: Of<'file_change'>[];
 }
 
-/** One line of the "files changed" list at the end of a turn; counts absent when not reported. */
+/**
+ * One line of the "files changed" list at the end of a turn; counts absent when not reported.
+ * The diffs of all its edits in the turn, in order, open in the diff window.
+ */
 export interface TurnFile {
   path: string;
+  /** A file created in the turn stays "add" through later edits. */
+  change: FileChange['change'];
+  movePath?: string;
   added?: number;
   removed?: number;
+  diffs: string[];
 }
 
 export type FeedRow =
@@ -218,9 +225,12 @@ function turnEnd(turn: TurnState, items: Item[]): FeedRow {
     end = Math.max(end, item.endedAt ?? item.startedAt);
     if (item.kind === 'file_change' && item.status === 'done') {
       for (const f of item.files) {
-        const file: TurnFile = files.get(f.path) ?? { path: f.path };
+        const file: TurnFile = files.get(f.path) ?? { path: f.path, change: f.change, diffs: [] };
+        if (file.change !== 'add' || f.change === 'delete') file.change = f.change;
+        if (f.movePath) file.movePath = f.movePath;
         if (f.added !== undefined) file.added = (file.added ?? 0) + f.added;
         if (f.removed !== undefined) file.removed = (file.removed ?? 0) + f.removed;
+        if (f.diff) file.diffs.push(f.diff);
         files.set(f.path, file);
       }
     }

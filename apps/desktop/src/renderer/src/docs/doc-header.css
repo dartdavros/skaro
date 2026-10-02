@@ -29,7 +29,7 @@
 
 h1[data-doc-header] {
   margin: 0;
-  font-size: var(--sk-fs-17);
+  font-size: var(--sk-fs-13);
   font-weight: 700;
   color: var(--sk-text-5);
   letter-spacing: -0.01em;

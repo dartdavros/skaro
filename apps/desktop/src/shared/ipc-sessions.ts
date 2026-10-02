@@ -110,6 +110,13 @@ export type ProposalAction =
   /** An applied document goes back to its previous text. */
   | { action: 'revert' };
 
+/** The current changes of one file in the working folder ("Обновить" in the diff window). */
+export interface FileDiff {
+  status: 'modified' | 'added' | 'deleted' | 'unchanged';
+  /** Unified diff (hunks with `@@` headers); empty when unchanged. */
+  diff: string;
+}
+
 export interface PathSuggestion {
   path: string;
   kind: 'file' | 'folder';

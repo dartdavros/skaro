@@ -10,6 +10,7 @@
     subtitle,
     width = 440,
     closable = true,
+    flush = false,
     children,
     footer,
   }: {
@@ -19,6 +20,11 @@
     width?: number;
     /** The × in the corner; some mockups close only by Esc, the backdrop and "Отмена". */
     closable?: boolean;
+    /**
+     * No inner padding: the head and the footer run edge to edge (the footer on its own band
+     * with a line above), the body sets its own padding and scrolls by itself.
+     */
+    flush?: boolean;
     children: Snippet;
     footer?: Snippet;
   } = $props();
@@ -32,6 +38,7 @@
   <div class="backdrop" role="presentation" onclick={close}>
     <div
       class="dialog"
+      class:flush
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -89,6 +96,23 @@
       0 0 0 1px var(--sk-white-a4);
     animation: skIn 0.16s ease-out;
     outline: none;
+  }
+
+  .dialog.flush {
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .flush > .head {
+    padding: 18px 18px 14px 20px;
+  }
+
+  .flush > .footer {
+    align-items: center;
+    padding: 14px 20px;
+    border-top: 1px solid var(--sk-line);
+    background: var(--sk-bg);
   }
 
   .head {

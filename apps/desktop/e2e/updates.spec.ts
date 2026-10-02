@@ -38,6 +38,7 @@ test('uses one real update state and protects a dev checkout from installation',
     } else {
       await expect(indicator).toHaveCount(0);
       await page.getByRole('button', { name: /Настройки|Settings/ }).click();
+      await page.getByRole('button', { name: /^(О программе|About)$/ }).click();
       const check = page.getByRole('button', { name: /Проверить обновления|Check for updates/ });
       await expect(check).toBeVisible();
       await check.click();

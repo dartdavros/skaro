@@ -3,39 +3,44 @@
   import { agents } from '../agents.svelte';
   import AboutCard from '../settings/AboutCard.svelte';
   import AppearanceCard from '../settings/AppearanceCard.svelte';
+  import { category, type SettingsCategory } from '../settings/categories';
   import '../settings/i18n';
   import NotifyCard from '../settings/NotifyCard.svelte';
   import ProjectDefaultsBlocks from '../settings/ProjectDefaultsBlocks.svelte';
   import ProjectsCard from '../settings/ProjectsCard.svelte';
   import RunsCard from '../settings/RunsCard.svelte';
+  import SettingsNav from '../settings/SettingsNav.svelte';
   import { updates } from '../settings/updates.svelte';
   import AgentsSettings from './AgentsSettings.svelte';
 
-  /** "Настройки" (Settings mockup). Without a ready agent this is the only screen Skaro opens. */
+  /**
+   * "Настройки" (Settings mockup): categories on the left, only the chosen one on the right.
+   * Without a ready agent this is the only screen Skaro opens.
+   */
   let { noAgents = false }: { noAgents?: boolean } = $props();
 
+  const SECTION_KEY = 'settings.section';
+  let current = $state<SettingsCategory>('agents');
   let scroller: HTMLDivElement | undefined = $state();
 
-  function about(e: MouseEvent): void {
-    e.preventDefault();
-    const target = scroller?.querySelector<HTMLElement>('#about');
-    if (target) scroller?.scrollTo({ top: target.offsetTop - 12, behavior: 'smooth' });
+  $effect(() => {
+    void window.skaro
+      .invoke('app.getSetting', SECTION_KEY)
+      .then((v) => (current = category(v)))
+      .catch(() => undefined);
+  });
+
+  function pick(id: SettingsCategory): void {
+    current = id;
+    scroller?.scrollTo({ top: 0 });
+    void window.skaro.invoke('app.setSetting', SECTION_KEY, id);
   }
 </script>
 
 <div class="settings">
-  <div class="head">
-    <div class="inner">
-      <div class="titles">
-        <span class="title">{t('settings.title')}</span>
-        <span class="subtitle">{t('settings.subtitle')}</span>
-      </div>
-      <span class="spacer"></span>
-      <span class="saved" data-tip={t('settings.saved.tip')}>{t('settings.saved')}</span>
-    </div>
-  </div>
+  <SettingsNav {current} onpick={pick} />
   <div class="scroll" bind:this={scroller}>
-    <div class="inner cards">
+    <div class="inner">
       {#if noAgents}
         <Banner
           kind="warning"
@@ -50,16 +55,30 @@
             ><span class="strong">{t('settings.update.banner', { v: updates.info.latest })}</span>
             {t('settings.update.banner.text')}</span
           >
-          <a href="#about" onclick={about}>{t('settings.update.more')}</a>
+          <a
+            href="#about"
+            onclick={(e) => {
+              e.preventDefault();
+              pick('about');
+            }}>{t('settings.update.more')}</a
+          >
         </div>
       {/if}
-      <AgentsSettings agents={agents.list} />
-      <RunsCard />
-      <ProjectsCard />
-      <ProjectDefaultsBlocks />
-      <NotifyCard />
-      <AppearanceCard />
-      <AboutCard />
+      {#if current === 'agents'}
+        <AgentsSettings agents={agents.list} />
+      {:else if current === 'work'}
+        <RunsCard />
+        <ProjectDefaultsBlocks part="work" />
+      {:else if current === 'projects'}
+        <ProjectsCard />
+        <ProjectDefaultsBlocks part="projects" />
+      {:else if current === 'notify'}
+        <NotifyCard />
+      {:else if current === 'appearance'}
+        <AppearanceCard />
+      {:else}
+        <AboutCard />
+      {/if}
     </div>
   </div>
 </div>
@@ -69,68 +88,23 @@
     flex: 1;
     min-height: 0;
     display: flex;
-    flex-direction: column;
     background: var(--sk-bg);
   }
 
-  .head {
-    flex: none;
-    padding: 14px 18px 10px;
-    display: flex;
-    justify-content: center;
+  .scroll {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 22px 32px 64px;
   }
 
   .inner {
-    width: 100%;
-    max-width: 760px;
-  }
-
-  .head .inner {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .titles {
+    max-width: 700px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-  }
-
-  .title {
-    font-size: var(--sk-fs-13);
-    font-weight: 700;
-    color: var(--sk-text-5);
-  }
-
-  .subtitle {
-    font-size: var(--sk-fs-4);
-    color: var(--sk-text-21);
-  }
-
-  .spacer {
-    flex: 1;
-  }
-
-  .saved {
-    font-size: var(--sk-fs-3);
-    color: var(--sk-text-23);
-  }
-
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 0 18px 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .cards {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    gap: 30px;
   }
 
   .update {

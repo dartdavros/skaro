@@ -39,10 +39,7 @@ test('preserves project parameters and saves real agent defaults', async () => {
     await params.getByRole('radio').filter({ hasText: 'Авто в пределах задачи' }).click();
     await expect.poll(async () => (await store.load()).config.permissionMode).toBe('auto');
     const autoDocs = !(await store.load()).config.chat.autoAcceptDocs;
-    await params
-      .getByRole('switch')
-      .filter({ hasText: 'Применять документы автоматически' })
-      .click();
+    await params.getByRole('switch', { name: 'Применять документы автоматически' }).click();
     await expect.poll(async () => (await store.load()).config.chat.autoAcceptDocs).toBe(autoDocs);
     const instructions = params.locator('textarea');
     await instructions.fill('Keep changes small.');
@@ -59,14 +56,14 @@ test('preserves project parameters and saves real agent defaults', async () => {
     await page.locator('button[data-tip="Настройки"]').click();
     const settings = page.locator('.settings');
     const codex = settings
-      .locator('.agents > .agent')
+      .locator('.agent.set-card')
       .filter({ has: page.locator('.name', { hasText: 'Codex' }) });
     await expect(settings.locator('.cfg-counts')).toHaveCount(2, { timeout: 20_000 });
     await expect(
       codex.getByRole('button', { name: 'Модель по умолчанию', exact: true }).locator('.value'),
     ).not.toBeEmpty();
     await compareBaseline(
-      settings.locator('.section').filter({ has: page.locator('.agents') }),
+      settings.locator('.set-section').filter({ has: page.locator('.agent.set-card') }),
       process.env['SKARO_E2E_PARAMETERS_LAYOUT'],
       'agents',
       true,

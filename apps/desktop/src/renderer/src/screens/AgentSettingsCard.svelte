@@ -6,9 +6,8 @@
   let { a, state }: AgentSettingsCardProps = $props();
 </script>
 
-<div data-agents-settings class="agent">
+<div data-agents-settings class="agent set-card">
   <AgentSettingsIdentity {a} {state} />
-  <div data-agents-settings class="divider"></div>
   <AgentSettingsFields {a} {state} />
   <AgentSettingsConfig {a} {state} />
 </div>

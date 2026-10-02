@@ -1,13 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  approvalDecisions,
-  exploreCounts,
-  feedRows,
-  type FeedRow,
-  type FileRow,
-} from './feed.ts';
+import { approvalDecisions, exploreCounts, feedRows, type FeedRow, type FileRow } from './feed.ts';
 import { GOLDEN_DIR } from './golden.ts';
 import type { Item } from './model.ts';
 import type { TimelineState } from './state.ts';
@@ -36,10 +30,20 @@ describe('feedRows', () => {
         'math.js',
       ]);
       const end = rows.at(-1) as Extract<FeedRow, { type: 'turn_end' }>;
-      expect(end.files.map((f) => f.path), agent).toEqual(files.map((f) => f.path));
+      expect(
+        end.files.map((f) => f.path),
+        agent,
+      ).toEqual(files.map((f) => f.path));
       for (const file of end.files) {
         const row = files.find((f) => f.path === file.path)!;
-        expect(file, agent).toEqual({ path: row.path, added: row.added, removed: row.removed });
+        expect(file, agent).toEqual({
+          path: row.path,
+          change: row.change,
+          ...(row.movePath ? { movePath: row.movePath } : {}),
+          added: row.added,
+          removed: row.removed,
+          diffs: row.diffs,
+        });
       }
     }
   });

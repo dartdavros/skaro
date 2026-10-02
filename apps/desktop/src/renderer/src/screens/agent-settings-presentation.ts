@@ -82,7 +82,7 @@ export function stateOf(a: AgentInfo): { text: string; dot: string; pulse: boole
     };
   return {
     text: t('settings.agent.ready'),
-    dot: 'var(--sk-fill-41)',
+    dot: 'var(--sk-green-2)',
     pulse: false,
     tip: t('agent.state.ready'),
   };

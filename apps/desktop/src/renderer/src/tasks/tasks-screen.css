@@ -26,15 +26,15 @@
 
 h1[data-task-tasks-screen] {
   margin: 0;
-  font-size: var(--sk-fs-15);
+  font-size: var(--sk-fs-13);
   font-weight: 700;
   color: var(--sk-text-5);
   letter-spacing: -0.01em;
 }
 
 .sub[data-task-tasks-screen] {
-  margin-top: 5px;
-  font-size: var(--sk-fs-6);
+  margin-top: 4px;
+  font-size: var(--sk-fs-5);
   color: var(--sk-text-17);
 }
 

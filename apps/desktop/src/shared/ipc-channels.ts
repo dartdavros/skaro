@@ -57,6 +57,8 @@ export const METHODS = [
   'tasks.delete',
   'tasks.move',
   'tasks.unblock',
+  'tasks.cancel',
+  'tasks.merge',
   'tasks.assign',
   'plan.milestones',
   'plan.create',
@@ -93,6 +95,7 @@ export const METHODS = [
   'files.suggest',
   'files.exist',
   'files.open',
+  'files.diff',
   'files.pick',
   'shell.openExternal',
 ] as const satisfies readonly MethodName[];

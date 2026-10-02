@@ -3,7 +3,6 @@
   import InventorySection from './InventorySection.svelte';
 
   let view = $state<'board' | 'list'>('board');
-  let effort = $state<'low' | 'medium' | 'high'>('medium');
   let layout = $state<'grid' | 'list'>('grid');
   let sliderValue = $state('xhigh');
   let planFirst = $state(false);
@@ -11,7 +10,7 @@
 
 <InventorySection
   title="05 · Переключатель"
-  note="Один вид для всех взаимоисключающих выборов: вид, сортировка, архив, усилие, изоляция. Подложка почти чёрная, активный пункт — цвета основного фона."
+  note="Один вид для всех взаимоисключающих выборов: вид, сортировка, архив, изоляция. Усилие — только ползунок. Подложка почти чёрная, активный пункт — цвета основного фона."
 >
   <div data-inventory class="panel row wrap">
     <Segmented
@@ -19,14 +18,6 @@
       options={[
         { value: 'board', label: 'Доска' },
         { value: 'list', label: 'Список' },
-      ]}
-    />
-    <Segmented
-      bind:value={effort}
-      options={[
-        { value: 'low', label: 'Низкое' },
-        { value: 'medium', label: 'Среднее' },
-        { value: 'high', label: 'Высокое' },
       ]}
     />
     <Segmented
@@ -53,7 +44,7 @@
     />
     <span data-inventory class="note"
       >Число шагов зависит от модели (2–5). Тянуть, кликать по дорожке или стрелками с клавиатуры;
-      справа — «Вернуть по умолчанию».</span
+      Home — вернуть рекомендуемый уровень.</span
     >
   </div>
   <div data-inventory class="panel column narrow">

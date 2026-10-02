@@ -32,7 +32,7 @@
 .fd-bubble {
   max-width: 78%;
   padding: 10px 15px;
-  border-radius: 20px;
+  border-radius: 12px;
   background: var(--sk-user-message);
   font-size: var(--fd-text, 14px);
   line-height: 1.45;

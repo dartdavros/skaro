@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Select, t } from '@skaro/ui';
   import type { ExternalApp } from '../../../shared/ipc';
-  import Card from './Card.svelte';
+  import Row from './Row.svelte';
+  import Section from './Section.svelte';
   import { Setting } from './setting.svelte';
 
   /** "Проекты": where new projects go, the editor and terminal to open them in. */
@@ -66,14 +67,14 @@
   );
 </script>
 
-<Card label={t('settings.projects')}>
-  <div class="grid">
-    <span class="key">{t('settings.projects.folder')}</span>
+<Section title={t('settings.projects')}>
+  <Row title={t('settings.projects.folder')}>
     <div class="folder">
       <div class="path">{folder}</div>
       <button type="button" class="pick" onclick={pickFolder}>{t('settings.projects.pick')}</button>
     </div>
-    <span class="key">{t('settings.projects.editor')}</span>
+  </Row>
+  <Row title={t('settings.projects.editor')}>
     <Select
       width={280}
       menuWidth="100%"
@@ -81,7 +82,8 @@
       options={editors}
       bind:value={() => editor.value.kind, (v) => void choose(editor, v)}
     />
-    <span class="key">{t('settings.projects.terminal')}</span>
+  </Row>
+  <Row title={t('settings.projects.terminal')}>
     <Select
       width={280}
       menuWidth="100%"
@@ -89,11 +91,13 @@
       options={terminals}
       bind:value={() => terminal.value.kind, (v) => void choose(terminal, v)}
     />
-  </div>
-</Card>
+  </Row>
+</Section>
 
 <style>
   .folder {
+    flex: none;
+    width: 280px;
     display: flex;
     gap: 8px;
     align-items: center;
@@ -102,14 +106,14 @@
   .path {
     flex: 1;
     min-width: 0;
-    height: 34px;
+    height: 32px;
     padding: 0 11px;
     display: flex;
     align-items: center;
     border-radius: 8px;
     background: var(--sk-fill-3);
     font-family: var(--sk-mono);
-    font-size: var(--sk-fs-5);
+    font-size: var(--sk-fs-4);
     color: var(--sk-text-7);
     overflow: hidden;
     white-space: nowrap;

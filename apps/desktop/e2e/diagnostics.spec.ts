@@ -58,11 +58,12 @@ test('shows unknown events as expandable service lines and exports sanitized dia
     await expect(notice).toContainText('future/event');
     await expect(notice).not.toContainText('private-file-content');
     await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+    await page.getByRole('button', { name: 'О программе', exact: true }).click();
     const path = join(userData, 'exported-diagnostics.json');
     await app.evaluate(({ session }, destination) => {
       session.defaultSession.once('will-download', (_event, item) => item.setSavePath(destination));
     }, path);
-    await page.getByRole('button', { name: 'Экспорт диагностики' }).click();
+    await page.getByRole('button', { name: 'Выгрузить диагностику' }).click();
     await expect
       .poll(() => {
         if (!existsSync(path)) return undefined;

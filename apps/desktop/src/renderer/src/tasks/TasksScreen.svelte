@@ -10,6 +10,7 @@
   import './i18n';
   import type { TasksProps } from './tasks-props';
   import { createTasksController } from './tasks-controller.svelte';
+  import { createBoardMoves } from './board-moves-controller.svelte';
   let { projectId, data, onopen, onnew }: TasksProps = $props();
   const state = createTasksController({
     get projectId() {
@@ -25,6 +26,11 @@
       return onnew;
     },
   });
+  const moves = createBoardMoves({
+    projectId: () => projectId,
+    tasks: () => state.shown,
+    onopen: (id) => onopen(id),
+  });
 
   import './tasks-screen.css';
 </script>
@@ -35,13 +41,7 @@
   {#if data.loaded && state.all.length === 0}
     <TasksEmpty {onnew} />
   {:else if state.view === 'board'}
-    <Board
-      tasks={state.shown}
-      selected={state.selected}
-      now={state.now}
-      onselect={state.select}
-      {onopen}
-    />
+    <Board {moves} selected={state.selected} now={state.now} onselect={state.select} {onopen} />
   {:else}
     <List
       tasks={state.shown}
@@ -62,7 +62,14 @@
   {/if}
 </div>
 
-{#if state.dialog === 'run'}
+{#if moves.starting}
+  <RunDialog
+    {projectId}
+    tasks={[moves.starting]}
+    onconfirm={moves.confirmStart}
+    onclose={moves.closeStart}
+  />
+{:else if state.dialog === 'run'}
   <RunDialog
     {projectId}
     tasks={state.picked}

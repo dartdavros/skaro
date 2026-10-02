@@ -55,41 +55,92 @@
 .agent-settings {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 18px;
   max-height: calc(100vh - 220px);
   overflow-y: auto;
-  margin: 0 -4px;
-  padding: 0 4px;
+  padding: 2px 20px 20px;
 }
-.agent-settings > .agents {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.agent-settings .agents {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 .agent-settings .agent {
+  position: relative;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 11px 13px;
+  padding: 12px 13px;
   border: none;
-  border-radius: 9px;
-  background: transparent;
+  border-radius: 10px;
+  background: var(--sk-fill-6);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-20);
   cursor: pointer;
   text-align: left;
   font: inherit;
+  transition:
+    background 0.12s,
+    box-shadow 0.12s;
 }
-.agent-settings .agent:hover:not(:disabled) {
-  background: var(--sk-fill-20);
+.agent-settings .agent:hover:not(:disabled):not(.on) {
+  background: var(--sk-fill-17);
 }
 .agent-settings .agent.on {
   background: var(--sk-fill-2);
+  box-shadow: inset 0 0 0 1.5px var(--sk-accent);
   cursor: default;
 }
 .agent-settings .agent:disabled {
   opacity: 0.45;
   cursor: default;
 }
-.agent-settings > .agents .texts,
+.agent-settings .badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.agent-settings .badge.check {
+  background: var(--sk-accent);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.14s,
+    transform 0.18s;
+}
+.agent-settings .badge.check.shown {
+  opacity: 1;
+  transform: scale(1);
+}
+.agent-settings .badge.lock {
+  background: var(--sk-fill-35);
+  color: var(--sk-text-6);
+}
+.agent-settings .label-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.agent-settings .label-hint {
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-27);
+}
+.agent-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-settings .agents .texts,
 .agent-settings > .plan-first .texts {
   flex: 1;
   min-width: 0;
@@ -97,11 +148,17 @@
   flex-direction: column;
   gap: 4px;
 }
-.agent-settings > .agents .name,
+.agent-settings .agents .texts {
+  gap: 3px;
+}
+.agent-settings .agents .name,
 .agent-settings > .plan-first .name {
   font-size: var(--sk-fs-6);
   font-weight: 600;
   color: var(--sk-text-6);
+}
+.agent-settings .agent.on .name {
+  color: var(--sk-text-bright);
 }
 .agent-settings .agent:not(.on) .name {
   color: var(--sk-text-13);
@@ -110,6 +167,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   font-size: var(--sk-fs-3);
 }
 .agent-settings .link {

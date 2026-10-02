@@ -32,6 +32,7 @@ import type {
   ChatView,
   ProposalAction,
   PathSuggestion,
+  FileDiff,
   PickedFile,
   ProjectInfo,
   ProjectCard,
@@ -129,6 +130,10 @@ export interface Methods {
   'tasks.delete': (projectId: string, taskIds: string[]) => void;
   'tasks.move': (projectId: string, taskIds: string[], milestoneId: string) => void;
   'tasks.unblock': (projectId: string, taskIds: string[]) => void;
+  /** Board: "В работе" → "Не начата" — the agent stops, the task waits for a new start. */
+  'tasks.cancel': (projectId: string, taskId: string) => void;
+  /** Board: "На ревью" → "Готово" — merges by the open card; `open` when it needs the feed. */
+  'tasks.merge': (projectId: string, taskId: string) => 'merged' | 'open';
   'tasks.assign': (projectId: string, taskIds: string[], assignment: TaskAssignment) => void;
   /** Milestones in plan order. */
   'plan.milestones': (projectId: string) => MilestoneInfo[];
@@ -208,6 +213,8 @@ export interface Methods {
   /** Which of the paths exist in the task's working folder (links in agent text). */
   'files.exist': (projectId: string, taskId: string, paths: string[]) => string[];
   'files.open': (projectId: string, taskId: string, path: string) => void;
+  /** Current uncommitted changes of a file in the task's (or the project's) working folder. */
+  'files.diff': (projectId: string, taskId: string, path: string) => FileDiff;
   'files.pick': (kind: 'images' | 'files' | 'folder') => PickedFile[];
   'shell.openExternal': (url: string) => void;
 }

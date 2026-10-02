@@ -1,33 +1,14 @@
 /* Baseline scope and specificity retained across composed views. */
 
-.section[data-agents-settings] {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 14px 15px 16px;
-  border-radius: 10px;
-  background: var(--sk-fill-16);
-}
-
-.agents[data-agents-settings] {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .agent[data-agents-settings] {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 14px;
-  border-radius: 10px;
-  background: var(--sk-fill-8);
+  overflow: hidden;
 }
 
 .head[data-agents-settings] {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 14px 16px;
 }
 
 .titles[data-agents-settings] {
@@ -123,6 +104,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 0 16px 14px;
 }
 
 .track[data-agents-settings] {
@@ -146,38 +128,21 @@
   color: var(--sk-text-21);
 }
 
-.divider[data-agents-settings] {
-  height: 1px;
-  background: var(--sk-line);
-}
-
-.grid[data-agents-settings] {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 14px 16px;
-  align-items: center;
-}
-
-.key[data-agents-settings] {
-  font-size: var(--sk-fs-3);
-  color: var(--sk-text-19);
-}
-
 .value[data-agents-settings] {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 28px;
 }
 
 .account[data-agents-settings] {
   font-size: var(--sk-fs-5);
-  color: var(--sk-text-7);
+  color: var(--sk-text-13);
 }
 
 .mono[data-agents-settings] {
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-4);
+  color: var(--sk-text-7);
 }
 
 .need-login[data-agents-settings] {
@@ -186,25 +151,9 @@
   color: var(--sk-warn);
 }
 
-/* The effort slider is as wide as the model select. */
-/* "Ваши настройки агента" (Settings mockup). */
-.cfg[data-agents-settings] {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.cfg-head[data-agents-settings] {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
+/* "Настройки агента" (Settings mockup). */
 .cfg-title[data-agents-settings] {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--sk-fs-5);
-  font-weight: 600;
+  font-size: var(--sk-fs-6);
   color: var(--sk-text-7);
   cursor: default;
 }
@@ -229,19 +178,18 @@
 }
 
 .cfg-open[data-agents-settings]:hover {
-  color: var(--sk-link-hover);
   text-decoration: underline;
 }
 
-.cfg-note[data-agents-settings],
-.cfg-counts[data-agents-settings] {
-  font-size: var(--sk-fs-4);
-  color: var(--sk-text-19);
+.cfg-note[data-agents-settings] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
 }
 
 .mcp[data-agents-settings] {
   display: flex;
   flex-direction: column;
+  margin-top: 4px;
 }
 
 .mcp-row[data-agents-settings] {

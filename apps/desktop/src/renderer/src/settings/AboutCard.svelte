@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '@skaro/ui';
-  import Card from './Card.svelte';
+  import Section from './Section.svelte';
   import { LINKS, updates } from './updates.svelte';
   import { exportDiagnostics } from './diagnostics-export';
   import './diagnostics-i18n';
@@ -20,7 +20,7 @@
   );
 </script>
 
-<Card label={t('settings.about')} id="about">
+<Section title={t('settings.about')}>
   <div class="row">
     <span class="name">Skaro <span class="version">{updates.info?.current ?? ''}</span></span>
     <button type="button" class="check" onclick={() => void exportDiagnostics()}
@@ -51,13 +51,14 @@
       >{t('settings.link.community')}</a
     >
   </div>
-</Card>
+</Section>
 
 <style>
   .row {
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 13px 16px;
   }
 
   .name {
@@ -108,6 +109,7 @@
   .links {
     display: flex;
     gap: 18px;
+    padding: 12px 16px;
     font-size: var(--sk-fs-5);
     font-weight: 600;
   }

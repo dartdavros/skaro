@@ -16,6 +16,8 @@ export function sessionHandlers({
   | 'tasks.delete'
   | 'tasks.move'
   | 'tasks.unblock'
+  | 'tasks.cancel'
+  | 'tasks.merge'
   | 'tasks.assign'
   | 'docs.list'
   | 'docs.read'
@@ -60,6 +62,8 @@ export function sessionHandlers({
     'tasks.delete': (projectId, ids) => board.delete(projectId, ids),
     'tasks.move': (projectId, ids, milestone) => board.move(projectId, ids, milestone),
     'tasks.unblock': (projectId, ids) => board.unblock(projectId, ids),
+    'tasks.cancel': (projectId, id) => runs.cancel(projectId, id),
+    'tasks.merge': (projectId, id) => runs.mergeFromBoard(projectId, id),
     'tasks.assign': async (projectId, ids, assignment) => {
       for (const id of ids) await runs.assign(projectId, id, assignment);
     },

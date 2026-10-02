@@ -4,6 +4,8 @@
   import type { AgentId } from '../../../shared/ipc';
   import type { ComposerController } from './composer-controller.svelte';
   import ComposerPermissions from './ComposerPermissions.svelte';
+  import EffortBars from './EffortBars.svelte';
+  import { effortLabel } from '../tasks/agent-models.svelte';
   import './composer-bar.css';
   import './composer-permissions.css';
   let {
@@ -12,6 +14,8 @@
     agent,
     model,
     modelTip,
+    effort,
+    efforts = [],
     contextPct,
     permissionMode,
     permissionModes,
@@ -25,6 +29,8 @@
     agent: AgentId;
     model: string;
     modelTip?: string;
+    effort?: string | undefined;
+    efforts?: string[];
     contextPct?: number;
     permissionMode?: PermissionMode;
     permissionModes: readonly PermissionMode[];
@@ -35,6 +41,9 @@
   } = $props();
   const ctxColor = $derived((contextPct ?? 0) >= 85 ? 'var(--sk-warn)' : 'var(--sk-accent)');
   const ctxDash = $derived(`${((37.7 * (contextPct ?? 0)) / 100).toFixed(1)} 37.7`);
+  // A model with a single level (or none) has nothing to choose: no indicator.
+  const effortIndex = $derived(effort ? efforts.indexOf(effort) : -1);
+  const showEffort = $derived(efforts.length > 1 && effortIndex >= 0);
 </script>
 
 <div class="bar">
@@ -100,7 +109,12 @@
     onclick={onmodel}
   >
     <AgentLogo {agent} size={15} />
-    {model}
+    <span>{model}</span>
+    {#if showEffort && effort}
+      <span class="model-sep"></span>
+      <EffortBars count={efforts.length} current={effortIndex} />
+      <span class="model-effort">{effortLabel(effort)}</span>
+    {/if}
     <Icon name="chevronDown" size={11} stroke={2.4} />
   </button>
 
