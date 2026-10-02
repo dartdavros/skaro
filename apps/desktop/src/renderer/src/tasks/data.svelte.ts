@@ -12,9 +12,15 @@ export class ProjectTasks {
   constructor(projectId: string) {
     this.projectId = projectId;
     void this.reload();
-    this.stop = window.skaro.on('project.changed', (p) => {
+    const changed = (p: { projectId: string }) => {
       if (p.projectId === projectId) void this.reload();
-    });
+    };
+    const stopProject = window.skaro.on('project.changed', changed);
+    const stopTask = window.skaro.on('task.changed', changed);
+    this.stop = () => {
+      stopProject();
+      stopTask();
+    };
   }
 
   async reload(): Promise<void> {

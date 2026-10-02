@@ -49,12 +49,21 @@
   const any = $derived(
     filters.milestones.length + filters.statuses.length + filters.agents.length > 0,
   );
+
+  import './toolbar.css';
 </script>
 
-<div class="bar">
-  <div class="search">
-    <span class="glass"><Icon name="search" size={14} stroke={2} color="var(--sk-text-18)" /></span>
-    <input type="text" placeholder={t('board.search')} bind:value={filters.query} />
+<div data-task-toolbar class="bar">
+  <div data-task-toolbar class="search">
+    <span data-task-toolbar class="glass"
+      ><Icon name="search" size={14} stroke={2} color="var(--sk-text-18)" /></span
+    >
+    <input
+      data-task-toolbar
+      type="text"
+      placeholder={t('board.search')}
+      bind:value={filters.query}
+    />
   </div>
 
   <FilterDrop
@@ -63,7 +72,7 @@
     bind:selected={filters.milestones}
     width={226}
   >
-    {#snippet marker(id: string)}<span class="ms-id">{id}</span>{/snippet}
+    {#snippet marker(id: string)}<span data-task-toolbar class="ms-id">{id}</span>{/snippet}
   </FilterDrop>
   <FilterDrop
     label={t('board.f.status')}
@@ -71,7 +80,10 @@
     bind:selected={filters.statuses}
     width={214}
   >
-    {#snippet marker(s: BoardStatus)}<span class="dot" style="background: {STATUS_META[s].color}"
+    {#snippet marker(s: BoardStatus)}<span
+        data-task-toolbar
+        class="dot"
+        style="background: {STATUS_META[s].color}"
       ></span>{/snippet}
   </FilterDrop>
   <FilterDrop
@@ -81,17 +93,19 @@
     width={206}
   >
     {#snippet marker(a: string)}
-      <span class="logo">
+      <span data-task-toolbar class="logo">
         {#if a === 'claude-code' || a === 'codex'}
           <AgentLogo agent={a} size={12} />
         {:else}
           <svg
+            data-task-toolbar
             width="12"
             height="12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--sk-text-22)"
-            stroke-width="2"><circle cx="12" cy="12" r="8" stroke-dasharray="3 3" /></svg
+            stroke-width="2"
+            ><circle data-task-toolbar cx="12" cy="12" r="8" stroke-dasharray="3 3" /></svg
           >
         {/if}
       </span>
@@ -100,6 +114,7 @@
 
   {#if any}
     <button
+      data-task-toolbar
       type="button"
       class="reset"
       onclick={() => (filters = { ...filters, milestones: [], statuses: [], agents: [] })}
@@ -107,134 +122,23 @@
     >
   {/if}
 
-  <div class="spacer"></div>
-  <div class="seg">
-    <button type="button" class:active={view === 'board'} onclick={() => (view = 'board')}>
+  <div data-task-toolbar class="spacer"></div>
+  <div data-task-toolbar class="seg">
+    <button
+      data-task-toolbar
+      type="button"
+      class:active={view === 'board'}
+      onclick={() => (view = 'board')}
+    >
       <Icon name="board" size={13} stroke={2} />{t('board.view.board')}
     </button>
-    <button type="button" class:active={view === 'list'} onclick={() => (view = 'list')}>
+    <button
+      data-task-toolbar
+      type="button"
+      class:active={view === 'list'}
+      onclick={() => (view = 'list')}
+    >
       <Icon name="list" size={13} stroke={2} />{t('board.view.list')}
     </button>
   </div>
 </div>
-
-<style>
-  .bar {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
-
-  .search {
-    position: relative;
-    flex: none;
-    width: 210px;
-  }
-
-  .glass {
-    position: absolute;
-    left: 10px;
-    top: 8px;
-    display: inline-flex;
-  }
-
-  input {
-    width: 100%;
-    height: 31px;
-    padding: 0 10px 0 31px;
-    border: none;
-    border-radius: 8px;
-    background: var(--sk-fill-3);
-    color: var(--sk-text-2);
-    font-size: var(--sk-fs-5);
-    outline: none;
-    box-shadow: inset 0 0 0 1px var(--sk-fill-25);
-  }
-
-  input:hover {
-    background: var(--sk-field-hover);
-    box-shadow: inset 0 0 0 1px var(--sk-fill-31);
-  }
-
-  input:focus {
-    background: var(--sk-field-hover);
-    box-shadow: inset 0 0 0 1px var(--sk-accent);
-  }
-
-  .ms-id {
-    flex: none;
-    font-family: var(--sk-mono);
-    font-size: var(--sk-fs-3);
-    color: var(--sk-text-17);
-  }
-
-  .dot {
-    flex: none;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-  }
-
-  .logo {
-    flex: none;
-    width: 13px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--sk-text-6);
-  }
-
-  .reset {
-    flex: none;
-    height: 31px;
-    padding: 0 10px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--sk-text-17);
-    font-size: var(--sk-fs-5);
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .reset:hover {
-    background: var(--sk-fill-15);
-    color: var(--sk-text-2);
-  }
-
-  .spacer {
-    flex: 1;
-  }
-
-  .seg {
-    flex: none;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 2px;
-    border-radius: 8px;
-    background: var(--sk-deep);
-  }
-
-  .seg button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    height: 27px;
-    padding: 0 11px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--sk-text-17);
-    font-size: var(--sk-fs-5);
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .seg button.active {
-    background: var(--sk-fill-5);
-    color: var(--sk-text-2);
-    box-shadow: 0 1px 2px var(--sk-black-a35);
-  }
-</style>
