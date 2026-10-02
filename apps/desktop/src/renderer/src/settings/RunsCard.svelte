@@ -86,7 +86,7 @@
   }
 
   button:hover {
-    background: var(--sk-fill-11);
+    background: var(--sk-surface-2);
     color: var(--sk-text-6);
   }
 

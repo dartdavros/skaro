@@ -5,13 +5,19 @@
 :root {
   color-scheme: dark;
 
-  /* Surfaces */
+  /*
+   * Surfaces. Levels 8 apart, so neighbours never blend: L0 #0f top bar and fields, L1 #17 page,
+   * L2 #1f cards on the page, L3 #27 what sits on a card or is selected on the page, L4 #2f.
+   * A line differs from its ground by two levels. Inside a card, "selected" is inset to L1.
+   */
   --sk-topbar: #0f0f0f; /* top bar, side panel */
-  --sk-bg: var(--sk-fill-8); /* main background, matches the left sidebar */
-  --sk-surface: #1a1a1a; /* cards */
-  --sk-surface-hover: #222222;
-  --sk-surface-2: #242424; /* secondary buttons, open menus */
-  --sk-surface-2-hover: #2d2d2d;
+  --sk-bg: var(--sk-fill-8); /* L1: main background, matches the left sidebar */
+  --sk-surface: var(--sk-fill-16); /* L2: cards and blocks on the page */
+  --sk-surface-hover: var(--sk-fill-23); /* L3 */
+  --sk-hover: var(--sk-fill-16); /* L2: hovered row or icon button on the page */
+  --sk-selected: var(--sk-fill-23); /* L3: selected row on the page */
+  --sk-surface-2: var(--sk-fill-23); /* L3: secondary buttons, open menus, things on a card */
+  --sk-surface-2-hover: var(--sk-fill-28); /* L4 */
   --sk-modal: #1a1a1a;
   --sk-composer: #2b2b2b; /* chat input */
   /* The darkest surface: switch tracks, filter buttons, board columns, inset panels. */
@@ -21,8 +27,8 @@
   --sk-field-hover: #0d0d0d;
   --sk-field-ring: #2a2a2a;
   --sk-field-ring-hover: #363636;
-  --sk-line: #1f1f1f;
-  --sk-line-strong: #2b2b2b;
+  --sk-line: var(--sk-fill-23); /* L3: separators on the page and the top bar */
+  --sk-line-strong: var(--sk-fill-28); /* L4: separators inside a card */
   --sk-menu: #242424;
   --sk-menu-hover: #2d2d2d;
   --sk-menu-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
@@ -34,7 +40,7 @@
   --sk-link: #7d9ce8;
   --sk-link-hover: #9bb4ee;
   --sk-code: var(--sk-link); /* highlights: commands, branches — the accent, never orange */
-  --sk-code-bg: var(--sk-fill-20); /* inline code: a notch lighter than the page */
+  --sk-code-bg: var(--sk-surface-2); /* inline code: lighter than the page and a card */
   --sk-error: #ef6a63;
   --sk-warn: #e0a33c;
   --sk-diff-add: #4caf50;
@@ -43,6 +49,7 @@
   --sk-text-bright: #e0e0e0;
   --sk-text: #d5d5d5;
   --sk-text-body: #b8b8b8;
+  --sk-text-reply: #f0efec; /* the agent's replies in the feed, as bright as Claude's */
   --sk-text-secondary: #adadad;
   --sk-text-muted: #848484;
   --sk-text-label: #767676;

@@ -2,8 +2,6 @@
 
 export const ru = {
   'time.s': '{n} с',
-  'tokens.k': '{n}k токенов',
-  'tokens.n': '{n} токенов',
   'task.crumbs.tasks': 'Задачи',
   'task.crumbs.tasks.tip': 'К списку задач',
   'task.status.todo': 'Не начата',
@@ -73,8 +71,6 @@ export const ru = {
 
 export const en = {
   'time.s': '{n}s',
-  'tokens.k': '{n}k tokens',
-  'tokens.n': '{n} tokens',
   'task.crumbs.tasks': 'Tasks',
   'task.crumbs.tasks.tip': 'Back to tasks',
   'task.status.todo': 'Not started',

@@ -68,7 +68,7 @@
 
 .task-description .sep {
   height: 1px;
-  background: var(--sk-fill-10);
+  background: var(--sk-line);
 }
 
 .task-description .section {

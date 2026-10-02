@@ -22,6 +22,13 @@ export interface FileRow {
   items: Of<'file_change'>[];
 }
 
+/** One line of the "files changed" list at the end of a turn; counts absent when not reported. */
+export interface TurnFile {
+  path: string;
+  added?: number;
+  removed?: number;
+}
+
 export type FeedRow =
   | { type: 'user'; id: string; item: Of<'message'>; images: Of<'image'>[]; hidden?: boolean }
   | { type: 'agent'; id: string; item: Of<'message'>; final: boolean }
@@ -46,8 +53,8 @@ export type FeedRow =
       id: string;
       turn: TurnState;
       durationMs: number;
-      /** Distinct files changed in the turn. */
-      files: number;
+      /** Distinct files changed in the turn, with lines summed over all their edits. */
+      files: TurnFile[];
       tokens?: number;
     };
 
@@ -205,12 +212,17 @@ function mergeFile(row: FileRow, file: FileChange, item: Of<'file_change'>): voi
 function turnEnd(turn: TurnState, items: Item[]): FeedRow {
   let start = Infinity;
   let end = 0;
-  const files = new Set<string>();
+  const files = new Map<string, TurnFile>();
   for (const item of items) {
     start = Math.min(start, item.startedAt);
     end = Math.max(end, item.endedAt ?? item.startedAt);
     if (item.kind === 'file_change' && item.status === 'done') {
-      for (const f of item.files) files.add(f.path);
+      for (const f of item.files) {
+        const file: TurnFile = files.get(f.path) ?? { path: f.path };
+        if (f.added !== undefined) file.added = (file.added ?? 0) + f.added;
+        if (f.removed !== undefined) file.removed = (file.removed ?? 0) + f.removed;
+        files.set(f.path, file);
+      }
     }
   }
   return {
@@ -218,7 +230,7 @@ function turnEnd(turn: TurnState, items: Item[]): FeedRow {
     id: `end:${turn.id}`,
     turn,
     durationMs: Number.isFinite(start) ? Math.max(0, end - start) : 0,
-    files: files.size,
+    files: [...files.values()],
     ...(turn.usage ? { tokens: turn.usage.inputTokens + turn.usage.outputTokens } : {}),
   };
 }

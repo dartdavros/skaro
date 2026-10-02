@@ -59,12 +59,10 @@ export class UpdateActivity {
           'tasks.run',
           'task.send',
           'task.respond',
-          'task.rewind',
           'task.merge',
           'chat.create',
           'chat.send',
           'chat.respond',
-          'chat.rewind',
           'chat.proposal',
           'import.start',
         ].includes(method))

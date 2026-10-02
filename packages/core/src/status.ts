@@ -3,8 +3,16 @@
 
 import type { Milestone, Task, TaskStatus } from './artifacts/model.ts';
 
-/** Operational state of a task, kept in AppDb (not in git). */
-export type TaskRuntime = 'idle' | 'queued' | 'running' | 'waiting';
+/**
+ * Operational state of a task, kept in AppDb (not in git). "failed": the last turn ended in an
+ * error and the agent is not working; the task keeps its stage (in progress, in review).
+ */
+export type TaskRuntime = 'idle' | 'queued' | 'running' | 'waiting' | 'failed';
+
+/** An agent works on the task or the task waits in line for one. */
+export function isAgentBusy(runtime: TaskRuntime | undefined): boolean {
+  return runtime === 'queued' || runtime === 'running' || runtime === 'waiting';
+}
 
 /** Status as the UI shows it. */
 export type DisplayStatus = TaskStatus | 'blocked' | 'queued' | 'needs_answer';
@@ -31,6 +39,7 @@ export function displayStatus(
   runtime: TaskRuntime = 'idle',
 ): DisplayStatus {
   if (task.status === 'done') return 'done';
+  if (runtime === 'failed') return 'failed';
   if (runtime === 'waiting') return 'needs_answer';
   if (runtime === 'queued') return 'queued';
   if (runtime === 'running') return 'in_progress';

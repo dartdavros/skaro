@@ -9,7 +9,7 @@
 }
 
 .project-nav.panel + .sk-panel-resizer[data-panel-side='left'] {
-  background: var(--sk-fill-18);
+  background: var(--sk-line);
 }
 
 .project-nav .head {
@@ -55,14 +55,14 @@
 }
 
 .project-nav .toggle:hover {
-  background: var(--sk-fill-13);
+  background: var(--sk-hover);
   color: var(--sk-text-bright);
 }
 
 .project-nav .sep {
   height: 1px;
   margin: 9px 10px;
-  background: var(--sk-fill-18);
+  background: var(--sk-line);
 }
 
 .project-nav .item {
@@ -122,7 +122,7 @@
   align-items: center;
   gap: 2px;
   padding: 18px 12px 14px;
-  border-right: 1px solid var(--sk-fill-18);
+  border-right: 1px solid var(--sk-line);
   background: var(--sk-fill-8);
 }
 
@@ -136,7 +136,7 @@
   padding: 0;
   border: none;
   border-radius: 7px;
-  background: var(--sk-fill-13);
+  background: var(--sk-surface);
   color: var(--sk-text-body);
   cursor: pointer;
 }
@@ -149,7 +149,7 @@
   width: 20px;
   height: 1px;
   margin: 7px 0;
-  background: var(--sk-fill-18);
+  background: var(--sk-line);
 }
 
 .project-nav .rail-item {
@@ -168,7 +168,7 @@
 }
 
 .project-nav .rail-item:hover {
-  background: var(--sk-fill-13);
+  background: var(--sk-hover);
   color: var(--sk-text-bright);
 }
 

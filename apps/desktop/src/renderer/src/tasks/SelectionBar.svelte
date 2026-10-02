@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Icon, t, tn } from '@skaro/ui';
   import type { TaskSummary } from '../../../shared/ipc';
-  import type { BulkAction } from './model';
+  import { canStart, type BulkAction } from './model';
 
   /** The floating bar of a selection (Tasks mockup): run, unblock, assign, move, archive, delete. */
   let {
@@ -16,6 +16,10 @@
 
   const blocked = $derived(selected.filter((x) => x.status === 'blocked'));
   const canAssign = $derived(selected.every((x) => x.status === 'todo' || x.status === 'blocked'));
+  /** Done or running tasks cannot start: "Запустить" only when something would start or wait. */
+  const canRun = $derived(blocked.length > 0 || selected.some(canStart));
+  /** A done task stays in its milestone. */
+  const canMove = $derived(!selected.some((x) => x.status === 'done'));
 </script>
 
 <div class="bar">
@@ -28,9 +32,11 @@
     >
   {/if}
   <div class="sep"></div>
-  <button type="button" class="run" data-tip={t('board.run.tip')} onclick={() => onaction('run')}>
-    <Icon name="play" size={13} stroke={2} />{t('board.run')}
-  </button>
+  {#if canRun}
+    <button type="button" class="run" data-tip={t('board.run.tip')} onclick={() => onaction('run')}>
+      <Icon name="play" size={13} stroke={2} />{t('board.run')}
+    </button>
+  {/if}
   {#if blocked.length}
     <button
       type="button"
@@ -47,9 +53,11 @@
       onclick={() => onaction('assign')}><Icon name="code" size={14} stroke={1.9} /></button
     >
   {/if}
-  <button type="button" class="icon" data-tip={t('board.move')} onclick={() => onaction('move')}
-    ><Icon name="folderPlus" size={14} stroke={1.9} /></button
-  >
+  {#if canMove}
+    <button type="button" class="icon" data-tip={t('board.move')} onclick={() => onaction('move')}
+      ><Icon name="folderPlus" size={14} stroke={1.9} /></button
+    >
+  {/if}
   <button
     type="button"
     class="icon"

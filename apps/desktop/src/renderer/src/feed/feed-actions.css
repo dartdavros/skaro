@@ -60,7 +60,7 @@
 }
 
 .fd-subrow.link:hover {
-  background: var(--sk-fill-7);
+  background: var(--sk-hover);
 }
 
 .fd-subrow .main {
@@ -205,7 +205,7 @@
   overflow: auto;
   padding: 10px 12px;
   border-radius: 8px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-4);
   line-height: 1.5;
@@ -246,7 +246,7 @@
 .fd-diff {
   padding: 8px 0;
   border-radius: 8px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-4);
   line-height: 1.5;
@@ -283,5 +283,5 @@
 .fd-diff-sep {
   height: 1px;
   margin: 6px 12px;
-  background: var(--sk-fill-20);
+  background: var(--sk-line-strong);
 }

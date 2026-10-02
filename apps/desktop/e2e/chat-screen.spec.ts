@@ -5,7 +5,7 @@ import { chatScreenProject } from './chat-screen-support';
 import { compareBaseline } from './layout-baseline';
 import { launchApp, tempUserData } from './launch';
 
-test('preserves saved chat navigation, archive, message dialogs and pinned plan', async () => {
+test('preserves saved chat navigation, archive, message actions and pinned plan', async () => {
   const userData = tempUserData();
   const fixture = chatScreenProject(userData);
   let app = await launchApp(userData);
@@ -39,28 +39,14 @@ test('preserves saved chat navigation, archive, message dialogs and pinned plan'
       await page.screenshot({ path: process.env['SKARO_E2E_CHAT_SCREENSHOT'] });
     const user = page.locator('.fd-user').first();
     await user.hover();
-    await user.getByRole('button', { name: 'Изменить', exact: true }).click();
-    await expect(user.locator('textarea')).toHaveValue('A saved message');
-    await user.locator('textarea').fill('');
-    await expect(user.getByRole('button', { name: 'Отправить', exact: true })).toBeDisabled();
-    await user.locator('textarea').fill('Edited draft');
-    await page.mouse.move(5, 5);
-    await compareBaseline(user, process.env['SKARO_E2E_CHAT_LAYOUT'], 'editing', true);
-    await user.getByRole('button', { name: 'Отправить', exact: true }).click();
-    const dialog = page.getByRole('alertdialog');
-    await expect(dialog).toContainText('Отправить изменённое сообщение?');
-    await compareBaseline(dialog, process.env['SKARO_E2E_CHAT_LAYOUT'], 'edit-confirm', true);
-    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
-    await user.locator('textarea').press('Escape');
-    await user.hover();
-    await user.getByRole('button', { name: 'Откатить к этому сообщению', exact: true }).click();
-    await expect(dialog).toContainText('Откатить к этому сообщению?');
-    await compareBaseline(dialog, process.env['SKARO_E2E_CHAT_LAYOUT'], 'rewind-confirm', true);
-    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(user.locator('.fd-hover-actions button')).toHaveCount(1);
+    await expect(
+      user.getByRole('button', { name: 'Скопировать сообщение', exact: true }),
+    ).toBeVisible();
+    await expect(user.locator('.fd-sent-at')).not.toBeEmpty();
     await expect(page.locator('.fd-user .import-source')).toHaveText('~/Docs/source · 2 файла');
     await page.getByRole('button', { name: 'Архивировать чат', exact: true }).click();
     await expect(sessions.locator('.row')).toHaveCount(0);
-    await expect(page.locator('.fd-hover-actions')).toHaveCount(0);
     await sessions.locator('.archive-toggle').click();
     await expect(sessions.locator('.row')).toHaveCount(2);
     await page.mouse.move(5, 5);

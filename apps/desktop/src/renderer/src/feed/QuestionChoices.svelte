@@ -64,7 +64,7 @@
   }
 
   .custom.on {
-    background: var(--sk-fill-13);
+    background: var(--sk-bg);
   }
 
   .custom-mark {

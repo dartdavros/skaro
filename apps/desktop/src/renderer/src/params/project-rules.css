@@ -98,7 +98,7 @@ textarea[data-project-rules] {
   padding: 10px 12px;
   border: none;
   border-radius: 9px;
-  background: var(--sk-fill-20);
+  background: var(--sk-surface-2);
   color: var(--sk-text-6);
   font-size: var(--sk-fs-5);
   line-height: 1.55;

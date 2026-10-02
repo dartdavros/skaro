@@ -7,7 +7,7 @@
 
 .proposal .card {
   border-radius: 10px;
-  background: var(--sk-fill-17);
+  background: var(--sk-surface);
   display: flex;
   flex-direction: column;
 }

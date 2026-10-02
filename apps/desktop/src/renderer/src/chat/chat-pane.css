@@ -39,7 +39,7 @@
 }
 .chat > .main > .head .archive:hover,
 .chat > .main > .head .archive.on {
-  background: var(--sk-fill-15);
+  background: var(--sk-selected);
   color: var(--sk-text-6);
 }
 .chat > .main > .banners {

@@ -52,7 +52,7 @@
   }
 
   .eye:hover {
-    background: var(--sk-fill-15);
+    background: var(--sk-surface-2);
     color: var(--sk-text-6);
   }
 </style>

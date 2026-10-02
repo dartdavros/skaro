@@ -16,7 +16,7 @@
 }
 
 .row.self[data-plan-task] {
-  background: var(--sk-fill-18);
+  background: var(--sk-surface-2);
 }
 
 .row.related[data-plan-task] {

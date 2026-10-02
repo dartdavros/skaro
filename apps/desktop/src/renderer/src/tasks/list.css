@@ -59,7 +59,7 @@
 .line[data-task-list] {
   flex: 1;
   height: 1px;
-  background: var(--sk-fill-15);
+  background: var(--sk-line);
 }
 
 .rows[data-task-list] {
@@ -70,14 +70,14 @@
 .row[data-task-list] {
   align-items: center;
   padding: 9px 12px;
-  background: var(--sk-fill-9);
+  background: var(--sk-surface);
   border-bottom: 1px solid var(--sk-fill-3);
   cursor: pointer;
   outline: none;
 }
 
 .row[data-task-list]:hover {
-  background: var(--sk-fill-18);
+  background: var(--sk-surface-hover);
 }
 
 .row.selected[data-task-list] {

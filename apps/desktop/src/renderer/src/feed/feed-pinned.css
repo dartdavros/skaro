@@ -7,7 +7,7 @@
   gap: 10px;
   padding: 9px 12px;
   border-radius: 10px;
-  background: var(--sk-fill-17);
+  background: var(--sk-surface);
 }
 
 .fd-pinned .cmd {

@@ -83,13 +83,34 @@ export interface Column {
   tasks: TaskSummary[];
 }
 
-/** Four columns: not started (with blocked and failed), in progress, in review, done. */
+/**
+ * The column a task belongs to; a failed task stays where it failed (in progress, in review).
+ * A cancelled task has no column.
+ */
+function columnOf(task: TaskSummary): Column['key'] | undefined {
+  switch (boardStatus(task.status)) {
+    case 'cancelled':
+      return undefined;
+    case 'todo':
+    case 'blocked':
+      return 'todo';
+    case 'error':
+      return task.stage === 'review' ? 'review' : 'working';
+    case 'review':
+      return 'review';
+    case 'done':
+      return 'done';
+    default:
+      return 'working';
+  }
+}
+
+/** Four columns: not started (with blocked), in progress, in review, done. */
 export function columns(tasks: TaskSummary[]): Column[] {
-  const of = (...kinds: BoardStatus[]) =>
-    tasks.filter((x) => kinds.includes(boardStatus(x.status)));
+  const of = (key: Column['key']) => tasks.filter((x) => columnOf(x) === key);
   return [
-    { key: 'todo', color: 'var(--sk-text-13)', tasks: of('todo', 'blocked', 'error') },
-    { key: 'working', color: 'var(--sk-text-13)', tasks: of('working', 'need') },
+    { key: 'todo', color: 'var(--sk-text-13)', tasks: of('todo') },
+    { key: 'working', color: 'var(--sk-text-13)', tasks: of('working') },
     { key: 'review', color: 'var(--sk-text-13)', tasks: of('review') },
     { key: 'done', color: 'var(--sk-text-13)', tasks: of('done') },
   ];
@@ -125,6 +146,14 @@ export function groups(
       };
     })
     .filter((g) => g.tasks.length > 0);
+}
+
+/**
+ * Starts now when launched; a blocked task waits for its dependencies instead. A task that
+ * failed mid-work goes on from its feed ("Перезапустить"), not from here.
+ */
+export function canStart(task: TaskSummary): boolean {
+  return task.status === 'todo' || task.status === 'cancelled' || task.stage === 'failed';
 }
 
 export function needsYou(task: TaskSummary): boolean {

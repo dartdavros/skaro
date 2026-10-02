@@ -121,8 +121,6 @@ export function createTaskController(
       window.skaro.invoke('task.merge', projectId, taskId, id, action),
     revertMerge: (commit) =>
       guard(() => window.skaro.invoke('task.revertMerge', projectId, taskId, commit)),
-    rewind: (itemId, resend) =>
-      guard(() => window.skaro.invoke('task.rewind', projectId, taskId, itemId, resend)),
     restart: () => void send({ text: t('task.start.message') }).catch(() => undefined),
   });
 

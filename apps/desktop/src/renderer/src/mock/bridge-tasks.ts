@@ -70,7 +70,6 @@ export const tasksHandlers = {
   'task.send': () => undefined,
   'task.respond': () => undefined,
   'task.interrupt': () => undefined,
-  'task.rewind': () => undefined,
   'task.stopBackground': () => undefined,
   'task.setSettings': (_p, _t, next) => void Object.assign(taskSettings, next),
   'task.merge': () => undefined,
@@ -103,7 +102,6 @@ export const tasksHandlers = {
   | 'task.send'
   | 'task.respond'
   | 'task.interrupt'
-  | 'task.rewind'
   | 'task.stopBackground'
   | 'task.setSettings'
   | 'task.merge'

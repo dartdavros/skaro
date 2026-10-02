@@ -1,7 +1,7 @@
 import { t } from '@skaro/ui';
 import type { AgentId, RunSlots, TaskSummary } from '../../../shared/ipc';
 import { AgentModels, effortLabel } from './agent-models.svelte';
-import { statusLabel } from './model';
+import { canStart, statusLabel } from './model';
 import type { RunProps } from './run-props';
 
 export function createRunController(p: RunProps) {
@@ -20,9 +20,7 @@ export function createRunController(p: RunProps) {
     void models.load(agent, p.projectId).then(() => (modelId = models.model()?.id ?? ''));
   });
 
-  const startable = (x: TaskSummary) =>
-    x.status === 'todo' || x.status === 'failed' || x.status === 'cancelled';
-  const runnable = $derived(p.tasks.filter(startable));
+  const runnable = $derived(p.tasks.filter(canStart));
   const blocked = $derived(p.tasks.some((x) => x.status === 'blocked'));
   const model = $derived(models.model(modelId));
   const options = $derived(
@@ -39,7 +37,7 @@ export function createRunController(p: RunProps) {
     if (task.status === 'blocked') {
       return { text: t('board.waits', { deps: task.waitsFor.join(', ') }), tone: 'blocked' };
     }
-    if (!startable(task)) return { text: statusLabel(task.status), tone: 'queue' };
+    if (!canStart(task)) return { text: statusLabel(task.status), tone: 'queue' };
     return runnable.indexOf(task) < slots.free
       ? { text: t('board.rd.now'), tone: 'now' }
       : { text: t('board.rd.queue'), tone: 'queue' };

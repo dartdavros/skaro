@@ -3,7 +3,7 @@
 .stage[data-plan-stage] {
   flex: none;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   transition: box-shadow 0.12s;
 }
 
@@ -27,7 +27,7 @@
 }
 
 .head[data-plan-stage]:hover {
-  background: var(--sk-fill-15);
+  background: var(--sk-surface-2);
 }
 
 .grip[data-plan-stage] {
@@ -129,7 +129,7 @@
   flex: 1;
   height: 4px;
   border-radius: 3px;
-  background: var(--sk-fill-20);
+  background: var(--sk-surface-2);
   overflow: hidden;
 }
 

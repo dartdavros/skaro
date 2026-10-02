@@ -3,7 +3,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { feedRows, type FeedRow } from './feed.ts';
 import { actionGroupState, groupFeedRows, type ActionGroup } from './feed-groups.ts';
-import { actionGroupSummary, dominantAction, reconnectionProgress } from './feed-action-summary.ts';
+import {
+  actionGroupDiffStats,
+  actionGroupSummary,
+  dominantAction,
+  reconnectionProgress,
+} from './feed-action-summary.ts';
 import { GOLDEN_DIR } from './golden.ts';
 import type { TimelineState } from './state.ts';
 
@@ -62,6 +67,18 @@ describe('consecutive action groups', () => {
       file.items[0]!.files.length,
     );
     expect(group.rows).toHaveLength(2);
+  });
+
+  it('sums line counts of applied edits for the collapsed group badge', () => {
+    if (file.type !== 'file') throw new Error('Expected captured file');
+    const other = { ...file, id: 'f2', added: 3, removed: 1 };
+    const declined = { ...file, id: 'f3', added: 50, removed: 50, status: 'declined' as const };
+    const group = groupFeedRows([file, command, other, declined])[0] as ActionGroup;
+    expect(actionGroupDiffStats(group)).toEqual({
+      added: (file.added ?? 0) + 3,
+      removed: (file.removed ?? 0) + 1,
+    });
+    expect(actionGroupDiffStats(groupFeedRows([command])[0] as ActionGroup)).toBeUndefined();
   });
 
   it('exposes pending permissions and input even in a collapsed command sequence', () => {

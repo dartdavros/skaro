@@ -1,6 +1,6 @@
 import { app, net } from 'electron';
 import { join } from 'node:path';
-import { AgentInstaller, currentPlatform, type AppDb, type AgentId } from '@skaro/core';
+import { AgentInstaller, currentPlatform, isAgentBusy, type AppDb, type AgentId } from '@skaro/core';
 import type { ChatSessions } from './chats';
 import type { TaskRuns } from './tasks';
 import type { Events, EventName } from '../shared/ipc';
@@ -26,7 +26,7 @@ export async function createUpdates(options: {
         .listProjects()
         .some(
           (project) =>
-            [...db.getTaskRuntime(project.id).values()].some((task) => task.state !== 'idle') ||
+            [...db.getTaskRuntime(project.id).values()].some((task) => isAgentBusy(task.state)) ||
             chats.list(project.id).some((chat) => chat.live),
         ),
   );

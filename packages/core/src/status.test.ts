@@ -4,6 +4,7 @@ import {
   dependencyCycles,
   displayStatus,
   indexTasks,
+  isAgentBusy,
   isBlocked,
   milestoneProgress,
   newlyUnblocked,
@@ -75,6 +76,14 @@ describe('display status and start', () => {
     expect(displayStatus(started, idx)).toBe('needs_answer');
     expect(displayStatus(started, idx, 'running')).toBe('in_progress');
     expect(displayStatus(task('T-3', { status: 'review' }), idx)).toBe('review');
+  });
+
+  it('shows a failed turn as an error without moving the task off its stage', () => {
+    const review = task('T-4', { status: 'review' });
+    expect(displayStatus(review, indexTasks([review]), 'failed')).toBe('failed');
+    expect(review.status).toBe('review');
+    expect(isAgentBusy('failed')).toBe(false);
+    expect(isAgentBusy('running')).toBe(true);
   });
 
   it('keeps completed tasks done regardless of retained runtime state', () => {

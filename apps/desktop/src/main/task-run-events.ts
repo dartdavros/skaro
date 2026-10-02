@@ -18,23 +18,6 @@ export class TaskRunEvents {
     active.pending.push(event);
     active.flushTimer ??= setTimeout(() => this.ctx.history.flush(active), FLUSH_MS);
     const { projectId, taskId } = active;
-    if (
-      event.t === 'item.upsert' &&
-      event.item.kind === 'message' &&
-      event.item.role === 'user' &&
-      !event.item.parentId &&
-      !active.snapshots.has(event.item.id)
-    ) {
-      const snapshot = active.pendingSnapshots.shift();
-      if (snapshot) {
-        active.snapshots.set(event.item.id, snapshot);
-        this.ctx.history.writeLine(active, {
-          ts: Date.now() - active.run.startedAt,
-          dir: 'meta',
-          line: { skaro: 'snapshot', itemId: event.item.id, ...snapshot },
-        });
-      }
-    }
     switch (event.t) {
       case 'session.started':
         if (event.nativeSessionId && event.nativeSessionId !== active.run.nativeSessionId) {
@@ -90,16 +73,16 @@ export class TaskRunEvents {
       if (task.status === 'done') return;
       const label = `${task.id} · ${task.title}`;
       if (outcome === 'failed') {
-        if (task.status !== 'failed') {
-          this.ctx.deps.db.addEvent(projectId, 'task_failed', { task: taskId });
-          await context.store.updateTask(taskId, { status: 'failed' });
-          this.ctx.deps.notify?.('error', label);
-          this.ctx.results.statusChanged(projectId, taskId);
-        }
+        // An error does not move the task back: it keeps its stage, the runtime says "failed".
+        this.ctx.deps.db.addEvent(projectId, 'task_failed', { task: taskId });
+        this.ctx.setRuntime(projectId, taskId, 'failed', active.run.id);
+        this.ctx.deps.notify?.('error', label);
+        this.ctx.results.statusChanged(projectId, taskId);
         return;
       }
       // The turn ended: "На ревью" only when every criterion is ticked, else the agent waits
       // for the user ("Нужен ответ", derived from "В работе" with no agent working).
+      // Older task files may still hold the "failed" stage.
       if (task.status === 'failed')
         await context.store.updateTask(taskId, { status: 'in_progress' });
       const state = await this.ctx.results.criteriaChanged(projectId, taskId);
@@ -120,6 +103,9 @@ export class TaskRunEvents {
       : s.status === 'idle'
         ? 'idle'
         : 'running';
+    // After a failed turn the agent stays idle: "failed" holds until it works again.
+    const current = this.ctx.deps.db.getTaskRuntime(active.projectId).get(active.taskId)?.state;
+    if (state === 'idle' && current === 'failed') return;
     this.ctx.setRuntime(active.projectId, active.taskId, state, active.run.id);
   }
 

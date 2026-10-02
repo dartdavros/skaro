@@ -62,14 +62,6 @@ export class ChatSessions implements ProjectToolHandlers {
   async interrupt(projectId: string, chatId: string): Promise<void> {
     return this.engine.conversation.interrupt(projectId, chatId);
   }
-  async rewind(
-    projectId: string,
-    chatId: string,
-    itemId: string,
-    resend?: MessageInput,
-  ): Promise<void> {
-    return this.engine.conversation.rewind(projectId, chatId, itemId, resend);
-  }
   async setSettings(projectId: string, chatId: string, next: ChatSettings): Promise<void> {
     return this.engine.settings.setSettings(projectId, chatId, next);
   }

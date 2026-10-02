@@ -18,13 +18,11 @@ export interface RawLine {
 /**
  * Skaro's own lines in a run log (`dir: 'meta'`): a new agent process starts (after a restart the
  * adapter begins with a fresh projector), or an event Skaro itself adds to the feed (merge card,
- * restored session).
+ * restored session). Older logs may hold other kinds (worktree snapshots); replays skip them.
  */
 export type RunLogMeta =
   | { skaro: 'segment'; agent: string; adapterVersion: string }
-  | { skaro: 'event'; event: TimelineEvent }
-  /** Worktree state before a user message: rewinding to it puts the files back. */
-  | { skaro: 'snapshot'; itemId: string; head: string; tree: string };
+  | { skaro: 'event'; event: TimelineEvent };
 
 export function isRunLogMeta(line: unknown): line is RunLogMeta {
   return typeof line === 'object' && line !== null && 'skaro' in line;

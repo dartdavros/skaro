@@ -36,7 +36,7 @@
 }
 
 .new[data-chat-screen]:hover {
-  background: var(--sk-fill-13);
+  background: var(--sk-hover);
   color: var(--sk-text-2);
 }
 
@@ -62,11 +62,11 @@
 }
 
 .row[data-chat-screen]:hover {
-  background: var(--sk-fill-13);
+  background: var(--sk-hover);
 }
 
 .row.on[data-chat-screen] {
-  background: var(--sk-fill-15);
+  background: var(--sk-selected);
 }
 
 .row-icon[data-chat-screen] {
@@ -148,6 +148,6 @@
 
 .archive-toggle[data-chat-screen]:hover,
 .archive-toggle.on[data-chat-screen] {
-  background: var(--sk-fill-15);
+  background: var(--sk-selected);
   color: var(--sk-text-6);
 }

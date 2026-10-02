@@ -62,7 +62,11 @@ export interface TaskRef {
   status: TaskStatus;
 }
 
+/** Where the task is in its lifecycle (the task file); `status` adds what happens right now. */
+export type TaskStage = 'todo' | 'in_progress' | 'review' | 'done' | 'failed' | 'cancelled';
+
 export interface TaskSummary extends TaskRef {
+  stage: TaskStage;
   milestone?: { id: string; title: string };
   archived: boolean;
   /** Assigned agent, else the agent of the last run; undefined — not assigned. */

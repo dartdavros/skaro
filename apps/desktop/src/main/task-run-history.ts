@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { createWriteStream, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
-  isRunLogMeta,
   persistsAfterTurn,
   countSegments,
   replayRunLog,
@@ -37,11 +36,6 @@ export class TaskRunHistory {
     const active = new ActiveRun(projectId, taskId, run, Timeline.from(events));
     active.seq = events.length;
     active.segments = countSegments(lines);
-    for (const line of lines) {
-      if (line.dir === 'meta' && isRunLogMeta(line.line) && line.line.skaro === 'snapshot') {
-        active.snapshots.set(line.line.itemId, { head: line.line.head, tree: line.line.tree });
-      }
-    }
     this.ctx.active.set(k, active);
     // A live turn cannot survive a restart; async questions still wait for a later reply.
     const turn = active.timeline.state.turns.at(-1);

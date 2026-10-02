@@ -62,6 +62,7 @@ export function summary(
   const spec = task.spec ? artifacts.specs.find((s) => s.id === task.spec) : undefined;
   return {
     ...ref(task, index, runtime),
+    stage: task.status,
     ...(milestone ? { milestone: { id: milestone.id, title: milestone.title } } : {}),
     ...(spec ? { spec: { id: spec.id, title: spec.title, path: spec.path } } : {}),
     archived: task.archived,

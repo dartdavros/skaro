@@ -67,6 +67,10 @@ addMessages('ru', {
   'ago.yesterday': 'вчера',
   'ago.day': '{n} дн назад',
   'ago.month': '{n} мес назад',
+  'sent.min': '{n} мин. назад',
+  'sent.today': 'сегодня в {time}',
+  'sent.yesterday': 'вчера в {time}',
+  'sent.date': '{date} в {time}',
   'home.agent.missing': '{name} не найден.',
   'home.agent.missing.text':
     'Установите агента или войдите в аккаунт — без него задачи не запустятся. {ready} готов к работе.',
@@ -200,6 +204,10 @@ addMessages('en', {
   'ago.yesterday': 'yesterday',
   'ago.day': '{n} days ago',
   'ago.month': '{n} mo ago',
+  'sent.min': '{n} min ago',
+  'sent.today': 'today at {time}',
+  'sent.yesterday': 'yesterday at {time}',
+  'sent.date': '{date} at {time}',
   'home.agent.missing': '{name} is not found.',
   'home.agent.missing.text':
     'Download the agent or sign in — tasks will not start without it. {ready} is ready to work.',

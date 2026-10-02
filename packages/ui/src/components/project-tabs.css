@@ -33,7 +33,7 @@
   margin-bottom: -1px;
   padding: 0 11px 0 13px;
   background: var(--sk-fill-8);
-  border: 1px solid var(--sk-surface-2);
+  border: 1px solid var(--sk-line);
   border-bottom: none;
   color: var(--sk-text);
   font-weight: 600;
@@ -47,7 +47,7 @@
   bottom: 0;
   width: 10px;
   height: 10px;
-  border-bottom: 1px solid var(--sk-surface-2);
+  border-bottom: 1px solid var(--sk-line);
   clip-path: inset(-1px -4px 0);
   pointer-events: none;
 }
@@ -55,14 +55,14 @@
 .project-tabs .tab.active::before {
   left: -11px;
   border-bottom-right-radius: 10px;
-  border-right: 1px solid var(--sk-surface-2);
+  border-right: 1px solid var(--sk-line);
   box-shadow: 3px 3px 0 3px var(--sk-fill-8);
 }
 
 .project-tabs .tab.active::after {
   right: -11px;
   border-bottom-left-radius: 10px;
-  border-left: 1px solid var(--sk-surface-2);
+  border-left: 1px solid var(--sk-line);
   box-shadow: -3px 3px 0 3px var(--sk-fill-8);
 }
 

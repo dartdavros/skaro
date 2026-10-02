@@ -2,7 +2,7 @@
 
 .plan[data-pinned-zone] {
   border-radius: 10px;
-  background: var(--sk-fill-17);
+  background: var(--sk-surface);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;

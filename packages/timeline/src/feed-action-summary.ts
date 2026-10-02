@@ -89,6 +89,21 @@ export function actionGroupSummary(group: ActionGroup): ActionSummary[] {
   return [...counts.values()];
 }
 
+/** "+a −r" over the group's applied file edits; undefined when no edit reports line counts. */
+export function actionGroupDiffStats(
+  group: ActionGroup,
+): { added: number; removed: number } | undefined {
+  let stats: { added: number; removed: number } | undefined;
+  for (const row of group.rows) {
+    if (row.type !== 'file' || row.status === 'declined' || row.status === 'failed') continue;
+    if (row.added === undefined && row.removed === undefined) continue;
+    stats ??= { added: 0, removed: 0 };
+    stats.added += row.added ?? 0;
+    stats.removed += row.removed ?? 0;
+  }
+  return stats;
+}
+
 /** Ties use the first encountered action, so the icon is deterministic during streaming. */
 export function dominantAction(parts: readonly ActionSummary[]): ActionKind {
   if (!parts.length) return 'command';

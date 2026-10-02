@@ -33,7 +33,7 @@
     width: 360px;
     height: 120px;
     border-radius: 10px;
-    background: var(--sk-fill-11);
+    background: var(--sk-surface);
     display: flex;
     align-items: center;
     justify-content: center;

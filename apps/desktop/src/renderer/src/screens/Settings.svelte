@@ -70,7 +70,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: var(--sk-fill-5);
+    background: var(--sk-bg);
   }
 
   .head {

@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { isAsyncQuestion, asyncQuestionInput, type InteractionAnswer } from '@skaro/timeline';
 import type { MessageInput } from '../shared/ipc';
 import { withoutSecrets } from './session-log';
@@ -22,19 +21,8 @@ export class TaskRunMessages {
 
   async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
     const session = await this.ctx.sessions.attach(active);
-    await this.snapshotBeforeMessage(active);
     if (active.timeline.state.status === 'idle') await session.send(input);
     else await session.steer(input);
-  }
-
-  async snapshotBeforeMessage(active: ActiveRun): Promise<void> {
-    const worktree = active.run.worktree;
-    if (!worktree || !existsSync(worktree)) return;
-    try {
-      active.pendingSnapshots.push(await this.ctx.project(active.projectId).git.snapshot(worktree));
-    } catch {
-      // No snapshot: rewinding to this message takes back the conversation only.
-    }
   }
 
   async respond(
@@ -84,24 +72,6 @@ export class TaskRunMessages {
       return;
     }
     await this.ctx.active.get(k)?.session?.interrupt();
-  }
-
-  async rewind(
-    projectId: string,
-    taskId: string,
-    itemId: string,
-    resend?: MessageInput,
-  ): Promise<void> {
-    const active = this.ctx.requireActive(projectId, taskId);
-    const session = await this.ctx.sessions.attach(active);
-    await session.rewind(itemId);
-    // Codex takes back only the conversation; the files come back from Skaro's snapshot.
-    const snapshot = active.snapshots.get(itemId);
-    const worktree = active.run.worktree;
-    if (snapshot && worktree && existsSync(worktree)) {
-      await this.ctx.project(projectId).git.restoreSnapshot(worktree, snapshot);
-    }
-    if (resend) await this.deliver(active, resend);
   }
 
   async stopBackground(projectId: string, taskId: string, backgroundId: string): Promise<void> {

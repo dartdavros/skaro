@@ -50,14 +50,14 @@
   margin-left: 21px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .fd-nested .fd-nested {
-  background: var(--sk-fill-17);
+  background: var(--sk-surface-2);
 }
 
 .fd-nested .fd-text {
@@ -78,7 +78,7 @@
   gap: 6px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   min-width: 0;
 }
 
@@ -164,7 +164,7 @@
   gap: 10px;
   padding: 9px 12px;
   border-radius: 9px;
-  background: var(--sk-fill-17);
+  background: var(--sk-surface);
 }
 
 .fd-bar .text {
@@ -218,7 +218,7 @@
   align-self: flex-start;
   padding: 6px;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   cursor: zoom-in;
   border: none;
 }

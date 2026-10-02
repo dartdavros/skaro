@@ -61,7 +61,7 @@
 }
 
 .icon[data-doc-editor]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-2);
 }
 
@@ -204,7 +204,7 @@
 }
 
 .editor.split[data-doc-editor] {
-  border-right: 1px solid var(--sk-fill-16);
+  border-right: 1px solid var(--sk-line);
 }
 
 textarea[data-doc-editor] {
@@ -214,7 +214,7 @@ textarea[data-doc-editor] {
   padding: 14px 16px;
   border: none;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   color: var(--sk-text-6);
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-6);

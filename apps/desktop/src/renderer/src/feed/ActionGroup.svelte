@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    actionGroupDiffStats,
     actionGroupSummary,
     dominantAction,
     actionGroupState,
@@ -10,6 +11,7 @@
   import type { Snippet } from 'svelte';
   import './action-groups-i18n';
   import ActionIcon from './ActionIcon.svelte';
+  import DiffBadge from './DiffBadge.svelte';
 
   let {
     group,
@@ -25,6 +27,7 @@
   const status = $derived(actionGroupState(group, waiting));
   const parts = $derived(actionGroupSummary(group));
   const kind = $derived(dominantAction(parts));
+  const diff = $derived(actionGroupDiffStats(group));
   const caption = $derived(
     parts
       .map((part, i) => {
@@ -53,6 +56,7 @@
   >
     <ActionIcon {kind} />
     <span>{caption}</span>
+    {#if diff}<DiffBadge added={diff.added} removed={diff.removed} />{/if}
     {#if status.waiting}<span class="fd-wait-dot" title={t('feed.waiting')}></span>{/if}
     {#if status.running}<span class="fd-pulse"></span>{/if}
     {#if status.declined}<span class="fd-meta">{t('feed.cmd.declined')}</span>{/if}

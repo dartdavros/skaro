@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { FeedRow } from '@skaro/timeline';
-  import { ConfirmDialog, t } from '@skaro/ui';
+  import { ConfirmDialog, Icon, t } from '@skaro/ui';
   import { useFeed } from './context.svelte';
   import './merge-undo-i18n';
 
@@ -26,9 +26,16 @@
 <div class="fd-divider" data-tip={t('feed.notice.merged.tip', { commit: commit.slice(0, 7) })}>
   <span>{t('feed.notice.merged', { branch: row.item.text })}</span>
   {#if feed.revertMerge}
-    <button type="button" class="fd-btn" disabled={busy} onclick={() => (confirm = true)}
-      >{t('feed.mergeUndo.action')}</button
+    <button
+      type="button"
+      class="fd-icon-btn"
+      disabled={busy}
+      data-tip={t('feed.mergeUndo.tip', { commit: commit.slice(0, 7) })}
+      aria-label={t('feed.mergeUndo.action')}
+      onclick={() => (confirm = true)}
     >
+      <Icon name="undo" size={14} stroke={1.9} />
+    </button>
   {/if}
 </div>
 

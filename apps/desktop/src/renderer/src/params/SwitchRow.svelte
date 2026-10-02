@@ -36,7 +36,7 @@
   }
 
   .row:hover {
-    background: var(--sk-fill-13);
+    background: var(--sk-surface-2);
   }
 
   .track {

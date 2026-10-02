@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { approvalDecisions, exploreCounts, feedRows, type FeedRow } from './feed.ts';
+import {
+  approvalDecisions,
+  exploreCounts,
+  feedRows,
+  type FeedRow,
+  type FileRow,
+} from './feed.ts';
 import { GOLDEN_DIR } from './golden.ts';
 import type { Item } from './model.ts';
 import type { TimelineState } from './state.ts';
@@ -24,12 +30,17 @@ describe('feedRows', () => {
   it('shows one line per file for both agents and counts changed files in the turn', () => {
     for (const agent of ['claude', 'codex']) {
       const rows = feedRows(golden(agent, 'edit'));
-      const files = rows.filter((r) => r.type === 'file');
+      const files = rows.filter((r): r is FileRow => r.type === 'file');
       expect(files.map((f) => f.path.split(/[\\/]/).pop()).sort(), agent).toEqual([
         'CHANGELOG.md',
         'math.js',
       ]);
-      expect(rows.at(-1)).toMatchObject({ type: 'turn_end', files: 2 });
+      const end = rows.at(-1) as Extract<FeedRow, { type: 'turn_end' }>;
+      expect(end.files.map((f) => f.path), agent).toEqual(files.map((f) => f.path));
+      for (const file of end.files) {
+        const row = files.find((f) => f.path === file.path)!;
+        expect(file, agent).toEqual({ path: row.path, added: row.added, removed: row.removed });
+      }
     }
   });
 

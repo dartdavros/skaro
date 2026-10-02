@@ -26,7 +26,7 @@
 
 .toc-toggle[data-doc-page]:hover,
 .toc-toggle.on[data-doc-page] {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-2);
 }
 
@@ -93,7 +93,7 @@ nav[data-doc-page] {
 }
 
 .toc-item[data-doc-page]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-6);
 }
 

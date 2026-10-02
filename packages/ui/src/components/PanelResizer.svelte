@@ -92,7 +92,7 @@
     flex: none;
     position: relative;
     width: 1px;
-    background: var(--sk-fill-11);
+    background: var(--sk-line);
     z-index: 5;
   }
   .grip {

@@ -2,7 +2,7 @@
 
 import type { InteractionAnswer } from '@skaro/timeline';
 import { getContext, setContext } from 'svelte';
-import type { MergeAction, MessageInput, ProposalAction } from '../../../shared/ipc';
+import type { MergeAction, ProposalAction } from '../../../shared/ipc';
 
 export interface FeedActions {
   /** Working folder of the agent: paths are shown relative to it. */
@@ -17,8 +17,6 @@ export interface FeedActions {
   respond(interactionId: string, answer: InteractionAnswer): Promise<void>;
   merge(interactionId: string, action: MergeAction): Promise<void>;
   revertMerge?(commit: string): Promise<void>;
-  /** Back to before a user message; with `resend`, sends again (edit, retry). */
-  rewind(itemId: string, resend?: MessageInput): Promise<void>;
   /** Starts the run again from where it stopped. */
   restart(): void;
   /** Decides on a chat proposal card (project chat only). */

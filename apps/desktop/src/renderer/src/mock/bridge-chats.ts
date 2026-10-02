@@ -32,7 +32,6 @@ export const chatsHandlers = {
   'chat.send': () => undefined,
   'chat.respond': () => undefined,
   'chat.interrupt': () => undefined,
-  'chat.rewind': () => undefined,
   'chat.setSettings': () => undefined,
   'chat.archive': (projectId, chatId, archived) => {
     const chat = chats.find((c) => c.id === chatId);
@@ -99,7 +98,6 @@ export const chatsHandlers = {
   | 'chat.send'
   | 'chat.respond'
   | 'chat.interrupt'
-  | 'chat.rewind'
   | 'chat.setSettings'
   | 'chat.archive'
   | 'chat.proposal'

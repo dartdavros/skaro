@@ -26,7 +26,7 @@
   margin: 12px 0 6px;
   font-size: var(--sk-fs-7);
   font-weight: 700;
-  color: var(--sk-text-6);
+  color: var(--sk-text-reply);
 }
 
 .md blockquote {
@@ -89,7 +89,7 @@
 
 .md th {
   padding: 8px 12px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   font-size: var(--sk-fs-2);
   font-weight: 600;
   letter-spacing: 0.07em;
@@ -100,15 +100,15 @@
 
 .md td {
   padding: 8px 12px;
-  border-top: 1px solid var(--sk-fill-16);
-  color: var(--sk-text-7);
+  border-top: 1px solid var(--sk-line);
+  color: var(--sk-text-reply);
 }
 
 .md .md-code {
   position: relative;
   margin: 0 0 8px;
   border-radius: 8px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   padding: 8px 12px 10px;
 }
 
@@ -206,7 +206,7 @@
   margin: 0 0 8px;
   padding: 16px;
   border-radius: 8px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   display: flex;
   justify-content: center;
   overflow-x: auto;
@@ -227,7 +227,7 @@
   padding: 9px 12px;
   margin: 0 0 8px;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
 }
 
 .md .md-local-image img,

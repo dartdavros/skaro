@@ -50,13 +50,13 @@
   display: flex;
   flex-direction: column;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   cursor: pointer;
   outline: none;
 }
 
 .projects .card:hover {
-  background: var(--sk-fill-18);
+  background: var(--sk-surface-hover);
 }
 
 .projects .card-body {
@@ -251,7 +251,7 @@
 .projects .bar {
   height: 4px;
   border-radius: 3px;
-  background: var(--sk-fill-20);
+  background: var(--sk-surface-2);
   overflow: hidden;
 }
 

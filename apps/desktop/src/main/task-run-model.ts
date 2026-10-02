@@ -3,7 +3,6 @@ import {
   type AppDb,
   type AttachmentStore,
   type RunRecord,
-  type WorktreeSnapshot,
 } from '@skaro/core';
 import type { Grant, McpHttpServer, SkaroScope } from '@skaro/mcp-server';
 import { Timeline, type AgentSession, type TimelineEvent } from '@skaro/timeline';
@@ -52,10 +51,6 @@ export class ActiveRun {
   merged: { commit: string; base: string } | undefined;
   /** Serializes session start and resume. */
   attaching: Promise<AgentSession> | undefined;
-  /** Worktree snapshots taken before sending, waiting for their user message to show up. */
-  pendingSnapshots: WorktreeSnapshot[] = [];
-  /** User message id → worktree state before it (rewind puts the files back). */
-  readonly snapshots = new Map<string, WorktreeSnapshot>();
   /** Work that waits for the running turn to end (cleanup after a merge). */
   afterTurn: (() => Promise<void>) | undefined;
 

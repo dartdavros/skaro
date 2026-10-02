@@ -19,7 +19,7 @@
 }
 
 .agent.on[data-agent-defaults] {
-  background: var(--sk-fill-11);
+  background: var(--sk-bg);
   color: var(--sk-text-6);
 }
 
@@ -96,11 +96,11 @@
 }
 
 .perm[data-agent-defaults]:hover {
-  background: var(--sk-fill-20);
+  background: var(--sk-surface-2);
 }
 
 .perm.on[data-agent-defaults] {
-  background: var(--sk-fill-13);
+  background: var(--sk-bg);
 }
 
 .dot[data-agent-defaults] {

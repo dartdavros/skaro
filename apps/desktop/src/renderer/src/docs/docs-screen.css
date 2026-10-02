@@ -39,7 +39,7 @@
 }
 
 .show-tree[data-docs-screen]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-2);
 }
 

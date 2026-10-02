@@ -104,7 +104,7 @@ h1[data-plan-screen] {
 }
 
 .hide[data-plan-screen]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-6);
 }
 
@@ -131,7 +131,7 @@ h1[data-plan-screen] {
 }
 
 .all[data-plan-screen]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-2);
 }
 

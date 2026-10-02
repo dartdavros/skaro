@@ -5,7 +5,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--sk-fill-16);
+  border-right: 1px solid var(--sk-line);
 }
 
 .head[data-doc-tree] {
@@ -37,7 +37,7 @@
 }
 
 .hide[data-doc-tree]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-2);
 }
 
@@ -69,7 +69,7 @@
 }
 
 .group[data-doc-tree]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-13);
 }
 
@@ -108,11 +108,11 @@
 }
 
 .item[data-doc-tree]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
 }
 
 .item.on[data-doc-tree] {
-  background: var(--sk-fill-15);
+  background: var(--sk-selected);
   color: var(--sk-text-6);
 }
 
@@ -166,7 +166,7 @@
   align-items: center;
   gap: 4px;
   padding: 8px;
-  border-top: 1px solid var(--sk-fill-11);
+  border-top: 1px solid var(--sk-line);
 }
 
 .menu[data-doc-tree] {
@@ -223,7 +223,7 @@
 }
 
 .import[data-doc-tree]:hover {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
   color: var(--sk-text-2);
 }
 
@@ -246,7 +246,7 @@
 
 .new[data-doc-tree]:hover,
 .new.open[data-doc-tree] {
-  background: var(--sk-fill-11);
+  background: var(--sk-hover);
 }
 
 .new[data-doc-tree]:hover {

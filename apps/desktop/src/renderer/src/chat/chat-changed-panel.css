@@ -31,7 +31,7 @@
   cursor: pointer;
 }
 .chat > .changed .changed-row:hover {
-  background: var(--sk-fill-13);
+  background: var(--sk-hover);
 }
 .chat > .changed .changed-icon {
   flex: none;

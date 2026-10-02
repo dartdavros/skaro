@@ -79,7 +79,7 @@
     gap: 10px;
     padding: 0 10px 0 14px;
     background: var(--sk-topbar);
-    border-bottom: 1px solid var(--sk-fill-18);
+    border-bottom: 1px solid var(--sk-line);
     -webkit-app-region: drag;
     user-select: none;
   }
@@ -145,6 +145,6 @@
     width: 1px;
     height: 16px;
     margin: 0 2px;
-    background: var(--sk-fill-14);
+    background: var(--sk-line);
   }
 </style>

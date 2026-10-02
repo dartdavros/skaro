@@ -180,11 +180,6 @@ export function createChatController(
     stopBackground: () => undefined,
     respond,
     merge: () => Promise.resolve(),
-    rewind: (itemId, resend) => {
-      const chat = chatId;
-      if (!chat) return Promise.resolve();
-      return guard(() => window.skaro.invoke('chat.rewind', projectId, chat, itemId, resend));
-    },
     restart: () => void send({ text: t('chat.continue') }).catch(() => undefined),
     proposal: (itemId: string, action: ProposalAction) => {
       const chat = chatId;

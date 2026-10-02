@@ -34,3 +34,21 @@ export function agoOrDate(at: number, now = Date.now()): string {
   const month = (MONTHS[i18n.locale] ?? MONTHS['en']!)[d.getMonth()]!;
   return i18n.locale === 'en' ? `${month} ${d.getDate()}` : `${d.getDate()} ${month}`;
 }
+
+/** "4 мин. назад", "сегодня в 15:30", "вчера в 15:30", "28 сен в 15:30" — when a message was sent. */
+export function sentAt(at: number, now = Date.now()): string {
+  const m = Math.floor(Math.max(0, now - at) / 60_000);
+  if (m < 1) return t('ago.now');
+  if (m < 60) return t('sent.min', { n: m });
+  const d = new Date(at);
+  const time = new Intl.DateTimeFormat(i18n.locale, { hour: '2-digit', minute: '2-digit' }).format(d);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - new Date(d).setHours(0, 0, 0, 0)) / 86_400_000);
+  if (days <= 0) return t('sent.today', { time });
+  if (days === 1) return t('sent.yesterday', { time });
+  const month = (MONTHS[i18n.locale] ?? MONTHS['en']!)[d.getMonth()]!;
+  const year = d.getFullYear() === today.getFullYear() ? '' : ` ${d.getFullYear()}`;
+  const date = i18n.locale === 'en' ? `${month} ${d.getDate()}${year}` : `${d.getDate()} ${month}${year}`;
+  return t('sent.date', { date, time });
+}

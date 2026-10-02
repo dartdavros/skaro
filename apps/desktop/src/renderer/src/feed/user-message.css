@@ -13,49 +13,12 @@
   color: var(--sk-blue-2);
 }
 
-.editing[data-user-message] {
-  width: 78%;
-  padding: 10px 12px 10px 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-textarea[data-user-message] {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--sk-blue-1);
-  font: inherit;
-  font-size: var(--sk-fs-6);
-  line-height: 1.45;
-  resize: none;
-  outline: none;
-  field-sizing: content;
-  min-height: 40px;
-}
-
-.edit-actions[data-user-message] {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.cancel[data-user-message] {
-  height: 28px;
-  padding: 0 11px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--sk-blue-2);
-  font: inherit;
-  font-size: var(--sk-fs-4);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.cancel[data-user-message]:hover {
-  background: var(--sk-white-a6);
+.fd-sent-at[data-user-message] {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
 }
 
 .thumb-btn[data-user-message] {

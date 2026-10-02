@@ -4,7 +4,7 @@
 .fd-card {
   flex: none;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   padding: 12px 13px;
   display: flex;
   flex-direction: column;
@@ -87,7 +87,7 @@
 }
 
 .fd-btn.ghost:hover {
-  background: var(--sk-fill-20);
+  background: var(--sk-surface-2);
   color: var(--sk-text-6);
 }
 
@@ -136,11 +136,11 @@
 }
 
 .fd-option:hover {
-  background: var(--sk-fill-18);
+  background: var(--sk-surface-2);
 }
 
 .fd-option.on {
-  background: var(--sk-fill-13);
+  background: var(--sk-bg);
 }
 
 .fd-radio {

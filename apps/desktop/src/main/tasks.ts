@@ -76,9 +76,6 @@ export class TaskRuns {
   interrupt(projectId: string, taskId: string): Promise<void> {
     return this.engine.messages.interrupt(projectId, taskId);
   }
-  rewind(projectId: string, taskId: string, itemId: string, resend?: MessageInput): Promise<void> {
-    return this.engine.messages.rewind(projectId, taskId, itemId, resend);
-  }
   stopBackground(projectId: string, taskId: string, backgroundId: string): Promise<void> {
     return this.engine.messages.stopBackground(projectId, taskId, backgroundId);
   }

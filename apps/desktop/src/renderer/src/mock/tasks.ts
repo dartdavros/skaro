@@ -1,6 +1,6 @@
 // Tasks of the in-memory bridge: the data of the Tasks mockup, changed by the board's actions.
 
-import type { AgentId, MilestoneInfo, TaskStatus, TaskSummary } from '../../../shared/ipc';
+import type { AgentId, MilestoneInfo, TaskStage, TaskStatus, TaskSummary } from '../../../shared/ipc';
 
 const MS: Record<string, string> = { M01: 'Базовый API', M02: 'Платежи', M03: 'Админка' };
 const MIN = 60_000;
@@ -45,11 +45,20 @@ const ROWS: Row[] = [
   ['T-023', 'Обновить зависимости платежей', '', 'todo', '', '', 1500],
 ];
 
+/** The stage behind a shown status: a failed task failed while it was in progress. */
+const STAGES: Partial<Record<TaskStatus, TaskStage>> = {
+  blocked: 'todo',
+  queued: 'in_progress',
+  needs_answer: 'in_progress',
+  failed: 'in_progress',
+};
+
 export const tasks: TaskSummary[] = ROWS.map(
   ([id, title, ms, status, agent, model, ago, deps]) => ({
     id,
     title,
     status,
+    stage: STAGES[status] ?? (status as TaskStage),
     ...(ms ? { milestone: { id: ms, title: MS[ms]! } } : {}),
     archived: false,
     ...(agent ? { agent } : {}),

@@ -81,7 +81,7 @@ h1[data-task-tasks-screen] {
   width: 54px;
   height: 54px;
   border-radius: 14px;
-  background: var(--sk-fill-12);
+  background: var(--sk-surface);
   display: flex;
   align-items: center;
   justify-content: center;

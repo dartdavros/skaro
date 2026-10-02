@@ -12,7 +12,6 @@ import { revert, type RevertOptions } from './revert.ts';
 import { localMergeObstacles } from './merge-safety.ts';
 export { git, GitError, type GitResult } from './command.ts';
 export { WorktreeRemovalBlocked } from './worktree-safety.ts';
-export type { WorktreeSnapshot } from './worktree-state.ts';
 
 /** Hard reasons a merge cannot happen now. */
 export type MergeBlocker = 'dirty_base' | 'not_on_base' | 'conflicts' | 'no_changes';
@@ -135,12 +134,6 @@ export class GitService {
     if (await this.branchExists(branch)) await git(this.repo, ['branch', '-D', branch]);
   }
 
-  snapshot(worktree: string): Promise<state.WorktreeSnapshot> {
-    return state.snapshot(worktree);
-  }
-  restoreSnapshot(worktree: string, snapshot: state.WorktreeSnapshot): Promise<void> {
-    return state.restoreSnapshot(worktree, snapshot);
-  }
   commitAll(worktree: string, message: string): Promise<boolean> {
     return state.commitAll(worktree, message);
   }

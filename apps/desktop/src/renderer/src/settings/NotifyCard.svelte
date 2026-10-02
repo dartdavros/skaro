@@ -44,6 +44,6 @@
   .line {
     height: 1px;
     margin: 2px 0;
-    background: var(--sk-fill-22);
+    background: var(--sk-line-strong);
   }
 </style>

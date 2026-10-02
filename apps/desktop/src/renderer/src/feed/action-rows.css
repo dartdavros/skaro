@@ -30,5 +30,5 @@
 
 .fd-feed .fd-text.commentary {
   font-size: var(--fd-text, 14px);
-  color: var(--sk-text-7);
+  color: var(--sk-text-reply);
 }

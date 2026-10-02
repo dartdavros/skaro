@@ -75,7 +75,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 16px;
-    background: var(--sk-fill-15);
+    background: var(--sk-surface);
   }
 
   .copy {

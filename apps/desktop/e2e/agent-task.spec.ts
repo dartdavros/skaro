@@ -188,30 +188,6 @@ test('claude-code: a question card, answered, stays as a summary line', async ()
 });
 
 for (const agent of agents) {
-  test(`${agent}: rewind to a message takes the files and the feed back`, async () => {
-    test.setTimeout(20 * 60_000);
-    const { app, page, worktree } = await openCalc(agent, { permissionMode: 'full' });
-    await send(page, 'Создай файл one.txt с текстом 1. Больше ничего не делай.');
-    await waitTurnEnd(page, 1);
-    await send(page, 'Создай файл two.txt с текстом 2. Больше ничего не делай.');
-    await waitTurnEnd(page, 2);
-    expect(readFileSync(join(worktree, 'two.txt'), 'utf8').trim()).toBe('2');
-
-    const second = page.locator('.fd-user').nth(1);
-    await second.hover();
-    await second.getByRole('button', { name: 'Откатить к этому сообщению' }).click();
-    await page
-      .getByRole('alertdialog')
-      .getByRole('button', { name: 'Откатить', exact: true })
-      .click();
-    await expect(page.locator('.fd-user')).toHaveCount(1, { timeout: 2 * 60_000 });
-    await expect.poll(() => existsSync(join(worktree, 'two.txt')), { timeout: 60_000 }).toBe(false);
-    expect(existsSync(join(worktree, 'one.txt'))).toBe(true);
-    await app.close();
-  });
-}
-
-for (const agent of agents) {
   test(`${agent}: "Стоп" ends the running turn as stopped`, async () => {
     test.setTimeout(10 * 60_000);
     const { app, page } = await openCalc(agent, { permissionMode: 'full' });

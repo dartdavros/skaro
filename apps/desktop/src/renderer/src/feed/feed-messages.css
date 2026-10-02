@@ -105,7 +105,7 @@
 }
 
 .fd-icon-btn:hover {
-  background: var(--sk-fill-15);
+  background: var(--sk-hover);
   color: var(--sk-text-6);
 }
 
@@ -114,7 +114,7 @@
   flex: none;
   font-size: var(--fd-text, 14px);
   line-height: 1.5;
-  color: var(--sk-text-7);
+  color: var(--sk-text-reply);
   text-wrap: pretty;
   overflow-wrap: anywhere;
   user-select: text;

@@ -22,14 +22,14 @@
 
 .projects .item-row {
   padding: 11px 14px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   border-bottom: 1px solid var(--sk-fill-3);
   cursor: pointer;
   outline: none;
 }
 
 .projects .item-row:hover {
-  background: var(--sk-fill-18);
+  background: var(--sk-surface-hover);
 }
 
 .projects .cell-project {
@@ -60,7 +60,7 @@
   padding: 54px 20px;
   text-align: center;
   border-radius: 10px;
-  background: var(--sk-fill-9);
+  background: var(--sk-surface);
 }
 
 .projects .nothing-title {

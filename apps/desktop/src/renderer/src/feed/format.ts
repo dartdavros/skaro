@@ -22,10 +22,6 @@ export function shortDuration(ms: number): string {
   return ms < 60_000 ? `${Math.max(0, Math.round(ms / 1000))}с` : clock(ms);
 }
 
-export function tokens(n: number): string {
-  return n >= 1000 ? t('tokens.k', { n: Math.round(n / 1000) }) : t('tokens.n', { n });
-}
-
 /** A path as the user knows it: relative to the working folder, forward slashes. */
 export function displayPath(path: string, cwd?: string): string {
   const normalized = path.replace(/\\/g, '/');

@@ -35,7 +35,6 @@ export function sessionHandlers({
   | 'task.send'
   | 'task.respond'
   | 'task.interrupt'
-  | 'task.rewind'
   | 'task.stopBackground'
   | 'task.setSettings'
   | 'task.merge'
@@ -48,7 +47,6 @@ export function sessionHandlers({
   | 'chat.send'
   | 'chat.respond'
   | 'chat.interrupt'
-  | 'chat.rewind'
   | 'chat.setSettings'
   | 'chat.archive'
   | 'chat.proposal'
@@ -84,8 +82,6 @@ export function sessionHandlers({
     'task.send': (projectId, taskId, input) => runs.send(projectId, taskId, input),
     'task.respond': (projectId, taskId, id, answer) => runs.respond(projectId, taskId, id, answer),
     'task.interrupt': (projectId, taskId) => runs.interrupt(projectId, taskId),
-    'task.rewind': (projectId, taskId, itemId, resend) =>
-      runs.rewind(projectId, taskId, itemId, resend),
     'task.stopBackground': (projectId, taskId, id) => runs.stopBackground(projectId, taskId, id),
     'task.setSettings': (projectId, taskId, settings) =>
       runs.setSettings(projectId, taskId, settings),
@@ -100,8 +96,6 @@ export function sessionHandlers({
     'chat.send': (projectId, chatId, input) => chats.send(projectId, chatId, input),
     'chat.respond': (projectId, chatId, id, answer) => chats.respond(projectId, chatId, id, answer),
     'chat.interrupt': (projectId, chatId) => chats.interrupt(projectId, chatId),
-    'chat.rewind': (projectId, chatId, itemId, resend) =>
-      chats.rewind(projectId, chatId, itemId, resend),
     'chat.setSettings': (projectId, chatId, settings) =>
       chats.setSettings(projectId, chatId, settings),
     'chat.archive': (projectId, chatId, archived) => chats.archive(projectId, chatId, archived),

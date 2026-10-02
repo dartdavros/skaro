@@ -148,7 +148,7 @@
 
 .divider[data-agents-settings] {
   height: 1px;
-  background: var(--sk-fill-19);
+  background: var(--sk-line);
 }
 
 .grid[data-agents-settings] {

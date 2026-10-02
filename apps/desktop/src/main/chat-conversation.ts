@@ -112,19 +112,6 @@ export class ChatConversation {
     await (await this.ctx.history.restore(projectId, chatId)).session?.interrupt();
   }
 
-  async rewind(
-    projectId: string,
-    chatId: string,
-    itemId: string,
-    resend?: MessageInput,
-  ): Promise<void> {
-    const live = await this.ctx.history.restore(projectId, chatId);
-    if (live.chat.archived) throw new Error('The chat is archived');
-    const session = await this.ctx.sessions.attach(live);
-    await session.rewind(itemId);
-    if (resend) await this.deliver(live, resend);
-  }
-
   /** An archived chat is read-only: its agent process stops. */
   async archive(projectId: string, chatId: string, archived: boolean): Promise<void> {
     const live = await this.ctx.history.restore(projectId, chatId);

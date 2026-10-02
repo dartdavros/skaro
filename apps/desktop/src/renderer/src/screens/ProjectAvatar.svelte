@@ -7,12 +7,12 @@
   }: { name: string; logo?: string | undefined; small?: boolean } = $props();
 
   const AVATARS = [
-    ['var(--sk-fill-21)', 'var(--sk-warn)'],
-    ['var(--sk-fill-21)', 'var(--sk-blue-3)'],
-    ['var(--sk-fill-21)', 'var(--sk-red-3)'],
-    ['var(--sk-fill-21)', 'var(--sk-green-1)'],
-    ['var(--sk-fill-21)', 'var(--sk-purple-1)'],
-    ['var(--sk-fill-24)', 'var(--sk-text-12)'],
+    ['var(--sk-surface-2)', 'var(--sk-warn)'],
+    ['var(--sk-surface-2)', 'var(--sk-blue-3)'],
+    ['var(--sk-surface-2)', 'var(--sk-red-3)'],
+    ['var(--sk-surface-2)', 'var(--sk-green-1)'],
+    ['var(--sk-surface-2)', 'var(--sk-purple-1)'],
+    ['var(--sk-surface-2)', 'var(--sk-text-12)'],
   ] as const;
 
   const colors = $derived.by(() => {

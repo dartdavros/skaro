@@ -171,8 +171,6 @@ export interface Methods {
     answer: InteractionAnswer,
   ) => void;
   'task.interrupt': (projectId: string, taskId: string) => void;
-  /** Back to before a user message; with `resend`, sends it again (edit or retry). */
-  'task.rewind': (projectId: string, taskId: string, itemId: string, resend?: MessageInput) => void;
   'task.stopBackground': (projectId: string, taskId: string, backgroundId: string) => void;
   'task.setSettings': (projectId: string, taskId: string, settings: AgentSettings) => void;
   'task.merge': (
@@ -197,7 +195,6 @@ export interface Methods {
     answer: InteractionAnswer,
   ) => void;
   'chat.interrupt': (projectId: string, chatId: string) => void;
-  'chat.rewind': (projectId: string, chatId: string, itemId: string, resend?: MessageInput) => void;
   'chat.setSettings': (projectId: string, chatId: string, settings: ChatSettings) => void;
   'chat.archive': (projectId: string, chatId: string, archived: boolean) => void;
   'chat.proposal': (

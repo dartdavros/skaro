@@ -104,14 +104,14 @@
   border-collapse: collapse;
   font-size: var(--sk-fs-6);
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   overflow: hidden;
 }
 
 .md[data-doc-article] th {
   text-align: left;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--sk-fill-20);
+  border-bottom: 1px solid var(--sk-line-strong);
   font-size: var(--sk-fs-2);
   font-weight: 600;
   letter-spacing: 0.07em;
@@ -121,7 +121,7 @@
 
 .md[data-doc-article] td {
   padding: 9px 14px;
-  border-top: 1px solid var(--sk-fill-6);
+  border-top: 1px solid var(--sk-line-strong);
   color: var(--sk-text-10);
   line-height: 1.5;
   vertical-align: top;
@@ -134,7 +134,7 @@
   gap: 12px;
   padding: 16px 18px 18px;
   border-radius: 12px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
 }
 
 .rules-head[data-doc-article] {
@@ -172,7 +172,7 @@
   display: flex;
   gap: 12px;
   padding: 7px 0;
-  border-top: 1px solid var(--sk-fill-6);
+  border-top: 1px solid var(--sk-line-strong);
   font-size: var(--sk-fs-7);
   line-height: 1.6;
   color: var(--sk-text-7);
@@ -194,7 +194,7 @@
 
 .code[data-doc-article] {
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   overflow: hidden;
 }
 
@@ -204,7 +204,7 @@
   justify-content: space-between;
   height: 32px;
   padding: 0 6px 0 14px;
-  border-bottom: 1px solid var(--sk-fill-6);
+  border-bottom: 1px solid var(--sk-line-strong);
 }
 
 .lang[data-doc-article] {
@@ -227,7 +227,7 @@
 }
 
 .copy[data-doc-article]:hover {
-  background: var(--sk-fill-20);
+  background: var(--sk-surface-2);
   color: var(--sk-text-6);
 }
 
@@ -246,6 +246,6 @@ pre[data-doc-article] {
   justify-content: center;
   padding: 22px 16px;
   border-radius: 10px;
-  background: var(--sk-fill-11);
+  background: var(--sk-surface);
   overflow-x: auto;
 }
