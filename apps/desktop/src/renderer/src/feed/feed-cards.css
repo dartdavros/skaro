@@ -1,0 +1,242 @@
+/* Interaction cards: buttons, inputs and options. */
+
+/* Cards */
+.fd-card {
+  flex: none;
+  border-radius: 10px;
+  background: var(--sk-fill-11);
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fd-card-title {
+  font-size: var(--sk-fs-6);
+  font-weight: 600;
+  color: var(--sk-text-6);
+}
+
+.fd-card-text {
+  font-size: var(--sk-fs-5);
+  line-height: 1.4;
+  color: var(--sk-text-13);
+  text-wrap: pretty;
+}
+
+.fd-card-q {
+  font-size: var(--sk-fs-6);
+  line-height: 1.45;
+  color: var(--sk-text-6);
+  text-wrap: pretty;
+}
+
+.fd-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fd-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.fd-card-foot .hint {
+  flex: 1;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.fd-btn {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: var(--sk-fill-23);
+  color: var(--sk-text-6);
+  font-family: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fd-btn:hover {
+  background: var(--sk-fill-28);
+  color: var(--sk-text-2);
+}
+
+.fd-btn.primary {
+  padding: 0 13px;
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  font-weight: 700;
+}
+
+.fd-btn.primary:hover {
+  background: var(--sk-accent-hover);
+}
+
+.fd-btn.ghost {
+  background: transparent;
+  color: var(--sk-text-17);
+}
+
+.fd-btn.ghost:hover {
+  background: var(--sk-fill-20);
+  color: var(--sk-text-6);
+}
+
+.fd-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fd-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-fill-3);
+  color: var(--sk-text-2);
+  font-family: inherit;
+  font-size: var(--sk-fs-5);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--sk-fill-25);
+}
+
+.fd-input:hover {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-31);
+}
+
+.fd-input:focus {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}
+
+.fd-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.fd-option:hover {
+  background: var(--sk-fill-18);
+}
+
+.fd-option.on {
+  background: var(--sk-fill-13);
+}
+
+.fd-radio {
+  flex: none;
+  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1.5px var(--sk-fill-34);
+}
+
+.fd-radio::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.on > .fd-radio,
+.fd-radio.on {
+  box-shadow: inset 0 0 0 1.5px var(--sk-accent);
+}
+
+.on > .fd-radio::after,
+.fd-radio.on::after {
+  background: var(--sk-accent);
+}
+
+.fd-check {
+  flex: none;
+  margin-top: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sk-fill-11);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-30);
+  color: transparent;
+}
+
+.on > .fd-check,
+.fd-check.on {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-37);
+  color: var(--sk-text-2);
+}
+
+.fd-option .texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fd-option .title {
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  color: var(--sk-text-13);
+}
+
+.fd-option.on .title {
+  color: var(--sk-text-6);
+}
+
+.fd-option .note {
+  font-size: var(--sk-fs-3);
+  line-height: 1.4;
+  color: var(--sk-text-21);
+  text-wrap: pretty;
+}
+
+.fd-done-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 2px;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.fd-done-line.clickable {
+  cursor: pointer;
+}
+
+.fd-done-line.clickable:hover {
+  color: var(--sk-text-6);
+}

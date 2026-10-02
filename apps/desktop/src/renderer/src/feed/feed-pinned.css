@@ -1,0 +1,50 @@
+/* Pinned command row above the composer. */
+
+/* Pinned zone above the composer */
+.fd-pinned {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--sk-fill-17);
+}
+
+.fd-pinned .cmd {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-code);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-pinned .when {
+  flex: none;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.fd-pinned .stop {
+  flex: none;
+  color: var(--sk-text-21);
+  display: inline-flex;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.fd-pinned .stop:hover {
+  color: var(--sk-text-2);
+}
+
+.fd-dot-gray {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sk-fill-39);
+}
