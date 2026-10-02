@@ -1,0 +1,116 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.field[data-select] {
+  width: 100%;
+  height: 32px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--sk-radius);
+  background: var(--sk-field);
+  color: var(--sk-text);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.field[data-select]:hover {
+  background: var(--sk-field-hover);
+}
+
+.value[data-select] {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.option[data-select] {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.option[data-select]:hover {
+  background: var(--sk-menu-hover);
+}
+
+.option.selected[data-select] {
+  background: var(--sk-fill-26);
+}
+
+/* Model field of the agent modal (mockup 7a/7b). */
+.model[data-select] .field:where([data-select]) {
+  height: 34px;
+  padding: 0 12px;
+}
+
+.model[data-select] .menu.menu {
+  background: var(--sk-fill-23);
+}
+
+.model[data-select] .option:where([data-select]):hover {
+  background: var(--sk-fill-29);
+}
+
+.model[data-select] .option.selected:where([data-select]) {
+  background: var(--sk-fill-24);
+}
+
+.model[data-select] .selected:where([data-select]) .check:where([data-select]) {
+  color: var(--sk-accent);
+}
+
+.model[data-select] .name:where([data-select]) {
+  color: var(--sk-text-7);
+}
+
+.model[data-select] .selected:where([data-select]) .name:where([data-select]) {
+  color: var(--sk-text-2);
+}
+
+.check[data-select] {
+  flex: none;
+  margin-top: 2px;
+  width: 13px;
+  display: inline-flex;
+  color: transparent;
+}
+
+.selected[data-select] .check:where([data-select]) {
+  color: var(--sk-text-bright);
+}
+
+.texts[data-select] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tag[data-select] {
+  margin-left: 8px;
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+  color: var(--sk-text-muted);
+}
+
+.name[data-select] {
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  color: var(--sk-text);
+}
+
+.description[data-select] {
+  font-size: var(--sk-fs-2);
+  line-height: 1.4;
+  color: var(--sk-text-muted);
+}
