@@ -3,6 +3,7 @@
   import { t } from '@skaro/ui';
   import ActionIcon from './ActionIcon.svelte';
   import { commandState, commandTip } from './command-state';
+  import { commandTail } from './command-tail';
   import { clock, useFeed } from './context.svelte';
   import { clock as formatClock, imageUrl, shortDuration } from './format';
 
@@ -20,12 +21,9 @@
 
   const running = $derived(item.status === 'running');
   const output = $derived(item.output.replace(/\s+$/, ''));
-  const tail = $derived.by(() => {
-    if (full) return output;
-    const lines = output.split('\n');
-    return lines.length > 40 ? lines.slice(-40).join('\n') : output;
-  });
-  const truncated = $derived(!full && output.split('\n').length > 40);
+  const excerpt = $derived(commandTail(output));
+  const tail = $derived(full ? output : excerpt.text);
+  const truncated = $derived(!full && excerpt.truncated);
   const elapsed = $derived(
     item.durationMs ?? (item.endedAt ?? (running ? clock.now : item.startedAt)) - item.startedAt,
   );

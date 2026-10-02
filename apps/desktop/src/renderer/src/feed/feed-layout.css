@@ -14,12 +14,7 @@
   height: 15px;
   z-index: 3;
   pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    var(--sk-bg) 0%,
-    var(--sk-bg-a85) 35%,
-    var(--sk-bg-a0) 100%
-  );
+  background: linear-gradient(180deg, var(--sk-bg) 0%, var(--sk-bg-a85) 35%, var(--sk-bg-a0) 100%);
 }
 
 .feed-wrap > .scroller {
@@ -28,6 +23,14 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 34px 26px 30px;
+}
+
+/* Retain DOM, selection and fold state; skip layout/paint of distant replies/actions.
+   Subagents may contain interactive cards/dialogs, so their expanded lists stay uncontained. */
+.feed-wrap > .scroller > .fd-feed > .fd-text,
+.feed-wrap > .scroller > .fd-feed > [data-action-group]:not(:has(.fd-nested)) {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 80px;
 }
 
 .feed-wrap > .down {

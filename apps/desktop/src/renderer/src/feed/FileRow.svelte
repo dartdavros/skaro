@@ -2,6 +2,8 @@
   import type { FileRow } from '@skaro/timeline';
   import { t } from '@skaro/ui';
   import ActionIcon from './ActionIcon.svelte';
+  import DiffLines from './DiffLines.svelte';
+  import { fileDiffLines } from './diff-model';
   import { useFeed } from './context.svelte';
   import { displayPath } from './format';
 
@@ -22,40 +24,7 @@
   const pending = $derived(waiting || row.status === 'queued');
   const hasDiff = $derived(row.diffs.some((d) => d.trim()));
 
-  interface Line {
-    kind: 'add' | 'del' | 'ctx' | 'hunk' | 'sep';
-    sign: string;
-    text: string;
-  }
-
-  const lines = $derived.by(() => {
-    const out: Line[] = [];
-    row.diffs.forEach((diff, index) => {
-      if (index) out.push({ kind: 'sep', sign: '', text: '' });
-      const raw = diff.replace(/\r/g, '').replace(/\n$/, '').split('\n');
-      const unified = raw.some((l) => /^(@@|[+-])/.test(l));
-      for (const line of raw) {
-        if (!unified) {
-          out.push({
-            kind: row.change === 'add' ? 'add' : 'ctx',
-            sign: row.change === 'add' ? '+' : '',
-            text: line,
-          });
-        } else if (/^(diff --git|index |--- |\+\+\+ |new file|deleted file)/.test(line)) {
-          continue;
-        } else if (line.startsWith('@@')) {
-          out.push({ kind: 'hunk', sign: '', text: line });
-        } else if (line.startsWith('+')) {
-          out.push({ kind: 'add', sign: '+', text: line.slice(1) });
-        } else if (line.startsWith('-')) {
-          out.push({ kind: 'del', sign: '−', text: line.slice(1) });
-        } else {
-          out.push({ kind: 'ctx', sign: '', text: line.startsWith(' ') ? line.slice(1) : line });
-        }
-      }
-    });
-    return out;
-  });
+  const lines = $derived(fileDiffLines(row));
 
   const tip = $derived(
     pending
@@ -111,17 +80,7 @@
   </button>
   {#if open && hasDiff}
     <div class="fd-expanded">
-      <div class="fd-diff">
-        {#each lines as line, i (i)}
-          {#if line.kind === 'sep'}
-            <div class="fd-diff-sep"></div>
-          {:else}
-            <div class="fd-diff-line {line.kind}">
-              <span class="sign">{line.sign}</span><span>{line.text}</span>
-            </div>
-          {/if}
-        {/each}
-      </div>
+      <DiffLines {lines} />
     </div>
   {/if}
 </div>

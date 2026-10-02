@@ -8,6 +8,8 @@ export class FeedScroll {
   private seenUser: string | undefined;
   private touchY: number | undefined;
   private lastTop = 0;
+  private resumeOnScroll = false;
+  private bottomRequested = false;
 
   constructor() {
     $effect(() => {
@@ -18,6 +20,7 @@ export class FeedScroll {
       observer.observe(content);
       observer.observe(scroller);
       scroller.addEventListener('scroll', this.onscroll);
+      scroller.addEventListener('scrollend', this.onscrollend);
       scroller.addEventListener('wheel', this.onwheel, { passive: true });
       scroller.addEventListener('keydown', this.onkeydown);
       scroller.addEventListener('pointerdown', this.onpointerdown);
@@ -29,6 +32,7 @@ export class FeedScroll {
         cancelAnimationFrame(frame);
         observer.disconnect();
         scroller.removeEventListener('scroll', this.onscroll);
+        scroller.removeEventListener('scrollend', this.onscrollend);
         scroller.removeEventListener('wheel', this.onwheel);
         scroller.removeEventListener('keydown', this.onkeydown);
         scroller.removeEventListener('pointerdown', this.onpointerdown);
@@ -59,7 +63,10 @@ export class FeedScroll {
     if (!el) return;
     const top = el.scrollTop;
     const distance = el.scrollHeight - top - el.clientHeight;
-    if (top >= this.lastTop && distance < 40) this.atBottom = true;
+    if (this.resumeOnScroll && top > this.lastTop && distance < 40) {
+      this.atBottom = true;
+      this.bottomRequested = false;
+    }
     // Scroll events also come from layout/anchoring and our own scrollTop assignments.
     // Only input handlers below suspend following; loading history must not do that.
     if (this.atBottom && distance > 2) this.follow();
@@ -67,7 +74,23 @@ export class FeedScroll {
   };
 
   onwheel = (event: WheelEvent): void => {
-    if (event.deltaY < 0) this.atBottom = false;
+    if (event.deltaY < 0) {
+      this.atBottom = false;
+      this.resumeOnScroll = false;
+      this.bottomRequested = false;
+    } else if (event.deltaY > 0) this.resumeOnScroll = true;
+  };
+
+  onscrollend = (): void => {
+    // Retarget after the native animation ends; restarting it on every resize stalls travel.
+    if (!this.scroller || !this.bottomRequested) return;
+    const distance =
+      this.scroller.scrollHeight - this.scroller.scrollTop - this.scroller.clientHeight;
+    if (distance < 40) {
+      this.atBottom = true;
+      this.bottomRequested = false;
+      this.follow();
+    } else this.scroller.scrollTo({ top: this.scroller.scrollHeight, behavior: 'smooth' });
   };
 
   onkeydown = (event: KeyboardEvent): void => {
@@ -80,16 +103,27 @@ export class FeedScroll {
     if (
       ['ArrowUp', 'PageUp', 'Home'].includes(event.key) ||
       (event.key === ' ' && event.shiftKey && !(target instanceof HTMLButtonElement))
-    )
+    ) {
       this.atBottom = false;
+      this.resumeOnScroll = false;
+      this.bottomRequested = false;
+    } else if (
+      ['ArrowDown', 'PageDown', 'End'].includes(event.key) ||
+      (event.key === ' ' && !(target instanceof HTMLButtonElement))
+    ) {
+      this.resumeOnScroll = true;
+    }
   };
 
   onpointerdown = (event: PointerEvent): void => {
     const el = this.scroller;
     if (!el) return;
     const scrollbar = el.offsetWidth - el.clientWidth;
-    if (scrollbar > 0 && event.clientX >= el.getBoundingClientRect().right - scrollbar)
+    if (scrollbar > 0 && event.clientX >= el.getBoundingClientRect().right - scrollbar) {
       this.atBottom = false;
+      this.bottomRequested = false;
+      this.resumeOnScroll = true;
+    }
   };
 
   ontouchstart = (event: TouchEvent): void => {
@@ -98,11 +132,19 @@ export class FeedScroll {
 
   ontouchmove = (event: TouchEvent): void => {
     const y = event.touches[0]?.clientY;
-    if (y !== undefined && this.touchY !== undefined && y > this.touchY) this.atBottom = false;
+    if (y !== undefined && this.touchY !== undefined) {
+      if (y > this.touchY) {
+        this.atBottom = false;
+        this.resumeOnScroll = false;
+        this.bottomRequested = false;
+      } else if (y < this.touchY) this.resumeOnScroll = true;
+    }
     this.touchY = y;
   };
 
   toBottom = (): void => {
+    this.resumeOnScroll = true;
+    this.bottomRequested = true;
     this.scroller?.scrollTo({ top: this.scroller.scrollHeight, behavior: 'smooth' });
   };
 }
