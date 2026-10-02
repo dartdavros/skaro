@@ -1,0 +1,161 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.body[data-new-project-modal] {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modes[data-new-project-modal] {
+  display: flex;
+  gap: 9px;
+}
+
+.mode[data-new-project-modal] {
+  flex: 1;
+  padding: 13px 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--sk-fill-11);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mode[data-new-project-modal]:hover {
+  background: var(--sk-fill-15);
+}
+
+.mode.on[data-new-project-modal] {
+  background: var(--sk-fill-20);
+}
+
+.icon[data-new-project-modal] {
+  display: inline-flex;
+  color: var(--sk-text-19);
+}
+
+.mode.on[data-new-project-modal] .icon:where([data-new-project-modal]) {
+  color: var(--sk-accent);
+}
+
+.mode-title[data-new-project-modal] {
+  font-size: var(--sk-fs-6);
+  font-weight: 600;
+  color: var(--sk-text-6);
+}
+
+.mode-note[data-new-project-modal] {
+  font-size: var(--sk-fs-3);
+  line-height: 1.45;
+  color: var(--sk-text-19);
+  text-wrap: pretty;
+}
+
+.field[data-new-project-modal] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.path-row[data-new-project-modal] {
+  display: flex;
+  gap: 8px;
+}
+
+.path[data-new-project-modal] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 8px;
+  background: var(--sk-fill-3);
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-10);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.path.placeholder[data-new-project-modal] {
+  font-family: var(--sk-font);
+  color: var(--sk-text-23);
+}
+
+.browse[data-new-project-modal] {
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-fill-23);
+  color: var(--sk-text-6);
+  font: inherit;
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.browse[data-new-project-modal]:hover {
+  background: var(--sk-fill-29);
+}
+
+.name[data-new-project-modal] {
+  height: 34px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-fill-3);
+  color: var(--sk-text-6);
+  font: inherit;
+  font-size: var(--sk-fs-6);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--sk-fill-25);
+}
+
+.name[data-new-project-modal]:hover {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-31);
+}
+
+.name[data-new-project-modal]:focus {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}
+
+.hint[data-new-project-modal] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.info[data-new-project-modal] {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--sk-fill-3);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-13);
+}
+
+.info.warn[data-new-project-modal] {
+  color: var(--sk-warn);
+}
+
+.info.error[data-new-project-modal] {
+  color: var(--sk-error);
+}
+
+.note[data-new-project-modal] {
+  flex: 1;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+  text-wrap: pretty;
+}

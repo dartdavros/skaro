@@ -1,0 +1,243 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.body[data-import-modal] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert[data-import-modal] {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px 11px 14px;
+  border-radius: 9px;
+  background: var(--sk-error-a10);
+  color: var(--sk-error);
+}
+
+.alert-text[data-import-modal] {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-6);
+}
+
+.alert-text[data-import-modal] strong:where([data-import-modal]) {
+  font-weight: 600;
+}
+
+.mono[data-import-modal] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+}
+
+.drop[data-import-modal] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border-radius: 10px;
+  background: var(--sk-fill-6);
+  border: 1.5px dashed var(--sk-fill-31);
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+}
+
+.drop[data-import-modal]:hover,
+.drop.over[data-import-modal] {
+  border-color: var(--sk-fill-36);
+  background: var(--sk-fill-7);
+}
+
+.drop-icon[data-import-modal] {
+  display: inline-flex;
+  color: var(--sk-text-23);
+}
+
+.drop-text[data-import-modal] {
+  font-size: var(--sk-fs-6);
+  color: var(--sk-text-13);
+}
+
+.drop-actions[data-import-modal] {
+  display: flex;
+  gap: 8px;
+}
+
+.small[data-import-modal] {
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: var(--sk-fill-23);
+  color: var(--sk-text-6);
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.small[data-import-modal]:hover {
+  background: var(--sk-fill-28);
+  color: var(--sk-text-2);
+}
+
+.sources[data-import-modal] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.source[data-import-modal] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 8px;
+  background: var(--sk-fill-6);
+}
+
+.source-icon[data-import-modal] {
+  flex: none;
+  display: inline-flex;
+  color: var(--sk-text-19);
+}
+
+.source-path[data-import-modal] {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-count[data-import-modal] {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.source.broken[data-import-modal] .source-icon:where([data-import-modal]),
+.source.broken[data-import-modal] .source-path:where([data-import-modal]),
+.source.broken[data-import-modal] .source-count:where([data-import-modal]) {
+  color: var(--sk-error);
+}
+
+.remove[data-import-modal] {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sk-text-21);
+  cursor: pointer;
+}
+
+.remove[data-import-modal]:hover {
+  background: var(--sk-fill-20);
+  color: var(--sk-text-2);
+}
+
+.note[data-import-modal] {
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+}
+
+.note.warn[data-import-modal] {
+  color: var(--sk-warn);
+}
+
+.formats[data-import-modal] {
+  border-bottom: 1px dotted var(--sk-text-27);
+  cursor: default;
+}
+
+.formats.warn[data-import-modal] {
+  border-bottom-color: #7a5d2b;
+}
+
+.agent[data-import-modal] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.agent-btn[data-import-modal] {
+  flex: none;
+  height: 30px;
+  padding: 0 10px 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  border-radius: 999px;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-10);
+  font: inherit;
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agent-btn[data-import-modal]:hover {
+  background: var(--sk-fill-27);
+  color: var(--sk-text-2);
+}
+
+.effort[data-import-modal] {
+  color: var(--sk-text-23);
+  font-weight: 400;
+}
+
+.cancel[data-import-modal],
+.start[data-import-modal] {
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: var(--sk-fs-6);
+}
+
+.cancel[data-import-modal] {
+  padding: 0 14px;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-6);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel[data-import-modal]:hover {
+  background: var(--sk-fill-27);
+  color: var(--sk-text-2);
+}
+
+.start[data-import-modal] {
+  padding: 0 15px;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-25);
+  font-weight: 700;
+  cursor: default;
+}
+
+.start.ok[data-import-modal] {
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  cursor: pointer;
+}
+
+.start.ok[data-import-modal]:hover {
+  background: var(--sk-accent-hover);
+}
