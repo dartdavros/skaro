@@ -176,7 +176,7 @@ test('claude-code: a question card, answered, stays as a summary line', async ()
   const question = card(page, 'Ответить');
   await expect(question).toBeVisible({ timeout: 10 * 60_000 });
   await question
-    .locator('.fd-option')
+    .locator('.option')
     .filter({ hasText: /[Сс]ин/ })
     .first()
     .click();

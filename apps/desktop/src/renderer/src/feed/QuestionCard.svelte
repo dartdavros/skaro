@@ -8,11 +8,26 @@
 
   let { interaction }: { interaction: Extract<Interaction, { kind: 'question' }> } = $props();
   const model = createQuestionController(() => interaction);
+
+  /** Digits pick an option, as in Claude Code; the one after the options goes to "Свой вариант…". */
+  function keys(e: KeyboardEvent): void {
+    const target = e.target as HTMLElement;
+    if (model.q.secret || target.closest('input, textarea') || e.ctrlKey || e.metaKey || e.altKey)
+      return;
+    const n = Number(e.key);
+    if (!Number.isInteger(n) || n < 1) return;
+    const option = model.q.options[n - 1];
+    if (option) model.choose(option.label);
+    else if (n === model.q.options.length + 1)
+      (e.currentTarget as HTMLElement).querySelector<HTMLInputElement>('.field')?.focus();
+    else return;
+    e.preventDefault();
+  }
 </script>
 
-<div class="fd-card">
+<div class="fd-card question" role="presentation" onkeydown={keys}>
   <QuestionHeader {model} />
-  <div class="fd-card-q">{model.q.text}</div>
+  <div class="text">{model.q.text}</div>
 
   {#if model.q.secret}
     <QuestionSecret {model} />
@@ -37,6 +52,21 @@
 </div>
 
 <style>
+  .question {
+    gap: 14px;
+    padding: 15px 16px 14px;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px var(--sk-fill-18);
+  }
+
+  .text {
+    font-size: var(--sk-fs-8);
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--sk-text-5);
+    text-wrap: pretty;
+  }
+
   .preview {
     margin: 0;
     padding: 10px 12px;

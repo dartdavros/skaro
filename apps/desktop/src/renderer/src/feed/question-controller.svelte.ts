@@ -11,6 +11,9 @@ export function createQuestionController(
   const customOn = $state<Record<string, boolean>>({});
   let reveal = $state(false);
   let sending = $state(false);
+  let advance: ReturnType<typeof setTimeout> | undefined;
+
+  $effect(() => () => clearTimeout(advance));
 
   const questions = $derived(getInteraction().questions);
   const q = $derived(questions[Math.min(step, questions.length - 1)]!);
@@ -23,7 +26,30 @@ export function createQuestionController(
     return values;
   }
 
-  const ready = $derived(questions.every((x) => answerOf(x.id).length > 0));
+  const answered = (id: string): boolean => answerOf(id).length > 0;
+  const ready = $derived(questions.every((x) => answered(x.id)));
+
+  /** Shows another question; a pending move to the next one is dropped. */
+  function goTo(index: number): void {
+    clearTimeout(advance);
+    step = Math.max(0, Math.min(index, questions.length - 1));
+  }
+
+  /**
+   * After a choice the card moves on to the next unanswered question (as in Claude Code), after
+   * a short pause that shows the choice. Nothing moves when all questions are answered.
+   */
+  function moveOn(): void {
+    const from = step;
+    const next = [...questions.keys()]
+      .map((i) => (from + 1 + i) % questions.length)
+      .find((i) => i !== from && !answered(questions[i]!.id));
+    if (next === undefined) return;
+    clearTimeout(advance);
+    advance = setTimeout(() => {
+      if (step === from) step = next;
+    }, 260);
+  }
 
   function choose(label: string): void {
     const current = picked[q.id] ?? [];
@@ -34,6 +60,7 @@ export function createQuestionController(
     } else {
       picked[q.id] = [label];
       customOn[q.id] = false;
+      moveOn();
     }
   }
 
@@ -76,7 +103,7 @@ export function createQuestionController(
       return step;
     },
     set step(value: typeof step) {
-      step = value;
+      goTo(value);
     },
     get picked() {
       return picked;
@@ -108,6 +135,7 @@ export function createQuestionController(
     get preview() {
       return preview;
     },
+    answered,
     choose,
     toggleCustom,
     customInput,
