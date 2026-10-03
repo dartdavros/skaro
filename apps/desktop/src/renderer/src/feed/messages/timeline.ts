@@ -93,6 +93,9 @@ export const ru = {
   'feed.live.editNoTarget': 'Готовит правку…',
   'feed.live.model': 'Ждёт ответа модели',
   'feed.live.model.tip': 'Модель долго не отвечает — это нормально для больших правок',
+  'feed.live.environment': 'Запускает окружение',
+  'feed.live.environment.tip':
+    'Первый запуск собирает образы и копирует данные — это несколько минут',
   'feed.end.files.one': 'Отредактировал {n} файл',
   'feed.end.files.few': 'Отредактировал {n} файла',
   'feed.end.files.many': 'Отредактировал {n} файлов',
@@ -208,6 +211,9 @@ export const en = {
   'feed.live.editNoTarget': 'Preparing an edit…',
   'feed.live.model': 'Waiting for the model',
   'feed.live.model.tip': 'The model takes a while — normal for large edits',
+  'feed.live.environment': 'Starting the environment',
+  'feed.live.environment.tip':
+    'The first start builds images and copies data — it takes a few minutes',
   'feed.end.files.one': 'Edited {n} file',
   'feed.end.files.other': 'Edited {n} files',
   'feed.end.interrupted': 'Stopped',

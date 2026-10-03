@@ -8,6 +8,11 @@
   gap: 5px;
 }
 
+/* Owner's 2026-10-03 screenshot: the live line is a step smaller than the feed text. */
+.fd-feed .fd-live {
+  font-size: calc(var(--fd-text, 14px) - 1px);
+}
+
 .fd-feed .fd-action-summary:hover {
   color: var(--sk-text-13);
 }
