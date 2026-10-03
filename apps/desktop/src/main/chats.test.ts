@@ -239,6 +239,40 @@ describe('project chats', () => {
     expect(session.received[1]).toMatch(/Дальше$/);
   });
 
+  it('renames refs earlier cards used instead of rejecting a second plan', async () => {
+    const { chatId, scope } = await startChat();
+    const task = (ref: string, title: string, dependsOn: string[] = []) => ({
+      ref,
+      title,
+      goal: `${title}.`,
+      criteria: ['Готово'],
+      dependsOn,
+    });
+    await chats.proposeTasks({ tasks: [task('a', 'Первая'), task('b', 'Вторая', ['a'])] }, scope);
+    const again = await chats.proposeTasks(
+      { tasks: [task('a', 'Новая'), task('b', 'После новой', ['a'])] },
+      scope,
+    );
+    expect(again.isError).toBeFalsy();
+    expect(again.text).toContain('a → a-2, b → b-2');
+
+    const [, second] = await proposals(chatId);
+    expect(second?.proposal).toMatchObject({
+      tasks: [
+        { ref: 'a-2', dependsOn: [] },
+        { ref: 'b-2', dependsOn: ['a-2'] },
+      ],
+    });
+    await chats.proposal(projectId, chatId, second!.id, { action: 'apply' });
+    const created = (await new ArtifactStore(root).load()).tasks.filter((t) =>
+      ['Новая', 'После новой'].includes(t.title),
+    );
+    expect(created.map((t) => [t.title, t.dependsOn])).toEqual([
+      ['Новая', []],
+      ['После новой', [created[0]!.id]],
+    ]);
+  });
+
   it('changes a task and records a rejected ADR', async () => {
     const { chatId, scope } = await startChat();
     await chats.updateTask({ id: 't-001', title: 'Схема БД и миграции', goal: 'Таблицы.' }, scope);

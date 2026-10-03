@@ -8,6 +8,7 @@ import type {
 } from '@skaro/mcp-server';
 import { headings, withSections } from './task-body';
 import { nextNumber, taskText } from './chat-proposal-helpers';
+import { withRefs } from './chat-plan';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -19,7 +20,15 @@ export class ChatPlans {
   async proposeMilestones(args: ProposeMilestonesArgs, scope: SkaroScope): Promise<ToolResult> {
     const live = this.ctx.context.caller(scope);
     const artifacts = await this.ctx.project(live.projectId).load();
-    const all = args.milestones.flatMap((m) => m.tasks);
+    const renames = this.ctx.plan.freshRefs(
+      live,
+      args.milestones.flatMap((m) => m.tasks),
+    );
+    const milestones = args.milestones.map((m) => ({
+      ...m,
+      tasks: m.tasks.map((t) => withRefs(t, renames)),
+    }));
+    const all = milestones.flatMap((m) => m.tasks);
     const problem = this.ctx.plan.checkTasks(live, artifacts, all);
     if (problem) return { text: problem, isError: true };
     const titles = this.ctx.plan.titlesByRef(live, artifacts, all);
@@ -32,7 +41,7 @@ export class ChatPlans {
         /^M(\d+)$/,
       ) + pending;
     const h = headings(this.ctx.deps.locale());
-    const shown = args.milestones.map((m, i) => {
+    const shown = milestones.map((m, i) => {
       const id = `M${String(first + i).padStart(2, '0')}`;
       this.ctx.proposals.addProposal(
         live,
@@ -53,7 +62,9 @@ export class ChatPlans {
     return {
       text:
         `Shown to the user as cards: ${shown.join(', ')}. Only the tasks the user picks are ` +
-        'created; the decision comes with their next message. Continue.',
+        'created; the decision comes with their next message.' +
+        this.ctx.plan.renamedNote(renames) +
+        ' Continue.',
     };
   }
 
@@ -66,9 +77,11 @@ export class ChatPlans {
     if (args.milestone && !milestone) {
       return { text: `There is no milestone ${args.milestone}.`, isError: true };
     }
-    const problem = this.ctx.plan.checkTasks(live, artifacts, args.tasks);
+    const renames = this.ctx.plan.freshRefs(live, args.tasks);
+    const tasks = args.tasks.map((t) => withRefs(t, renames));
+    const problem = this.ctx.plan.checkTasks(live, artifacts, tasks);
     if (problem) return { text: problem, isError: true };
-    const titles = this.ctx.plan.titlesByRef(live, artifacts, args.tasks);
+    const titles = this.ctx.plan.titlesByRef(live, artifacts, tasks);
     this.ctx.proposals.addProposal(
       live,
       {
@@ -76,14 +89,16 @@ export class ChatPlans {
         ...(milestone
           ? { milestone: { id: milestone.id, title: milestone.title, isNew: false } }
           : {}),
-        tasks: args.tasks.map((t) => this.ctx.plan.proposedTask(t, titles)),
+        tasks: tasks.map((t) => this.ctx.plan.proposedTask(t, titles)),
       },
       'pending',
     );
     return {
       text:
-        `${args.tasks.length} tasks are shown to the user as a card; only the ones the user ` +
-        'picks are created. The decision comes with their next message. Continue.',
+        `${tasks.length} tasks are shown to the user as a card; only the ones the user ` +
+        'picks are created. The decision comes with their next message.' +
+        this.ctx.plan.renamedNote(renames) +
+        ' Continue.',
     };
   }
 

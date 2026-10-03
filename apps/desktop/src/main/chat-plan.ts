@@ -8,6 +8,16 @@ import { adrId, findCycle } from './chat-proposal-helpers';
 
 import type { ChatEngine } from './chat-engine';
 
+/** A task with its ref and dependencies renamed by `ChatPlan.freshRefs`. */
+export function withRefs(task: ProposedTaskArgs, renames: Map<string, string>): ProposedTaskArgs {
+  if (!renames.size) return task;
+  return {
+    ...task,
+    ref: renames.get(task.ref) ?? task.ref,
+    dependsOn: task.dependsOn.map((d) => renames.get(d) ?? d),
+  };
+}
+
 export class ChatPlan {
   private readonly ctx: ChatEngine;
   constructor(ctx: ChatEngine) {
@@ -95,22 +105,49 @@ export class ChatPlan {
     return { result, note };
   }
 
+  /** Refs of tasks earlier cards of this chat proposed. */
+  private earlierRefs(live: LiveChat): Set<string> {
+    return new Set(
+      this.ctx.proposals
+        .proposals(live)
+        .flatMap((p) => (p.proposal.type === 'plan' ? p.proposal.tasks.map((t) => t.ref) : [])),
+    );
+  }
+
+  /**
+   * Refs of this call that earlier cards of the chat already used get new ones (t1 → t1-2), so
+   * the agent never resends a plan because of them. Inside the call its own task wins: a
+   * dependency on a renamed ref goes to the renamed task.
+   */
+  freshRefs(live: LiveChat, tasks: ProposedTaskArgs[]): Map<string, string> {
+    const earlier = this.earlierRefs(live);
+    const taken = new Set([...earlier, ...tasks.map((t) => t.ref)]);
+    const renames = new Map<string, string>();
+    for (const ref of new Set(tasks.map((t) => t.ref))) {
+      if (!earlier.has(ref)) continue;
+      let n = 2;
+      while (taken.has(`${ref}-${n}`)) n++;
+      renames.set(ref, `${ref}-${n}`);
+      taken.add(`${ref}-${n}`);
+    }
+    return renames;
+  }
+
+  /** What the agent is told about renamed refs, if any. */
+  renamedNote(renames: Map<string, string>): string {
+    if (!renames.size) return '';
+    const pairs = [...renames].map(([from, to]) => `${from} → ${to}`).join(', ');
+    return ` Refs already used by earlier cards of this chat were renamed: ${pairs}.`;
+  }
+
   /** Refs tasks of this chat may depend on: this call, earlier cards, existing tasks. */
   checkTasks(
     live: LiveChat,
     artifacts: ProjectArtifacts,
     tasks: ProposedTaskArgs[],
   ): string | undefined {
-    const earlier = new Set(
-      this.ctx.proposals
-        .proposals(live)
-        .flatMap((p) => (p.proposal.type === 'plan' ? p.proposal.tasks.map((t) => t.ref) : [])),
-    );
+    const earlier = this.earlierRefs(live);
     const refs = new Set(tasks.map((t) => t.ref));
-    const clash = [...refs].filter((r) => earlier.has(r));
-    if (clash.length) {
-      return `Refs ${clash.join(', ')} are already used by earlier cards in this chat; use new refs.`;
-    }
     const ids = new Set(artifacts.tasks.map((t) => t.id));
     const unknown = tasks.flatMap((t) =>
       t.dependsOn.filter((d) => !refs.has(d) && !earlier.has(d) && !ids.has(d.toUpperCase())),
