@@ -17,19 +17,19 @@
   class="fd-live"
   data-tip={activity.state === 'waiting_model' ? t('feed.live.model.tip') : t('feed.live')}
 >
+  <ThinkingMark />
   {#if activity.state === 'thinking'}
-    <ThinkingMark />{t('feed.live.thinking')}
+    {t('feed.live.thinking')}
   {:else if activity.state === 'writing'}
-    <ThinkingMark />{t('feed.live.writing')}
+    {t('feed.live.writing')}
   {:else if activity.state === 'preparing_edit'}
-    <span class="fd-pulse"></span>
     {#if activity.target}
       {t('feed.live.edit')}&nbsp;<code>{displayPath(activity.target, cwd)}</code>…
     {:else}
       {t('feed.live.editNoTarget')}
     {/if}
   {:else}
-    <span class="fd-pulse"></span>{t('feed.live.model')} · <span class="mono">{formatClock(clock.now - since)}</span>
+    {t('feed.live.model')} · <span class="mono">{formatClock(clock.now - since)}</span>
   {/if}
 </div>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-  /** Animated "agent is thinking" mark (owner's ai-thinking-order.svg): eight dots drift and slowly rotate. */
+  /** Animated "agent is thinking" mark (owner's ai-thinking-order.svg): eight dots drift and slowly rotate.
+   * The one mark of the live line at the bottom of the feed, whatever the agent is doing. */
   const LIGHT = '#C4DCFF';
   const ACCENT = '#5EA2FF';
   const KEY_TIMES = '0;.25;.5;.75;1';
@@ -23,8 +24,8 @@
 <svg
   class="fd-thinking"
   xmlns="http://www.w3.org/2000/svg"
-  width="15"
-  height="15"
+  width="17"
+  height="17"
   viewBox="0 0 30 30"
   fill="none"
   aria-hidden="true"
@@ -38,9 +39,9 @@
       dur="9.6s"
       repeatCount="indefinite"
     />
-    {#each dots as dot}
+    {#each dots as dot, i (i)}
       <circle cx={dot.cx[0]} cy={dot.cy[0]} r="1.25" fill={dot.fill} opacity=".5">
-        {#each [['cx', loop(dot.cx)], ['cy', loop(dot.cy)], ['opacity', '.5;1;.5;1;.5'], ['r', '1.25;1.6;1.25;1.35;1.25']] as [attributeName, values]}
+        {#each [['cx', loop(dot.cx)], ['cy', loop(dot.cy)], ['opacity', '.5;1;.5;1;.5'], ['r', '1.25;1.6;1.25;1.35;1.25']] as [attributeName, values] (attributeName)}
           <animate
             {attributeName}
             {values}

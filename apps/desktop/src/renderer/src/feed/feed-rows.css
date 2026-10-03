@@ -209,10 +209,6 @@
   color: var(--sk-text-23);
 }
 
-.fd-live .fd-pulse {
-  margin: 0 2px;
-}
-
 /* Images */
 .fd-image-frame {
   align-self: flex-start;
