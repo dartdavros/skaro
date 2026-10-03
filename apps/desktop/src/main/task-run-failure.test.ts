@@ -14,9 +14,13 @@ it('keeps a task on its stage after a failed turn and holds the error until the 
       setRuntime: (_p: string, taskId: string, state: TaskRuntime) =>
         state === 'idle' ? runtime.delete(taskId) : runtime.set(taskId, { state }),
       project: () => ({
-        store: { readTask: async () => ({ id: 'T-1', title: 'Task', status: 'review' }), updateTask },
+        store: {
+          readTask: async () => ({ id: 'T-1', title: 'Task', status: 'review' }),
+          updateTask,
+        },
       }),
       results: { statusChanged: vi.fn() },
+      limitEnvironments: vi.fn(),
       changed: vi.fn(),
     },
   });

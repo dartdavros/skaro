@@ -75,7 +75,12 @@ export async function saveProjectSettings(
   const before = artifacts.config;
   const defaults = appDefaults(projects);
   const inherited = INHERITABLE.filter((key) => settings[key] === defaults[key]);
-  await context.store.writeConfig(toConfig(settings, before.checks), inherited);
+  // The screen does not edit checks and the task environment: they stay as the file has them.
+  const next = toConfig(settings, before.checks);
+  await context.store.writeConfig(
+    { ...next, ...(before.environment ? { environment: before.environment } : {}) },
+    inherited,
+  );
   context.invalidate();
   if (before.agentFiles !== settings.agentFiles) {
     await syncAgentFiles(context.root, settings.agentFiles, locale);

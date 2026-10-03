@@ -87,7 +87,28 @@ export interface ProjectCheck {
   run: string;
 }
 
+/**
+ * How Skaro runs a task's own disposable copy of the project's services (task-environments.md).
+ * Commands run in the task checkout; values may use {name}, {root}, {worktree} and {PORT_VARIABLE}.
+ */
+export interface EnvironmentConfig {
+  /** Variables that each receive a free host port. */
+  ports: string[];
+  /** Further variables for the commands and for the agent's shell. */
+  env: Record<string, string>;
+  /** Creates the copy of the data, once per task. */
+  create?: string;
+  /** Starts the services; returns when they run. */
+  start: string;
+  /** Answers 2xx once the environment is ready. */
+  ready?: string;
+  /** Addresses the agent gets, by name. */
+  urls: Record<string, string>;
+}
+
 export interface ProjectConfig {
+  /** Absent: the project has no services Skaro runs for a task. */
+  environment?: EnvironmentConfig;
   checks: ProjectCheck[];
   defaultAgent: string;
   defaultModel?: string;

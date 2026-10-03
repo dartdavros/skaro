@@ -14,6 +14,8 @@ export interface TaskMergeHooks {
   launchUnblocked: (projectId: string, ids: string[]) => Promise<void>;
   detach: (active: ActiveRun) => Promise<void>;
   setRuntime: (projectId: string, taskId: string, state: TaskRuntime) => void;
+  /** A merged task has no use for its environment: a disposable copy goes with it. */
+  removeEnvironment: (projectId: string, taskId: string) => Promise<void>;
 }
 
 /** Only open merge cards are polled. Git and local file edits require no agent turn. */

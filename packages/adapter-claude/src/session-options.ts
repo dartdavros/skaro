@@ -24,6 +24,7 @@ export function queryOptions(
     spawnClaudeCodeProcess: handlers.spawnClaudeCodeProcess,
     env: {
       ...process.env,
+      ...o.env,
       ...(config.configDir ? { CLAUDE_CONFIG_DIR: config.configDir } : {}),
     },
     // Without summaries the thinking arrives empty: minutes of "Думает…" with nothing to show.

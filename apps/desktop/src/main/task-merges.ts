@@ -208,12 +208,14 @@ export class TaskMerges {
     this.hooks.deps.emit('project.changed', { projectId: active.projectId });
     void this.hooks.launchUnblocked(active.projectId, unblocked);
 
-    // Close the agent after its reply; running services and ignored data retain their worktree.
+    // Close the agent after its reply. The checkout and its ignored data stay; the task's
+    // environment is a disposable copy and goes now, without holding up the merge.
     const cleanup = async (): Promise<void> => {
       await this.hooks.detach(active);
       this.hooks.deps.db.finishRun(active.run.id, 'done');
       this.hooks.setRuntime(active.projectId, active.taskId, 'idle');
       this.hooks.changed(active.projectId, active.taskId);
+      void this.hooks.removeEnvironment(active.projectId, active.taskId);
     };
     if (active.session && active.timeline.state.status !== 'idle') active.afterTurn = cleanup;
     else await cleanup();

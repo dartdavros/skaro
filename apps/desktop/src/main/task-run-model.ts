@@ -1,15 +1,12 @@
 import { type WriteStream } from 'node:fs';
-import {
-  type AppDb,
-  type AttachmentStore,
-  type RunRecord,
-} from '@skaro/core';
+import { type AppDb, type AttachmentStore, type RunRecord } from '@skaro/core';
 import type { Grant, McpHttpServer, SkaroScope } from '@skaro/mcp-server';
 import { Timeline, type AgentSession, type TimelineEvent } from '@skaro/timeline';
 import type { Events, EventName } from '../shared/ipc';
 import type { AgentManager } from './agents';
 import type { Projects } from './projects';
 import type { NotifyKind } from './notifier';
+import type { EnvironmentDocker } from './task-environment-docker';
 
 export interface TaskRunDeps {
   db: AppDb;
@@ -23,6 +20,8 @@ export interface TaskRunDeps {
   locale: () => string;
   /** A system notification ("Настройки" → "Уведомления"). */
   notify?: (kind: NotifyKind, text: string) => void;
+  /** Docker operations of task environments; the system Docker unless a test replaces them. */
+  docker?: EnvironmentDocker;
 }
 
 /** A task's latest run, with or without an agent process attached. */
@@ -41,7 +40,7 @@ export class ActiveRun {
   /** Agent processes the run log holds so far ("segment" lines); turns are numbered per segment. */
   segments = 0;
   flushTimer: NodeJS.Timeout | undefined;
-  /** Resolves the queue slot when the first turn ends. */
+  /** Frees the queue slot when the turn that took it ends. */
   release: (() => void) | undefined;
   /** Summary the agent gave to merge_task. */
   mergeSummary: string | undefined;

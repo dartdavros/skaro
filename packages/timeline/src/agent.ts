@@ -29,6 +29,8 @@ export type McpServer = (
 ) & {
   /** Its tools run without asking the user: Skaro's own server, whose tools confirm in cards. */
   trusted?: boolean;
+  /** Longest tool call of this server, in milliseconds; the agent's own default otherwise. */
+  timeout?: number;
 };
 
 export interface SessionOptions {
@@ -48,6 +50,8 @@ export interface SessionOptions {
   /** Extra instructions for every turn (project rules, Skaro workflow). */
   instructions?: string;
   mcpServers?: Record<string, McpServer>;
+  /** Extra variables of the agent's process and of the commands it runs. */
+  env?: Record<string, string>;
   /** Whether the agent sandbox holds the workspace boundary (self-check, D-28). */
   sandboxVerified?: boolean;
   /** Agent-specific sandbox setting chosen by the self-check (Codex on Windows: elevated/unelevated). */

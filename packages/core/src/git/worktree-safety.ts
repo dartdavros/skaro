@@ -1,7 +1,7 @@
-import { execFile } from 'node:child_process';
 import { realpath } from 'node:fs/promises';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { git } from './command.ts';
+import { containsPath, hostPath, inspectContainers } from '../docker/containers.ts';
+export { containsPath } from '../docker/containers.ts';
 
 /** Existing containers retain mount dependencies even while stopped. */
 export interface ContainerMounts {
@@ -9,38 +9,7 @@ export interface ContainerMounts {
   Mounts: { Type: string; Source: string }[];
 }
 
-function docker(args: string[]): Promise<string> {
-  return new Promise((accept, reject) => {
-    execFile(
-      'docker',
-      args,
-      { windowsHide: true, timeout: 10_000, maxBuffer: 16 * 1024 * 1024 },
-      (error, stdout) => (error ? reject(error) : accept(stdout)),
-    );
-  });
-}
-
-export async function containerMounts(): Promise<ContainerMounts[]> {
-  const ids = (await docker(['ps', '-aq'])).trim().split(/\s+/).filter(Boolean);
-  if (!ids.length) return [];
-  const records: ContainerMounts[] = [];
-  for (let i = 0; i < ids.length; i += 50) {
-    records.push(...JSON.parse(await docker(['inspect', ...ids.slice(i, i + 50)])));
-  }
-  return records;
-}
-
-/** A separator boundary matters: T-007 must not match T-007-other. */
-export function containsPath(parent: string, child: string): boolean {
-  const path = relative(resolve(hostPath(parent)), resolve(hostPath(child)));
-  return path === '' || (!isAbsolute(path) && path !== '..' && !path.startsWith(`..${sep}`));
-}
-
-/** Docker Desktop may report a Windows bind source in Linux notation. */
-function hostPath(path: string): string {
-  if (process.platform !== 'win32') return path;
-  return path.replace(/^\/(?:run\/desktop\/mnt\/host|host_mnt)\/([a-z])\//i, '$1:/');
-}
+export const containerMounts: () => Promise<ContainerMounts[]> = inspectContainers;
 
 export class WorktreeRemovalBlocked extends Error {
   constructor(path: string, reason: string) {

@@ -6,7 +6,7 @@ import type { McpHttpServer, SkaroScope } from '@skaro/mcp-server';
 import { afterEach, beforeEach, expect } from 'vitest';
 import type { AgentManager } from './agents';
 import { Projects } from './projects';
-import { TaskRuns } from './tasks';
+import { TaskRuns, type TaskRunDeps } from './tasks';
 
 export let dir: string;
 export let repo: string;
@@ -60,7 +60,11 @@ beforeEach(async () => {
 });
 
 function createTaskRuns(): TaskRuns {
-  return new TaskRuns({
+  return new TaskRuns(taskRunDeps());
+}
+
+export function taskRunDeps(): TaskRunDeps {
+  return {
     db,
     dataDir: dir,
     projects,
@@ -69,7 +73,15 @@ function createTaskRuns(): TaskRuns {
     mcp: {} as McpHttpServer<SkaroScope>,
     emit: () => undefined,
     locale: () => 'ru',
-  });
+    // The machine's real Docker is never inspected or changed by these tests.
+    docker: {
+      inspect: async () => [],
+      stop: async () => undefined,
+      remove: async () => [],
+      hasData: async () => false,
+      ports: async (count) => Array.from({ length: count }, (_, i) => 20_000 + i),
+    },
+  };
 }
 
 export function scope(): SkaroScope {

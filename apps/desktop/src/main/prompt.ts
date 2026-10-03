@@ -101,6 +101,8 @@ export function taskInstructions(options: {
   cwd: string;
   branch?: string;
   locale: string;
+  /** The project describes a task environment and Skaro runs it (task-environments.md). */
+  managedEnvironment?: boolean;
 }): string {
   const { task, artifacts, root, cwd, branch } = options;
   const language = LANGUAGES[options.locale] ?? 'English';
@@ -186,7 +188,9 @@ export function taskInstructions(options: {
         ...terms(options.locale),
       ].join('\n'),
     agentInteractionInstructions(),
-    taskEnvironmentInstructions(),
+    taskEnvironmentInstructions(
+      !branch ? 'in-place' : options.managedEnvironment ? 'managed' : 'own',
+    ),
   ];
   return parts.filter(Boolean).join('\n\n');
 }

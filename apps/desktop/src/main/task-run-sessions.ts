@@ -8,6 +8,8 @@ import { key, settingsKey, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 
+const ENVIRONMENT_TOOL_TIMEOUT_MS = 30 * 60_000;
+
 /** sessions: a focused part of the task-run controller. */
 export class TaskRunSessions {
   private readonly ctx: TaskRunEngine;
@@ -46,6 +48,10 @@ export class TaskRunSessions {
       dir: 'meta',
       line: { skaro: 'segment', agent, adapterVersion: run.adapterVersion },
     });
+    // A task in its own checkout gets the name and ports of its environment in its shell.
+    const environment = inWorktree
+      ? await this.ctx.environments.describe({ projectId, taskId }).catch(() => undefined)
+      : undefined;
     active.grant = this.ctx.deps.mcp.grant({ kind: 'task', projectId, taskId, runId: run.id });
     let session: AgentSession;
     try {
@@ -62,7 +68,9 @@ export class TaskRunSessions {
           cwd,
           ...(inWorktree && run.branch ? { branch: run.branch } : {}),
           locale: this.ctx.deps.locale(),
+          managedEnvironment: environment?.config !== undefined,
         }),
+        ...(environment ? { env: environment.variables } : {}),
         mcpServers: {
           playwright: await taskBrowserServer(this.ctx.deps.dataDir, run.id),
           skaro: {
@@ -70,6 +78,8 @@ export class TaskRunSessions {
             url: active.grant.url,
             headers: active.grant.headers,
             trusted: true,
+            // start_environment builds images and copies data: minutes on the first call.
+            timeout: ENVIRONMENT_TOOL_TIMEOUT_MS,
           },
         },
         ...(sandbox ? { sandboxVerified: sandbox.holds } : {}),
@@ -119,6 +129,9 @@ export class TaskRunSessions {
     active.grant = undefined;
     await session?.close().catch(() => undefined);
     this.ctx.history.flush(active);
+    // A closed session ends no turn by itself: its slot must not stay taken.
+    active.release?.();
+    active.release = undefined;
   }
 
   async close(): Promise<void> {
@@ -130,9 +143,11 @@ export class TaskRunSessions {
   async forget(projectId: string, taskId: string): Promise<void> {
     const k = key(projectId, taskId);
     this.ctx.queue.cancel(k);
-    this.ctx.firstInputs.delete(k);
+    this.ctx.queuedInputs.delete(k);
     const git = this.ctx.project(projectId).git;
     const runs = this.ctx.deps.db.listRuns(projectId, taskId);
+    // The disposable environment goes first: its containers would hold the checkout.
+    await this.ctx.removeEnvironment({ projectId, taskId });
     // Check every retained folder before mutating sessions, records or branches.
     for (const run of runs) if (run.worktree) await git.assertRemovableWorktree(run.worktree);
     const active = this.ctx.active.get(k);

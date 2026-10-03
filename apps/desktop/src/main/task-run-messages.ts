@@ -16,9 +16,21 @@ export class TaskRunMessages {
     const k = key(projectId, taskId);
     const active = this.ctx.active.get(k) ?? (await this.ctx.history.restore(projectId, taskId));
     if (!active) return this.ctx.scheduling.start(projectId, taskId, input);
-    await this.deliver(active, input);
+    await this.turn(active, input);
   }
 
+  /** Joins the running turn, or starts a new one when a slot is free (it waits in the queue). */
+  async turn(active: ActiveRun, input: MessageInput): Promise<void> {
+    const { projectId, taskId } = active;
+    const working = active.timeline.state.status !== 'idle';
+    if (working || this.ctx.scheduling.holdsSlot(projectId, taskId)) {
+      await this.deliver(active, input);
+    } else {
+      this.ctx.scheduling.enqueue(projectId, taskId, input);
+    }
+  }
+
+  /** Straight to the agent: only for a turn that holds its slot. */
   async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
     const session = await this.ctx.sessions.attach(active);
     if (active.timeline.state.status === 'idle') await session.send(input);
@@ -37,7 +49,7 @@ export class TaskRunMessages {
     if (!active) throw new Error('The agent session has ended');
     const interaction = active.timeline.state.interactions.find((i) => i.id === interactionId);
     if (isAsyncQuestion(interaction)) {
-      await this.deliver(active, asyncQuestionInput(interaction, answer));
+      await this.turn(active, asyncQuestionInput(interaction, answer));
       this.ctx.history.skaroEvent(active, {
         t: 'interaction.closed',
         id: interactionId,
@@ -67,8 +79,11 @@ export class TaskRunMessages {
   async interrupt(projectId: string, taskId: string): Promise<void> {
     const k = key(projectId, taskId);
     if (this.ctx.queue.cancel(k)) {
-      this.ctx.firstInputs.delete(k);
-      this.ctx.setRuntime(projectId, taskId, 'idle');
+      this.ctx.queuedInputs.delete(k);
+      // A started task goes back to what its feed says; a new one was never running.
+      const active = this.ctx.active.get(k);
+      if (active) this.ctx.events.settleRuntime(active);
+      else this.ctx.setRuntime(projectId, taskId, 'idle');
       return;
     }
     await this.ctx.active.get(k)?.session?.interrupt();

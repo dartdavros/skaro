@@ -35,7 +35,8 @@ it.each(['task', 'chat'] as const)(
       kind === 'task'
         ? {
             ctx: { history: base, active: new Map() },
-            deliver: async (_active: unknown, input: unknown) => {
+            // The answer starts a turn of its own: it takes a slot like any other message.
+            turn: async (_active: unknown, input: unknown) => {
               sent.push(input);
             },
           }

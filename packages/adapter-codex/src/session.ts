@@ -78,6 +78,7 @@ export class CodexSession implements AgentSession {
         'suppress_unstable_features_warning=true',
       ],
       cwd: o.cwd,
+      ...(o.env ? { env: o.env } : {}),
       onMessage: (msg) => {
         // Server requests are answered by their own id (numbers or strings).
         if (typeof msg['method'] === 'string' && msg['id'] !== undefined) {

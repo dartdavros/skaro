@@ -60,7 +60,7 @@ export class TaskRunMergeActions {
           resolution: 'cancelled',
         });
         const files = card.conflicts.map((f) => `- ${f}`).join('\n');
-        await this.ctx.messages.deliver(active, {
+        await this.ctx.messages.turn(active, {
           text:
             `Слияние ветки ${branch} в ${base} даёт конфликты:\n${files}\n\n` +
             `Перенеси ветку на свежую ${base} (git rebase ${base}), разреши конфликты, закоммить ` +

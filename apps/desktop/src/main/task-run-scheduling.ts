@@ -22,6 +22,7 @@ export class TaskRunScheduling {
 
   setSlots(slots: number): void {
     this.ctx.queue.setSlots(slots);
+    this.ctx.limitEnvironments();
   }
 
   async launch(
@@ -73,6 +74,8 @@ export class TaskRunScheduling {
     if (task.status !== 'todo') await context.store.updateTask(taskId, { status: 'todo' });
     context.invalidate();
     this.ctx.changed(projectId, taskId);
+    // A task taken back does not keep services running; the copy of its data stays.
+    void this.ctx.environments.stop({ projectId, taskId }).catch(() => undefined);
   }
 
   awaiting(projectId: string): Record<string, { message: string; assignment?: TaskAssignment }> {
@@ -98,17 +101,34 @@ export class TaskRunScheduling {
     if (isBlocked(task, indexTasks(artifacts.tasks))) throw new Error('The task is blocked');
     const settings = this.ctx.views.settings(projectId, task, artifacts);
     await this.ctx.views.ensureAgent(settings.agent);
+    this.enqueue(projectId, taskId, input);
+  }
+
+  /** Whether the task's agent works now: its turn took a slot and has not ended. */
+  holdsSlot(projectId: string, taskId: string): boolean {
+    return this.ctx.queue.state().running.includes(key(projectId, taskId));
+  }
+
+  /**
+   * Every turn of an agent takes a slot (architecture.md 7.1): the message waits in the queue
+   * until one is free. Messages sent meanwhile join it and go to the agent in order.
+   */
+  enqueue(projectId: string, taskId: string, input: MessageInput): void {
     const k = key(projectId, taskId);
-    this.ctx.firstInputs.set(k, input);
-    const result = this.ctx.queue.enqueue([k]);
-    if (!result.accepted.length) this.ctx.firstInputs.delete(k);
+    this.ctx.queuedInputs.set(k, [...(this.ctx.queuedInputs.get(k) ?? []), input]);
+    this.ctx.queue.enqueue([k]);
     this.ctx.changed(projectId, taskId);
   }
 
   async begin(k: string): Promise<void> {
     const [projectId, taskId] = k.split('\n') as [string, string];
-    const input = this.ctx.firstInputs.get(k) ?? { text: '' };
-    this.ctx.firstInputs.delete(k);
+    const inputs = this.ctx.queuedInputs.get(k) ?? [{ text: '' }];
+    this.ctx.queuedInputs.delete(k);
+    const existing = this.ctx.active.get(k);
+    if (existing) {
+      this.ctx.setRuntime(projectId, taskId, 'running', existing.run.id);
+      return this.runTurn(existing, inputs);
+    }
     const context = this.ctx.project(projectId);
     const artifacts = await context.load();
     const task = findTask(artifacts, taskId);
@@ -154,10 +174,15 @@ export class TaskRunScheduling {
     this.ctx.active.set(k, active);
     this.ctx.setRuntime(projectId, taskId, 'running', run.id);
     this.ctx.deps.emit('project.changed', { projectId });
+    return this.runTurn(active, inputs);
+  }
 
+  /** Holds the slot until the turn ends; later messages of the batch join the running turn. */
+  private async runTurn(active: ActiveRun, inputs: MessageInput[]): Promise<void> {
+    this.ctx.environments.touch(active);
     const done = new Promise<void>((resolve) => (active.release = resolve));
     try {
-      await this.ctx.messages.deliver(active, input);
+      for (const input of inputs) await this.ctx.messages.deliver(active, input);
     } catch (error) {
       active.release = undefined;
       this.ctx.events.failTurn(active, error);

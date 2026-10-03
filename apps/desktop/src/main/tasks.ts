@@ -12,6 +12,7 @@ import type {
 } from '../shared/ipc';
 import { type TaskRunDeps } from './task-run-model';
 import { TaskRunEngine } from './task-run-engine';
+import { startTaskEnvironment } from './task-environment-tool';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
 
@@ -90,6 +91,13 @@ export class TaskRuns {
   }
   submitResult(args: SubmitResultArgs, scope: SkaroScope): Promise<ToolResult> {
     return this.engine.results.submitResult(args, scope);
+  }
+  startEnvironment(scope: SkaroScope): Promise<ToolResult> {
+    return startTaskEnvironment(this.engine, scope);
+  }
+  /** After a start of the app: Docker may have brought every old environment back. */
+  limitEnvironments(): void {
+    this.engine.limitEnvironments();
   }
   merge(
     projectId: string,

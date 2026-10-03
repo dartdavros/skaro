@@ -120,6 +120,30 @@ export function submitResultTool(
 }
 
 /**
+ * `start_environment` (task-environments.md): the agent asks for running services, Skaro starts
+ * the task's own disposable copy within the limit of parallel runs and answers with its addresses.
+ */
+export function startEnvironmentTool(
+  handler: (scope: SkaroScope) => Promise<ToolResult>,
+): Tool<SkaroScope> {
+  return {
+    name: 'start_environment',
+    description:
+      "Start this task's own environment: the project's services running on the task's sources, " +
+      'with a disposable copy of the data of the main environment (its existing accounts ' +
+      'included). Call it when you need running services: before browser verification, for ' +
+      'integration checks, to read service logs. It returns when the services are ready and ' +
+      'gives their addresses; the first call builds images and copies data and may take several ' +
+      'minutes. Skaro stops the environment while the task is idle and removes it when the task ' +
+      'is merged, so call it again whenever you need the services: a running environment answers ' +
+      'at once. Do not start, recreate or re-point the services yourself.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    available: (scope) => scope.kind === 'task' && scope.taskId !== undefined,
+    call: (_args, scope) => handler(scope),
+  };
+}
+
+/**
  * `merge_task` (D-27): the user asks in the task chat to merge, the agent calls this tool, Skaro
  * follows the automatic/manual setting. Completed tasks return their status without a new card.
  * In manual mode the tool does not wait for the card decision (agent-output.md 5.4).

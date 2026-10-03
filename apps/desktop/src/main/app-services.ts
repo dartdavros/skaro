@@ -5,6 +5,7 @@ import {
   McpHttpServer,
   mergeTaskTool,
   submitResultTool,
+  startEnvironmentTool,
   projectTools,
   type ToolResult,
   type SkaroScope,
@@ -45,6 +46,7 @@ export async function createServices(
       // Tools are called only after the app is up, when `runs` exists.
       mergeTaskTool((args, scope): Promise<ToolResult> => runs.mergeTask(args, scope)),
       submitResultTool((args, scope): Promise<ToolResult> => runs.submitResult(args, scope)),
+      startEnvironmentTool((scope): Promise<ToolResult> => runs.startEnvironment(scope)),
       ...projectTools({
         context: (scope) => chats.context(scope),
         writeDoc: (args, scope) => chats.writeDoc(args, scope),
@@ -78,6 +80,7 @@ export async function createServices(
     },
     Number(appState.getSetting('runs.slots')) || 3,
   );
+  runs.limitEnvironments();
   const board = new TaskBoard({
     projects,
     runs,

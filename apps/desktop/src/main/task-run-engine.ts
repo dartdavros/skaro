@@ -1,7 +1,8 @@
-import { RunQueue, type TaskRuntime } from '@skaro/core';
+import { RunQueue, type TaskKey, type TaskRuntime } from '@skaro/core';
 import type { MessageInput } from '../shared/ipc';
 import type { ProjectContext } from './projects';
 import type { NotifyKind } from './notifier';
+import { TaskEnvironments } from './task-environments';
 import { TaskMerges } from './task-merges';
 import { key } from './task-run-helpers';
 import { ActiveRun, type TaskRunDeps } from './task-run-model';
@@ -14,13 +15,20 @@ import { TaskRunSessions } from './task-run-sessions';
 import { TaskRunEvents } from './task-run-events';
 import { TaskRunHistory } from './task-run-history';
 
+function taskKey(k: string): TaskKey {
+  const [projectId, taskId] = k.split('\n') as [string, string];
+  return { projectId, taskId };
+}
+
 /** Shared state and composition of the task-run services. */
 export class TaskRunEngine {
   readonly deps: TaskRunDeps;
   readonly active = new Map<string, ActiveRun>();
-  readonly firstInputs = new Map<string, MessageInput>();
+  /** Messages that wait for a queue slot, in the order they were sent. */
+  readonly queuedInputs = new Map<string, MessageInput[]>();
   readonly queue: RunQueue;
   readonly merges: TaskMerges;
+  readonly environments: TaskEnvironments;
   readonly views = new TaskRunViews(this);
   readonly scheduling = new TaskRunScheduling(this);
   readonly messages = new TaskRunMessages(this);
@@ -41,6 +49,7 @@ export class TaskRunEngine {
       launchUnblocked: (projectId, ids) => this.scheduling.launchUnblocked(projectId, ids),
       detach: (active) => this.sessions.detach(active),
       setRuntime: (projectId, taskId, state) => this.setRuntime(projectId, taskId, state),
+      removeEnvironment: (projectId, taskId) => this.removeEnvironment({ projectId, taskId }),
     });
     this.queue = new RunQueue({
       slots,
@@ -48,12 +57,46 @@ export class TaskRunEngine {
       start: (key) => this.scheduling.begin(key),
     });
     this.queue.on((event) => {
-      const [projectId, taskId] = event.taskId.split('\n') as [string, string];
+      const { projectId, taskId } = taskKey(event.taskId);
       if (event.type === 'queued') this.setRuntime(projectId, taskId, 'queued');
       if (event.type === 'finished' && event.error) {
         this.setRuntime(projectId, taskId, 'idle');
       }
     });
+    this.environments = new TaskEnvironments({
+      db: deps.db,
+      dataDir: deps.dataDir,
+      projects: deps.projects,
+      busy: () => this.queue.state().running.map(taskKey),
+      limit: () => this.queue.state().slots,
+      finished: (task) => this.finished(task),
+      ...(deps.docker ? { docker: deps.docker } : {}),
+    });
+  }
+
+  /** Merged, cancelled or deleted: the task needs no environment any more. */
+  private async finished(task: TaskKey): Promise<boolean> {
+    try {
+      const artifacts = await this.project(task.projectId).load();
+      const found = artifacts.tasks.find((t) => t.id === task.taskId);
+      return !found || found.status === 'done' || found.status === 'cancelled';
+    } catch {
+      // A project that cannot be read proves nothing about its tasks.
+      return false;
+    }
+  }
+
+  /** Docker being away must not fail a merge or a deletion; the next pass removes what is left. */
+  async removeEnvironment(task: TaskKey): Promise<void> {
+    const failures = await this.environments
+      .destroy(task)
+      .catch((error: unknown) => [String(error)]);
+    if (failures.length) console.error(`environment of ${task.taskId}: ${failures.join('; ')}`);
+  }
+
+  /** Finished tasks lose their environments; the running ones stay within the slot limit. */
+  limitEnvironments(): void {
+    void this.environments.enforce().catch(() => undefined);
   }
 
   setRuntime(projectId: string, taskId: string, state: TaskRuntime, runId?: string): void {

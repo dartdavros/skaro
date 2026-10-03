@@ -14,6 +14,7 @@ export function codexMcpConfig(servers: Record<string, McpServer> = {}): Record<
               ...(server.env ? { env: server.env } : {}),
             }),
         ...(server.trusted ? { default_tools_approval_mode: 'approve' } : {}),
+        ...(server.timeout ? { tool_timeout_sec: Math.ceil(server.timeout / 1000) } : {}),
       },
     ]),
   );

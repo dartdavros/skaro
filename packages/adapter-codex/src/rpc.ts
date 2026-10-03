@@ -16,6 +16,8 @@ export interface AppServerOptions extends CodexBinary {
   config?: string[];
   /** Replaces ~/.codex (tests, "not logged in" checks). */
   codexHome?: string;
+  /** Extra variables of the server and of the commands the agent runs. */
+  env?: Record<string, string>;
   /** Every line both ways, before parsing. */
   onRaw?: (dir: 'in' | 'out' | 'err', line: unknown) => void;
   /** Messages from the server (after onRaw). */
@@ -65,6 +67,7 @@ export class AppServer {
     this.options = options;
     const env: NodeJS.ProcessEnv = {
       ...process.env,
+      ...options.env,
       PATH: [...options.pathDirs, process.env['PATH'] ?? ''].join(delimiter),
       ...(options.codexHome ? { CODEX_HOME: options.codexHome } : {}),
     };

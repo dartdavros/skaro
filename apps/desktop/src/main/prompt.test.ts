@@ -59,15 +59,40 @@ describe('task instructions', () => {
     expect(text).not.toContain('merges after the user confirms');
   });
 
-  it('allows documented compatible services without repeated consent and protects other tasks', () => {
-    expect(text).toContain('read-only inspection of running processes');
-    expect(text).toContain('A responding localhost port alone does not establish ownership');
-    expect(text).toContain('use it without asking for permission again');
-    expect(text).toContain('verify against its own sources');
-    expect(text).toContain(
-      'Do not stop, restart, reconfigure or replace services owned by another task',
-    );
+  it('keeps a task that brings up its own services inside its own compose project', () => {
+    expect(text).toContain("COMPOSE_PROJECT_NAME set to this task's own project name");
+    expect(text).toContain('Skaro stops the containers of an idle task');
+    expect(text).not.toContain('start_environment');
+    expect(text).toContain('Do not stop, restart, reconfigure or replace services of another task');
     expect(text).toContain('Never replace missing APIs with mock responses');
+  });
+
+  it('hands the environment to Skaro when the project describes one', () => {
+    const managed = taskInstructions({
+      task,
+      artifacts,
+      root: '/work/project',
+      cwd: '/data/worktrees/T-001',
+      branch: 'skaro/T-001-karkas',
+      locale: 'ru',
+      managedEnvironment: true,
+    });
+    expect(managed).toContain('Call the start_environment tool');
+    expect(managed).toContain('Do not start, recreate or re-point services yourself');
+    expect(managed).toContain('The environment holds nothing unique');
+    expect(managed).not.toContain('Take free ports');
+  });
+
+  it('leaves a task in the main working copy with the main environment', () => {
+    const inPlace = taskInstructions({
+      task,
+      artifacts,
+      root: '/work',
+      cwd: '/work',
+      locale: 'ru',
+    });
+    expect(inPlace).toContain("You work in the project's main working copy");
+    expect(inPlace).not.toContain('COMPOSE_PROJECT_NAME');
   });
 });
 

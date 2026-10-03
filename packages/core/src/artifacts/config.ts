@@ -11,6 +11,7 @@ import type {
 } from './model.ts';
 import { DEFAULT_CONFIG } from './model.ts';
 import { readChecks } from './checks.ts';
+import { environmentYaml, readEnvironment } from './environment.ts';
 
 export async function readConfig(
   files: ArtifactFiles,
@@ -38,7 +39,9 @@ export async function readConfig(
   const app = defaults();
   const bool = (value: unknown, fallback: boolean | undefined, base: boolean): boolean =>
     typeof value === 'boolean' ? value : (fallback ?? base);
+  const environment = readEnvironment(raw['environment'], problems);
   return {
+    ...(environment ? { environment } : {}),
     checks: readChecks(raw['checks'], problems),
     defaultAgent: str(raw['default_agent']) ?? DEFAULT_CONFIG.defaultAgent,
     defaultModel: str(raw['default_model']),
@@ -83,6 +86,7 @@ export async function writeConfig(
     branch_template: own('branchTemplate', config.branchTemplate),
     isolation: own('isolation', config.isolation),
     checks: config.checks.length ? config.checks : undefined,
+    environment: environmentYaml(config.environment),
     merge: merge.strategy === undefined && merge.delete_branch === undefined ? undefined : merge,
     chat: autoAccept === undefined ? undefined : { auto_accept_docs: autoAccept },
     agent_files: own('agentFiles', config.agentFiles),

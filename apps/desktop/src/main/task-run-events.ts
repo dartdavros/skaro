@@ -58,6 +58,8 @@ export class TaskRunEvents {
     this.settleRuntime(active);
     active.release?.();
     active.release = undefined;
+    // The slot is free: environments of idle tasks beyond the limit stop now.
+    this.ctx.limitEnvironments();
     const after = active.afterTurn;
     if (after) {
       active.afterTurn = undefined;
