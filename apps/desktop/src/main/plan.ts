@@ -39,8 +39,24 @@ export function milestoneBody(input: MilestoneInput, locale: string): string {
   return `## ${h.goal}\n\n${input.goal.trim()}\n\n## ${h.done}\n\n${input.criteria.trim()}\n`;
 }
 
+/** The acceptance of a stage ticks the criterion as a list; the plan shows its words. */
+function readinessWords(criteria: string): string {
+  return criteria
+    .split('\n')
+    .map((line) => line.replace(/^\s*[-*]\s+(?:\[[ xX]\]\s+)?/, '').trim())
+    .filter(Boolean)
+    .join('; ');
+}
+
 function info(m: Milestone): MilestoneInfo {
-  return { id: m.id, title: m.title, order: m.order, ...milestoneSections(m.body) };
+  const { goal, criteria } = milestoneSections(m.body);
+  return {
+    id: m.id,
+    title: m.title,
+    order: m.order,
+    ...(goal ? { goal } : {}),
+    ...(criteria ? { criteria: readinessWords(criteria) } : {}),
+  };
 }
 
 export class Plan {

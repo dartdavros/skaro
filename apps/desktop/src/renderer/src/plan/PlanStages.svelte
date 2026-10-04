@@ -41,9 +41,14 @@
       now={model.now}
       canArchive={canArchive(stage)}
       canDelete={canDelete(stage.milestone.id, model.p.data.tasks)}
+      info={model.archiveView ? undefined : model.info(stage.milestone.id)}
+      slotsFree={model.p.data.slotsFree}
+      onrun={(action) => model.run(stage.milestone.id, action)}
       ontoggle={() => model.toggle(stage.milestone.id)}
       onmenu={(action) => {
-        if (action === 'archive') model.setArchived(stage, true);
+        if (action === 'open') model.p.onopen(stage.milestone.id);
+        else if (action === 'mergeFinished') void model.mergeFinished(stage.milestone.id);
+        else if (action === 'archive') model.setArchived(stage, true);
         else if (action === 'restore') model.setArchived(stage, false);
         else if (action === 'delete') model.modal = { kind: 'delete', milestone: stage.milestone };
         else model.p.onchat();

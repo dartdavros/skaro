@@ -2,7 +2,7 @@
   import { AgentLogo, Checkbox, t } from '@skaro/ui';
   import type { TaskSummary } from '../../../shared/ipc';
   import { agoLong } from '../ago';
-  import { agentLine, boardStatus } from './model';
+  import { agentLine, boardStatus, waitsStageMerge } from './model';
   import StatusLabel from './StatusLabel.svelte';
   let {
     task,
@@ -20,6 +20,7 @@
     onopen: (id: string) => void;
   } = $props();
   const kind = $derived(boardStatus(task.status));
+  const stageDone = $derived(waitsStageMerge(task));
   const pickTip = $derived(on ? t('board.unselect') : t('board.select'));
 
   function activate(): void {
@@ -33,6 +34,7 @@
   class="grid row"
   class:selected={on}
   class:dim={kind === 'blocked'}
+  class:stage-done={stageDone}
   role="button"
   tabindex="0"
   data-tip={selecting ? pickTip : t('board.open')}
@@ -50,7 +52,7 @@
     class="title"
     class:muted={kind === 'blocked' || kind === 'done' || kind === 'cancelled'}>{task.title}</span
   >
-  <StatusLabel status={task.status} />
+  <StatusLabel status={task.status} {stageDone} after={task.after} />
   <span data-task-list class="agent">
     {#if task.agent}<AgentLogo agent={task.agent} size={10} />{/if}
     <span data-task-list class="agent-name">{agentLine(task)}</span>

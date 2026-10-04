@@ -7,12 +7,17 @@ import type { ActiveRun, TaskRunDeps } from './tasks';
 import type { MergeTaskArgs } from '@skaro/mcp-server';
 import type { TaskMergeHooks } from './task-merge-refresh';
 import { MergeCardRefresh } from './task-merge-refresh';
-import { mergeInteraction, type MergeInteraction } from './task-merge-card';
+import { mergeInteraction, withStage, type MergeInteraction } from './task-merge-card';
 import { taskSections, withSummary } from './task-body';
 import { requestTaskMerge } from './task-merge-request';
 import { closeMergeCards, recordedTaskMerge } from './task-merge-result';
 import { runChecks } from './check-runner';
 import { undoTaskMerge } from './task-merge-undo';
+import { confirmStageMerge } from './stage-merge-confirm';
+import { stageMergeInfo } from './stage-merge';
+import { stageNotice } from './stage-views';
+import { readLedger } from './task-stage';
+import { subjectOf, subjectStage, updateSubject } from './task-subject';
 
 export class TaskMerges {
   private readonly refresh: MergeCardRefresh;
@@ -42,31 +47,50 @@ export class TaskMerges {
     );
   }
 
-  showCard(active: ActiveRun, context: ProjectContext) {
-    return this.enqueue(active, () => this.performShowCard(active, context));
+  /** `partial`: «Влить готовое» of a stage, the finished tasks while the stage goes on. */
+  showCard(active: ActiveRun, context: ProjectContext, options: { partial?: boolean } = {}) {
+    return this.enqueue(active, () => this.performShowCard(active, context, options));
   }
 
   private async performShowCard(
     active: ActiveRun,
     context: ProjectContext,
+    options: { partial?: boolean } = {},
   ): Promise<MergeInteraction | undefined> {
     context.invalidate();
     const artifacts = await context.load();
-    const task = artifacts.tasks.find((task) => task.id === active.taskId);
+    const task = subjectOf(artifacts, active.taskId);
     if (!task) throw new Error('The task no longer exists');
+    const stage = subjectStage(artifacts, active.taskId);
     if (task.status === 'done') {
       closeMergeCards(active, this.hooks);
       return undefined;
     }
-    if (task.status !== 'review') {
-      await context.store.updateTask(task.id, { status: 'review' });
+    const previous = active.timeline.state.interactions.find(
+      (i): i is MergeInteraction => i.kind === 'merge',
+    );
+    const label = `${task.id} · ${task.title}`;
+    if (stage) {
+      // A stage is never stored as "in review": the first card of its full merge says so.
+      if (!previous && !options.partial) {
+        this.hooks.deps.db.addEvent(active.projectId, 'stage_review', { stage: stage.id });
+        this.hooks.deps.notify?.(
+          'review',
+          stage.title,
+          stageNotice('review', stage.id, this.hooks.deps.locale()),
+        );
+      }
+    } else if (task.status !== 'review') {
+      await updateSubject(context, task.id, { status: 'review' });
       context.invalidate();
       this.hooks.deps.db.addEvent(active.projectId, 'task_review', { task: task.id });
-      this.hooks.deps.notify?.('review', `${task.id} · ${task.title}`);
+      this.hooks.deps.notify?.('review', label);
     }
-    await context.git.commitAll(active.run.worktree!, `${task.id}: ${task.title}`);
+    await context.git.commitAll(
+      active.run.worktree!,
+      (stage && active.commitMessage?.trim()) || `${task.id}: ${task.title}`,
+    );
     const check = await context.git.checkMerge(artifacts.config.baseBranch, active.run.branch!);
-    const previous = active.timeline.state.interactions.find((i) => i.kind === 'merge');
     if (previous)
       this.hooks.skaroEvent(active, {
         t: 'interaction.closed',
@@ -79,7 +103,14 @@ export class TaskMerges {
       artifacts.config.baseBranch,
       check,
     );
-    if (active.commitMessage) card.message = active.commitMessage;
+    if (stage) {
+      const ledger = readLedger(this.hooks.deps.db, active.projectId, stage.id);
+      const partial = options.partial ?? false;
+      withStage(
+        card,
+        stageMergeInfo(stage, artifacts, ledger, { partial, previous: previous?.stage }),
+      );
+    } else if (active.commitMessage) card.message = active.commitMessage;
     this.hooks.skaroEvent(active, { t: 'interaction.opened', interaction: card });
     this.hooks.settleRuntime(active);
     this.watch(active);
@@ -120,10 +151,13 @@ export class TaskMerges {
   ): Promise<{ commit: string; base: string }> {
     context.invalidate();
     const artifacts = await context.load();
-    const task = artifacts.tasks.find((t) => t.id === active.taskId)!;
+    const task = subjectOf(artifacts, active.taskId);
     if (!task) throw new Error('The task no longer exists');
     const configProblems = artifacts.problems.filter((p) => p.path === '.skaro/config.yaml');
     if (configProblems.length) throw new Error(configProblems.map((p) => p.message).join('\n'));
+    const stage = subjectStage(artifacts, active.taskId);
+    if (stage && task.status !== 'done')
+      return confirmStageMerge(active, context, stage, card, this.hooks);
     if (task.status === 'done') {
       closeMergeCards(active, this.hooks);
       const merge = recordedTaskMerge(active, artifacts.config.baseBranch, this.hooks.deps.db);
@@ -224,7 +258,7 @@ export class TaskMerges {
 }
 
 /** The last agent reply of the run: the fallback task summary. */
-function lastAgentText(active: ActiveRun): string | undefined {
+export function lastAgentText(active: ActiveRun): string | undefined {
   const items = active.timeline.state.items;
   for (let i = items.length - 1; i >= 0; i--) {
     const item = items[i]!;

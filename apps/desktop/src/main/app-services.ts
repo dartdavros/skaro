@@ -68,7 +68,7 @@ export async function createServices(
   });
   const runs: TaskRuns = new TaskRuns(
     {
-      notify: (kind, text) => notifier.notify(kind, text),
+      notify: (kind, text, title) => notifier.notify(kind, text, title),
       db,
       dataDir,
       projects,

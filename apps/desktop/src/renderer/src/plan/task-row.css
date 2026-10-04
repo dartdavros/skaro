@@ -132,6 +132,17 @@
   color: var(--sk-link);
 }
 
+/* A task of a stage: done and waiting for the merge, or waiting its turn in the stage. */
+.stage-note[data-plan-task] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-muted);
+  white-space: nowrap;
+}
+
+.stage-note[data-plan-task] .mono {
+  font-family: var(--sk-mono);
+}
+
 .dep[data-plan-task] {
   font-family: var(--sk-mono);
   font-size: var(--sk-fs-3);

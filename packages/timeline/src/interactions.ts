@@ -48,7 +48,7 @@ export type Interaction =
       added: number;
       removed: number;
       /** Hard reasons the merge cannot happen now (core GitService.checkMerge). */
-      blockers: ('dirty_base' | 'not_on_base' | 'conflicts' | 'no_changes')[];
+      blockers: ('dirty_base' | 'not_on_base' | 'conflicts' | 'no_changes' | 'criteria')[];
       localChanges?: string[];
       /** Warnings: base commits the branch lacks, and .skaro/ changes that will be dropped. */
       baseAhead: number;
@@ -56,7 +56,19 @@ export type Interaction =
       conflicts: string[];
       /** Commit message the agent proposed, in the repository's convention. */
       message?: string;
+      /** The merge of a stage: the tasks that go in, each with the message of its commit. */
+      stage?: StageMerge;
     };
+
+export interface StageMerge {
+  /** The milestone. */
+  id: string;
+  tasks: { id: string; title: string; message: string }[];
+  /** «Влить готовое»: the finished tasks go in while the stage goes on. */
+  partial: boolean;
+  /** Readiness criteria that are not ticked: the stage is not merged while there are any. */
+  unmet: string[];
+}
 
 export type ApprovalAnswer =
   | { kind: 'approval'; choice: 'allow_once' | 'allow_session' }

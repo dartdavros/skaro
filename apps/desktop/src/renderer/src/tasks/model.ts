@@ -156,8 +156,13 @@ export function groups(
 
 export { canStart } from './task-rules';
 
+/** Done in the branch of its stage: it waits for the merge of the stage, not for the user. */
+export function waitsStageMerge(task: TaskSummary): boolean {
+  return task.status === 'review' && !!task.staged;
+}
+
 export function needsYou(task: TaskSummary): boolean {
-  return task.status === 'needs_answer' || task.status === 'review';
+  return task.status === 'needs_answer' || (task.status === 'review' && !task.staged);
 }
 
 const ACTIVE_ORDER = { need: 0, review: 1, working: 2 } as const;
@@ -172,7 +177,7 @@ export function activeTasks(
   const kindOf = (task: TaskSummary): keyof typeof ACTIVE_ORDER | undefined =>
     task.status === 'needs_answer'
       ? 'need'
-      : task.status === 'review'
+      : task.status === 'review' && !task.staged
         ? 'review'
         : task.status === 'in_progress' || task.status === 'queued'
           ? 'working'

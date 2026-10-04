@@ -47,7 +47,14 @@ export function toMilestone(
     problems.push({ path, message: 'milestone without id' });
     return undefined;
   }
-  return { id, title: str(f['title']) ?? id, order: num(f['order']) ?? 0, body, path };
+  return {
+    id,
+    title: str(f['title']) ?? id,
+    order: num(f['order']) ?? 0,
+    branch: str(f['branch']),
+    body,
+    path,
+  };
 }
 
 export function toAdr(

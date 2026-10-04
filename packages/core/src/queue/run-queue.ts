@@ -5,6 +5,11 @@ export interface RunQueueOptions {
   slots?: number;
   /** Why a task cannot run now (blocked, archived...), or undefined if it can. Checked on enqueue and on start. */
   canRun: (taskId: string) => string | undefined;
+  /**
+   * The task cannot start right now and keeps its place: another task of its stage works in
+   * the checkout they share. Checked each time a slot is free; `poke` asks again.
+   */
+  blocked?: (taskId: string) => boolean;
   /** Starts the run; resolves when the run ends (done, failed or interrupted). */
   start: (taskId: string) => Promise<void>;
 }
@@ -79,6 +84,11 @@ export class RunQueue {
     return () => this.listeners.delete(listener);
   }
 
+  /** What held a waiting task back may be gone: start whatever can start now. */
+  poke(): void {
+    this.pump();
+  }
+
   /** Resolves when nothing runs and nothing waits. */
   idle(): Promise<void> {
     if (!this.running.size && !this.waiting.length) return Promise.resolve();
@@ -86,8 +96,10 @@ export class RunQueue {
   }
 
   private pump(): void {
-    while (this.running.size < this.slots && this.waiting.length) {
-      const id = this.waiting.shift()!;
+    while (this.running.size < this.slots) {
+      const next = this.waiting.findIndex((id) => !this.options.blocked?.(id));
+      if (next < 0) break;
+      const id = this.waiting.splice(next, 1)[0]!;
       // The task may have changed while waiting (e.g. archived, or a dependency reopened).
       const reason = this.options.canRun(id);
       if (reason) {

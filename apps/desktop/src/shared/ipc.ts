@@ -16,6 +16,7 @@ import type {
   AgentSettings,
   TaskSummary,
   MilestoneInfo,
+  StageInfo,
   ImportSource,
   ImportReview,
   DocEntry,
@@ -134,6 +135,14 @@ export interface Methods {
   /** Board: "На ревью" → "Готово" — merges by the open card; `open` when it needs the feed. */
   'tasks.merge': (projectId: string, taskId: string) => 'merged' | 'open';
   'tasks.assign': (projectId: string, taskIds: string[], assignment: TaskAssignment) => void;
+  /** The stages of the project, in plan order. */
+  'stages.list': (projectId: string) => StageInfo[];
+  /** «Запустить» / «Продолжить»: the tasks of the stage go one after another. */
+  'stages.run': (projectId: string, stageId: string, message: string) => void;
+  /** «Остановить»: the working agent stops, the waiting tasks leave the queue. */
+  'stages.stop': (projectId: string, stageId: string) => void;
+  /** «Влить готовое»: a merge card for the finished tasks in the feed of the stage. */
+  'stages.mergeFinished': (projectId: string, stageId: string) => void;
   /** Milestones in plan order. */
   'plan.milestones': (projectId: string) => MilestoneInfo[];
   /** Deletes a milestone without started tasks, together with its tasks. */

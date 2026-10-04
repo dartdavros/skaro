@@ -1,17 +1,22 @@
 <script lang="ts">
   import { PanelResizer, t } from '@skaro/ui';
-  import type { TaskDetail } from '../../../shared/ipc';
+  import type { StageView, TaskDetail } from '../../../shared/ipc';
   import TaskDescription from './TaskDescription.svelte';
   import type { TaskDescriptionLayout } from './task-description-layout.svelte';
   let {
     task,
+    stage,
     layout,
     onspec,
+    onopen,
     ontoggle,
   }: {
     task: TaskDetail;
+    /** The screen of a stage: the milestone with its tasks instead of a task. */
+    stage?: StageView | undefined;
     layout: TaskDescriptionLayout;
     onspec: (path: string) => void;
+    onopen: (taskId: string) => void;
     ontoggle: (index: number) => void;
   } = $props();
   const id = $props.id();
@@ -28,7 +33,14 @@
   oncommit={() => layout.save()}
 />
 <div {id} class="desc-col" style="width: {layout.width}px">
-  <TaskDescription {task} oncollapse={() => layout.setOpen(false)} {onspec} {ontoggle} />
+  <TaskDescription
+    {task}
+    {stage}
+    oncollapse={() => layout.setOpen(false)}
+    {onspec}
+    {onopen}
+    {ontoggle}
+  />
 </div>
 
 <style>

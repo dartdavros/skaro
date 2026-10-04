@@ -26,7 +26,7 @@ export class TaskRunMessages {
     if (working || this.ctx.scheduling.holdsSlot(projectId, taskId)) {
       await this.deliver(active, input);
     } else {
-      this.ctx.scheduling.enqueue(projectId, taskId, input);
+      await this.ctx.scheduling.enqueue(projectId, taskId, input);
     }
   }
 

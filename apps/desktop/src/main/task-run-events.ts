@@ -4,6 +4,7 @@ import { errorText } from './session-log';
 import { FLUSH_MS } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
+import { readSubject, updateSubject } from './task-subject';
 
 /** events: a focused part of the task-run controller. */
 export class TaskRunEvents {
@@ -71,7 +72,7 @@ export class TaskRunEvents {
     const { projectId, taskId } = active;
     const context = this.ctx.project(projectId);
     try {
-      const task = await context.store.readTask(taskId);
+      const task = await readSubject(context, taskId);
       if (task.status === 'done') return;
       const label = `${task.id} · ${task.title}`;
       if (outcome === 'failed') {
@@ -85,8 +86,7 @@ export class TaskRunEvents {
       // The turn ended: "На ревью" only when every criterion is ticked, else the agent waits
       // for the user ("Нужен ответ", derived from "В работе" with no agent working).
       // Older task files may still hold the "failed" stage.
-      if (task.status === 'failed')
-        await context.store.updateTask(taskId, { status: 'in_progress' });
+      if (task.status === 'failed') await updateSubject(context, taskId, { status: 'in_progress' });
       const state = await this.ctx.results.criteriaChanged(projectId, taskId);
       if (state === 'open' || state === 'none') {
         this.ctx.deps.notify?.('need', label);

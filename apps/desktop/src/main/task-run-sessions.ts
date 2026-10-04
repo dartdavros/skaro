@@ -2,10 +2,13 @@ import { existsSync } from 'node:fs';
 import { segmentTurns, type AgentSession } from '@skaro/timeline';
 import type { AgentId } from '../shared/ipc';
 import { taskInstructions } from './prompt';
+import { acceptanceInstructions } from './prompt-acceptance';
+import { subjectStage } from './task-subject';
 import { taskBrowserServer } from './task-browser';
 import { errorText } from './session-log';
 import { key, settingsKey, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
+import { checkoutKey, ownsCheckout, stageIdOf } from './task-stage';
 import type { TaskRunEngine } from './task-run-engine';
 
 const ENVIRONMENT_TOOL_TIMEOUT_MS = 30 * 60_000;
@@ -50,8 +53,12 @@ export class TaskRunSessions {
     });
     // A task in its own checkout gets the name and ports of its environment in its shell.
     const environment = inWorktree
-      ? await this.ctx.environments.describe({ projectId, taskId }).catch(() => undefined)
+      ? await this.ctx.environments.describe(checkoutKey(active)).catch(() => undefined)
       : undefined;
+    // A run named after a milestone is the acceptance of its stage.
+    const acceptance = subjectStage(artifacts, taskId);
+    const stageId = stageIdOf(run);
+    const stage = stageId ? artifacts.milestones.find((m) => m.id === stageId) : undefined;
     active.grant = this.ctx.deps.mcp.grant({ kind: 'task', projectId, taskId, runId: run.id });
     let session: AgentSession;
     try {
@@ -61,15 +68,26 @@ export class TaskRunSessions {
         ...(settings.effort ? { effort: settings.effort } : {}),
         permissionMode: settings.permissionMode,
         planFirst: settings.planFirst,
-        instructions: taskInstructions({
-          task,
-          artifacts,
-          root: context.root,
-          cwd,
-          ...(inWorktree && run.branch ? { branch: run.branch } : {}),
-          locale: this.ctx.deps.locale(),
-          managedEnvironment: environment?.config !== undefined,
-        }),
+        instructions: acceptance
+          ? acceptanceInstructions({
+              stage: acceptance,
+              artifacts,
+              root: context.root,
+              cwd,
+              branch: run.branch ?? '',
+              locale: this.ctx.deps.locale(),
+              managedEnvironment: environment?.config !== undefined,
+            })
+          : taskInstructions({
+              task,
+              artifacts,
+              root: context.root,
+              cwd,
+              ...(inWorktree && run.branch ? { branch: run.branch } : {}),
+              ...(inWorktree && stage ? { stage } : {}),
+              locale: this.ctx.deps.locale(),
+              managedEnvironment: environment?.config !== undefined,
+            }),
         ...(environment ? { env: environment.variables } : {}),
         mcpServers: {
           playwright: await taskBrowserServer(this.ctx.deps.dataDir, run.id),
@@ -146,10 +164,13 @@ export class TaskRunSessions {
     this.ctx.queuedInputs.delete(k);
     const git = this.ctx.project(projectId).git;
     const runs = this.ctx.deps.db.listRuns(projectId, taskId);
+    // The checkout, the branch and the environment of a stage belong to its other tasks too:
+    // deleting one task leaves them alone.
+    const own = runs.filter(ownsCheckout);
     // The disposable environment goes first: its containers would hold the checkout.
-    await this.ctx.removeEnvironment({ projectId, taskId });
+    if (own.length === runs.length) await this.ctx.removeEnvironment({ projectId, taskId });
     // Check every retained folder before mutating sessions, records or branches.
-    for (const run of runs) if (run.worktree) await git.assertRemovableWorktree(run.worktree);
+    for (const run of own) if (run.worktree) await git.assertRemovableWorktree(run.worktree);
     const active = this.ctx.active.get(k);
     if (active) {
       await this.detach(active);
@@ -158,10 +179,12 @@ export class TaskRunSessions {
     }
     for (const run of runs) {
       if (!run.endedAt) this.ctx.deps.db.finishRun(run.id, 'interrupted');
+      if (!ownsCheckout(run)) continue;
       if (run.worktree) await git.removeWorktree(run.worktree);
       if (run.branch) await git.deleteBranch(run.branch);
     }
     this.ctx.deps.db.setSetting(settingsKey(projectId, taskId), null);
     this.ctx.setRuntime(projectId, taskId, 'idle');
+    await this.ctx.stages.sync(projectId, taskId);
   }
 }

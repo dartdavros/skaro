@@ -1,5 +1,5 @@
 import type { MergeCheck } from '@skaro/core';
-import type { Interaction } from '@skaro/timeline';
+import type { Interaction, StageMerge } from '@skaro/timeline';
 export type MergeInteraction = Extract<Interaction, { kind: 'merge' }>;
 
 export function mergeInteraction(
@@ -24,6 +24,14 @@ export function mergeInteraction(
   };
 }
 
+/** The card of a stage merge: its tasks, and the blocker while a criterion is not ticked. */
+export function withStage(card: MergeInteraction, stage: StageMerge | undefined): MergeInteraction {
+  if (!stage) return card;
+  card.stage = stage;
+  if (stage.unmet.length && !card.blockers.includes('criteria')) card.blockers.push('criteria');
+  return card;
+}
+
 /** What the agent learns from merge_task. */
 export function mergeToolReply(card: MergeInteraction): string {
   const lines: string[] = [];
@@ -45,6 +53,8 @@ export function mergeToolReply(card: MergeInteraction): string {
       if (blocker === 'no_changes') lines.push('- the task branch has no code changes;');
       if (blocker === 'conflicts')
         lines.push(`- merge conflicts in: ${card.conflicts.join(', ')};`);
+      if (blocker === 'criteria')
+        lines.push(`- readiness criteria are not ticked: ${card.stage?.unmet.join('; ') ?? ''};`);
     }
     lines.push('The user sees this in a card. Tell the user briefly and end your turn.');
   }

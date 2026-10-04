@@ -2,29 +2,47 @@
   import { t } from '@skaro/ui';
   import type { TaskDetail } from '../../../shared/ipc';
   import TaskPanelIcon from './TaskPanelIcon.svelte';
-  let { task, onexpand, ontasks }: { task: TaskDetail; onexpand: () => void; ontasks: () => void } =
-    $props();
+  let {
+    task,
+    plan = false,
+    expandable = true,
+    onexpand,
+    ontasks,
+  }: {
+    task: TaskDetail;
+    /** The screen of a stage: its crumbs lead back to "План" and are always shown. */
+    plan?: boolean;
+    /** The description is collapsed: the button brings it back. */
+    expandable?: boolean;
+    onexpand: () => void;
+    ontasks: () => void;
+  } = $props();
 </script>
 
 <div class="head">
   <div class="crumbs">
-    <button type="button" class="crumb" data-tip={t('task.crumbs.tasks.tip')} onclick={ontasks}
-      >{t('task.crumbs.tasks')}</button
+    <button
+      type="button"
+      class="crumb"
+      data-tip={t(plan ? 'task.crumbs.plan.tip' : 'task.crumbs.tasks.tip')}
+      onclick={ontasks}>{t(plan ? 'task.crumbs.plan' : 'task.crumbs.tasks')}</button
     >
     <span class="slash">/</span>
     <span class="id">{task.id}</span>
     <span class="slash">·</span>
     <span class="name">{task.title}</span>
   </div>
-  <button
-    type="button"
-    class="expand"
-    data-tip={t('task.expand')}
-    aria-label={t('task.expand')}
-    onclick={onexpand}
-  >
-    <TaskPanelIcon expand />
-  </button>
+  {#if expandable}
+    <button
+      type="button"
+      class="expand"
+      data-tip={t('task.expand')}
+      aria-label={t('task.expand')}
+      onclick={onexpand}
+    >
+      <TaskPanelIcon expand />
+    </button>
+  {/if}
 </div>
 
 <style>

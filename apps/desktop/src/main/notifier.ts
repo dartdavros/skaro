@@ -40,14 +40,15 @@ export class Notifier {
     this.deps = deps;
   }
 
-  notify(kind: NotifyKind, task: string): void {
+  /** `title` replaces the words of the kind: a stage is not "a task in review". */
+  notify(kind: NotifyKind, task: string, title?: string): void {
     const saved = this.deps.setting(`notify.${kind}`);
     const on = typeof saved === 'boolean' ? saved : NOTIFY_DEFAULTS[kind];
     if (!on || !Notification.isSupported()) return;
     if (BrowserWindow.getAllWindows().some((w) => w.isFocused())) return;
     const sound = this.deps.setting('notify.sound') !== false;
-    const title = (TEXT[this.deps.locale()] ?? TEXT['en']!)[kind];
-    const notification = new Notification({ title, body: task, silent: !sound });
+    const words = title ?? (TEXT[this.deps.locale()] ?? TEXT['en']!)[kind];
+    const notification = new Notification({ title: words, body: task, silent: !sound });
     notification.on('click', () => {
       const win = BrowserWindow.getAllWindows()[0];
       if (!win) return;

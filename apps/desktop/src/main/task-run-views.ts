@@ -4,8 +4,12 @@ import { join } from 'node:path';
 import { indexTasks, type ProjectArtifacts, type RunRecord, type Task } from '@skaro/core';
 import type { AgentId, AgentSettings, TaskAssignment, TaskSummary, TaskView } from '../shared/ipc';
 import { toggleCriterion } from './task-body';
-import { key, settingsKey, findTask, runInfo, summary, detail } from './task-run-helpers';
+import { key, settingsKey, findTask, ref, runInfo, summary, detail } from './task-run-helpers';
 import type { TaskRunEngine } from './task-run-engine';
+import { orderedStageTasks, stageInfo } from './stage-views';
+import { stageOf } from './task-stage';
+import { subjectStage } from './task-subject';
+import { readSubject, updateSubject } from './task-subject';
 
 /** views: a focused part of the task-run controller. */
 export class TaskRunViews {
@@ -20,17 +24,51 @@ export class TaskRunViews {
     const runtime = this.ctx.deps.db.getTaskRuntime(projectId);
     const index = indexTasks(artifacts.tasks);
     const runs = this.ctx.deps.db.listRuns(projectId);
+    const awaiting = this.ctx.scheduling.awaiting(projectId);
     return Promise.all(
       artifacts.tasks.map(async (task) => {
         const run = runs.find((r) => r.taskId === task.id);
         const file = await stat(join(context.root, task.path)).catch(() => undefined);
         const updatedAt = Math.max(file?.mtimeMs ?? 0, run?.endedAt ?? run?.startedAt ?? 0);
-        return summary(task, artifacts, index, runtime.get(task.id)?.state, {
+        const state = runtime.get(task.id)?.state;
+        const result = summary(task, artifacts, index, state, {
           ...this.assigned(projectId, task, run),
           updatedAt,
         });
+        const waiting = task.status === 'todo' && (state === 'queued' || task.id in awaiting);
+        const after = waiting && !result.waitsFor.length ? this.before(task, artifacts) : undefined;
+        return after ? { ...result, after } : result;
       }),
     );
+  }
+
+  /** Another task of the stage works in their checkout: this one starts after it. */
+  private waitsInStage(
+    projectId: string,
+    task: Task,
+    artifacts: ProjectArtifacts,
+    runtime: ReadonlyMap<string, { state: string }>,
+  ): { after?: string } {
+    const stage = task.status === 'todo' ? stageOf(task, artifacts) : undefined;
+    if (!stage) return {};
+    const busy = orderedStageTasks(stage, artifacts).find(
+      (t) =>
+        t.id !== task.id &&
+        (t.status === 'in_progress' ||
+          ['running', 'queued', 'waiting'].includes(runtime.get(t.id)?.state ?? '')),
+    );
+    const after = busy ? (this.before(task, artifacts) ?? busy.id) : undefined;
+    return after ? { after } : {};
+  }
+
+  /** The unfinished task of the stage that runs before this one. */
+  private before(task: Task, artifacts: ProjectArtifacts): string | undefined {
+    const stage = stageOf(task, artifacts);
+    if (!stage) return undefined;
+    const order = orderedStageTasks(stage, artifacts);
+    return order
+      .slice(0, order.indexOf(task))
+      .findLast((t) => t.status !== 'review' && t.status !== 'done')?.id;
   }
 
   assigned(
@@ -64,12 +102,28 @@ export class TaskRunViews {
       `agents.${settings.agent}.sandbox`,
       null,
     );
+    const stage = subjectStage(artifacts, taskId);
+    const index = indexTasks(artifacts.tasks);
     return {
       projectId,
       task: detail(task, artifacts, runtime),
+      ...(stage
+        ? {
+            stage: {
+              info: stageInfo(stage, artifacts, runtime, {
+                awaiting: new Set(Object.keys(this.ctx.scheduling.awaiting(projectId))),
+                accepted: this.ctx.deps.db.listRuns(projectId, stage.id).length > 0,
+              }),
+              tasks: orderedStageTasks(stage, artifacts).map((t) =>
+                ref(t, index, runtime.get(t.id)?.state),
+              ),
+            },
+          }
+        : {}),
       settings,
       ...(active ? { run: runInfo(active), timeline: active.timeline.state } : {}),
       seq: active?.seq ?? 0,
+      ...this.waitsInStage(projectId, task, artifacts, runtime),
       queued: this.ctx.queue.state().queued.includes(key(projectId, taskId)),
       slotsFree: this.ctx.queue.state().running.length < this.ctx.queue.state().slots,
       ...(sandbox?.holds !== undefined ? { sandboxHolds: sandbox.holds } : {}),
@@ -124,8 +178,8 @@ export class TaskRunViews {
 
   async toggleCriterion(projectId: string, taskId: string, index: number): Promise<void> {
     const context = this.ctx.project(projectId);
-    const task = await context.store.readTask(taskId);
-    await context.store.updateTask(taskId, { body: toggleCriterion(task.body, index) });
+    const task = await readSubject(context, taskId);
+    await updateSubject(context, taskId, { body: toggleCriterion(task.body, index) });
     this.ctx.changed(projectId, taskId);
     await this.ctx.results.criteriaChanged(projectId, taskId);
   }

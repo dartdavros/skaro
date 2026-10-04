@@ -33,12 +33,13 @@ export async function createMilestone(
 export async function updateMilestone(
   files: ArtifactFiles,
   id: string,
-  patch: Partial<Pick<Milestone, 'title' | 'order' | 'body'>>,
+  patch: Partial<Pick<Milestone, 'title' | 'order' | 'body' | 'branch'>>,
 ): Promise<Milestone> {
   const { file, path } = await files.findFile('milestones', id, toMilestone);
   setFields(file, {
     ...('title' in patch ? { title: patch.title } : {}),
     ...('order' in patch ? { order: patch.order } : {}),
+    ...('branch' in patch ? { branch: patch.branch } : {}),
   });
   if (patch.body !== undefined) file.body = patch.body;
   await files.writeFile(path, serializeMarkdown(file));

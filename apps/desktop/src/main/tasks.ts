@@ -6,6 +6,7 @@ import type {
   MergeAction,
   MessageInput,
   RunSlots,
+  StageInfo,
   TaskAssignment,
   TaskSummary,
   TaskView,
@@ -79,6 +80,19 @@ export class TaskRuns {
   }
   cancel(projectId: string, taskId: string): Promise<void> {
     return this.engine.scheduling.cancel(projectId, taskId);
+  }
+  stages(projectId: string): Promise<StageInfo[]> {
+    return this.engine.stages.list(projectId);
+  }
+  runStage(projectId: string, stageId: string, message: string): Promise<void> {
+    return this.engine.stages.start(projectId, stageId, message);
+  }
+  stopStage(projectId: string, stageId: string): Promise<void> {
+    return this.engine.stages.stop(projectId, stageId);
+  }
+  /** «Влить готовое» of a stage: shows the card in the feed of the stage. */
+  mergeFinished(projectId: string, stageId: string): Promise<void> {
+    return this.engine.stages.mergeFinished(projectId, stageId);
   }
   mergeFromBoard(projectId: string, taskId: string): Promise<'merged' | 'open'> {
     return this.engine.mergeActions.mergeFromBoard(projectId, taskId);

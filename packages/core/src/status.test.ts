@@ -57,6 +57,23 @@ describe('blocked', () => {
     const t = task('T-3', { dependsOn: ['T-2'], status: 'review' });
     expect(isBlocked(t, indexTasks([running, t]))).toBe(false);
   });
+
+  it('inside a stage a dependency in review is enough, across stages it is not', () => {
+    const reviewed = task('T-2', { status: 'review', milestone: 'M01' });
+    const same = task('T-3', { dependsOn: ['T-2'], milestone: 'M01' });
+    const other = task('T-4', { dependsOn: ['T-2'], milestone: 'M02' });
+    const loose = task('T-5', { dependsOn: ['T-2'] });
+    const index = indexTasks([reviewed, same, other, loose]);
+    expect(isBlocked(same, index)).toBe(false);
+    expect(isBlocked(other, index)).toBe(true);
+    expect(isBlocked(loose, index)).toBe(true);
+  });
+
+  it('a dependency with a branch of its own must be merged even in the same milestone', () => {
+    const own = task('T-2', { status: 'review', milestone: 'M01', branch: 'skaro/T-2-own' });
+    const t = task('T-3', { dependsOn: ['T-2'], milestone: 'M01' });
+    expect(isBlocked(t, indexTasks([own, t]))).toBe(true);
+  });
 });
 
 describe('display status and start', () => {

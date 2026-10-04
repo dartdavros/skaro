@@ -4,6 +4,8 @@ import { ArtifactStore } from '@skaro/core';
 import type { ActiveRun, TaskRunDeps } from './task-run-model';
 import type { ProjectContext } from './projects';
 import type { TaskMergeHooks } from './task-merge-refresh';
+import { readLedger } from './task-stage';
+import { subjectOf, subjectStage } from './task-subject';
 
 /** Invoked inside the same project queue as merge confirmation. */
 export async function undoTaskMerge(
@@ -21,8 +23,16 @@ export async function undoTaskMerge(
     throw new Error('Wait for the task agent to finish before reverting its merge');
   context.invalidate();
   const artifacts = await context.load();
-  const task = artifacts.tasks.find((task) => task.id === active.taskId);
-  if (!task || task.status !== 'done')
+  const task = subjectOf(artifacts, active.taskId);
+  // A stage merge took several tasks: they all return to review.
+  const stage = subjectStage(artifacts, active.taskId);
+  const taken = stage
+    ? (readLedger(hooks.deps.db, active.projectId, stage.id).merged.find(
+        (merge) => merge.commit === commit,
+      )?.tasks ?? [])
+    : [active.taskId];
+  const returned = artifacts.tasks.filter((t) => taken.includes(t.id));
+  if (!task || !returned.length || returned.some((t) => t.status !== 'done'))
     throw new Error('Only a completed task merge can be reverted');
   const latest = hooks.deps.db
     .listMerges(active.projectId, active.taskId)
@@ -40,12 +50,14 @@ export async function undoTaskMerge(
     );
   const result = await context.git.revert(commit, `Revert ${task.id}: ${task.title}`, {
     ...(record.strategy === 'rebase' ? { before } : {}),
-    managedPaths: [task.path],
+    managedPaths: returned.map((t) => t.path),
     beforeCommit: async (checkout) => {
-      await writeFile(join(checkout, task.path), await readFile(join(context.root, task.path)));
       const store = new ArtifactStore(checkout);
-      const updated = await store.updateTask(task.id, { status: 'review' });
-      return [updated.path];
+      for (const item of returned) {
+        await writeFile(join(checkout, item.path), await readFile(join(context.root, item.path)));
+        await store.updateTask(item.id, { status: 'review' });
+      }
+      return returned.map((t) => t.path);
     },
   });
   if (!result.ok) throw new Error(`Revert conflicts: ${result.conflicts.join(', ')}`);
@@ -69,6 +81,7 @@ export async function undoTaskMerge(
         native: { agent: 'skaro', type: 'merge_reverted', ref: result.commit },
       },
     });
+  for (const item of returned) hooks.changed(active.projectId, item.id);
   hooks.changed(active.projectId, active.taskId);
   hooks.deps.emit('project.changed', { projectId: active.projectId });
   return result.commit;

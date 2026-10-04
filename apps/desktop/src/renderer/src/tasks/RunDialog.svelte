@@ -72,6 +72,7 @@
         <span data-task-run-dialog class="name" class:dim={n.tone === 'blocked'}>{task.title}</span>
         <span data-task-run-dialog class="note {n.tone}">
           {#if n.tone === 'blocked'}<Icon name="lock" size={11} stroke={2.1} />{/if}
+          {#if n.tone === 'stage'}<Icon name="clock" size={11} stroke={2.1} />{/if}
           {n.text}
         </span>
       </div>
@@ -80,7 +81,11 @@
 
   <div data-task-run-dialog class="footer">
     <span data-task-run-dialog class="hint"
-      >{state.blocked ? t('board.rd.hint.blocked') : t('board.rd.hint')}</span
+      >{state.blocked
+        ? t('board.rd.hint.blocked')
+        : tasks.some((x) => x.staged)
+          ? t('board.rd.hint.stage')
+          : t('board.rd.hint')}</span
     >
     <button data-task-run-dialog type="button" class="cancel" onclick={onclose}
       >{t('ui.cancel')}</button

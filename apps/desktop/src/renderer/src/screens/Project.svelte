@@ -55,6 +55,12 @@
   onDestroy(() => data.dispose());
 
   const attention = $derived(data.tasks.filter((x) => !x.archived && needsYou(x)).length);
+  // Stages that wait for the user: a question of the acceptance, the merge, an error.
+  const stagesWaiting = $derived(
+    data.stages.filter((s) =>
+      ['acceptance_needs_answer', 'awaiting_merge', 'error'].includes(s.state),
+    ).length,
+  );
 
   const items = $derived<NavItem[]>([
     {
@@ -67,7 +73,15 @@
       railTip: tn('board.attention.rail', attention),
     },
     { id: 'docs', label: t('nav.docs'), tip: t('nav.docs.tip'), icon: 'docs' },
-    { id: 'plan', label: t('nav.plan'), tip: t('nav.plan.tip'), icon: 'plan' },
+    {
+      id: 'plan',
+      label: t('nav.plan'),
+      tip: t('nav.plan.tip'),
+      icon: 'plan',
+      count: stagesWaiting,
+      countTip: t('plan.attention.tip'),
+      railTip: tn('plan.attention.rail', stagesWaiting),
+    },
     { id: 'chat', label: t('nav.chat'), tip: t('nav.chat.tip'), icon: 'chat', separated: true },
     { id: 'params', label: t('nav.params'), tip: t('nav.params.tip'), icon: 'params' },
   ]);
@@ -85,14 +99,18 @@
     })),
   );
 
+  /** The open task names a milestone: it is the screen of a stage, shown under "План". */
+  const stageOpen = $derived(task !== undefined && data.milestones.some((m) => m.id === task));
+
   function go(id: string): void {
-    if (id === 'tasks') task = undefined;
+    if (id === 'tasks' || stageOpen) task = undefined;
     section = id;
   }
 
+  /** Opens a task, or the stage of a milestone. */
   function openTask(id: string): void {
     task = id;
-    section = 'tasks';
+    section = data.milestones.some((m) => m.id === id) ? 'plan' : 'tasks';
   }
 
   /** Tasks and plans are made with the agent, in a new chat ("Новая задача", "Перепланировать"). */
@@ -114,7 +132,7 @@
     tasks={navTasks}
     ontask={openTask}
     onselect={(id) => {
-      if (id === 'tasks' && section === 'tasks') task = undefined;
+      if ((id === 'tasks' && section === 'tasks') || stageOpen) task = undefined;
       section = id;
     }}
   />
@@ -122,6 +140,7 @@
     {project}
     section={current.id}
     {task}
+    stage={stageOpen}
     bind:chat
     {doc}
     {data}

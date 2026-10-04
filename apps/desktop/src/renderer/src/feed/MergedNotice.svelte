@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { FeedRow } from '@skaro/timeline';
-  import { ConfirmDialog, Icon, t } from '@skaro/ui';
+  import { ConfirmDialog, Icon, t, tn } from '@skaro/ui';
   import { useFeed } from './context.svelte';
   import './merge-undo-i18n';
 
@@ -9,6 +9,8 @@
   let confirm = $state(false);
   let busy = $state(false);
   const commit = $derived(row.item.native.ref);
+  /** The merge of a stage: it took several tasks, «Влить готовое» only the finished ones. */
+  const stage = $derived(row.item.merge?.tasks ? row.item.merge : undefined);
 
   async function revert(): Promise<void> {
     if (busy || !feed.revertMerge) return;
@@ -24,7 +26,11 @@
 </script>
 
 <div class="fd-divider" data-tip={t('feed.notice.merged.tip', { commit: commit.slice(0, 7) })}>
-  <span>{t('feed.notice.merged', { branch: row.item.text })}</span>
+  <span
+    >{stage?.partial
+      ? tn('feed.notice.merged.partial', stage.tasks ?? 0, { branch: row.item.text })
+      : t('feed.notice.merged', { branch: row.item.text })}</span
+  >
   {#if feed.revertMerge}
     <button
       type="button"
@@ -42,7 +48,9 @@
 <ConfirmDialog
   bind:open={confirm}
   title={t('feed.mergeUndo.action')}
-  text={t('feed.mergeUndo.confirm', { commit: commit.slice(0, 7) })}
+  text={stage
+    ? tn('feed.mergeUndo.stage', stage.tasks ?? 0)
+    : t('feed.mergeUndo.confirm', { commit: commit.slice(0, 7) })}
   action={t('feed.mergeUndo.action')}
   icon="undo"
   onconfirm={() => void revert()}

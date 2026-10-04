@@ -80,6 +80,34 @@
   background: var(--sk-error);
 }
 
+/* Done in its stage and waiting for the merge: quieter than a blocked card. */
+.board > .col > .cards > .board-card.stage-done {
+  opacity: 0.55;
+}
+
+.board > .col > .cards > .board-card .meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.board > .col > .cards > .board-card .meta > .ms {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Waiting its turn in the stage: the task that goes before it. */
+.board > .col > .cards > .board-card .meta > .after {
+  flex: none;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-secondary);
+}
+
+.board > .col > .cards > .board-card .meta > .after > .mono {
+  font-family: var(--sk-mono);
+}
+
 /* Under the title, which the checkbox pushes right. */
 .board > .col > .cards > .board-card.selecting .meta,
 .board > .col > .cards > .board-card.selecting .bottom {

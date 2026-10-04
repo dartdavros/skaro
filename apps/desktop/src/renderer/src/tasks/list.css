@@ -9,13 +9,18 @@
 
 .grid[data-task-list] {
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) 150px 132px 118px 86px;
+  grid-template-columns: 62px minmax(0, 1fr) 210px 132px 118px 86px;
   gap: 12px;
 }
 
 /* "Выбрать несколько": the checkbox column comes first. */
 .selecting[data-task-list] .grid:where([data-task-list]) {
-  grid-template-columns: 26px 62px minmax(0, 1fr) 150px 132px 118px 86px;
+  grid-template-columns: 26px 62px minmax(0, 1fr) 210px 132px 118px 86px;
+}
+
+/* Done in its stage and waiting for the merge of the stage. */
+.row.stage-done[data-task-list] {
+  opacity: 0.55;
 }
 
 .head[data-task-list] {

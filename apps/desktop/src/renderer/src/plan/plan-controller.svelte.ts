@@ -76,6 +76,23 @@ export function createPlanController(getProps: () => PlanProps) {
     void window.skaro.invoke('tasks.archive', p.projectId, ids, value);
   }
 
+  /** Where the stage of a milestone stands. */
+  function info(id: string) {
+    return p.data.stages.find((s) => s.id === id);
+  }
+
+  /** «Запустить» and «Продолжить» start the tasks of the stage in order; «Остановить» ends it. */
+  function run(id: string, action: 'run' | 'stop'): void {
+    if (action === 'stop') void window.skaro.invoke('stages.stop', p.projectId, id);
+    else void window.skaro.invoke('stages.run', p.projectId, id, t('task.start.message'));
+  }
+
+  /** «Влить готовое»: the card shows in the feed of the stage. */
+  async function mergeFinished(id: string): Promise<void> {
+    await window.skaro.invoke('stages.mergeFinished', p.projectId, id);
+    p.onopen(id);
+  }
+
   function restoreTask(id: string): void {
     void window.skaro.invoke('tasks.archive', p.projectId, [id], false);
   }
@@ -150,6 +167,9 @@ export function createPlanController(getProps: () => PlanProps) {
       return archiveTip;
     },
     dnd,
+    info,
+    run,
+    mergeFinished,
     toggle,
     setArchived,
     restoreTask,

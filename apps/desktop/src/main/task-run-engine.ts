@@ -14,6 +14,10 @@ import { TaskRunMergeActions } from './task-run-merge-actions';
 import { TaskRunSessions } from './task-run-sessions';
 import { TaskRunEvents } from './task-run-events';
 import { TaskRunHistory } from './task-run-history';
+import { TaskRunStages } from './task-run-stages';
+import { checkoutKey, stageTasks } from './task-stage';
+import { readSubject, subjectStage } from './task-subject';
+import { stageNotice } from './stage-views';
 
 function taskKey(k: string): TaskKey {
   const [projectId, taskId] = k.split('\n') as [string, string];
@@ -37,11 +41,13 @@ export class TaskRunEngine {
   readonly sessions = new TaskRunSessions(this);
   readonly events = new TaskRunEvents(this);
   readonly history = new TaskRunHistory(this);
+  readonly stages = new TaskRunStages(this);
   constructor(deps: TaskRunDeps, slots = 3) {
     this.deps = deps;
     this.merges = new TaskMerges({
       deps,
       active: () => [...this.active.values()],
+      restore: (projectId, taskId) => this.history.restore(projectId, taskId),
       project: (id) => this.project(id),
       skaroEvent: (active, event) => this.history.skaroEvent(active, event),
       settleRuntime: (active) => this.events.settleRuntime(active),
@@ -54,6 +60,7 @@ export class TaskRunEngine {
     this.queue = new RunQueue({
       slots,
       canRun: () => undefined,
+      blocked: (key) => this.stages.blocked(key),
       start: (key) => this.scheduling.begin(key),
     });
     this.queue.on((event) => {
@@ -67,19 +74,28 @@ export class TaskRunEngine {
       db: deps.db,
       dataDir: deps.dataDir,
       projects: deps.projects,
-      busy: () => this.queue.state().running.map(taskKey),
+      busy: () =>
+        this.queue.state().running.map((k) => {
+          const active = this.active.get(k);
+          return active ? checkoutKey(active) : taskKey(k);
+        }),
       limit: () => this.queue.state().slots,
       finished: (task) => this.finished(task),
       ...(deps.docker ? { docker: deps.docker } : {}),
     });
   }
 
-  /** Merged, cancelled or deleted: the task needs no environment any more. */
+  /**
+   * Merged, cancelled or deleted: the task needs no environment any more. The environment of a
+   * stage is named after its milestone and lives while any of its tasks is unfinished.
+   */
   private async finished(task: TaskKey): Promise<boolean> {
     try {
       const artifacts = await this.project(task.projectId).load();
+      const over = (t: { status: string }) => t.status === 'done' || t.status === 'cancelled';
       const found = artifacts.tasks.find((t) => t.id === task.taskId);
-      return !found || found.status === 'done' || found.status === 'cancelled';
+      if (found) return over(found);
+      return stageTasks({ id: task.taskId }, artifacts).every(over);
     } catch {
       // A project that cannot be read proves nothing about its tasks.
       return false;
@@ -109,10 +125,14 @@ export class TaskRunEngine {
 
   async notifyTask(kind: NotifyKind, projectId: string, taskId: string): Promise<void> {
     if (!this.deps.notify) return;
-    const task = await this.project(projectId)
-      .store.readTask(taskId)
-      .catch(() => undefined);
-    this.deps.notify(kind, task ? `${task.id} · ${task.title}` : taskId);
+    const context = this.project(projectId);
+    const task = await readSubject(context, taskId).catch(() => undefined);
+    const stage = task && subjectStage(await context.load(), taskId);
+    this.deps.notify(
+      kind,
+      stage ? stage.title : task ? `${task.id} · ${task.title}` : taskId,
+      stage ? stageNotice(kind, stage.id, this.deps.locale()) : undefined,
+    );
   }
 
   changed(projectId: string, taskId: string): void {

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Icon, t } from '@skaro/ui';
-  import type { TaskDetail } from '../../../shared/ipc';
+  import type { StageView, TaskDetail } from '../../../shared/ipc';
+  import StageChip from './StageChip.svelte';
+  import StageTasks from './StageTasks.svelte';
   import TaskDescriptionHeader from './TaskDescriptionHeader.svelte';
   import './task-description.css';
   import StatusChip from './StatusChip.svelte';
@@ -11,11 +13,17 @@
    */
   let {
     task,
+    stage,
     oncollapse,
     ontoggle,
     onspec,
+    onopen,
   }: {
     task: TaskDetail;
+    /** The acceptance of a stage: its state, its readiness criterion and its tasks. */
+    stage?: StageView | undefined;
+    /** Opens a task of the stage. */
+    onopen?: (taskId: string) => void;
     oncollapse: () => void;
     ontoggle: (index: number) => void;
     /** Opens the specification in "Документы". */
@@ -34,7 +42,7 @@
 <div class="desc task-description">
   <TaskDescriptionHeader {task} {oncollapse} />
   <div class="meta">
-    <StatusChip status={task.status} />
+    {#if stage}<StageChip info={stage.info} />{:else}<StatusChip status={task.status} />{/if}
     {#if task.dependsOn.length}
       <div class="line">
         {t('task.dependsOn')}
@@ -66,7 +74,14 @@
       </div>
     {/if}
     {#if task.branch}
-      <div class="branch" data-tip={t('task.branch.tip')}>
+      <div
+        class="branch"
+        data-tip={stage
+          ? t('task.branch.stageTip', { stage: task.id })
+          : task.staged && task.milestone
+            ? t('task.branch.stageTip', { stage: task.milestone.id })
+            : t('task.branch.tip')}
+      >
         <Icon name="branch" size={12} stroke={1.9} />
         <span>{task.branch}</span>
       </div>
@@ -84,7 +99,7 @@
 
   {#if task.criteria.length}
     <div class="section" style="gap: 9px">
-      <span class="sk-label">{t('task.criteria')}</span>
+      <span class="sk-label">{t(stage ? 'task.stage.criteria' : 'task.criteria')}</span>
       <div class="criteria">
         {#each task.criteria as criterion, i (i)}
           {@const req = requirement(criterion.text)}
@@ -106,6 +121,8 @@
       </div>
     </div>
   {/if}
+
+  {#if stage}<StageTasks {stage} onopen={(id) => onopen?.(id)} />{/if}
 
   {#if task.notes}
     <div class="section">

@@ -3,7 +3,7 @@
   import { AgentLogo, Checkbox, Icon, t } from '@skaro/ui';
   import type { TaskSummary } from '../../../shared/ipc';
   import { agoLong } from '../ago';
-  import { agentLine, boardStatus, statusLabel } from './model';
+  import { agentLine, boardStatus, statusLabel, waitsStageMerge } from './model';
 
   /**
    * A task card of the board (Tasks mockup): title, lock or status dot; milestone; time and
@@ -37,7 +37,10 @@
     onkey?: (e: KeyboardEvent) => void;
   } = $props();
 
-  const shortId = $derived(task.id.replace(/^T-0*(\d+)$/, 'T$1'));
+  const short = (id: string) => id.replace(/^T-0*(\d+)$/, 'T$1');
+  const shortId = $derived(short(task.id));
+  // Done in the branch of its stage: dimmed, it needs nothing until the stage is merged.
+  const stageDone = $derived(waitsStageMerge(task));
   const kind = $derived(boardStatus(task.status));
   const muted = $derived(kind === 'blocked' || kind === 'done' || kind === 'cancelled');
   const dot = $derived(
@@ -67,6 +70,7 @@
   class:ghost
   class:dropped
   class:dim={kind === 'blocked' && !ghost}
+  class:stage-done={stageDone && !ghost}
   role="button"
   tabindex={ghost ? -1 : 0}
   aria-hidden={ghost || undefined}
@@ -99,8 +103,17 @@
   </div>
   <div class="meta">
     <span class="ms"
-      >{task.milestone ? `${task.milestone.id} · ${task.milestone.title}` : t('board.loose')}</span
+      >{stageDone && task.milestone
+        ? `${task.milestone.id} · ${t('board.stage.review')}`
+        : task.milestone
+          ? `${task.milestone.id} · ${task.milestone.title}`
+          : t('board.loose')}</span
     >
+    {#if task.after}
+      <span class="after"
+        >{t('board.stage.after')} <span class="mono">{short(task.after)}</span></span
+      >
+    {/if}
   </div>
   <div class="bottom">
     <span
