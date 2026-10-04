@@ -4,17 +4,24 @@
   import FilterDrop from './FilterDrop.svelte';
   import { boardStatus, STATUS_META, STATUS_ORDER, type BoardStatus, type Filters } from './model';
 
-  /** Search, the milestone / status / agent filters and the board-list switch (Tasks mockup). */
+  /**
+   * Search, the milestone / status / agent filters, "Выбрать несколько" and the board-list
+   * switch (Tasks mockup).
+   */
   let {
     tasks,
     milestones,
     filters = $bindable(),
     view = $bindable(),
+    selecting,
+    onselecting,
   }: {
     tasks: TaskSummary[];
     milestones: MilestoneInfo[];
     filters: Filters;
     view: 'board' | 'list';
+    selecting: boolean;
+    onselecting: () => void;
   } = $props();
 
   const msOptions = $derived([
@@ -121,6 +128,17 @@
       >{t('board.reset')}</button
     >
   {/if}
+
+  <button
+    data-task-toolbar
+    type="button"
+    class="pick"
+    class:on={selecting}
+    aria-pressed={selecting}
+    onclick={onselecting}
+  >
+    <Icon name="tasks" size={13} stroke={2} />{t('board.pick')}
+  </button>
 
   <div data-task-toolbar class="spacer"></div>
   <div data-task-toolbar class="seg">

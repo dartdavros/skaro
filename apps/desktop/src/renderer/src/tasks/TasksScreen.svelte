@@ -41,12 +41,20 @@
   {#if data.loaded && state.all.length === 0}
     <TasksEmpty {onnew} />
   {:else if state.view === 'board'}
-    <Board {moves} selected={state.selected} now={state.now} onselect={state.select} {onopen} />
+    <Board
+      {moves}
+      selected={state.selected}
+      selecting={state.selecting}
+      now={state.now}
+      onselect={state.select}
+      {onopen}
+    />
   {:else}
     <List
       tasks={state.shown}
       milestones={data.milestones}
       selected={state.selected}
+      selecting={state.selecting}
       now={state.now}
       onselect={state.select}
       {onopen}
@@ -56,7 +64,7 @@
   {#if state.picked.length}
     <SelectionBar
       selected={state.picked}
-      onaction={(a) => (state.dialog = a)}
+      onaction={state.action}
       onclear={() => (state.selected = [])}
     />
   {/if}
@@ -68,13 +76,6 @@
     tasks={[moves.starting]}
     onconfirm={moves.confirmStart}
     onclose={moves.closeStart}
-  />
-{:else if state.dialog === 'run'}
-  <RunDialog
-    {projectId}
-    tasks={state.picked}
-    onconfirm={state.run}
-    onclose={() => (state.dialog = undefined)}
   />
 {:else if state.dialog === 'assign'}
   <AssignDialog

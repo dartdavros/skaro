@@ -7,17 +7,25 @@
   let {
     task,
     on,
+    selecting,
     now,
     onselect,
     onopen,
   }: {
     task: TaskSummary;
     on: boolean;
+    selecting: boolean;
     now: number;
     onselect: (id: string, on: boolean) => void;
     onopen: (id: string) => void;
   } = $props();
   const kind = $derived(boardStatus(task.status));
+  const pickTip = $derived(on ? t('board.unselect') : t('board.select'));
+
+  function activate(): void {
+    if (selecting) onselect(task.id, !on);
+    else onopen(task.id);
+  }
 </script>
 
 <div
@@ -27,17 +35,15 @@
   class:dim={kind === 'blocked'}
   role="button"
   tabindex="0"
-  data-tip={t('board.open')}
-  onclick={() => onopen(task.id)}
-  onkeydown={(e) => e.key === 'Enter' && onopen(task.id)}
+  data-tip={selecting ? pickTip : t('board.open')}
+  onclick={activate}
+  onkeydown={(e) => e.key === 'Enter' && e.target === e.currentTarget && activate()}
 >
-  <span data-task-list class="check">
-    <Checkbox
-      checked={on}
-      tip={on ? t('board.unselect') : t('board.select')}
-      onchange={(v) => onselect(task.id, v)}
-    />
-  </span>
+  {#if selecting}
+    <span data-task-list class="check">
+      <Checkbox checked={on} tip={pickTip} onchange={(v) => onselect(task.id, v)} />
+    </span>
+  {/if}
   <span data-task-list class="id">{task.id}</span>
   <span
     data-task-list

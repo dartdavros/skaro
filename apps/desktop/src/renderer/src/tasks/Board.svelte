@@ -13,12 +13,14 @@
   let {
     moves,
     selected,
+    selecting,
     now,
     onselect,
     onopen,
   }: {
     moves: BoardMoves;
     selected: string[];
+    selecting: boolean;
     now: number;
     onselect: (id: string, on: boolean) => void;
     onopen: (id: string) => void;
@@ -52,6 +54,7 @@
           <BoardCard
             {task}
             {now}
+            {selecting}
             selected={selected.includes(task.id)}
             dropped={dnd.dropped === task.id}
             onselect={(on) => onselect(task.id, on)}
@@ -78,7 +81,13 @@
       style="left: {drag.x - drag.ox}px; top: {drag.y - drag.oy}px; width: {drag.w}px"
     >
       <div class="cards">
-        <BoardCard task={drag.task} {now} selected={selected.includes(drag.task.id)} ghost />
+        <BoardCard
+          task={drag.task}
+          {now}
+          {selecting}
+          selected={selected.includes(drag.task.id)}
+          ghost
+        />
       </div>
     </div>
   {/if}

@@ -8,8 +8,9 @@
 
 .search[data-task-toolbar] {
   position: relative;
-  flex: none;
-  width: 210px;
+  /* Gives way first when the row runs out of room (wide filters, "Сбросить"). */
+  flex: 0 1 210px;
+  min-width: 140px;
 }
 
 .glass[data-task-toolbar] {
@@ -81,6 +82,29 @@ input[data-task-toolbar]:focus {
 .reset[data-task-toolbar]:hover {
   background: var(--sk-hover);
   color: var(--sk-text-2);
+}
+
+/* "Выбрать несколько": looks like a filter button, filled with the accent while on. */
+.pick[data-task-toolbar] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 31px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-deep);
+  color: var(--sk-text-17);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pick.on[data-task-toolbar] {
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
 }
 
 .spacer[data-task-toolbar] {

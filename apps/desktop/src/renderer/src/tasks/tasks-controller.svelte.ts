@@ -7,7 +7,9 @@ export function createTasksController(p: TasksProps) {
   let view = $state<'board' | 'list'>('board');
   let filters = $state<Filters>({ query: '', milestones: [], statuses: [], agents: [] });
   let selected = $state<string[]>([]);
-  let dialog = $state<BulkAction | undefined>();
+  /** "Выбрать несколько": cards show checkboxes and a click selects instead of opening. */
+  let selecting = $state(false);
+  let dialog = $state<Exclude<BulkAction, 'run'> | undefined>();
   let now = $state(Date.now());
 
   $effect(() => {
@@ -48,6 +50,18 @@ export function createTasksController(p: TasksProps) {
     selected = on ? [...selected, id] : selected.filter((x) => x !== id);
   }
 
+  /** Leaving the mode drops the selection: without checkboxes there is nothing to show it. */
+  function toggleSelecting(): void {
+    selecting = !selecting;
+    if (!selecting) selected = [];
+  }
+
+  /** "Запустить" starts at once, each task with its own agent and model; the rest ask first. */
+  function action(kind: BulkAction): void {
+    if (kind === 'run') void run();
+    else dialog = kind;
+  }
+
   async function act(run: () => Promise<unknown>): Promise<void> {
     dialog = undefined;
     await run().catch(() => undefined);
@@ -67,15 +81,9 @@ export function createTasksController(p: TasksProps) {
     });
   }
 
-  function run(assignment?: TaskAssignment): Promise<void> {
+  function run(): Promise<void> {
     return act(async () => {
-      await window.skaro.invoke(
-        'tasks.run',
-        p.projectId,
-        ids(),
-        t('task.start.message'),
-        ...(assignment ? [assignment] : []),
-      );
+      await window.skaro.invoke('tasks.run', p.projectId, ids(), t('task.start.message'));
       selected = [];
     });
   }
@@ -104,6 +112,9 @@ export function createTasksController(p: TasksProps) {
     set selected(value: typeof selected) {
       selected = value;
     },
+    get selecting() {
+      return selecting;
+    },
     get dialog() {
       return dialog;
     },
@@ -127,8 +138,9 @@ export function createTasksController(p: TasksProps) {
     },
     setView,
     select,
+    toggleSelecting,
+    action,
     bulk,
-    run,
     assign,
   };
 }

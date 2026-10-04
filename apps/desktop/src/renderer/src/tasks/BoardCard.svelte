@@ -6,14 +6,17 @@
   import { agentLine, boardStatus, statusLabel } from './model';
 
   /**
-   * A task card of the board (Tasks mockup): checkbox, title, lock or status dot; milestone;
-   * time and agent logo. The column already says the status, the card does not repeat it.
+   * A task card of the board (Tasks mockup): title, lock or status dot; milestone; time and
+   * agent logo. The column already says the status, the card does not repeat it. While
+   * `selecting` ("Выбрать несколько") it shows a checkbox and a click anywhere selects it
+   * instead of opening the task.
    * It is dragged by the pointer (`ondragstart`) or taken with Space (`onkey`); `ghost` is the
    * copy that follows the pointer, `dropped` plays the landing.
    */
   let {
     task,
     selected,
+    selecting,
     now,
     ghost = false,
     dropped = false,
@@ -24,6 +27,7 @@
   }: {
     task: TaskSummary;
     selected: boolean;
+    selecting: boolean;
     now: number;
     ghost?: boolean;
     dropped?: boolean;
@@ -48,11 +52,18 @@
   const when = $derived(
     task.status === 'in_progress' ? t('agoShort.now') : agoLong(task.updatedAt, now),
   );
+  const pickTip = $derived(selected ? t('board.unselect') : t('board.select'));
+
+  function activate(): void {
+    if (selecting) onselect?.(!selected);
+    else onopen?.();
+  }
 </script>
 
 <div
   class="card board-card"
   class:selected
+  class:selecting
   class:ghost
   class:dropped
   class:dim={kind === 'blocked' && !ghost}
@@ -60,24 +71,24 @@
   tabindex={ghost ? -1 : 0}
   aria-hidden={ghost || undefined}
   data-card={ghost ? undefined : task.id}
-  data-tip={ghost ? undefined : t('board.open')}
+  data-tip={ghost ? undefined : selecting ? pickTip : t('board.open')}
   aria-roledescription={ghost ? undefined : t('board.dnd.card')}
-  onclick={() => onopen?.()}
+  onclick={activate}
   onpointerdown={(e) => ondragstart?.(e)}
   onkeydown={(e) => {
-    if (e.key === 'Enter') onopen?.();
+    // Keys pressed on the checkbox are its own.
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter') activate();
     else onkey?.(e);
   }}
 >
   <div class="top">
-    <!-- The checkbox selects; it never starts a drag. -->
-    <span class="check" role="presentation" onpointerdown={(e) => e.stopPropagation()}>
-      <Checkbox
-        checked={selected}
-        tip={selected ? t('board.unselect') : t('board.select')}
-        onchange={(on) => onselect?.(on)}
-      />
-    </span>
+    {#if selecting}
+      <!-- The checkbox selects; it never starts a drag. -->
+      <span class="check" role="presentation" onpointerdown={(e) => e.stopPropagation()}>
+        <Checkbox checked={selected} tip={pickTip} onchange={(on) => onselect?.(on)} />
+      </span>
+    {/if}
     <span class="title" class:muted>{shortId} · {task.title}</span>
     {#if kind === 'blocked'}
       <span class="lock" data-tip={t('board.lock', { deps: task.waitsFor.join(', ') })}

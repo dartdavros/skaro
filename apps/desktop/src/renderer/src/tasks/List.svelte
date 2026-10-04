@@ -9,6 +9,7 @@
     tasks,
     milestones,
     selected,
+    selecting,
     now,
     onselect,
     onopen,
@@ -16,6 +17,8 @@
     tasks: TaskSummary[];
     milestones: MilestoneInfo[];
     selected: string[];
+    /** "Выбрать несколько": rows get the checkbox column and a click selects. */
+    selecting: boolean;
     now: number;
     onselect: (id: string, on: boolean) => void;
     onopen: (id: string) => void;
@@ -26,9 +29,9 @@
   import './list.css';
 </script>
 
-<div data-task-list class="list">
+<div data-task-list class="list" class:selecting>
   <div data-task-list class="grid head">
-    <div data-task-list></div>
+    {#if selecting}<div data-task-list></div>{/if}
     <div data-task-list>{t('board.col.id')}</div>
     <div data-task-list>{t('board.col.title')}</div>
     <div data-task-list>{t('board.col.status')}</div>
@@ -48,7 +51,14 @@
       </div>
       <div data-task-list class="rows">
         {#each group.tasks as task (task.id)}
-          <TaskListRow {task} on={selected.includes(task.id)} {now} {onselect} {onopen} />
+          <TaskListRow
+            {task}
+            on={selected.includes(task.id)}
+            {selecting}
+            {now}
+            {onselect}
+            {onopen}
+          />
         {/each}
       </div>
     </div>

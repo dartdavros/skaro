@@ -80,8 +80,9 @@
   background: var(--sk-error);
 }
 
-.board > .col > .cards > .board-card .meta,
-.board > .col > .cards > .board-card .bottom {
+/* Under the title, which the checkbox pushes right. */
+.board > .col > .cards > .board-card.selecting .meta,
+.board > .col > .cards > .board-card.selecting .bottom {
   padding-left: 22px;
 }
 

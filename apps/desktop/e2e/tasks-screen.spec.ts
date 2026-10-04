@@ -26,7 +26,12 @@ test('preserves task board/list, filters, selection and native bulk actions', as
       compareBaseline(dialog, process.env['SKARO_E2E_TASKS_LAYOUT'], name, true);
     const row = (id: string) =>
       screen.locator('.grid.row').filter({ has: page.locator('.id', { hasText: id }) });
-    const select = async (id: string) => row(id).getByRole('checkbox').click();
+    // "Выбрать несколько" brings the checkboxes; a click anywhere on a row then selects it.
+    const pick = screen.getByRole('button', { name: 'Выбрать несколько', exact: true });
+    const select = async (id: string) => {
+      await row(id).click();
+      await expect(row(id).getByRole('checkbox')).toBeChecked();
+    };
     const action = (tip: string) => screen.locator(`button[data-tip="${tip}"]`);
     await expect(screen.locator('.card')).toHaveCount(3);
     await compare('board');
@@ -46,6 +51,9 @@ test('preserves task board/list, filters, selection and native bulk actions', as
     await expect(screen.locator('.grid.row')).toHaveCount(1);
     await compare('filtered');
     await screen.getByRole('button', { name: 'Сбросить', exact: true }).click();
+    await expect(screen.locator('.grid.row').getByRole('checkbox')).toHaveCount(0);
+    await pick.click();
+    await expect(screen.locator('.grid.row').getByRole('checkbox')).toHaveCount(3);
     await select('T-002');
     await select('T-003');
     await compare('selected');
@@ -61,14 +69,10 @@ test('preserves task board/list, filters, selection and native bulk actions', as
     await page.reload();
     await expect(row('T-002').locator('.agent-name')).toContainText('Codex');
     await expect(row('T-003').locator('.agent-name')).toContainText('Codex');
+    await pick.click();
     await select('T-002');
     await select('T-003');
-    await screen.getByRole('button', { name: 'Запустить', exact: true }).click();
-    await expect(dialog).toContainText('Запустить задачи');
-    await dialog.getByRole('button', { name: 'Как в задаче', exact: true }).click();
-    await expect(dialog.locator('.static')).toHaveText('Как в задаче');
-    await compareDialog('run');
-    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(screen.getByRole('button', { name: 'Запустить', exact: true })).toBeVisible();
     await action('Разблокировать').click();
     await expect(dialog.locator('.tasks .task')).toHaveCount(1);
     await compareDialog('unblock');

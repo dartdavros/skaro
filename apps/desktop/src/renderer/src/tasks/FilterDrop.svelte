@@ -83,7 +83,9 @@
   .drop {
     display: inline-flex;
     align-items: center;
+    justify-content: space-between;
     gap: 7px;
+    min-width: 120px;
     height: 31px;
     padding: 0 11px;
     border: none;

@@ -20,5 +20,7 @@
     milestones={state.p.data.milestones}
     bind:filters={state.filters}
     bind:view={() => state.view, state.setView}
+    selecting={state.selecting}
+    onselecting={state.toggleSelecting}
   />
 </div>
