@@ -41,7 +41,9 @@ export function sentAt(at: number, now = Date.now()): string {
   if (m < 1) return t('ago.now');
   if (m < 60) return t('sent.min', { n: m });
   const d = new Date(at);
-  const time = new Intl.DateTimeFormat(i18n.locale, { hour: '2-digit', minute: '2-digit' }).format(d);
+  const time = new Intl.DateTimeFormat(i18n.locale, { hour: '2-digit', minute: '2-digit' }).format(
+    d,
+  );
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
   const days = Math.round((today.getTime() - new Date(d).setHours(0, 0, 0, 0)) / 86_400_000);
@@ -49,6 +51,7 @@ export function sentAt(at: number, now = Date.now()): string {
   if (days === 1) return t('sent.yesterday', { time });
   const month = (MONTHS[i18n.locale] ?? MONTHS['en']!)[d.getMonth()]!;
   const year = d.getFullYear() === today.getFullYear() ? '' : ` ${d.getFullYear()}`;
-  const date = i18n.locale === 'en' ? `${month} ${d.getDate()}${year}` : `${d.getDate()} ${month}${year}`;
+  const date =
+    i18n.locale === 'en' ? `${month} ${d.getDate()}${year}` : `${d.getDate()} ${month}${year}`;
   return t('sent.date', { date, time });
 }

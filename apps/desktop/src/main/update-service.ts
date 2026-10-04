@@ -1,6 +1,12 @@
 import { app, net } from 'electron';
 import { join } from 'node:path';
-import { AgentInstaller, currentPlatform, isAgentBusy, type AppDb, type AgentId } from '@skaro/core';
+import {
+  AgentInstaller,
+  currentPlatform,
+  isAgentBusy,
+  type AppDb,
+  type AgentId,
+} from '@skaro/core';
 import type { ChatSessions } from './chats';
 import type { TaskRuns } from './tasks';
 import type { Events, EventName } from '../shared/ipc';

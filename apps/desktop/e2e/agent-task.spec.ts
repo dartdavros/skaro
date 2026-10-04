@@ -93,7 +93,9 @@ for (const agent of agents) {
     await dialog.getByRole('button', { name: 'Отменить слияние', exact: true }).click();
     await expect(page.getByText('Слияние отменено', { exact: true })).toBeVisible();
     expect(readFileSync(join(repo, 'src', 'math.js'), 'utf8')).toContain('a - b');
-    expect(readFileSync(join(repo, '.skaro', 'tasks', 'T-001-fix-add.md'), 'utf8')).toContain('status: review');
+    expect(readFileSync(join(repo, '.skaro', 'tasks', 'T-001-fix-add.md'), 'utf8')).toContain(
+      'status: review',
+    );
     expect(existsSync(worktree)).toBe(true);
     await page.screenshot({ path: `test-results/${agent}-revert-review.png` });
     await app.close();
@@ -101,7 +103,9 @@ for (const agent of agents) {
     page = await app.firstWindow();
     await openTask(page, 'Исправить сложение');
     await expect(page.getByText('Слияние отменено', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Отменить слияние', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Отменить слияние', exact: true })).toHaveCount(
+      0,
+    );
     await app.close();
   });
 }

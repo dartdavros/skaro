@@ -95,11 +95,12 @@ export function appHandlers(
         appState.getLocale(app.getLocale()),
       ),
     'app.version': () => updates.snapshot().current,
-    'diagnostics.export': () => collectDiagnostics(db, dataDir, {
-      app: updates.snapshot().current,
-      electron: process.versions.electron,
-      node: process.versions.node,
-    }),
+    'diagnostics.export': () =>
+      collectDiagnostics(db, dataDir, {
+        app: updates.snapshot().current,
+        electron: process.versions.electron,
+        node: process.versions.node,
+      }),
     'app.checkUpdate': () => updates.check(),
     'updates.state': () => updates.snapshot(),
     'updates.download': () => updates.download(),

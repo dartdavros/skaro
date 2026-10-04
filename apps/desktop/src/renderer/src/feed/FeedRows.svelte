@@ -23,12 +23,10 @@
   let {
     rows,
     waiting,
-    nested = false,
   }: {
     rows: FeedRow[];
     /** Items with an open permission request (blue dot). */
     waiting: ReadonlySet<string>;
-    nested?: boolean;
   } = $props();
 
   /**

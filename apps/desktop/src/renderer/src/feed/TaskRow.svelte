@@ -36,7 +36,7 @@
   </button>
   {#if open}
     <div class="fd-nested">
-      <FeedRows rows={row.children} {waiting} nested />
+      <FeedRows rows={row.children} {waiting} />
       {#if summary && !row.children.some((c) => c.type === 'agent')}
         <div class="fd-text">{summary}</div>
       {/if}
