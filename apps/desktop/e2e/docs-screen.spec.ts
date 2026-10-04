@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { architecture, docsProject } from './docs-test-support';
 import { compareBaseline } from './layout-baseline';
+
+test.skip(noAgents, noAgentsReason);
 
 test('preserves document reading, tree, editing, conflicts and ADR/specification actions', async () => {
   const userData = tempUserData();

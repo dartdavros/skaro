@@ -2,8 +2,10 @@ import { expect, test } from '@playwright/test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppDb } from '@skaro/core';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { makeRepo } from './agent-task-support';
+
+test.skip(noAgents, noAgentsReason);
 
 test('preserves project grid, list, filtering and missing-folder actions', async () => {
   const userData = tempUserData();

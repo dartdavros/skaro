@@ -4,13 +4,9 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppDb } from '@skaro/core';
 import type { SkaroApi } from '../src/shared/ipc';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 
 declare const window: Window & { skaro: SkaroApi };
-
-// Without a ready agent the app stays on Settings, so project screens need installed agents.
-const noAgents = !process.env['SKARO_AGENTS_DIR'];
-const noAgentsReason = 'SKARO_AGENTS_DIR with installed agents is not set';
 
 test('opens the frameless main window with the Skaro top bar', async () => {
   const app = await launchApp();

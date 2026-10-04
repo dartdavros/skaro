@@ -3,7 +3,9 @@ import { expect, test } from '@playwright/test';
 import { join } from 'node:path';
 import { chatScreenProject } from './chat-screen-support';
 import { compareBaseline } from './layout-baseline';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
+
+test.skip(noAgents, noAgentsReason);
 
 test('preserves saved chat navigation, archive, message actions and pinned plan', async () => {
   const userData = tempUserData();

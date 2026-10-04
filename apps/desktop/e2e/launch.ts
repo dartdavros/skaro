@@ -24,6 +24,10 @@ function packagedExecutable(): string {
   }
 }
 
+/** Without a ready agent the app stays on Settings, so project screens need installed agents. */
+export const noAgents = !process.env['SKARO_AGENTS_DIR'];
+export const noAgentsReason = 'SKARO_AGENTS_DIR with installed agents is not set';
+
 /** A fresh app data dir for one test. */
 export function tempUserData(): string {
   return mkdtempSync(join(tmpdir(), 'skaro-e2e-'));

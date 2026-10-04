@@ -2,10 +2,12 @@ import { expect, test } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppDb } from '@skaro/core';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { makeRepo, openTask } from './agent-task-support';
 
 /** Authorized file/Git fixtures; real Electron main, preload, replay and native download. */
+test.skip(noAgents, noAgentsReason);
+
 test('shows unknown events as expandable service lines and exports sanitized diagnostics', async () => {
   const userData = tempUserData();
   const repo = makeRepo(userData);

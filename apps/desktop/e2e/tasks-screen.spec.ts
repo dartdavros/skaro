@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { utimesSync } from 'node:fs';
 import { join } from 'node:path';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { planProject } from './plan-test-support';
 import { compareBaseline } from './layout-baseline';
+
+test.skip(noAgents, noAgentsReason);
 
 test('preserves task board/list, filters, selection and native bulk actions', async () => {
   const userData = tempUserData();

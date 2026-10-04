@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { planProject } from './plan-test-support';
 import { compareBaseline } from './layout-baseline';
 
@@ -15,6 +15,8 @@ async function dragTo(page: Page, from: Locator, to: Locator, during?: () => Pro
   await during?.();
   await page.mouse.up();
 }
+
+test.skip(noAgents, noAgentsReason);
 
 test('keeps the plan layout and relations, archives milestones and drags like the board', async () => {
   const userData = tempUserData();

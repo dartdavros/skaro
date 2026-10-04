@@ -3,8 +3,10 @@ import { expect, test } from '@playwright/test';
 import { join } from 'node:path';
 import { agentDefaultsKey } from '../src/shared/ipc';
 import { compareBaseline } from './layout-baseline';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { planProject } from './plan-test-support';
+
+test.skip(noAgents, noAgentsReason);
 
 test('preserves project parameters and saves real agent defaults', async () => {
   const userData = tempUserData();

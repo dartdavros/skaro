@@ -4,9 +4,11 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { git } from './agent-task-support';
 import { compareBaseline } from './layout-baseline';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { planProject } from './plan-test-support';
 import type { SkaroApi } from '../src/shared/ipc';
+
+test.skip(noAgents, noAgentsReason);
 
 test('preserves project creation and creates a real Git repository', async () => {
   const userData = tempUserData();

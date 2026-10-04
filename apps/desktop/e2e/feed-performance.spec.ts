@@ -2,13 +2,15 @@ import { expect, test } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { longHistory } from './feed-performance-support';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 
 declare global {
   interface Window {
     feedCull: Map<Element, boolean>;
   }
 }
+
+test.skip(noAgents, noAgentsReason);
 
 test('keeps long history, large output and diff usable without changing visible styles', async () => {
   test.setTimeout(120_000);

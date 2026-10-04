@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { questionProject } from './question-state-support';
 import { compareBaseline } from './layout-baseline';
+
+test.skip(noAgents, noAgentsReason);
 
 test('moves to the next question after a choice and keeps choices, custom answers, previews and secret input', async () => {
   const userData = tempUserData();

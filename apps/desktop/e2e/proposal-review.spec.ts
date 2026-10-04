@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from '@playwright/test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 import { proposalProject } from './proposal-test-support';
 import { ArtifactStore } from '@skaro/core';
 
@@ -35,6 +35,8 @@ async function compareLayout(root: Locator, name: string) {
   if (existsSync(path)) expect(layout).toEqual(JSON.parse(readFileSync(path, 'utf8')));
   else writeFileSync(path, JSON.stringify(layout, null, 2));
 }
+
+test.skip(noAgents, noAgentsReason);
 
 test('preserves proposal cards, document decisions and import selection/application', async () => {
   const userData = tempUserData();
