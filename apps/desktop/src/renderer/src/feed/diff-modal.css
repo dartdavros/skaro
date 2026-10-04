@@ -1,0 +1,155 @@
+/* The diff window (Skaro UI v2 mockup, "Diff modal"). */
+
+.dm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sk-black-a55);
+  backdrop-filter: blur(3px);
+  animation: skFade 0.14s ease-out;
+}
+
+.dm-dialog {
+  width: min(920px, calc(100vw - 48px));
+  height: min(640px, calc(100vh - 96px));
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--sk-radius-modal);
+  background: var(--sk-modal);
+  box-shadow:
+    0 30px 80px var(--sk-black-a60),
+    0 0 0 1px var(--sk-white-a4);
+  animation: skIn 0.16s ease-out;
+  overflow: hidden;
+  outline: none;
+  transition:
+    width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-radius 0.22s;
+}
+
+.dm-dialog.expanded {
+  width: calc(100vw - 24px);
+  height: calc(100vh - 24px);
+  border-radius: 10px;
+}
+
+/* Syntax colours (shiki's CSS-variables theme) mapped onto the palette. */
+.dm-body {
+  --sk-syn-foreground: var(--sk-text-8);
+  --sk-syn-background: transparent;
+  --sk-syn-token-keyword: var(--sk-purple-1);
+  --sk-syn-token-string: var(--sk-blue-3);
+  --sk-syn-token-string-expression: var(--sk-blue-3);
+  --sk-syn-token-constant: var(--sk-orange-1);
+  --sk-syn-token-comment: var(--sk-text-23);
+  --sk-syn-token-function: var(--sk-text-8);
+  --sk-syn-token-parameter: var(--sk-text-8);
+  --sk-syn-token-punctuation: var(--sk-text-8);
+  --sk-syn-token-link: var(--sk-blue-3);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 0 14px;
+  background: var(--sk-fill-6);
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  line-height: 20px;
+  tab-size: 4;
+  user-select: text;
+  transition: opacity 0.2s;
+}
+
+.dm-body.dim {
+  opacity: 0.45;
+}
+
+.dm-lines {
+  width: max-content;
+  min-width: 100%;
+}
+
+.dm-chunk.skip {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 1200px;
+}
+
+.dm-hunk {
+  display: flex;
+  margin: 6px 0;
+  background: var(--sk-blue-5);
+  color: var(--sk-blue-4);
+}
+
+.dm-hunk-pad {
+  flex: none;
+  width: 106px;
+}
+
+.dm-hunk > span:last-child {
+  padding: 2px 12px 2px 0;
+  white-space: pre;
+}
+
+.dm-row {
+  display: flex;
+}
+
+.dm-row.add {
+  background: var(--sk-green-a10);
+}
+
+.dm-row.del {
+  background: var(--sk-error-a10);
+}
+
+.dm-num {
+  flex: none;
+  width: 44px;
+  padding-right: 8px;
+  text-align: right;
+  color: var(--sk-text-28);
+  user-select: none;
+}
+
+.dm-row.add .dm-num {
+  color: var(--sk-green-2);
+  background: var(--sk-green-a14);
+}
+
+.dm-row.del .dm-num {
+  color: var(--sk-red-4);
+  background: var(--sk-error-a14);
+}
+
+.dm-sign {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  user-select: none;
+}
+
+.dm-row.add .dm-sign {
+  color: var(--sk-green-2);
+}
+
+.dm-row.del .dm-sign {
+  color: var(--sk-error);
+}
+
+.dm-code {
+  padding-right: 20px;
+  white-space: pre;
+  color: var(--sk-text-8);
+}
+
+.dm-empty {
+  padding: 40px 20px;
+  text-align: center;
+  font-family: var(--sk-font);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-23);
+}

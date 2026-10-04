@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppDb } from '@skaro/core';
 import type { SkaroApi } from '../src/shared/ipc';
-import { launchApp, tempUserData } from './launch';
+import { launchApp, noAgents, noAgentsReason, tempUserData } from './launch';
 
 declare const window: Window & { skaro: SkaroApi };
 
@@ -36,6 +36,7 @@ test('opens the frameless main window with the Skaro top bar', async () => {
 });
 
 test('restores project tabs after a restart', async () => {
+  test.skip(noAgents, noAgentsReason);
   const userData = tempUserData();
   const shop = join(userData, 'shop-api');
   const blog = join(userData, 'blog-engine');
@@ -53,7 +54,9 @@ test('restores project tabs after a restart', async () => {
   const tabs = page.getByRole('tab');
   await expect(tabs).toHaveText(['Shop API', 'Blog Engine']);
   await expect(page.getByRole('tab', { selected: true })).toHaveText('Blog Engine');
-  await expect(page.getByRole('navigation').getByText('Обзор')).toBeVisible();
+  await expect(
+    page.getByRole('navigation').getByRole('button', { name: 'Задачи', exact: true }),
+  ).toHaveAttribute('aria-current', 'page');
 
   // Close the active tab: Shop API becomes active; then open the Tasks section.
   await page
@@ -72,6 +75,7 @@ test('restores project tabs after a restart', async () => {
 });
 
 test('creates a new project folder as a git repository from the "Новый проект" modal', async () => {
+  test.skip(noAgents, noAgentsReason);
   const userData = tempUserData();
   const parent = join(userData, 'code');
   mkdirSync(parent);
@@ -82,7 +86,8 @@ test('creates a new project folder as a git repository from the "Новый пр
 
   const app = await launchApp(userData);
   const page = await app.firstWindow();
-  await page.getByRole('button', { name: 'Новый проект' }).click();
+  // No projects yet: the home screen shows the empty state with its «Создать проект» button.
+  await page.getByRole('button', { name: 'Создать проект' }).click();
   const modal = page.getByRole('dialog', { name: 'Новый проект' });
   await expect(modal.getByRole('button', { name: 'Подключить' })).toBeDisabled();
   await modal.getByRole('button', { name: /Новая папка/ }).click();

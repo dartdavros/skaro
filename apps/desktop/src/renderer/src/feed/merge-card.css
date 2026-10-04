@@ -1,0 +1,76 @@
+.fd-merge-card .route {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-code);
+  min-width: 0;
+}
+
+.fd-merge-card .branch {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-merge-card .arrow {
+  flex: none;
+  color: var(--sk-text-23);
+}
+
+.fd-merge-card .base {
+  flex: none;
+  color: var(--sk-text-7);
+}
+
+.fd-merge-card .stats {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+  display: flex;
+  gap: 6px;
+}
+
+.fd-merge-card .line {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: var(--sk-fs-4);
+  line-height: 1.45;
+}
+
+.fd-merge-card .line svg {
+  margin-top: 2px;
+}
+
+.fd-merge-card .line.bad {
+  color: var(--sk-error);
+}
+
+.fd-merge-card .line.warn {
+  color: var(--sk-warn);
+}
+
+.fd-merge-card .files {
+  margin-left: 19px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-13);
+}
+
+.fd-merge-card .message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fd-merge-card textarea.fd-input {
+  height: auto;
+  padding: 8px 11px;
+  line-height: 1.4;
+  resize: vertical;
+}

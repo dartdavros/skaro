@@ -3,8 +3,16 @@
 
 import type { Milestone, Task, TaskStatus } from './artifacts/model.ts';
 
-/** Operational state of a task, kept in AppDb (not in git). */
-export type TaskRuntime = 'idle' | 'queued' | 'running' | 'waiting';
+/**
+ * Operational state of a task, kept in AppDb (not in git). "failed": the last turn ended in an
+ * error and the agent is not working; the task keeps its stage (in progress, in review).
+ */
+export type TaskRuntime = 'idle' | 'queued' | 'running' | 'waiting' | 'failed';
+
+/** An agent works on the task or the task waits in line for one. */
+export function isAgentBusy(runtime: TaskRuntime | undefined): boolean {
+  return runtime === 'queued' || runtime === 'running' || runtime === 'waiting';
+}
 
 /** Status as the UI shows it. */
 export type DisplayStatus = TaskStatus | 'blocked' | 'queued' | 'needs_answer';
@@ -30,10 +38,14 @@ export function displayStatus(
   index: TaskIndex,
   runtime: TaskRuntime = 'idle',
 ): DisplayStatus {
+  if (task.status === 'done') return 'done';
+  if (runtime === 'failed') return 'failed';
   if (runtime === 'waiting') return 'needs_answer';
   if (runtime === 'queued') return 'queued';
   if (runtime === 'running') return 'in_progress';
-  return isBlocked(task, index) ? 'blocked' : task.status;
+  if (isBlocked(task, index)) return 'blocked';
+  // Started, but no agent works on it now: it waits for the user (a reply, unmet criteria).
+  return task.status === 'in_progress' ? 'needs_answer' : task.status;
 }
 
 /** Why a task cannot be started now, or undefined if it can. */

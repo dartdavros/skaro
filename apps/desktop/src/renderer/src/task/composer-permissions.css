@@ -1,0 +1,79 @@
+.composer .pop {
+  position: absolute;
+  bottom: 34px;
+  left: 0;
+  z-index: 40;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--sk-fill-20);
+  box-shadow: 0 16px 38px var(--sk-black-a55);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: skIn 0.14s ease-out;
+}
+.composer .pop.attach {
+  width: 208px;
+}
+.composer .pop.perm {
+  width: 280px;
+}
+.composer .pop-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-7);
+  cursor: pointer;
+  text-align: left;
+}
+.composer .pop-row:hover,
+.composer .perm-row:hover {
+  background: var(--sk-fill-27);
+}
+.composer .perm-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.composer .perm-row.on {
+  background: var(--sk-fill-26);
+}
+.composer .perm-row .check {
+  flex: none;
+  margin-top: 2px;
+  width: 13px;
+  display: inline-flex;
+}
+.composer .perm-row .texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.composer .perm-row .label {
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  color: var(--sk-text-6);
+}
+.composer .perm-row .label.warn {
+  color: var(--sk-warn);
+}
+.composer .perm-row .note {
+  font-size: var(--sk-fs-2);
+  line-height: 1.4;
+  color: var(--sk-text-21);
+}

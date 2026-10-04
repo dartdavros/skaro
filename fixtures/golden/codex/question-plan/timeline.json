@@ -54,7 +54,7 @@
     }
   ],
   "interactions": [],
-  "status": "working",
+  "status": "idle",
   "session": {
     "nativeSessionId": "01a0d511-24f7-7092-a93b-88e4abc246ae",
     "model": "gpt-6-sol",

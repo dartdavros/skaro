@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import {
   EVENT_CHANNEL,
   EVENTS,
@@ -14,6 +14,7 @@ const events = new Set<string>(EVENTS);
 
 const api: SkaroApi = {
   platform: process.platform,
+  pathOf: (file) => webUtils.getPathForFile(file),
   invoke: (method, ...args) => {
     if (!methods.has(method)) return Promise.reject(new Error(`unknown method ${method}`));
     return ipcRenderer.invoke(INVOKE_CHANNEL, method, ...args);

@@ -1,0 +1,48 @@
+/* Fields of "Ветки и слияние" and "Инструкции агенту" (Settings mockup). */
+
+input[data-project-rules] {
+  flex: none;
+  width: 280px;
+  height: 32px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-field);
+  color: var(--sk-text-6);
+  font-size: var(--sk-fs-5);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--sk-field-ring);
+}
+
+.mono[data-project-rules] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+}
+
+input[data-project-rules]:hover {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-field-ring-hover);
+}
+
+input[data-project-rules]:focus {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}
+
+textarea[data-project-rules] {
+  min-height: 96px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--sk-surface);
+  color: var(--sk-text-6);
+  font-size: var(--sk-fs-5);
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--sk-field-ring);
+}
+
+textarea[data-project-rules]:focus {
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}

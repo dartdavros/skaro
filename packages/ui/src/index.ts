@@ -32,4 +32,6 @@ export { default as AgentLogo } from './components/AgentLogo.svelte';
 export { default as TaskCard } from './components/TaskCard.svelte';
 export { default as ProjectTabs, type ProjectTab } from './components/ProjectTabs.svelte';
 export { default as NavPanel, type NavItem } from './components/NavPanel.svelte';
+export { type NavTask } from './components/NavActiveTasks.svelte';
+export { default as PanelResizer } from './components/PanelResizer.svelte';
 export { default as WindowControls } from './components/WindowControls.svelte';

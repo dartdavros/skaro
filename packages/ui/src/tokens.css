@@ -5,22 +5,30 @@
 :root {
   color-scheme: dark;
 
-  /* Surfaces */
+  /*
+   * Surfaces. Levels 8 apart, so neighbours never blend: L0 #0f top bar and fields, L1 #17 page,
+   * L2 #1f cards on the page, L3 #27 what sits on a card or is selected on the page, L4 #2f.
+   * A line differs from its ground by two levels. Inside a card, "selected" is inset to L1.
+   */
   --sk-topbar: #0f0f0f; /* top bar, side panel */
-  --sk-bg: #121212; /* main background */
-  --sk-surface: #1a1a1a; /* cards */
-  --sk-surface-hover: #222222;
-  --sk-surface-2: #242424; /* secondary buttons, open menus */
-  --sk-surface-2-hover: #2d2d2d;
+  --sk-bg: var(--sk-fill-8); /* L1: main background, matches the left sidebar */
+  --sk-surface: var(--sk-fill-16); /* L2: cards and blocks on the page */
+  --sk-surface-hover: var(--sk-fill-23); /* L3 */
+  --sk-hover: var(--sk-fill-16); /* L2: hovered row or icon button on the page */
+  --sk-selected: var(--sk-fill-23); /* L3: selected row on the page */
+  --sk-surface-2: var(--sk-fill-23); /* L3: secondary buttons, open menus, things on a card */
+  --sk-surface-2-hover: var(--sk-fill-28); /* L4 */
   --sk-modal: #1a1a1a;
   --sk-composer: #2b2b2b; /* chat input */
-  --sk-seg-track: #060606; /* segmented switch track */
+  /* The darkest surface: switch tracks, filter buttons, board columns, inset panels. */
+  --sk-deep: #0e0e0e;
+  --sk-seg-track: var(--sk-deep); /* segmented switch track */
   --sk-field: #0f0f0f; /* fields and selects, darker than any surface */
-  --sk-field-hover: #0b0b0b;
+  --sk-field-hover: #0d0d0d;
   --sk-field-ring: #2a2a2a;
   --sk-field-ring-hover: #363636;
-  --sk-line: #1f1f1f;
-  --sk-line-strong: #2b2b2b;
+  --sk-line: var(--sk-fill-23); /* L3: separators on the page and the top bar */
+  --sk-line-strong: var(--sk-fill-28); /* L4: separators inside a card */
   --sk-menu: #242424;
   --sk-menu-hover: #2d2d2d;
   --sk-menu-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
@@ -31,19 +39,29 @@
   --sk-user-message: #1c2a4d;
   --sk-link: #7d9ce8;
   --sk-link-hover: #9bb4ee;
-  --sk-code: #e8875b; /* non-clickable highlights: code, commands */
+  --sk-code: var(--sk-link); /* highlights: commands, branches — the accent, never orange */
+  --sk-code-bg: var(--sk-surface-2); /* inline code: lighter than the page and a card */
   --sk-error: #ef6a63;
   --sk-warn: #e0a33c;
   --sk-diff-add: #4caf50;
+  /* "Отредактировал N файлов" at the end of a reply, as bright as the agent's own colours. */
+  --sk-diff-icon: #878581;
+  --sk-diff-plus: #27d74b;
+  --sk-diff-minus: #ff2834;
+  --sk-diff-chevron: #c3c0b4;
 
-  /* Text: pure white is never used, #ededed at most */
-  --sk-text-bright: #ededed;
+  /* Text: pure white is never used; headings and active items stay muted, #e0e0e0 at most */
+  --sk-text-bright: #e0e0e0;
   --sk-text: #d5d5d5;
-  --sk-text-body: #b1b1b1;
-  --sk-text-secondary: #a6a6a6;
-  --sk-text-muted: #7d7d7d;
-  --sk-text-label: #6f6f6f;
-  --sk-icon: #989898;
+  --sk-text-body: #b8b8b8;
+  --sk-text-reply: #f0efec; /* the agent's replies in the feed, as bright as Claude's */
+  --sk-text-secondary: #adadad;
+  --sk-text-muted: #848484;
+  --sk-text-label: #767676;
+  --sk-icon: #9f9f9f;
+  --sk-scrollbar: #282828;
+  --sk-scrollbar-hover: #3b3b3b;
+  --sk-diagram-text: #d5d5d5; /* Mermaid labels */
 
   /* Type */
   --sk-font:
@@ -69,7 +87,7 @@ body {
   background: var(--sk-bg);
   color: var(--sk-text-body);
   font-family: var(--sk-font);
-  font-size: 14px;
+  font-size: var(--sk-fs-8);
   -webkit-font-smoothing: antialiased;
   /* Code shows what is typed: no "===" or "->" ligatures of the mono font. */
   font-variant-ligatures: none;
@@ -94,7 +112,6 @@ a:hover {
 
 code {
   font-family: var(--sk-mono);
-  color: var(--sk-code);
 }
 
 ::-webkit-scrollbar {
@@ -107,12 +124,12 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #282828;
+  background: var(--sk-scrollbar);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b3b3b;
+  background: var(--sk-scrollbar-hover);
 }
 
 @keyframes skPulse {
@@ -149,34 +166,76 @@ code {
   }
 }
 
+@keyframes skFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Drag and drop on the board: the landing slot, the lifted ghost, the dropped card. */
+@keyframes skSlot {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes skLift {
+  from {
+    transform: rotate(0deg) scale(1);
+    box-shadow: none;
+  }
+  to {
+    transform: rotate(2deg) scale(1.03);
+  }
+}
+
+@keyframes skDrop {
+  0% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 1.5px var(--sk-accent);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 0 0 var(--sk-accent-a0);
+  }
+}
+
 /* Type scale (02 · Типографика) */
 .sk-title {
   margin: 0;
-  font-size: 23px;
+  font-size: var(--sk-fs-13);
   font-weight: 700;
-  color: #d8d8d8;
+  color: var(--sk-text-5);
   letter-spacing: -0.01em;
 }
 
 .sk-name {
-  font-size: 14.5px;
+  font-size: var(--sk-fs-9);
   font-weight: 600;
   color: var(--sk-text);
 }
 
 .sk-text {
-  font-size: 13px;
+  font-size: var(--sk-fs-6);
   line-height: 1.6;
   color: var(--sk-text-body);
 }
 
 .sk-secondary {
-  font-size: 12px;
+  font-size: var(--sk-fs-4);
   color: var(--sk-text-muted);
 }
 
 .sk-label {
-  font-size: 11px;
+  font-size: var(--sk-fs-2);
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -185,5 +244,164 @@ code {
 
 .sk-mono {
   font-family: var(--sk-mono);
-  font-size: 12px;
+  font-size: var(--sk-fs-4);
+}
+
+/*
+ * Palette and type scale of the screens (generated from the styles, then tuned by hand).
+ * Text greys: 1 = brightest. Fill greys (backgrounds, borders, shadows): 1 = darkest.
+ * Colors by hue, 1 = lightest. Translucent: base color and opacity in percent.
+ * Font sizes: 1 = smallest.
+ */
+:root {
+  /* Text */
+  --sk-text-1: #ffffff;
+  --sk-text-2: #e0e0e0;
+  --sk-text-3: #dedede;
+  --sk-text-4: #dbdbdb;
+  --sk-text-5: #d8d8d8;
+  --sk-text-6: #d5d5d5;
+  --sk-text-7: #cfcfcf;
+  --sk-text-8: #c9c9c9;
+  --sk-text-9: #bfbfbf;
+  --sk-text-10: #b8b8b8;
+  --sk-text-11: #b8b8b8;
+  --sk-text-12: #afafaf;
+  --sk-text-13: #adadad;
+  --sk-text-14: #a9a9a9;
+  --sk-text-15: #adadad;
+  --sk-text-16: #a5a5a5;
+  --sk-text-17: #9f9f9f;
+  --sk-text-18: #9f9f9f;
+  --sk-text-19: #919191;
+  --sk-text-20: #919191;
+  --sk-text-21: #848484;
+  --sk-text-22: #848484;
+  --sk-text-23: #767676;
+  --sk-text-24: #727272;
+  --sk-text-25: #767676;
+  --sk-text-26: #676767;
+  --sk-text-27: #666666;
+  --sk-text-28: #525252;
+  --sk-text-29: #3b3b3b;
+
+  /* Fills */
+  --sk-fill-1: #000000;
+  --sk-fill-2: #0d0d0d;
+  --sk-fill-3: #0f0f0f;
+  --sk-fill-4: #111111;
+  --sk-fill-5: #121212;
+  --sk-fill-6: #141414;
+  --sk-fill-7: #161616;
+  --sk-fill-8: #171717;
+  --sk-fill-9: #181818;
+  --sk-fill-10: #191919;
+  --sk-fill-11: #1a1a1a;
+  --sk-fill-12: #1b1b1b;
+  --sk-fill-13: #1c1c1c;
+  --sk-fill-14: #1d1d1d;
+  --sk-fill-15: #1e1e1e;
+  --sk-fill-16: #1f1f1f;
+  --sk-fill-17: #202020;
+  --sk-fill-18: #222222;
+  --sk-fill-19: #232323;
+  --sk-fill-20: #242424;
+  --sk-fill-21: #252525;
+  --sk-fill-22: #262626;
+  --sk-fill-23: #272727;
+  --sk-fill-24: #292929;
+  --sk-fill-25: #2a2a2a;
+  --sk-fill-26: #2b2b2b;
+  --sk-fill-27: #2d2d2d;
+  --sk-fill-28: #2f2f2f;
+  --sk-fill-29: #303030;
+  --sk-fill-30: #353535;
+  --sk-fill-31: #363636;
+  --sk-fill-32: #383838;
+  --sk-fill-33: #3a3a3a;
+  --sk-fill-34: #3b3b3b;
+  --sk-fill-35: #454545;
+  --sk-fill-36: #4a4a4a;
+  --sk-fill-37: #5a5a5a;
+  --sk-fill-38: #5f5f5f;
+  --sk-fill-39: #6f6f6f;
+  --sk-fill-40: #8a8a8a;
+  --sk-fill-41: #a6a6a6;
+  --sk-fill-42: #ffffff;
+
+  /* Colors */
+  --sk-blue-1: #dfe5f3;
+  --sk-blue-2: #b8c3dc;
+  --sk-blue-3: #8fb8e6;
+  --sk-blue-4: #5f6f8f;
+  --sk-blue-5: #18212e;
+  --sk-green-1: #74c294;
+  --sk-green-2: #58b47c;
+  --sk-orange-1: #e8b356;
+  --sk-orange-2: #d0a45c;
+  --sk-orange-3: #332508;
+  --sk-purple-1: #b09ad0;
+  --sk-red-1: #ffb3ae;
+  --sk-red-2: #f08b85;
+  --sk-red-3: #e08b80;
+  --sk-red-4: #d98079;
+  --sk-red-5: #e5625c;
+  --sk-red-6: #d9534d;
+  --sk-red-7: #c8453d;
+  --sk-red-8: #2a1413;
+  --sk-red-9: #1a1414;
+  --sk-teal-1: #2bb3a6;
+  --sk-teal-2: #10201e;
+  --sk-teal-3: #141a19;
+
+  /* Translucent */
+  --sk-accent-a0: rgba(42, 82, 190, 0);
+  --sk-accent-a14: rgba(42, 82, 190, 0.14);
+  --sk-accent-a18: rgba(42, 82, 190, 0.18);
+  --sk-accent-a55: rgba(42, 82, 190, 0.55);
+  --sk-bg-a0: rgba(23, 23, 23, 0);
+  --sk-bg-a85: rgba(23, 23, 23, 0.85);
+  --sk-black-a35: rgba(0, 0, 0, 0.35);
+  --sk-black-a12: rgba(0, 0, 0, 0.12);
+  --sk-black-a45: rgba(0, 0, 0, 0.45);
+  --sk-black-a50: rgba(0, 0, 0, 0.5);
+  --sk-black-a55: rgba(0, 0, 0, 0.55);
+  --sk-black-a60: rgba(0, 0, 0, 0.6);
+  --sk-black-a65: rgba(0, 0, 0, 0.65);
+  --sk-black-a78: rgba(0, 0, 0, 0.78);
+  --sk-green-a10: rgba(88, 180, 124, 0.1);
+  --sk-green-a14: rgba(88, 180, 124, 0.14);
+  --sk-error-a10: rgba(239, 106, 99, 0.1);
+  --sk-error-a12: rgba(239, 106, 99, 0.12);
+  --sk-error-a14: rgba(239, 106, 99, 0.14);
+  --sk-error-a16: rgba(239, 106, 99, 0.16);
+  --sk-error-a18: rgba(239, 106, 99, 0.18);
+  --sk-error-a26: rgba(239, 106, 99, 0.26);
+  --sk-error-a28: rgba(239, 106, 99, 0.28);
+  --sk-float-a72: rgba(12, 12, 12, 0.72);
+  --sk-float-hover-a90: rgba(30, 30, 30, 0.9);
+  --sk-warn-a10: rgba(224, 163, 60, 0.1);
+  --sk-white-a4: rgba(255, 255, 255, 0.04);
+  --sk-white-a6: rgba(255, 255, 255, 0.06);
+  --sk-white-a55: rgba(255, 255, 255, 0.55);
+
+  /* Font sizes */
+  --sk-fs-0: 11px;
+  --sk-fs-1: 11.5px;
+  --sk-fs-2: 12px;
+  --sk-fs-3: 12.5px;
+  --sk-fs-4: 13px;
+  --sk-fs-5: 13.5px;
+  --sk-fs-6: 14px;
+  --sk-fs-7: 14.5px;
+  --sk-fs-8: 15px;
+  --sk-fs-9: 15.5px;
+  --sk-fs-10: 16px;
+  --sk-fs-11: 16.5px;
+  --sk-fs-12: 17px;
+  --sk-fs-13: 18px;
+  --sk-fs-14: 21px;
+  --sk-fs-15: 23px;
+  --sk-fs-16: 24px;
+  --sk-fs-17: 25px;
 }

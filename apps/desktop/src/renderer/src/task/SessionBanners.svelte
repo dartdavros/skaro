@@ -2,6 +2,7 @@
   import type { TimelineState } from '@skaro/timeline';
   import { Banner, t } from '@skaro/ui';
   import type { AgentInfo } from '../../../shared/ipc';
+  import { clock } from '../feed/context.svelte';
   import { agentName } from '../feed/format';
 
   /** Over the feed: sign-in, usage limit, agent download (mockup 8a). */
@@ -18,15 +19,22 @@
   } = $props();
 
   const name = $derived(agent ? agentName(agent.id) : '');
-  const until = $derived(
-    limits?.resetsAt
-      ? t('banner.until', {
-          time: new Date(limits.resetsAt).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-        })
-      : '',
+  // The reset time, with the date when it is not today (a weekly window).
+  const until = $derived.by(() => {
+    if (!limits?.resetsAt) return '';
+    const at = new Date(limits.resetsAt);
+    const today = at.toDateString() === new Date(clock.now).toDateString();
+    const time = at.toLocaleString([], {
+      ...(today ? {} : { day: 'numeric', month: 'short' }),
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return t('banner.until', { time });
+  });
+  // A limit is news only until its reset: after that the agent has a fresh allowance even if it
+  // has not said so yet (it reports limits only while it works).
+  const limit = $derived(
+    limits && !(limits.resetsAt && Date.parse(limits.resetsAt) <= clock.now) ? limits.state : 'ok',
   );
   const mb = (n: number) => Math.round(n / 1e6);
 </script>
@@ -57,9 +65,9 @@
     action={t('agent.login')}
     onaction={() => void window.skaro.invoke('agents.login', agent.id)}
   />
-{:else if limits?.state === 'exhausted'}
+{:else if limit === 'exhausted'}
   <Banner kind="warning" text={t('banner.limit', { agent: name, until })} />
-{:else if limits?.state === 'warning'}
+{:else if limit === 'warning'}
   <Banner kind="warning" text={t('banner.limitSoon', { agent: name, until })} />
 {/if}
 {#if agent?.error && !agent.download && !agent.installed}
@@ -81,7 +89,7 @@
     gap: 8px;
     padding: 10px 12px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--sk-white-a4);
   }
 
   .row {
@@ -92,14 +100,14 @@
 
   .text {
     flex: 1;
-    font-size: 12.5px;
-    color: #a6a6a6;
+    font-size: var(--sk-fs-5);
+    color: var(--sk-text-13);
   }
 
   .bar {
     height: 4px;
     border-radius: 3px;
-    background: #242424;
+    background: var(--sk-fill-20);
     overflow: hidden;
   }
 
@@ -107,7 +115,7 @@
     display: block;
     height: 100%;
     border-radius: 3px;
-    background: #8a8a8a;
+    background: var(--sk-fill-40);
     transition: width 0.6s ease;
   }
 </style>

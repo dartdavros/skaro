@@ -1,8 +1,10 @@
 <script lang="ts">
   import { IconButton, Icon, ProjectTabs, t, WindowControls, type ProjectTab } from '@skaro/ui';
+  import UpdateButton from './updates/UpdateButton.svelte';
 
   /** The top bar is the window title bar: home, project tabs, settings, window buttons. */
   let {
+    locked = false,
     tabs,
     active,
     home,
@@ -13,6 +15,8 @@
     onadd,
     onsettings,
   }: {
+    /** No agent yet: home and projects are closed until one is added. */
+    locked?: boolean;
     tabs: ProjectTab[];
     active?: string;
     home: boolean;
@@ -38,16 +42,19 @@
     type="button"
     class="home"
     class:current={home}
+    class:locked
+    disabled={locked}
     data-tip={t('tabs.home')}
     aria-label={t('tabs.home')}
     onclick={onhome}
   >
     <span>skaro</span>
   </button>
-  <div class="tabs">
+  <div class="tabs" class:locked inert={locked}>
     <ProjectTabs {tabs} {active} {onselect} {onclose} {onadd} />
   </div>
   <div class="right">
+    <UpdateButton />
     <IconButton tip={t('window.settings')} active={settings} onclick={onsettings}>
       <Icon name="settings" size={16} />
     </IconButton>
@@ -72,7 +79,7 @@
     gap: 10px;
     padding: 0 10px 0 14px;
     background: var(--sk-topbar);
-    border-bottom: 1px solid var(--sk-surface);
+    border-bottom: 1px solid var(--sk-line);
     -webkit-app-region: drag;
     user-select: none;
   }
@@ -82,29 +89,35 @@
     padding-left: 80px;
   }
 
+  /* The logo is plain text, not a tab: only its colour reacts to hover and "current". */
   .home {
     flex: none;
     display: flex;
     align-items: center;
-    gap: 8px;
     height: 32px;
-    padding: 0 14px;
+    padding: 0 12px 0 4px;
     border: none;
-    border-radius: 11px 11px 0 0;
     background: transparent;
     cursor: pointer;
     -webkit-app-region: no-drag;
   }
 
-  .home:hover,
-  .home.current {
-    background: #161616;
+  .home.locked,
+  .tabs.locked {
+    opacity: 0.4;
+    cursor: default;
   }
 
   .home span {
-    font-size: 13.5px;
+    font-size: var(--sk-fs-13);
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
+    color: var(--sk-text-8);
+    transition: color 0.12s ease;
+  }
+
+  .home:not(:disabled):hover span,
+  .home.current span {
     color: var(--sk-text-bright);
   }
 
@@ -132,6 +145,6 @@
     width: 1px;
     height: 16px;
     margin: 0 2px;
-    background: #1d1d1d;
+    background: var(--sk-line);
   }
 </style>

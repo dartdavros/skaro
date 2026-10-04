@@ -1,0 +1,228 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.toolbar[data-doc-editor] {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--sk-fill-16);
+}
+
+.name[data-doc-editor] {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title[data-doc-editor] {
+  font-size: var(--sk-fs-8);
+  font-weight: 700;
+  color: var(--sk-text-6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dirty[data-doc-editor] {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sk-accent);
+}
+
+.tools[data-doc-editor] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 8px;
+  border-left: 1px solid var(--sk-fill-20);
+}
+
+.icon[data-doc-editor] {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-17);
+  cursor: pointer;
+}
+
+.icon.small[data-doc-editor] {
+  width: 28px;
+  height: 28px;
+}
+
+.icon[data-doc-editor]:hover {
+  background: var(--sk-hover);
+  color: var(--sk-text-2);
+}
+
+.spacer[data-doc-editor] {
+  flex: 1;
+}
+
+.seg[data-doc-editor] {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--sk-deep);
+}
+
+.seg[data-doc-editor] button:where([data-doc-editor]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 27px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sk-text-17);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.seg[data-doc-editor] button:where([data-doc-editor]):hover {
+  background: var(--sk-fill-11);
+  color: var(--sk-text-6);
+}
+
+.seg[data-doc-editor] button.active:where([data-doc-editor]) {
+  background: var(--sk-bg);
+  color: var(--sk-text-2);
+  box-shadow: 0 1px 2px var(--sk-black-a35);
+}
+
+.cancel[data-doc-editor],
+.save[data-doc-editor] {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--sk-fs-5);
+}
+
+.cancel[data-doc-editor] {
+  gap: 7px;
+  padding: 0 13px;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-6);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel[data-doc-editor]:hover {
+  background: var(--sk-fill-27);
+  color: var(--sk-text-2);
+}
+
+.save[data-doc-editor] {
+  padding: 0 14px;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-23);
+  font-weight: 700;
+  cursor: default;
+}
+
+.save.ready[data-doc-editor] {
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  cursor: pointer;
+}
+
+.save.ready[data-doc-editor]:hover {
+  background: var(--sk-accent-hover);
+}
+
+.conflict[data-doc-editor] {
+  flex: none;
+  margin: 10px 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 9px;
+  background: var(--sk-warn-a10);
+  color: var(--sk-warn);
+}
+
+.warn[data-doc-editor] {
+  flex: none;
+  display: inline-flex;
+}
+
+.conflict-text[data-doc-editor] {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-6);
+}
+
+.strong[data-doc-editor] {
+  font-weight: 600;
+}
+
+.link[data-doc-editor] {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: var(--sk-fs-6);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link[data-doc-editor]:hover {
+  text-decoration: underline;
+}
+
+.body[data-doc-editor] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.editor[data-doc-editor] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  padding: 14px 16px 16px;
+}
+
+.editor.split[data-doc-editor] {
+  border-right: 1px solid var(--sk-line);
+}
+
+textarea[data-doc-editor] {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--sk-surface);
+  color: var(--sk-text-6);
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-6);
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+}
+
+textarea[data-doc-editor]:focus {
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}

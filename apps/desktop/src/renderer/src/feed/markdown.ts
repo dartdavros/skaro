@@ -37,16 +37,11 @@ marked.use({
       );
     },
     codespan({ text }: Tokens.Codespan): string {
-      // `text` arrives escaped; paths are checked against the working folder later.
-      const raw = text
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-      return looksLikePath(raw)
-        ? `<code class="md-path" data-path="${escape(raw)}">${text}</code>`
-        : `<code>${text}</code>`;
+      // `text` arrives raw: `<object>` in backticks is text, never a tag. Paths are checked
+      // against the working folder later.
+      return looksLikePath(text)
+        ? `<code class="md-path" data-path="${escape(text)}">${escape(text)}</code>`
+        : `<code>${escape(text)}</code>`;
     },
     image({ href, text }: Tokens.Image): string {
       if (/^https?:\/\//i.test(href)) {
@@ -55,8 +50,10 @@ marked.use({
       }
       return `<span class="md-local-image" data-path="${escape(href)}" data-alt="${escape(text)}"></span>`;
     },
-    link({ href, text }: Tokens.Link): string {
-      const label = typeof text === 'string' ? text : href;
+    link(token: Tokens.Link): string {
+      const { href } = token;
+      // The label is Markdown of its own (inline code, emphasis), rendered and escaped by marked.
+      const label = this.parser.parseInline(token.tokens);
       if (/^https?:\/\//i.test(href)) {
         return `<a href="${escape(href)}" data-external="1" data-tip="${escape(href)}">${label}</a>`;
       }
@@ -130,20 +127,23 @@ export async function drawMermaid(root: HTMLElement): Promise<void> {
   const blocks = [...root.querySelectorAll<HTMLElement>('.md-mermaid:not([data-done])')];
   if (!blocks.length) return;
   mermaid ??= import('mermaid').then((m) => {
+    // Mermaid derives shades from real colors, so it gets the token values, not var().
+    const styles = getComputedStyle(document.documentElement);
+    const token = (name: string): string => styles.getPropertyValue(name).trim();
     m.default.initialize({
       startOnLoad: false,
       theme: 'dark',
       securityLevel: 'strict',
       // SVG text labels: HTML labels would need foreignObject, which sanitizing drops.
-      flowchart: { htmlLabels: false },
+      htmlLabels: false,
       fontFamily: 'Nunito Sans Variable, sans-serif',
       themeVariables: {
-        background: '#1a1a1a',
-        primaryColor: '#242424',
-        primaryTextColor: '#c8c8c8',
-        primaryBorderColor: '#242424',
-        lineColor: '#6f6f6f',
-        fontSize: '12px',
+        background: token('--sk-surface'),
+        primaryColor: token('--sk-surface-2'),
+        primaryTextColor: token('--sk-diagram-text'),
+        primaryBorderColor: token('--sk-surface-2'),
+        lineColor: token('--sk-text-25'),
+        fontSize: token('--sk-fs-4'),
       },
     });
     return m.default;

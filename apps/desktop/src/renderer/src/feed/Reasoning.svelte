@@ -1,40 +1,19 @@
 <script lang="ts">
   import type { FeedRow } from '@skaro/timeline';
   import { t } from '@skaro/ui';
-  import Chevron from './Chevron.svelte';
   import { clock } from './context.svelte';
-  import { clock as formatClock, duration } from './format';
+  import { clock as formatClock } from './format';
+  import ThinkingMark from './ThinkingMark.svelte';
 
-  /** "Думал 12 с": folded by default, opens to the dimmed text (agent-output.md 7.1). */
+  /** "Думает… 0:07" while the agent reasons; a finished "Думал 12 с" is not shown (owner's call). */
   let { row }: { row: Extract<FeedRow, { type: 'reasoning' }> } = $props();
 
-  let open = $state(false);
-  const running = $derived(row.item.status === 'running');
-  const ms = $derived(
-    (row.item.endedAt ?? (running ? clock.now : row.item.startedAt)) - row.item.startedAt,
-  );
-  const text = $derived(row.item.text?.trim() ?? '');
+  const ms = $derived(clock.now - row.item.startedAt);
 </script>
 
 <div class="fd-block gap6">
-  {#if running}
-    <div class="fd-live">
-      <span class="fd-pulse"></span>{t('feed.live.thinking')}
-      {formatClock(ms)}
-    </div>
-  {:else if row.item.redacted || !text}
-    <div class="fd-fold static" data-tip={t('feed.thought.hiddenTip')} style="padding-left: 19px">
-      {t('feed.thought.hidden', { d: duration(ms) })}
-    </div>
-  {:else}
-    <button
-      type="button"
-      class="fd-fold"
-      data-tip={t('feed.thought.tip')}
-      onclick={() => (open = !open)}
-    >
-      <Chevron {open} />{t('feed.thought', { d: duration(ms) })}
-    </button>
-    {#if open}<div class="fd-reasoning">{text}</div>{/if}
-  {/if}
+  <div class="fd-live">
+    <ThinkingMark />{t('feed.live.thinking')}
+    {formatClock(ms)}
+  </div>
 </div>

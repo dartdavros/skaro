@@ -14,11 +14,24 @@ export interface UserInput {
   images?: string[];
 }
 
-export interface McpServer {
-  type: 'http';
-  url: string;
-  headers?: Record<string, string>;
-}
+export type McpServer = (
+  | {
+      type: 'http';
+      url: string;
+      headers?: Record<string, string>;
+    }
+  | {
+      type: 'stdio';
+      command: string;
+      args: string[];
+      env?: Record<string, string>;
+    }
+) & {
+  /** Its tools run without asking the user: Skaro's own server, whose tools confirm in cards. */
+  trusted?: boolean;
+  /** Longest tool call of this server, in milliseconds; the agent's own default otherwise. */
+  timeout?: number;
+};
 
 export interface SessionOptions {
   /** Worktree of the task, or the project root for chats. */
@@ -30,11 +43,15 @@ export interface SessionOptions {
   planFirst?: boolean;
   /** Project and task chats read code only (architecture.md 9). */
   readOnly?: boolean;
+  /** Folders outside cwd the agent may read: the copy of an import's sources (architecture.md 12). */
+  readDirs?: string[];
   /** Native session to continue (Claude session id, Codex thread id). */
   resume?: string;
   /** Extra instructions for every turn (project rules, Skaro workflow). */
   instructions?: string;
   mcpServers?: Record<string, McpServer>;
+  /** Extra variables of the agent's process and of the commands it runs. */
+  env?: Record<string, string>;
   /** Whether the agent sandbox holds the workspace boundary (self-check, D-28). */
   sandboxVerified?: boolean;
   /** Agent-specific sandbox setting chosen by the self-check (Codex on Windows: elevated/unelevated). */
@@ -97,6 +114,26 @@ export interface SandboxCheck {
   detail: string;
 }
 
+/** An MCP server from the user's agent settings, as the agent sees it at start. */
+export interface AgentMcpServer {
+  name: string;
+  state: 'ok' | 'failed' | 'needs_auth' | 'disabled';
+  tools: number;
+  error?: string;
+}
+
+/**
+ * The user's own agent settings Skaro connects to every run (D-25): where they live, MCP servers
+ * with their state, skills and hooks ("Ваши настройки агента").
+ */
+export interface AgentUserConfig {
+  /** ~/.claude, ~/.codex, or the folder the environment points to. */
+  dir: string;
+  mcp: AgentMcpServer[];
+  skills: number;
+  hooks: number;
+}
+
 export interface AgentAdapter {
   readonly id: 'claude-code' | 'codex';
   readonly adapterVersion: string;
@@ -105,6 +142,8 @@ export interface AgentAdapter {
   login(): Promise<void>;
   listModels(cwd: string): Promise<AgentModel[]>;
   listCommands(cwd: string): Promise<AgentCommand[]>;
+  /** The user's agent settings: MCP servers (connected at start, no model call), skills, hooks. */
+  userConfig(cwd: string): Promise<AgentUserConfig>;
   /** D-28: does the sandbox hold the workspace boundary on this machine? */
   checkSandbox(scratchDir: string): Promise<SandboxCheck>;
   start(options: SessionOptions): Promise<AgentSession>;

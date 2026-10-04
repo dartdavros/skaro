@@ -1,0 +1,109 @@
+.composer .menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  max-height: 260px;
+  overflow: auto;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--sk-fill-20);
+  box-shadow: 0 16px 38px var(--sk-black-a55);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: skIn 0.14s ease-out;
+}
+.composer .menu.at {
+  overflow: visible;
+  gap: 4px;
+}
+.composer .slash-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.composer .slash-row.hl,
+.composer .at-row.hl {
+  background: var(--sk-fill-27);
+}
+.composer .slash-row .cmd {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-code);
+}
+.composer .slash-row .note {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.composer .search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.composer .search svg {
+  position: absolute;
+  left: 10px;
+}
+.composer .search input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px 0 31px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-fill-5);
+  color: var(--sk-text-2);
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  outline: none;
+}
+.composer .search input:focus {
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}
+.composer .at-rows {
+  max-height: 210px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.composer .at-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-7);
+}
+.composer .at-row span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.composer .empty {
+  padding: 8px 9px;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-21);
+}

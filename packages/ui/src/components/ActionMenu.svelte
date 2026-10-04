@@ -1,5 +1,7 @@
 <script lang="ts">
   import { t } from '../i18n.svelte.ts';
+  import type { IconName } from '../icons.ts';
+  import Icon from './Icon.svelte';
   import Popover from './Popover.svelte';
 
   /** Actions menu: a list with a separator before the dangerous item. */
@@ -7,21 +9,39 @@
     items,
     tip,
     align = 'left',
+    size = 'md',
+    width = 214,
   }: {
-    items: ({ label: string; onselect: () => void; danger?: boolean } | 'separator')[];
+    items: (
+      | {
+          label: string;
+          onselect: () => void;
+          danger?: boolean;
+          icon?: IconName;
+          tip?: string;
+          /** Shown but not chosen; `tip` says why. */
+          disabled?: boolean;
+        }
+      | 'separator'
+    )[];
     tip?: string;
     align?: 'left' | 'right';
+    /** `sm`: the 26px button of a project card (Projects mockup), `row`: 28px (Plan mockup). */
+    size?: 'md' | 'sm' | 'row';
+    width?: number;
   } = $props();
 
   let open = $state(false);
 </script>
 
-<Popover bind:open width={214} {align}>
+<Popover bind:open {width} {align} offset={size === 'row' ? 32 : 34}>
   {#snippet trigger({ toggle, open })}
     <button
       type="button"
       class="dots"
       class:active={open}
+      class:sm={size === 'sm'}
+      class:row={size === 'row'}
       data-tip={tip ?? t('ui.more')}
       aria-label={tip ?? t('ui.more')}
       onclick={toggle}
@@ -43,19 +63,26 @@
         <div
           class="item"
           class:danger={item.danger}
+          class:disabled={item.disabled}
+          data-tip={item.tip}
           role="menuitem"
           tabindex="-1"
+          aria-disabled={item.disabled || undefined}
           onclick={() => {
+            if (item.disabled) return;
             close();
             item.onselect();
           }}
           onkeydown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !item.disabled) {
               close();
               item.onselect();
             }
           }}
         >
+          {#if item.icon}<span class="icon"
+              ><Icon name={item.icon} size={14} stroke={item.icon === 'plus' ? 2.4 : 1.9} /></span
+            >{/if}
           {item.label}
         </div>
       {/if}
@@ -77,16 +104,29 @@
     cursor: pointer;
   }
 
+  .dots.sm {
+    width: 26px;
+    height: 26px;
+  }
+
+  .dots.row {
+    width: 28px;
+    height: 28px;
+  }
+
   .dots.active,
   .dots:hover {
-    background: #262626;
+    background: var(--sk-fill-22);
     color: var(--sk-text-bright);
   }
 
   .item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
     padding: 7px 9px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     color: var(--sk-text);
     cursor: pointer;
   }
@@ -96,18 +136,38 @@
     color: var(--sk-text-bright);
   }
 
+  .icon {
+    display: inline-flex;
+    color: var(--sk-text-19);
+  }
+
   .item.danger {
-    color: #d98079;
+    color: var(--sk-red-4);
+  }
+
+  .item.danger .icon {
+    color: inherit;
   }
 
   .item.danger:hover {
-    background: rgba(239, 106, 99, 0.12);
+    background: var(--sk-error-a12);
     color: var(--sk-error);
+  }
+
+  .item.disabled,
+  .item.disabled:hover {
+    background: transparent;
+    color: var(--sk-text-23);
+    cursor: default;
+  }
+
+  .item.disabled .icon {
+    color: inherit;
   }
 
   .sep {
     height: 1px;
     margin: 4px 2px;
-    background: #2f2f2f;
+    background: var(--sk-fill-28);
   }
 </style>

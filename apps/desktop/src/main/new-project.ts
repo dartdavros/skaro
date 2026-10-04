@@ -58,3 +58,18 @@ async function ensureSkaroConfig(path: string): Promise<void> {
   await mkdir(join(path, '.skaro'), { recursive: true });
   await writeFile(config, 'base_branch: main\n');
 }
+
+/** Files that are Skaro's own or agent instructions, not the project's code. */
+const NOT_CODE = /^(\.skaro\/|\.gitignore$|AGENTS\.md$|CLAUDE\.md$|README(\.\w+)?$|LICENSE)/i;
+
+/** The folder has code of its own: a tracked or new file beyond Skaro's and the readme. */
+export async function hasCode(path: string): Promise<boolean> {
+  const listed = await git(path, ['ls-files', '--cached', '--others', '--exclude-standard'], {
+    allowFail: true,
+  });
+  if (listed.code !== 0) return false;
+  return listed.stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .some((l) => l && !NOT_CODE.test(l));
+}

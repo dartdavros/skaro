@@ -1,0 +1,27 @@
+.composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px 8px;
+  border-radius: 14px;
+  background: var(--sk-fill-26);
+}
+.composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: 48px;
+  overflow-y: hidden;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--sk-text-6);
+  font: inherit;
+  font-size: var(--sk-fs-8);
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+.composer textarea::placeholder {
+  color: var(--sk-text-21);
+}

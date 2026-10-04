@@ -4,6 +4,7 @@ out/
 dist/
 release/
 *.tsbuildinfo
+/apps/desktop/build/skaro-bundle.json
 .eslintcache
 
 # ── Tests ──────────────────────────────────────────────

@@ -117,6 +117,25 @@ describe('ArtifactStore', () => {
     });
   });
 
+  it('keeps specifications like ADRs and links tasks to them', async () => {
+    const old = await store.createSpec({ title: 'Оплата картой', status: 'accepted' });
+    const next = await store.createSpec({ title: 'Возвраты по картам', replaces: old.id });
+    expect([old.id, next.id, next.status]).toEqual(['0001', '0002', 'proposed']);
+    expect(next.path).toBe('.skaro/specs/0002-vozvraty-po-kartam.md');
+    expect(next.body).toContain('## Требования');
+    await store.setSpecStatus(next.id, 'accepted');
+    const task = await store.createTask({ title: 'Возврат из заказа', spec: next.id });
+    const project = await store.load();
+    expect(project.specs.find((s) => s.id === old.id)).toMatchObject({
+      status: 'superseded',
+      replacedBy: next.id,
+    });
+    expect(project.tasks.find((t) => t.id === task.id)?.spec).toBe(next.id);
+    expect(project.problems).toEqual([]);
+    await store.updateTask(task.id, { spec: undefined });
+    expect((await store.readTask(task.id)).spec).toBeUndefined();
+  });
+
   it('writes documents and reads their titles', async () => {
     await store.writeDoc('brief.md', '# Калькулятор\n\nЧто строим.\n');
     await store.writeDoc('docs/notes.md', 'no heading');
@@ -139,6 +158,33 @@ describe('ArtifactStore', () => {
     expect(taskBranch(reread, { id: 'T-012', title: 'Авторизация по email' })).toBe(
       'skaro/T-012-avtorizatsiya-po-email',
     );
+  });
+
+  it('falls back to the app-wide defaults for what the project does not set', async () => {
+    let defaults: { baseBranch?: string; deleteBranch?: boolean; agentInstructions?: string } = {
+      baseBranch: 'develop',
+      deleteBranch: false,
+      agentInstructions: 'Commits in English.',
+    };
+    const inheriting = new ArtifactStore(root, () => defaults);
+    const config = (await inheriting.load()).config;
+    expect(config.baseBranch).toBe('develop');
+    expect(config.merge.deleteBranch).toBe(false);
+    expect(config.globalInstructions).toBe('Commits in English.');
+
+    // Inherited settings are not written: the project follows later changes of the defaults.
+    await inheriting.writeConfig({ ...config, branchTemplate: 'feature/{id}' }, [
+      'baseBranch',
+      'deleteBranch',
+    ]);
+    const yaml = await readFile(join(root, '.skaro', 'config.yaml'), 'utf8');
+    expect(yaml).not.toContain('base_branch');
+    expect(yaml).not.toContain('Commits in English');
+    defaults = { baseBranch: 'trunk' };
+    const reread = (await inheriting.load()).config;
+    expect(reread.baseBranch).toBe('trunk');
+    expect(reread.branchTemplate).toBe('feature/{id}');
+    expect(reread.merge.deleteBranch).toBe(true);
   });
 
   it('reports manual edits but not its own writes', async () => {

@@ -1,0 +1,132 @@
+/* Feed base: blocks, the user bubble and agent text. */
+
+.fd-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fd-block {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.fd-block.gap4 {
+  gap: 4px;
+}
+
+.fd-block.gap6 {
+  gap: 6px;
+}
+
+/* User bubble */
+.fd-user {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.fd-bubble {
+  max-width: 78%;
+  padding: 10px 15px;
+  border-radius: 12px;
+  background: var(--sk-user-message);
+  font-size: var(--fd-text, 14px);
+  line-height: 1.45;
+  color: var(--sk-blue-1);
+  text-wrap: pretty;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.fd-bubble.queued {
+  opacity: 0.55;
+}
+
+.fd-bubble.with-images {
+  padding: 10px 12px 10px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fd-bubble .thumbs {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.fd-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  object-fit: cover;
+  cursor: zoom-in;
+  display: block;
+}
+
+.fd-hover-actions {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.fd-user:hover .fd-hover-actions,
+.fd-user:focus-within .fd-hover-actions {
+  opacity: 1;
+}
+
+.fd-queued-label {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+  cursor: default;
+}
+
+.fd-icon-btn {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-21);
+  cursor: pointer;
+  padding: 0;
+}
+
+.fd-icon-btn:hover {
+  background: var(--sk-hover);
+  color: var(--sk-text-6);
+}
+
+/* Agent text */
+.fd-text {
+  flex: none;
+  font-size: var(--fd-text, 14px);
+  line-height: 1.5;
+  color: var(--sk-text-reply);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.fd-text.commentary {
+  font-size: calc(var(--fd-text, 14px) - 0.5px);
+  color: var(--sk-text-9);
+}
+
+.fd-after-final {
+  display: flex;
+  gap: 2px;
+  margin-top: -8px;
+}

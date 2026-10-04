@@ -4,8 +4,14 @@ export type AgentId = 'claude-code' | 'codex';
 
 /** Pinned versions. Bump together with adapter golden tests (agent-output.md, section 8). */
 export const AGENT_PINS: Record<AgentId, string> = {
-  'claude-code': '0.3.281', // @anthropic-ai/claude-agent-sdk (Claude Code 2.1.281)
-  codex: '0.156.1', // @openai/codex
+  'claude-code': '0.3.285', // @anthropic-ai/claude-agent-sdk (Claude Code 2.1.285)
+  codex: '0.159.2', // @openai/codex
+};
+
+/** The agent's own version, shown to the user ("Claude Code 2.1.281"): moves with the pins. */
+const SHOWN_VERSIONS: Record<AgentId, string> = {
+  'claude-code': '2.1.285',
+  codex: '0.159.2',
 };
 
 export interface Platform {
@@ -17,8 +23,10 @@ export interface Platform {
 
 export interface AgentPackage {
   agent: AgentId;
-  /** Version shown to the user. */
+  /** Pinned version: the install folder and the sandbox check are keyed by it. */
   version: string;
+  /** The agent's own version, shown to the user. */
+  shownVersion: string;
   /** npm package and version that carry the binary for this platform. */
   name: string;
   npmVersion: string;
@@ -62,10 +70,15 @@ export function currentPlatform(): Platform {
   return { os: process.platform, arch: process.arch, musl: isMusl() };
 }
 
-export function agentPackage(agent: AgentId, platform: Platform = currentPlatform()): AgentPackage {
+export function agentPackage(
+  agent: AgentId,
+  platform: Platform = currentPlatform(),
+  pin?: { version: string; shownVersion: string },
+): AgentPackage {
   const key = `${platform.os}-${platform.arch}`;
   const exe = platform.os === 'win32' ? '.exe' : '';
-  const version = AGENT_PINS[agent];
+  const version = pin?.version ?? AGENT_PINS[agent];
+  const shownVersion = pin?.shownVersion ?? SHOWN_VERSIONS[agent];
   if (agent === 'claude-code') {
     if (
       !['win32', 'darwin', 'linux'].includes(platform.os) ||
@@ -78,6 +91,7 @@ export function agentPackage(agent: AgentId, platform: Platform = currentPlatfor
       version,
       name: `@anthropic-ai/claude-agent-sdk-${key}${platform.musl ? '-musl' : ''}`,
       npmVersion: version,
+      shownVersion,
       binary: `claude${exe}`,
       pathDirs: [],
     };
@@ -89,6 +103,7 @@ export function agentPackage(agent: AgentId, platform: Platform = currentPlatfor
     version,
     name: '@openai/codex',
     npmVersion: `${version}-${key}`,
+    shownVersion,
     binary: `vendor/${triple}/bin/codex${exe}`,
     pathDirs: [`vendor/${triple}/codex-path`],
   };

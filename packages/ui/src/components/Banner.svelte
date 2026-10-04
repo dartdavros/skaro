@@ -52,24 +52,24 @@
   }
 
   .warning {
-    background: rgba(224, 163, 60, 0.1);
+    background: var(--sk-warn-a10);
     color: var(--sk-warn);
   }
 
   .error {
-    background: rgba(239, 106, 99, 0.1);
+    background: var(--sk-error-a10);
     color: var(--sk-error);
   }
 
   .info {
-    background: rgba(42, 82, 190, 0.14);
+    background: var(--sk-accent-a14);
     color: var(--sk-link);
   }
 
   .body {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
   }
 
   strong {
@@ -82,7 +82,7 @@
     border: none;
     background: transparent;
     color: inherit;
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     font-weight: 600;
     cursor: pointer;
   }
@@ -107,6 +107,6 @@
   }
 
   .close:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--sk-white-a6);
   }
 </style>

@@ -1,0 +1,181 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.head[data-task-run-dialog] {
+  padding: 16px 18px 12px;
+}
+
+.title[data-task-run-dialog] {
+  font-size: var(--sk-fs-12);
+  font-weight: 700;
+  color: var(--sk-text-2);
+}
+
+.sub[data-task-run-dialog] {
+  margin-top: 4px;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-17);
+}
+
+.fields[data-task-run-dialog] {
+  padding: 0 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row[data-task-run-dialog] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.key[data-task-run-dialog] {
+  flex: none;
+  width: 72px;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-17);
+}
+
+.chips[data-task-run-dialog] {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+}
+
+.chip[data-task-run-dialog] {
+  height: 26px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 7px;
+  background: var(--sk-fill-13);
+  color: var(--sk-text-10);
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip.on[data-task-run-dialog] {
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+}
+
+.select[data-task-run-dialog] {
+  flex: 1;
+  min-width: 0;
+}
+
+.static[data-task-run-dialog] {
+  flex: 1;
+  height: 32px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  background: var(--sk-deep);
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-17);
+}
+
+.tasks[data-task-run-dialog] {
+  margin: 0 18px;
+  border-radius: 9px;
+  background: var(--sk-deep);
+  overflow: hidden;
+}
+
+.task[data-task-run-dialog] {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--sk-fill-4);
+}
+
+.id[data-task-run-dialog] {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.name[data-task-run-dialog] {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name.dim[data-task-run-dialog] {
+  color: var(--sk-text-17);
+}
+
+.note[data-task-run-dialog] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--sk-fs-3);
+  font-weight: 600;
+  color: var(--sk-text-17);
+}
+
+.note.blocked[data-task-run-dialog],
+.note.now[data-task-run-dialog] {
+  color: var(--sk-text-13);
+}
+
+.footer[data-task-run-dialog] {
+  padding: 14px 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hint[data-task-run-dialog] {
+  flex: 1;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-17);
+  text-wrap: pretty;
+}
+
+.cancel[data-task-run-dialog],
+.confirm[data-task-run-dialog] {
+  flex: none;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--sk-fs-5);
+  cursor: pointer;
+}
+
+.cancel[data-task-run-dialog] {
+  padding: 0 13px;
+  background: var(--sk-fill-23);
+  color: var(--sk-text-10);
+  font-weight: 600;
+}
+
+.cancel[data-task-run-dialog]:hover {
+  background: var(--sk-fill-29);
+  color: var(--sk-text-2);
+}
+
+.confirm[data-task-run-dialog] {
+  padding: 0 14px;
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  font-weight: 700;
+}
+
+.confirm[data-task-run-dialog]:hover {
+  background: var(--sk-accent-hover);
+}
+
+.confirm[data-task-run-dialog]:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

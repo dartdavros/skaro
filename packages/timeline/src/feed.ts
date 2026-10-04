@@ -3,6 +3,8 @@
 
 import type { FileChange, InteractionAnswer, Item } from './model.ts';
 import type { TimelineState, TurnState } from './state.ts';
+import { isAsyncQuestion, type AsyncQuestion } from './async-question.ts';
+import { questionHistory } from './feed-questions.ts';
 
 type Of<K extends Item['kind']> = Extract<Item, { kind: K }>;
 
@@ -20,9 +22,24 @@ export interface FileRow {
   items: Of<'file_change'>[];
 }
 
+/**
+ * One line of the "files changed" list at the end of a turn; counts absent when not reported.
+ * The diffs of all its edits in the turn, in order, open in the diff window.
+ */
+export interface TurnFile {
+  path: string;
+  /** A file created in the turn stays "add" through later edits. */
+  change: FileChange['change'];
+  movePath?: string;
+  added?: number;
+  removed?: number;
+  diffs: string[];
+}
+
 export type FeedRow =
-  | { type: 'user'; id: string; item: Of<'message'>; images: Of<'image'>[] }
+  | { type: 'user'; id: string; item: Of<'message'>; images: Of<'image'>[]; hidden?: boolean }
   | { type: 'agent'; id: string; item: Of<'message'>; final: boolean }
+  | { type: 'question'; id: string; item: Of<'message'>; interaction: AsyncQuestion }
   | { type: 'reasoning'; id: string; item: Of<'reasoning'> }
   | { type: 'explore'; id: string; items: Of<'explore'>[] }
   | FileRow
@@ -34,13 +51,17 @@ export type FeedRow =
   | { type: 'unknown'; id: string; item: Of<'unknown'> }
   /** A decision without a row of its own (questions, plans, forms): a summary line. */
   | { type: 'decision'; id: string; item: Of<'decision'> }
+  /** A chat agent's proposal: a card between the replies (agent-output.md 5.4). */
+  | { type: 'proposal'; id: string; item: Of<'proposal'> }
+  /** "Подготовлено 30 файлов · 12 пропущено": the copy of an import's sources. */
+  | { type: 'import_prep'; id: string; item: Of<'import_prep'> }
   | {
       type: 'turn_end';
       id: string;
       turn: TurnState;
       durationMs: number;
-      /** Distinct files changed in the turn. */
-      files: number;
+      /** Distinct files changed in the turn, with lines summed over all their edits. */
+      files: TurnFile[];
       tokens?: number;
     };
 
@@ -49,13 +70,28 @@ function hidden(item: Item): boolean {
   return item.kind === 'tool' && item.server === 'skaro';
 }
 
+/**
+ * Skaro puts the user's decisions on proposals in front of the next message for the agent
+ * (agent-output.md 5.4); the feed shows the message as the user wrote it.
+ */
+const SKARO_NOTE = /^<skaro-note>[\s\S]*?<\/skaro-note>\s*/;
+
+export function withSkaroNote(note: string, text: string): string {
+  return note.trim() ? `<skaro-note>\n${note.trim()}\n</skaro-note>\n\n${text}` : text;
+}
+
+export function withoutSkaroNote(text: string): string {
+  return text.replace(SKARO_NOTE, '');
+}
+
 function isUserImage(item: Item): item is Of<'image'> {
   return item.kind === 'image' && item.native.type.startsWith('user');
 }
 
 /** Rows of the main feed (or of one subagent when `parentId` is given). */
 export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
-  const items = state.items.filter((i) => i.parentId === parentId && !hidden(i));
+  const { items: history, cardAnswers } = questionHistory(state.items);
+  const items = history.filter((i) => i.parentId === parentId && !hidden(i));
   const rows: FeedRow[] = [];
   const turnEnds = new Map<string, TurnState>();
   for (const turn of state.turns) if (turn.outcome) turnEnds.set(turn.id, turn);
@@ -66,8 +102,23 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
     const prev = rows.at(-1);
     switch (item.kind) {
       case 'message':
-        if (item.role === 'user') rows.push({ type: 'user', id: item.id, item, images: [] });
-        else rows.push({ type: 'agent', id: item.id, item, final: item.phase === 'final' });
+        if (item.role === 'user') {
+          const text = cardAnswers.get(item.id) ?? withoutSkaroNote(item.text);
+          rows.push({
+            type: 'user',
+            id: item.id,
+            item: text === item.text ? item : { ...item, text },
+            images: [],
+            ...(cardAnswers.has(item.id) ? { hidden: true } : {}),
+          });
+        } else {
+          const question = state.interactions.find(
+            (i) => isAsyncQuestion(i) && i.itemId === item.id,
+          );
+          if (isAsyncQuestion(question))
+            rows.push({ type: 'question', id: item.id, item, interaction: question });
+          else rows.push({ type: 'agent', id: item.id, item, final: item.phase === 'final' });
+        }
         break;
       case 'image':
         if (isUserImage(item) && prev?.type === 'user') prev.images.push(item);
@@ -100,7 +151,8 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
         }
         break;
       case 'reasoning':
-        rows.push({ type: 'reasoning', id: item.id, item });
+        // Only the live "Думает…" line; a finished "Думал 12 с" carries nothing (owner's call).
+        if (item.status === 'running') rows.push({ type: 'reasoning', id: item.id, item });
         break;
       case 'command':
         rows.push({ type: 'command', id: item.id, item });
@@ -113,6 +165,12 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
         break;
       case 'unknown':
         rows.push({ type: 'unknown', id: item.id, item });
+        break;
+      case 'proposal':
+        rows.push({ type: 'proposal', id: item.id, item });
+        break;
+      case 'import_prep':
+        rows.push({ type: 'import_prep', id: item.id, item });
         break;
       case 'decision':
         // Permissions show on the row they were about; the rest get a summary line.
@@ -161,12 +219,20 @@ function mergeFile(row: FileRow, file: FileChange, item: Of<'file_change'>): voi
 function turnEnd(turn: TurnState, items: Item[]): FeedRow {
   let start = Infinity;
   let end = 0;
-  const files = new Set<string>();
+  const files = new Map<string, TurnFile>();
   for (const item of items) {
     start = Math.min(start, item.startedAt);
     end = Math.max(end, item.endedAt ?? item.startedAt);
     if (item.kind === 'file_change' && item.status === 'done') {
-      for (const f of item.files) files.add(f.path);
+      for (const f of item.files) {
+        const file: TurnFile = files.get(f.path) ?? { path: f.path, change: f.change, diffs: [] };
+        if (file.change !== 'add' || f.change === 'delete') file.change = f.change;
+        if (f.movePath) file.movePath = f.movePath;
+        if (f.added !== undefined) file.added = (file.added ?? 0) + f.added;
+        if (f.removed !== undefined) file.removed = (file.removed ?? 0) + f.removed;
+        if (f.diff) file.diffs.push(f.diff);
+        files.set(f.path, file);
+      }
     }
   }
   return {
@@ -174,7 +240,7 @@ function turnEnd(turn: TurnState, items: Item[]): FeedRow {
     id: `end:${turn.id}`,
     turn,
     durationMs: Number.isFinite(start) ? Math.max(0, end - start) : 0,
-    files: files.size,
+    files: [...files.values()],
     ...(turn.usage ? { tokens: turn.usage.inputTokens + turn.usage.outputTokens } : {}),
   };
 }

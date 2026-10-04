@@ -1,0 +1,164 @@
+/* The head of the diff window: file, counts, switcher and buttons. */
+
+.dm-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 18px;
+  border-bottom: 1px solid var(--sk-line);
+}
+
+.dm-file-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-13);
+}
+
+.dm-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dm-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dm-path {
+  min-width: 0;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dm-dir {
+  color: var(--sk-text-21);
+}
+
+.dm-name {
+  color: var(--sk-text-bright);
+  font-weight: 600;
+}
+
+.dm-counts {
+  flex: none;
+  display: inline-flex;
+  gap: 6px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+}
+
+.dm-plus {
+  color: var(--sk-green-2);
+}
+
+.dm-minus {
+  color: var(--sk-error);
+}
+
+.dm-badge {
+  flex: none;
+  height: 18px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  font-size: var(--sk-fs-1);
+  font-weight: 700;
+}
+
+.dm-badge.new {
+  background: var(--sk-green-a14);
+  color: var(--sk-green-1);
+}
+
+.dm-badge.deleted {
+  background: var(--sk-error-a14);
+  color: var(--sk-red-2);
+}
+
+.dm-sub {
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-23);
+}
+
+.dm-switch {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--sk-deep);
+}
+
+.dm-step {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sk-text-13);
+  cursor: pointer;
+}
+
+.dm-step:hover {
+  background: var(--sk-fill-16);
+}
+
+.dm-step:disabled {
+  color: var(--sk-text-29);
+  cursor: default;
+}
+
+.dm-pos {
+  min-width: 44px;
+  text-align: center;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-13);
+}
+
+.dm-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--sk-line);
+}
+
+.dm-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-17);
+  cursor: pointer;
+}
+
+.dm-btn:hover {
+  background: var(--sk-fill-23);
+  color: var(--sk-text-bright);
+}

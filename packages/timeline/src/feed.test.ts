@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { approvalDecisions, exploreCounts, feedRows, type FeedRow } from './feed.ts';
+import { approvalDecisions, exploreCounts, feedRows, type FeedRow, type FileRow } from './feed.ts';
 import { GOLDEN_DIR } from './golden.ts';
 import type { Item } from './model.ts';
 import type { TimelineState } from './state.ts';
@@ -14,7 +14,7 @@ const types = (rows: FeedRow[]) => rows.map((r) => r.type);
 describe('feedRows', () => {
   it('groups reads and searches into one line and ends the turn with a summary', () => {
     const rows = feedRows(golden('claude', 'read'));
-    expect(types(rows)).toEqual(['user', 'notice', 'explore', 'reasoning', 'agent', 'turn_end']);
+    expect(types(rows)).toEqual(['user', 'notice', 'explore', 'agent', 'turn_end']);
     const explore = rows[2] as Extract<FeedRow, { type: 'explore' }>;
     expect(exploreCounts(explore.items)).toMatchObject({ read: 2, search: [expect.any(String)] });
     const end = rows.at(-1) as Extract<FeedRow, { type: 'turn_end' }>;
@@ -24,12 +24,27 @@ describe('feedRows', () => {
   it('shows one line per file for both agents and counts changed files in the turn', () => {
     for (const agent of ['claude', 'codex']) {
       const rows = feedRows(golden(agent, 'edit'));
-      const files = rows.filter((r) => r.type === 'file');
+      const files = rows.filter((r): r is FileRow => r.type === 'file');
       expect(files.map((f) => f.path.split(/[\\/]/).pop()).sort(), agent).toEqual([
         'CHANGELOG.md',
         'math.js',
       ]);
-      expect(rows.at(-1)).toMatchObject({ type: 'turn_end', files: 2 });
+      const end = rows.at(-1) as Extract<FeedRow, { type: 'turn_end' }>;
+      expect(
+        end.files.map((f) => f.path),
+        agent,
+      ).toEqual(files.map((f) => f.path));
+      for (const file of end.files) {
+        const row = files.find((f) => f.path === file.path)!;
+        expect(file, agent).toEqual({
+          path: row.path,
+          change: row.change,
+          ...(row.movePath ? { movePath: row.movePath } : {}),
+          added: row.added,
+          removed: row.removed,
+          diffs: row.diffs,
+        });
+      }
     }
   });
 
@@ -57,6 +72,40 @@ describe('feedRows', () => {
         removed: 1,
         diffs: ['@@ e1', '@@ e2'],
       }),
+    ]);
+  });
+
+  it('shows reasoning only while it runs, so reads around it stay one line', () => {
+    const base = { turnId: 't1', startedAt: 0 };
+    const read = (id: string): Item => ({
+      ...base,
+      id,
+      kind: 'explore',
+      op: 'read',
+      target: `${id}.md`,
+      status: 'done',
+      native: { agent: 'test', type: 'read', ref: id },
+    });
+    const think = (id: string, status: 'running' | 'done'): Item => ({
+      ...base,
+      id,
+      kind: 'reasoning',
+      redacted: true,
+      status,
+      native: { agent: 'test', type: 'thinking', ref: id },
+    });
+    const state = (items: Item[]): TimelineState => ({
+      turns: [],
+      items,
+      interactions: [],
+      status: 'working',
+    });
+    const done = feedRows(state([read('r1'), think('th1', 'done'), read('r2')]));
+    expect(types(done)).toEqual(['explore']);
+    expect(done[0]).toMatchObject({ items: [{ id: 'r1' }, { id: 'r2' }] });
+    expect(types(feedRows(state([read('r1'), think('th1', 'running')])))).toEqual([
+      'explore',
+      'reasoning',
     ]);
   });
 

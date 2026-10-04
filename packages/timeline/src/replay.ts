@@ -18,16 +18,42 @@ export interface RawLine {
 /**
  * Skaro's own lines in a run log (`dir: 'meta'`): a new agent process starts (after a restart the
  * adapter begins with a fresh projector), or an event Skaro itself adds to the feed (merge card,
- * restored session).
+ * restored session). Older logs may hold other kinds (worktree snapshots); replays skip them.
  */
 export type RunLogMeta =
   | { skaro: 'segment'; agent: string; adapterVersion: string }
-  | { skaro: 'event'; event: TimelineEvent }
-  /** Worktree state before a user message: rewinding to it puts the files back. */
-  | { skaro: 'snapshot'; itemId: string; head: string; tree: string };
+  | { skaro: 'event'; event: TimelineEvent };
 
 export function isRunLogMeta(line: unknown): line is RunLogMeta {
   return typeof line === 'object' && line !== null && 'skaro' in line;
+}
+
+/**
+ * Every segment of a run log is a new agent process whose projector numbers turns from the start
+ * again ("turn-1" after a restart). Turns of later segments get the segment in their id, so a new
+ * turn never lands in an old, finished one. Live sessions and replays number segments alike.
+ */
+export function segmentTurns(segment: number, event: TimelineEvent): TimelineEvent {
+  if (segment <= 0) return event;
+  const id = (turnId: string): string => (turnId ? `s${segment}.${turnId}` : turnId);
+  switch (event.t) {
+    case 'turn.started':
+    case 'turn.completed':
+      return { ...event, turnId: id(event.turnId) };
+    case 'item.upsert':
+      return { ...event, item: { ...event.item, turnId: id(event.item.turnId) } };
+    default:
+      return event;
+  }
+}
+
+/** Segments a run log holds: the next agent process gets this number. */
+export function countSegments(lines: Iterable<RawLine>): number {
+  let n = 0;
+  for (const raw of lines) {
+    if (raw.dir === 'meta' && isRunLogMeta(raw.line) && raw.line.skaro === 'segment') n++;
+  }
+  return n;
 }
 
 /**
@@ -43,13 +69,16 @@ export function replayRunLog(
   const events: TimelineEvent[] = [];
   let now = startedAt;
   const ctx: ProjectionContext = { now: () => now, attachImage };
-  const emit: Emit = (event) => events.push(event);
+  let segment = -1;
+  const emit: Emit = (event) => events.push(segmentTurns(segment, event));
   let projector: Projector | undefined;
   for (const raw of lines) {
     now = startedAt + raw.ts;
     if (raw.dir === 'meta' && isRunLogMeta(raw.line)) {
-      if (raw.line.skaro === 'segment') projector = createProjector(ctx, emit);
-      else if (raw.line.skaro === 'event') events.push(raw.line.event);
+      if (raw.line.skaro === 'segment') {
+        segment++;
+        projector = createProjector(ctx, emit);
+      } else if (raw.line.skaro === 'event') events.push(raw.line.event);
       continue;
     }
     projector ??= createProjector(ctx, emit);

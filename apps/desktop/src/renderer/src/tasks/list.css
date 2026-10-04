@@ -1,0 +1,150 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.list[data-task-list] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 24px 18px;
+}
+
+.grid[data-task-list] {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) 150px 132px 118px 86px;
+  gap: 12px;
+}
+
+/* "Выбрать несколько": the checkbox column comes first. */
+.selecting[data-task-list] .grid:where([data-task-list]) {
+  grid-template-columns: 26px 62px minmax(0, 1fr) 150px 132px 118px 86px;
+}
+
+.head[data-task-list] {
+  padding: 8px 12px;
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sk-text-21);
+}
+
+.right[data-task-list] {
+  text-align: right;
+}
+
+.group[data-task-list] {
+  margin-bottom: 14px;
+}
+
+.group-head[data-task-list] {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 12px;
+}
+
+.ms-id[data-task-list] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  font-weight: 600;
+  color: var(--sk-text-17);
+}
+
+.ms-name[data-task-list] {
+  font-size: var(--sk-fs-6);
+  font-weight: 700;
+  color: var(--sk-text-2);
+}
+
+.ms-count[data-task-list] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.line[data-task-list] {
+  flex: 1;
+  height: 1px;
+  background: var(--sk-line);
+}
+
+.rows[data-task-list] {
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.row[data-task-list] {
+  align-items: center;
+  padding: 9px 12px;
+  background: var(--sk-surface);
+  border-bottom: 1px solid var(--sk-fill-3);
+  cursor: pointer;
+  outline: none;
+}
+
+.row[data-task-list]:hover {
+  background: var(--sk-surface-hover);
+}
+
+.row.selected[data-task-list] {
+  background: var(--sk-teal-3);
+}
+
+.row.dim[data-task-list] {
+  opacity: 0.72;
+}
+
+.check[data-task-list] {
+  display: inline-flex;
+}
+
+.id[data-task-list] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.title[data-task-list] {
+  min-width: 0;
+  font-size: var(--sk-fs-6);
+  font-weight: 600;
+  color: var(--sk-text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title.muted[data-task-list] {
+  color: var(--sk-text-12);
+}
+
+.agent[data-task-list] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.agent-name[data-task-list],
+.deps[data-task-list] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deps[data-task-list] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-28);
+}
+
+.deps.has[data-task-list] {
+  color: var(--sk-text-13);
+}
+
+.updated[data-task-list] {
+  text-align: right;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}

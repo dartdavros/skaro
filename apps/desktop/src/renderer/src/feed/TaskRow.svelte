@@ -32,11 +32,11 @@
     {:else}
       <span class="meta">{tn('feed.actions', row.actions)} · {formatClock(elapsed)}</span>
     {/if}
-    <Chevron {open} color="#6f6f6f" />
+    <Chevron {open} color="var(--sk-text-25)" />
   </button>
   {#if open}
     <div class="fd-nested">
-      <FeedRows rows={row.children} {waiting} nested />
+      <FeedRows rows={row.children} {waiting} />
       {#if summary && !row.children.some((c) => c.type === 'agent')}
         <div class="fd-text">{summary}</div>
       {/if}

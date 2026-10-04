@@ -27,6 +27,12 @@ export interface InstallerOptions {
 
 export type InstallProgress = (received: number, total: number | undefined) => void;
 
+/** Exact registry artifact approved by a Skaro release; never a latest tag. */
+export interface AgentArtifact {
+  tarball: string;
+  integrity: string;
+}
+
 const MARKER = '.skaro-installed.json';
 
 export class AgentInstaller {
@@ -49,9 +55,18 @@ export class AgentInstaller {
   /** The pinned version if it is fully installed. */
   async installed(agent: AgentId): Promise<InstalledAgent | undefined> {
     const pkg = this.package(agent);
+    return this.installedPackage(pkg);
+  }
+
+  async installedPackage(
+    pkg: AgentPackage,
+    integrity?: string,
+  ): Promise<InstalledAgent | undefined> {
     const dir = this.versionDir(pkg);
     try {
-      JSON.parse(await readFile(join(dir, MARKER), 'utf8'));
+      const marker = JSON.parse(await readFile(join(dir, MARKER), 'utf8'));
+      if (marker.name !== pkg.name || marker.version !== pkg.npmVersion) return undefined;
+      if (integrity && marker.integrity !== integrity) return undefined;
     } catch {
       return undefined;
     }
@@ -65,15 +80,31 @@ export class AgentInstaller {
     onProgress?: InstallProgress,
     signal?: AbortSignal,
   ): Promise<InstalledAgent> {
-    const existing = await this.installed(agent);
-    if (existing) return existing;
+    return this.installPackage(this.package(agent), undefined, onProgress, signal);
+  }
 
-    const pkg = this.package(agent);
-    const meta = await this.json(
-      `${this.registry}/${encodePackage(pkg.name)}/${encodeURIComponent(pkg.npmVersion)}`,
-      signal,
-    );
-    const dist = meta['dist'] as { tarball?: string; integrity?: string } | undefined;
+  /** Prepares a future pinned binary without switching the running app's adapters. */
+  async installPackage(
+    pkg: AgentPackage,
+    artifact?: AgentArtifact,
+    onProgress?: InstallProgress,
+    signal?: AbortSignal,
+  ): Promise<InstalledAgent> {
+    const existing = await this.installedPackage(pkg, artifact?.integrity);
+    if (existing) return existing;
+    if (artifact && (await this.installedPackage(pkg))) {
+      throw new Error(
+        `${pkg.name}@${pkg.npmVersion}: installed integrity differs from the release`,
+      );
+    }
+
+    const meta = artifact
+      ? undefined
+      : await this.json(
+          `${this.registry}/${encodePackage(pkg.name)}/${encodeURIComponent(pkg.npmVersion)}`,
+          signal,
+        );
+    const dist = artifact ?? (meta?.['dist'] as AgentArtifact | undefined);
     if (!dist?.tarball || !dist.integrity?.startsWith('sha512-')) {
       throw new Error(
         `${pkg.name}@${pkg.npmVersion}: registry has no tarball with sha512 integrity`,
@@ -104,8 +135,17 @@ export class AgentInstaller {
         }),
       );
       const target = this.versionDir(pkg);
+      const completed = await this.installedPackage(pkg);
+      if (completed) {
+        if (artifact && !(await this.installedPackage(pkg, artifact.integrity))) {
+          throw new Error(
+            `${pkg.name}@${pkg.npmVersion}: installed integrity differs from the release`,
+          );
+        }
+        return completed;
+      }
       await rm(target, { recursive: true, force: true });
-      await mkdir(join(this.dir, agent), { recursive: true });
+      await mkdir(join(this.dir, pkg.agent), { recursive: true });
       await rename(staging, target);
       return this.describe(pkg, target);
     } finally {

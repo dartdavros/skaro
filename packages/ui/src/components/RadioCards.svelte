@@ -68,7 +68,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: inset 0 0 0 1.5px #3b3b3b;
+    box-shadow: inset 0 0 0 1.5px var(--sk-fill-34);
   }
 
   .dot {
@@ -103,7 +103,7 @@
   }
 
   .title {
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     color: var(--sk-text-secondary);
   }
@@ -113,13 +113,13 @@
   }
 
   .note {
-    font-size: 11.5px;
+    font-size: var(--sk-fs-3);
     line-height: 1.45;
     color: var(--sk-text-muted);
     text-wrap: pretty;
   }
 
   .on.warn .note {
-    color: #d0a45c;
+    color: var(--sk-orange-2);
   }
 </style>

@@ -1,0 +1,239 @@
+/* Subagents, tools, notices, turn end, the live line and images. */
+
+/* Subagent */
+.fd-task-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 2px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.fd-task-row .arrow {
+  flex: none;
+  width: 12px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-21);
+}
+
+.fd-task-row .title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-task-row:hover .title {
+  color: var(--sk-text-6);
+}
+
+.fd-task-row .meta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-21);
+}
+
+.fd-nested {
+  margin-left: 21px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--sk-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fd-nested .fd-nested {
+  background: var(--sk-surface-2);
+}
+
+.fd-nested .fd-text {
+  font-size: var(--sk-fs-5);
+}
+
+/* Tool */
+.fd-tool-grid {
+  margin: 2px 0 6px 21px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: 8px;
+}
+
+.fd-tool-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--sk-surface);
+  min-width: 0;
+}
+
+.fd-tool-box pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  line-height: 1.5;
+  color: var(--sk-text-13);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.fd-label {
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sk-text-23);
+}
+
+/* Notices */
+.fd-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: var(--sk-fs-3);
+  line-height: 1.4;
+  color: var(--sk-text-23);
+  align-self: flex-start;
+}
+
+.fd-notice.warning {
+  color: var(--sk-warn);
+}
+
+.fd-notice.error {
+  color: var(--sk-error);
+}
+
+.fd-notice svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.fd-notice .action {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fd-notice .action:hover {
+  text-decoration: underline;
+}
+
+.fd-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.fd-divider::before,
+.fd-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--sk-fill-20);
+}
+
+.fd-divider span {
+  flex: none;
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-23);
+}
+
+/* Turn end and bars */
+.fd-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--sk-surface);
+}
+
+.fd-bar .text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+}
+
+.fd-bar.error .text {
+  color: var(--sk-error);
+}
+
+.fd-bar.warning .text {
+  color: var(--sk-warn);
+}
+
+.fd-bar .action {
+  flex: none;
+  font-size: var(--sk-fs-3);
+  font-weight: 600;
+  color: var(--sk-text-13);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 0;
+}
+
+.fd-bar .action:hover {
+  color: var(--sk-text-2);
+}
+
+/* Live line */
+.fd-live {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+}
+
+/* Images */
+.fd-image-frame {
+  align-self: flex-start;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--sk-surface);
+  cursor: zoom-in;
+  border: none;
+}
+
+.fd-image-frame img {
+  display: block;
+  max-width: 360px;
+  max-height: 240px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.fd-image-strip {
+  margin-left: 21px;
+  display: flex;
+  gap: 6px;
+}
+
+.fd-caption {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}

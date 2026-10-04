@@ -51,7 +51,7 @@
     >
       <Icon name="check" size={13} stroke={2.4} />
       <span class="text">{text}</span>
-      <Chevron {open} color="#6f6f6f" />
+      <Chevron {open} color="var(--sk-text-25)" />
     </button>
     {#if open}
       <div class="pairs">
@@ -93,14 +93,14 @@
   }
 
   .q {
-    font-size: 12.5px;
-    line-height: 1.5;
-    color: #a6a6a6;
+    font-size: var(--sk-fs-5);
+    line-height: 1.4;
+    color: var(--sk-text-13);
   }
 
   .a {
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     font-weight: 600;
-    color: #d5d5d5;
+    color: var(--sk-text-6);
   }
 </style>

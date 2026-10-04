@@ -1,0 +1,143 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.head[data-task-assign-dialog] {
+  padding: 18px 20px 14px;
+}
+
+.title[data-task-assign-dialog] {
+  font-size: var(--sk-fs-11);
+  font-weight: 700;
+  color: var(--sk-text-5);
+}
+
+.sub[data-task-assign-dialog] {
+  margin-top: 5px;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-17);
+}
+
+.agents[data-task-assign-dialog] {
+  padding: 0 20px;
+  display: flex;
+  gap: 9px;
+}
+
+.agent[data-task-assign-dialog] {
+  flex: 1;
+  padding: 13px 14px;
+  border-radius: 10px;
+  background: var(--sk-fill-11);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  outline: none;
+  color: var(--sk-text-19);
+}
+
+.agent[data-task-assign-dialog]:hover {
+  background: var(--sk-fill-15);
+}
+
+.agent.on[data-task-assign-dialog] {
+  background: var(--sk-fill-20);
+  color: var(--sk-text-6);
+}
+
+.logo[data-task-assign-dialog] {
+  flex: none;
+  display: inline-flex;
+}
+
+.names[data-task-assign-dialog] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name[data-task-assign-dialog] {
+  font-size: var(--sk-fs-6);
+  font-weight: 600;
+  color: var(--sk-text-6);
+}
+
+.state[data-task-assign-dialog] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-13);
+}
+
+.fields[data-task-assign-dialog] {
+  padding: 16px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field[data-task-assign-dialog] {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label[data-task-assign-dialog] {
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sk-text-23);
+}
+
+.note[data-task-assign-dialog] {
+  font-size: var(--sk-fs-3);
+  line-height: 1.45;
+  color: var(--sk-text-21);
+  text-wrap: pretty;
+}
+
+.footer[data-task-assign-dialog] {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hint[data-task-assign-dialog] {
+  flex: 1;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.cancel[data-task-assign-dialog],
+.confirm[data-task-assign-dialog] {
+  flex: none;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--sk-fs-5);
+  cursor: pointer;
+}
+
+.cancel[data-task-assign-dialog] {
+  padding: 0 13px;
+  background: var(--sk-fill-23);
+  color: var(--sk-text-10);
+  font-weight: 600;
+}
+
+.cancel[data-task-assign-dialog]:hover {
+  background: var(--sk-fill-29);
+  color: var(--sk-text-2);
+}
+
+.confirm[data-task-assign-dialog] {
+  padding: 0 15px;
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  font-weight: 700;
+}
+
+.confirm[data-task-assign-dialog]:hover {
+  background: var(--sk-accent-hover);
+}

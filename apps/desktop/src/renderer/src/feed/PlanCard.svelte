@@ -78,7 +78,7 @@
 
 <style>
   .plan {
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
   }
 
   .row {

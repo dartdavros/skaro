@@ -2,12 +2,19 @@
 // adapters, account status, models and "/" commands, and the sandbox self-check (D-28).
 
 import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { ClaudeAdapter } from '@skaro/adapter-claude';
 import { CodexAdapter } from '@skaro/adapter-codex';
 import { AgentInstaller, agentPackage, type AgentId } from '@skaro/core';
-import type { AgentAdapter, AgentCommand, AgentModel, SandboxCheck } from '@skaro/timeline';
-import type { AgentInfo } from '../shared/ipc';
+import type {
+  AgentAdapter,
+  AgentCommand,
+  AgentModel,
+  AgentUserConfig,
+  SandboxCheck,
+} from '@skaro/timeline';
+import { agentDefaultsKey, agentReady, type AgentInfo } from '../shared/ipc';
 
 export const AGENT_IDS: readonly AgentId[] = ['claude-code', 'codex'];
 
@@ -29,6 +36,10 @@ export class AgentManager {
   private readonly downloads = new Map<AgentId, Promise<void>>();
   private readonly models = new Map<string, Promise<AgentModel[]>>();
   private readonly commands = new Map<string, Promise<AgentCommand[]>>();
+  private readonly configs = new Map<string, Promise<AgentUserConfig>>();
+  /** Status checks in progress. */
+  private readonly checks = new Map<AgentId, Promise<AgentInfo>>();
+  private readonly locale: () => string;
   private readonly scratchDir: string;
   private readonly store: Store;
   private readonly onChange: (agents: AgentInfo[]) => void;
@@ -39,7 +50,10 @@ export class AgentManager {
     store: Store;
     openUrl: (url: string) => void;
     onChange: (agents: AgentInfo[]) => void;
+    /** Language of messages the user sees. */
+    locale?: () => string;
   }) {
+    this.locale = options.locale ?? (() => 'en');
     this.installer = new AgentInstaller({ dir: options.agentsDir });
     this.scratchDir = options.scratchDir;
     this.store = options.store;
@@ -69,13 +83,64 @@ export class AgentManager {
     return AGENT_IDS.map((id) => this.info.get(id)!);
   }
 
+  /** The preferred agent if it is ready, else the first ready one (an absent agent is inactive). */
+  readyAgent(preferred: AgentId): AgentId {
+    const list = this.list();
+    if (list.some((a) => a.id === preferred && agentReady(a))) return preferred;
+    return list.find(agentReady)?.id ?? preferred;
+  }
+
+  /**
+   * Throws unless the agent is downloaded and signed in: Skaro never works without one. Right
+   * after start the agents are still being checked; this waits for the check.
+   */
+  async requireReady(id: AgentId): Promise<void> {
+    let info = this.info.get(id);
+    if (info?.checking) info = await (this.checks.get(id) ?? this.refreshOne(id));
+    const name = id === 'codex' ? 'Codex' : 'Claude Code';
+    const ru = this.locale() === 'ru';
+    if (!info?.installed) {
+      throw new Error(
+        ru
+          ? `${name} не загружен — загрузите его в «Настройки → Агенты»`
+          : `${name} is not downloaded — add it in Settings → Agents`,
+      );
+    }
+    if (info.authenticated === false) {
+      throw new Error(
+        ru
+          ? `${name}: не выполнен вход — войдите в «Настройки → Агенты»`
+          : `${name} is not signed in — sign in in Settings → Agents`,
+      );
+    }
+  }
+
+  /** Default model and effort set in Settings → Agents. */
+  defaults(id: AgentId): { model?: string; effort?: string } {
+    const saved = this.store.getSetting(agentDefaultsKey(id)) as {
+      model?: string;
+      effort?: string;
+    } | null;
+    return saved ?? {};
+  }
+
   /** Re-reads install and sign-in state of every agent. */
   async refresh(): Promise<AgentInfo[]> {
+    // "Проверить снова" also re-reads the user's agent settings (MCP servers may be fixed now).
+    this.configs.clear();
     await Promise.all(AGENT_IDS.map((id) => this.refreshOne(id)));
     return this.list();
   }
 
-  async refreshOne(id: AgentId): Promise<AgentInfo> {
+  refreshOne(id: AgentId): Promise<AgentInfo> {
+    const running = this.checks.get(id);
+    if (running) return running;
+    const check = this.check(id).finally(() => this.checks.delete(id));
+    this.checks.set(id, check);
+    return check;
+  }
+
+  private async check(id: AgentId): Promise<AgentInfo> {
     const previous = this.info.get(id)!;
     let next: AgentInfo;
     try {
@@ -83,7 +148,7 @@ export class AgentManager {
       next = {
         id,
         installed: status.installed,
-        version: status.installed ? agentPackage(id).version : undefined,
+        version: status.installed ? agentPackage(id).shownVersion : undefined,
         authenticated: status.authenticated,
         account: status.account,
         sizeBytes: DOWNLOAD_SIZE[id],
@@ -139,6 +204,21 @@ export class AgentManager {
   /** Models of an agent (cached per working folder). */
   listModels(id: AgentId, cwd: string): Promise<AgentModel[]> {
     return this.cached(this.models, `${id}\n${cwd}`, () => this.adapters[id].listModels(cwd));
+  }
+
+  /** The user's agent settings; before the agent is downloaded, only where they live. */
+  userConfig(id: AgentId, cwd: string): Promise<AgentUserConfig> {
+    if (!this.info.get(id)?.installed) {
+      return Promise.resolve({ dir: this.configDir(id), mcp: [], skills: 0, hooks: 0 });
+    }
+    return this.cached(this.configs, `${id}\n${cwd}`, () => this.adapters[id].userConfig(cwd));
+  }
+
+  /** ~/.claude or ~/.codex, or where the environment points them. */
+  configDir(id: AgentId): string {
+    return id === 'codex'
+      ? (process.env['CODEX_HOME'] ?? join(homedir(), '.codex'))
+      : (process.env['CLAUDE_CONFIG_DIR'] ?? join(homedir(), '.claude'));
   }
 
   listCommands(id: AgentId, cwd: string): Promise<AgentCommand[]> {

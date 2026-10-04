@@ -1,0 +1,206 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.screen[data-plan-screen] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--sk-bg);
+}
+
+.top[data-plan-screen] {
+  flex: none;
+  padding: 20px 24px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.titles[data-plan-screen] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+h1[data-plan-screen] {
+  margin: 0;
+  font-size: var(--sk-fs-13);
+  font-weight: 700;
+  color: var(--sk-text-5);
+  letter-spacing: -0.01em;
+}
+
+.sub[data-plan-screen] {
+  margin-top: 4px;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-17);
+}
+
+.actions[data-plan-screen] {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+
+.secondary[data-plan-screen],
+.primary[data-plan-screen] {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--sk-fs-5);
+  cursor: pointer;
+}
+
+.secondary[data-plan-screen] {
+  padding: 0 13px;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-6);
+  font-weight: 600;
+}
+
+.secondary[data-plan-screen]:hover {
+  background: var(--sk-fill-27);
+  color: var(--sk-text-2);
+}
+
+.primary[data-plan-screen] {
+  padding: 0 14px;
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  font-weight: 700;
+}
+
+.primary[data-plan-screen]:hover {
+  background: var(--sk-accent-hover);
+}
+
+.primary.big[data-plan-screen] {
+  height: 34px;
+  padding: 0 15px;
+  font-size: var(--sk-fs-6);
+}
+
+.tools[data-plan-screen] {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.spacer[data-plan-screen] {
+  flex: 1;
+}
+
+.all[data-plan-screen] {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-17);
+  cursor: pointer;
+}
+
+.all.on[data-plan-screen],
+.all[data-plan-screen]:hover {
+  background: var(--sk-hover);
+  color: var(--sk-text-2);
+}
+
+.stages[data-plan-screen] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Where a dragged milestone lands (the board's slot). */
+.slot[data-plan-screen] {
+  flex: none;
+  border-radius: 10px;
+  background: var(--sk-accent-a14);
+  box-shadow: inset 0 0 0 1px var(--sk-accent-a55);
+  animation: skSlot 0.16s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot[data-plan-screen] > span {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sk-accent-a55);
+}
+
+/* The dragged milestone or task follows the pointer above everything. */
+.ghost[data-plan-screen] {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.live[data-plan-screen] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The board's lift (skLift), tilted less: a milestone is several times wider than a card. */
+@keyframes skPlanLift {
+  from {
+    transform: rotate(0deg) scale(1);
+    box-shadow: none;
+  }
+  to {
+    transform: rotate(0.5deg) scale(1.01);
+  }
+}
+
+.empty[data-plan-screen] {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 24px 60px;
+  text-align: center;
+}
+
+.empty-icon[data-plan-screen] {
+  display: inline-flex;
+  color: var(--sk-text-28);
+}
+
+.empty-copy[data-plan-screen] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 380px;
+}
+
+.empty-title[data-plan-screen] {
+  font-size: var(--sk-fs-10);
+  font-weight: 700;
+  color: var(--sk-text-6);
+}
+
+.empty-text[data-plan-screen] {
+  font-size: var(--sk-fs-6);
+  line-height: 1.6;
+  color: var(--sk-text-19);
+  text-wrap: pretty;
+}

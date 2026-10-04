@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { taskSections, toggleCriterion, withSummary } from './task-body';
+import {
+  setCriteria,
+  taskBody,
+  taskSections,
+  toggleCriterion,
+  withSections,
+  withSummary,
+} from './task-body';
 
 const body = [
   '## Цель',
@@ -40,6 +47,15 @@ describe('task body', () => {
     expect(toggleCriterion(body, 5)).toBe(body);
   });
 
+  it('sets every criterion from a verdict and leaves the rest of the body', () => {
+    const set = setCriteria(body, [true, false]);
+    expect(taskSections(set).criteria.map((c) => c.done)).toEqual([true, false]);
+    expect(set).toContain('- [x] add(2, 3) возвращает 5');
+    expect(set).toContain('- [ ] тесты зелёные');
+    expect(taskSections(set).notes).toBe('Без спешки.');
+    expect(taskSections(setCriteria(body, [undefined, false])).criteria[0]!.done).toBe(false);
+  });
+
   it('writes the summary once, replacing an older one', () => {
     const once = withSummary(body, 'Сложение исправлено.');
     expect(taskSections(once).summary).toBe('Сложение исправлено.');
@@ -49,5 +65,25 @@ describe('task body', () => {
       summary: 'Исправлено и покрыто тестом.',
       notes: 'Без спешки.',
     });
+  });
+
+  it('builds a new body and patches sections, keeping the rest', () => {
+    const fresh = taskBody({ goal: 'Сделать X.', criteria: ['a', 'b'] }, 'ru');
+    expect(taskSections(fresh)).toEqual({
+      goal: 'Сделать X.',
+      criteria: [
+        { text: 'a', done: false },
+        { text: 'b', done: false },
+      ],
+    });
+    const patched = withSections(withSummary(body, 'Готово.'), { goal: 'Новая цель.' }, 'ru');
+    expect(taskSections(patched)).toMatchObject({
+      goal: 'Новая цель.',
+      notes: 'Без спешки.',
+      summary: 'Готово.',
+    });
+    expect(taskSections(patched).criteria).toHaveLength(2);
+    const noted = withSections(fresh, { notes: 'См. ADR-0007.' }, 'en');
+    expect(noted).toContain('## Notes\n\nСм. ADR-0007.');
   });
 });

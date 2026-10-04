@@ -1,0 +1,108 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.screen[data-task-tasks-screen] {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--sk-bg);
+}
+
+.top[data-task-tasks-screen] {
+  flex: none;
+  padding: 20px 24px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.titles[data-task-tasks-screen] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+h1[data-task-tasks-screen] {
+  margin: 0;
+  font-size: var(--sk-fs-13);
+  font-weight: 700;
+  color: var(--sk-text-5);
+  letter-spacing: -0.01em;
+}
+
+.sub[data-task-tasks-screen] {
+  margin-top: 4px;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-17);
+}
+
+.new[data-task-tasks-screen] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  font-size: var(--sk-fs-5);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.new[data-task-tasks-screen]:hover {
+  background: var(--sk-accent-hover);
+}
+
+.new.big[data-task-tasks-screen] {
+  gap: 8px;
+  height: 34px;
+  padding: 0 16px;
+  font-size: var(--sk-fs-6);
+}
+
+.empty[data-task-tasks-screen] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 24px 40px;
+  text-align: center;
+}
+
+.empty-icon[data-task-tasks-screen] {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: var(--sk-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-copy[data-task-tasks-screen] {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.empty-title[data-task-tasks-screen] {
+  font-size: var(--sk-fs-13);
+  font-weight: 700;
+  color: var(--sk-text-2);
+}
+
+.empty-text[data-task-tasks-screen] {
+  font-size: var(--sk-fs-7);
+  line-height: 1.6;
+  color: var(--sk-text-17);
+  text-wrap: pretty;
+}

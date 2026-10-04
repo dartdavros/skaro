@@ -1,0 +1,111 @@
+.proposal .text {
+  font-size: var(--sk-fs-5);
+  line-height: 1.45;
+  color: var(--sk-text-13);
+  text-wrap: pretty;
+}
+
+.proposal .text code {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-12);
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--sk-code-bg);
+}
+
+.proposal .tasks {
+  padding: 0 13px;
+  display: flex;
+  flex-direction: column;
+}
+
+.proposal .task {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.proposal .task.static {
+  cursor: default;
+}
+
+.proposal .box {
+  flex: none;
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: var(--sk-fill-11);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-30);
+  transition:
+    background 0.12s,
+    box-shadow 0.12s;
+}
+
+.proposal .box.on {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-37);
+}
+
+.proposal .task-texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.proposal .task-title {
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  color: var(--sk-text-19);
+}
+
+.proposal .task-title.on {
+  color: var(--sk-text-6);
+}
+
+.proposal .task-meta {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.proposal .line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 2px;
+}
+
+.proposal .line-text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+}
+
+.proposal .line-open {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--sk-fs-3);
+  font-weight: 600;
+  color: var(--sk-text-13);
+  cursor: pointer;
+}
+
+.proposal .line-open:hover {
+  color: var(--sk-text-2);
+}

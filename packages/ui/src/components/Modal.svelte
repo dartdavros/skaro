@@ -9,6 +9,8 @@
     title,
     subtitle,
     width = 440,
+    closable = true,
+    flush = false,
     children,
     footer,
   }: {
@@ -16,6 +18,13 @@
     title?: string;
     subtitle?: string;
     width?: number;
+    /** The × in the corner; some mockups close only by Esc, the backdrop and "Отмена". */
+    closable?: boolean;
+    /**
+     * No inner padding: the head and the footer run edge to edge (the footer on its own band
+     * with a line above), the body sets its own padding and scrolls by itself.
+     */
+    flush?: boolean;
     children: Snippet;
     footer?: Snippet;
   } = $props();
@@ -29,6 +38,7 @@
   <div class="backdrop" role="presentation" onclick={close}>
     <div
       class="dialog"
+      class:flush
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -43,15 +53,15 @@
             ><span class="title">{title}</span>{#if subtitle}<span class="subtitle">{subtitle}</span
               >{/if}</span
           >
-          <button
-            type="button"
-            class="x"
-            data-tip={t('ui.closeEsc')}
-            aria-label={t('ui.close')}
-            onclick={close}
-          >
-            <Icon name="close" size={14} stroke={2.2} />
-          </button>
+          {#if closable}<button
+              type="button"
+              class="x"
+              data-tip={t('ui.closeEsc')}
+              aria-label={t('ui.close')}
+              onclick={close}
+            >
+              <Icon name="close" size={14} stroke={2.2} />
+            </button>{/if}
         </div>
       {/if}
       {@render children()}
@@ -69,7 +79,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--sk-black-a55);
     backdrop-filter: blur(3px);
   }
 
@@ -82,10 +92,27 @@
     border-radius: var(--sk-radius-modal);
     background: var(--sk-modal);
     box-shadow:
-      0 30px 80px rgba(0, 0, 0, 0.6),
-      0 0 0 1px rgba(255, 255, 255, 0.04);
+      0 30px 80px var(--sk-black-a60),
+      0 0 0 1px var(--sk-white-a4);
     animation: skIn 0.16s ease-out;
     outline: none;
+  }
+
+  .dialog.flush {
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .flush > .head {
+    padding: 18px 18px 14px 20px;
+  }
+
+  .flush > .footer {
+    align-items: center;
+    padding: 14px 20px;
+    border-top: 1px solid var(--sk-line);
+    background: var(--sk-bg);
   }
 
   .head {
@@ -104,12 +131,12 @@
   }
 
   .subtitle {
-    font-size: 12px;
+    font-size: var(--sk-fs-4);
     color: var(--sk-text-muted);
   }
 
   .title {
-    font-size: 15px;
+    font-size: var(--sk-fs-10);
     font-weight: 700;
     color: var(--sk-text);
   }

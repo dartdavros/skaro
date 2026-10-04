@@ -1,0 +1,121 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.screen[data-docs-screen] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  background: var(--sk-bg);
+}
+
+.main[data-docs-screen] {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.body[data-docs-screen] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.show-tree[data-docs-screen] {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 6;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-17);
+  cursor: pointer;
+}
+
+.show-tree[data-docs-screen]:hover {
+  background: var(--sk-hover);
+  color: var(--sk-text-2);
+}
+
+.empty[data-docs-screen] {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 24px 80px;
+  text-align: center;
+}
+
+.empty-icon[data-docs-screen] {
+  display: inline-flex;
+  color: var(--sk-text-28);
+}
+
+.empty-copy[data-docs-screen] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 380px;
+}
+
+.empty-title[data-docs-screen] {
+  font-size: var(--sk-fs-10);
+  font-weight: 700;
+  color: var(--sk-text-6);
+}
+
+.empty-text[data-docs-screen] {
+  font-size: var(--sk-fs-6);
+  line-height: 1.6;
+  color: var(--sk-text-19);
+  text-wrap: pretty;
+}
+
+.empty-actions[data-docs-screen] {
+  display: flex;
+  gap: 8px;
+}
+
+.secondary[data-docs-screen],
+.primary[data-docs-screen] {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.secondary[data-docs-screen] {
+  padding: 0 13px;
+  background: var(--sk-fill-20);
+  color: var(--sk-text-6);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+}
+
+.secondary[data-docs-screen]:hover {
+  background: var(--sk-fill-27);
+  color: var(--sk-text-2);
+}
+
+.primary[data-docs-screen] {
+  padding: 0 15px;
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+  font-size: var(--sk-fs-6);
+  font-weight: 700;
+}
+
+.primary[data-docs-screen]:hover {
+  background: var(--sk-accent-hover);
+}

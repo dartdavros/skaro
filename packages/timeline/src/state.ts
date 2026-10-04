@@ -9,6 +9,7 @@ import type {
   PlanStep,
   TimelineEvent,
 } from './model.ts';
+import { isAsyncQuestion, persistsAfterTurn } from './async-question.ts';
 
 export interface TurnState {
   id: string;
@@ -93,14 +94,16 @@ export class Timeline {
           done.usage = { inputTokens: s.usage.inputTokens, outputTokens: s.usage.outputTokens };
         }
         delete s.activity;
-        // Questions and approvals do not outlive the turn that asked them.
-        s.interactions = s.interactions.filter((i) => i.kind === 'merge');
+        // Async questions wait for a later user message, even after the agent finishes.
+        s.interactions = s.interactions.filter(persistsAfterTurn);
         s.status = 'idle';
         return;
       }
       case 'item.upsert': {
         const at = this.index.get(event.item.id);
         if (at === undefined) {
+          if (event.item.kind === 'message' && event.item.role === 'user' && !event.item.parentId)
+            s.interactions = s.interactions.filter((i) => !isAsyncQuestion(i));
           this.index.set(event.item.id, s.items.length);
           s.items.push({ ...event.item });
         } else {
@@ -131,7 +134,8 @@ export class Timeline {
         return;
       case 'interaction.closed':
         s.interactions = s.interactions.filter((i) => i.id !== event.id);
-        if (!s.interactions.length && s.status === 'waiting') s.status = 'working';
+        if (!s.interactions.length && s.status === 'waiting')
+          s.status = s.turns.some((turn) => !turn.outcome) ? 'working' : 'idle';
         return;
       case 'usage':
         s.usage = {
@@ -154,6 +158,7 @@ export class Timeline {
         s.status = event.state;
         return;
       case 'rewound':
+        s.interactions = s.interactions.filter((i) => !isAsyncQuestion(i));
         this.rewind(event.toItemId);
         return;
     }

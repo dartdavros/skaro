@@ -9,15 +9,17 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "node scripts/bundle-metadata.mjs && electron-vite build",
     "preview": "electron-vite preview",
-    "package": "electron-vite build && electron-builder --dir",
-    "dist": "electron-vite build && electron-builder",
+    "package": "pnpm run build && node scripts/package.mjs --dir",
+    "dist": "pnpm run build && node scripts/package.mjs",
     "typecheck": "tsc -p tsconfig.node.json && svelte-check --tsconfig tsconfig.web.json --fail-on-warnings",
     "test:e2e": "playwright test",
-    "preview:ui": "vite --config vite.preview.config.ts"
+    "preview:ui": "vite --config vite.preview.config.ts",
+    "release:manifest": "node scripts/release-manifest.mjs"
   },
   "devDependencies": {
+    "@lucide/svelte": "1.48.0",
     "@playwright/test": "^1.63.0",
     "@skaro/adapter-claude": "workspace:*",
     "@skaro/adapter-codex": "workspace:*",
@@ -27,16 +29,28 @@
     "@skaro/ui": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@types/node": "^24.0.0",
+    "@types/turndown": "^5.0.6",
     "dompurify": "^3.4.16",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
     "highlight.js": "^11.12.0",
+    "mammoth": "^1.13.0",
     "marked": "^18.0.14",
     "mermaid": "^12.0.0",
+    "shiki": "^4.5.0",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",
+    "turndown": "^7.2.4",
     "typescript": "~6.0.3",
+    "unpdf": "^1.8.1",
     "vite": "^7.3.6"
+  },
+  "dependencies": {
+    "@playwright/mcp": "0.0.83",
+    "electron-updater": "6.8.9",
+    "yaml": "2.9.1"
   }
 }

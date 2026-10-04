@@ -1,0 +1,116 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.slider[data-effort-slider] {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 14px 10px;
+  border-radius: 12px;
+  background: var(--sk-fill-6);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-20);
+  user-select: none;
+}
+
+.head[data-effort-slider] {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.caption[data-effort-slider] {
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-21);
+  cursor: default;
+}
+
+.name[data-effort-slider] {
+  font-size: var(--sk-fs-5);
+  font-weight: 700;
+  color: var(--sk-text-bright);
+  cursor: default;
+}
+
+.ends[data-effort-slider] {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: -3px;
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-23);
+}
+
+.track[data-effort-slider] {
+  position: relative;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--sk-fill-19);
+  box-shadow: inset 0 1px 2px var(--sk-black-a45);
+  cursor: pointer;
+  outline: none;
+  touch-action: none;
+}
+
+.track[data-effort-slider]:focus-visible {
+  box-shadow:
+    inset 0 1px 2px var(--sk-black-a45),
+    0 0 0 1px var(--sk-accent);
+}
+
+.fill[data-effort-slider] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sk-accent-a18), var(--sk-accent-a55));
+  transition: width 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tick[data-effort-slider] {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+
+.tick.default[data-effort-slider] {
+  width: 2px;
+  height: 10px;
+  margin: -5px 0 0 -1px;
+}
+
+.knob[data-effort-slider] {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 20px;
+  margin: -10px 0 0 -8px;
+  border-radius: 7px;
+  background: var(--sk-text-reply);
+  box-shadow:
+    0 2px 6px var(--sk-black-a50),
+    inset 0 -1px 0 var(--sk-black-a12);
+  transition: left 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
+.below[data-effort-slider] {
+  position: relative;
+  height: 16px;
+}
+
+.recommended[data-effort-slider] {
+  position: absolute;
+  font-size: var(--sk-fs-1);
+  color: var(--sk-text-28);
+  white-space: nowrap;
+  transition:
+    left 0.18s,
+    color 0.15s;
+}
+
+.recommended.on[data-effort-slider] {
+  color: var(--sk-text-21);
+}

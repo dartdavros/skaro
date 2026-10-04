@@ -1,0 +1,152 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.agents[data-agent-defaults] {
+  display: flex;
+  gap: 9px;
+}
+
+.agent[data-agent-defaults] {
+  flex: 1;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: var(--sk-fill-23);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--sk-text-19);
+  outline: none;
+}
+
+.agent.on[data-agent-defaults] {
+  background: var(--sk-bg);
+  color: var(--sk-text-6);
+}
+
+.logo[data-agent-defaults] {
+  flex: none;
+  display: inline-flex;
+}
+
+.names[data-agent-defaults] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name[data-agent-defaults] {
+  font-size: var(--sk-fs-6);
+  font-weight: 600;
+  color: var(--sk-text-13);
+}
+
+.agent.on[data-agent-defaults] .name:where([data-agent-defaults]) {
+  color: var(--sk-text-6);
+}
+
+.state[data-agent-defaults] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.row[data-agent-defaults] {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.field[data-agent-defaults] {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.grow[data-agent-defaults] {
+  flex: 1;
+  min-width: 220px;
+}
+
+.effort[data-agent-defaults] {
+  flex: 1;
+  min-width: 220px;
+}
+
+.key[data-agent-defaults] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-19);
+}
+
+.perms[data-agent-defaults] {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.perm[data-agent-defaults] {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.perm[data-agent-defaults]:hover {
+  background: var(--sk-surface-2);
+}
+
+.perm.on[data-agent-defaults] {
+  background: var(--sk-bg);
+}
+
+.dot[data-agent-defaults] {
+  flex: none;
+  margin-top: 1px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--sk-fill-34);
+}
+
+.perm.on[data-agent-defaults] .dot:where([data-agent-defaults]) {
+  background: var(--sk-accent);
+  box-shadow: inset 0 0 0 1.5px var(--sk-accent);
+}
+
+.perm.on.warn[data-agent-defaults] .dot:where([data-agent-defaults]) {
+  background: var(--sk-warn);
+  box-shadow: inset 0 0 0 1.5px var(--sk-warn);
+}
+
+.texts[data-agent-defaults] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title[data-agent-defaults] {
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  color: var(--sk-text-13);
+}
+
+.perm.on[data-agent-defaults] .title:where([data-agent-defaults]) {
+  color: var(--sk-text-6);
+}
+
+.note[data-agent-defaults] {
+  font-size: var(--sk-fs-3);
+  line-height: 1.45;
+  color: var(--sk-text-21);
+  text-wrap: pretty;
+}
+
+.perm.on.warn[data-agent-defaults] .note:where([data-agent-defaults]) {
+  color: var(--sk-orange-2);
+}

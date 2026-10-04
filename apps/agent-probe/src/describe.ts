@@ -67,6 +67,12 @@ function item(i: Item): string {
       return `${head} ⚑ ${i.level} ${i.code} ${oneLine(i.text)}${i.retry ? ` (${i.retry.attempt}/${i.retry.max} in ${i.retry.inMs}ms)` : ''}`;
     case 'unknown':
       return `${head} ⁇ unknown ${i.native.type}`;
+    case 'decision':
+      return `${head} decision ${i.interaction.kind}`;
+    case 'proposal':
+      return `${head} proposal ${i.proposal.type} ${i.state}`;
+    case 'import_prep':
+      return `${head} import ${i.prepared} prepared, ${i.skipped} skipped`;
   }
 }
 

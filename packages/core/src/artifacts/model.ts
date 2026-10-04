@@ -27,6 +27,8 @@ export interface Task {
   agent?: string;
   model?: string;
   branch?: string;
+  /** Specification the task implements, e.g. "0003" (architecture.md 3.7). */
+  spec?: string;
   created?: string;
   body: string;
   /** Path relative to the project root. */
@@ -56,6 +58,22 @@ export interface Adr {
   path: string;
 }
 
+export type SpecStatus = AdrStatus;
+
+/** What a function does: problem, scenarios, requirements R-n (architecture.md 3.7, D-30). */
+export interface Spec {
+  /** Four digits, e.g. "0003"; shown as SPEC-0003. */
+  id: string;
+  title: string;
+  status: SpecStatus;
+  /** Specification this one replaces / is replaced by. */
+  replaces?: string;
+  replacedBy?: string;
+  date?: string;
+  body: string;
+  path: string;
+}
+
 /** Brief, architecture and free documents. */
 export interface Doc {
   kind: 'brief' | 'architecture' | 'doc';
@@ -64,24 +82,79 @@ export interface Doc {
   path: string;
 }
 
+export interface ProjectCheck {
+  name: string;
+  run: string;
+}
+
+/**
+ * How Skaro runs a task's own disposable copy of the project's services (task-environments.md).
+ * Commands run in the task checkout; values may use {name}, {root}, {worktree} and {PORT_VARIABLE}.
+ */
+export interface EnvironmentConfig {
+  /** Variables that each receive a free host port. */
+  ports: string[];
+  /** Further variables for the commands and for the agent's shell. */
+  env: Record<string, string>;
+  /** Creates the copy of the data, once per task. */
+  create?: string;
+  /** Starts the services; returns when they run. */
+  start: string;
+  /** Answers 2xx once the environment is ready. */
+  ready?: string;
+  /** Addresses the agent gets, by name. */
+  urls: Record<string, string>;
+}
+
 export interface ProjectConfig {
+  /** Absent: the project has no services Skaro runs for a task. */
+  environment?: EnvironmentConfig;
+  checks: ProjectCheck[];
   defaultAgent: string;
   defaultModel?: string;
+  defaultEffort?: string;
+  /** How new tasks start: ask, auto within the task, full access. */
+  permissionMode: 'ask' | 'auto' | 'full';
   baseBranch: string;
   branchTemplate: string;
   isolation: 'worktree' | 'in-place';
-  merge: { strategy: 'squash' | 'merge'; deleteBranch: boolean };
+  merge: { strategy: 'squash' | 'merge' | 'rebase'; deleteBranch: boolean };
   chat: { autoAcceptDocs: boolean };
+  /** Skaro keeps its block in AGENTS.md and CLAUDE.md (architecture.md 3). */
+  agentFiles: boolean;
+  agentInstructions?: string;
+  /** App-wide instructions ("Настройки"): the agent gets them before the project's own. */
+  globalInstructions?: string;
+}
+
+/**
+ * App-wide defaults ("Настройки"): a project takes them for whatever its config.yaml does not
+ * set; the project's own values win.
+ */
+export interface ConfigDefaults {
+  baseBranch?: string;
+  branchTemplate?: string;
+  isolation?: 'worktree' | 'in-place';
+  mergeStrategy?: 'squash' | 'merge' | 'rebase';
+  deleteBranch?: boolean;
+  autoAcceptDocs?: boolean;
+  agentFiles?: boolean;
   agentInstructions?: string;
 }
 
+/** Settings a project may leave to the app-wide defaults. */
+export type InheritableSetting = Exclude<keyof ConfigDefaults, 'agentInstructions'>;
+
 export const DEFAULT_CONFIG: ProjectConfig = {
+  checks: [],
   defaultAgent: 'claude-code',
+  permissionMode: 'auto',
   baseBranch: 'main',
   branchTemplate: 'skaro/{id}-{slug}',
   isolation: 'worktree',
   merge: { strategy: 'squash', deleteBranch: true },
   chat: { autoAcceptDocs: true },
+  agentFiles: false,
 };
 
 /** A file in .skaro/ that could not be read; shown to the user instead of crashing. */
@@ -96,6 +169,7 @@ export interface ProjectArtifacts {
   architecture?: Doc;
   docs: Doc[];
   adrs: Adr[];
+  specs: Spec[];
   milestones: Milestone[];
   tasks: Task[];
   problems: ArtifactProblem[];

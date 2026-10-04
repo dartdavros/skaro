@@ -1,0 +1,145 @@
+.task-description {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 10px 14px 12px 16px;
+}
+
+.task-description .meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+}
+
+.task-description .line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.task-description .ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--sk-mono);
+  color: var(--sk-text-13);
+}
+
+.task-description .spec {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--sk-mono);
+  font-size: inherit;
+  color: var(--sk-link);
+  cursor: pointer;
+}
+
+.task-description .spec:hover {
+  text-decoration: underline;
+}
+
+.task-description .req {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  color: var(--sk-link);
+  cursor: default;
+}
+
+.task-description .branch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--sk-mono);
+  color: var(--sk-code);
+  min-width: 0;
+}
+
+.task-description .branch span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-description .sep {
+  height: 1px;
+  background: var(--sk-line);
+}
+
+.task-description .section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.task-description .goal {
+  margin: 0;
+  font-size: var(--sk-fs-6);
+  line-height: 1.6;
+  color: var(--sk-text-10);
+  text-wrap: pretty;
+  white-space: pre-wrap;
+}
+
+.task-description .notes {
+  margin: 0;
+  font-size: var(--sk-fs-5);
+  line-height: 1.6;
+  color: var(--sk-text-19);
+  text-wrap: pretty;
+  white-space: pre-wrap;
+}
+
+.task-description .criteria {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-description .criterion {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.task-description .box {
+  flex: none;
+  margin-top: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: var(--sk-fill-11);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-30);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-description .box.done {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-37);
+}
+
+.task-description .criterion .text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-5);
+  line-height: 1.5;
+  color: var(--sk-text-13);
+  text-wrap: pretty;
+}
+
+.task-description .criterion .text.done {
+  color: var(--sk-text-21);
+}

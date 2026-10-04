@@ -1,0 +1,250 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.stage[data-plan-stage] {
+  flex: none;
+  border-radius: 10px;
+  background: var(--sk-surface);
+  transition: box-shadow 0.12s;
+}
+
+/* A task from another milestone would land here (the board's column under a card). */
+.stage.over[data-plan-stage] {
+  background: var(--sk-fill-9);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-25);
+}
+
+/* The copy under the pointer: lifted and tilted like a board card. */
+.stage.ghost[data-plan-stage] {
+  background: var(--sk-fill-20);
+  box-shadow:
+    0 18px 40px var(--sk-black-a60),
+    0 0 0 1px var(--sk-white-a6);
+  transform: rotate(0.5deg) scale(1.01);
+  animation: skPlanLift 0.14s ease-out;
+}
+
+.stage.ghost[data-plan-stage] .head {
+  cursor: grabbing;
+}
+
+.stage.dropped[data-plan-stage] {
+  animation: skDrop 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.head[data-plan-stage] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px 12px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  touch-action: none;
+}
+
+.head[data-plan-stage]:focus-visible {
+  box-shadow: 0 0 0 1.5px var(--sk-accent);
+}
+
+.head[data-plan-stage]:hover {
+  background: var(--sk-surface-2);
+}
+
+.grip[data-plan-stage] {
+  flex: none;
+  width: 14px;
+  display: inline-flex;
+  justify-content: center;
+  color: var(--sk-text-28);
+  cursor: grab;
+}
+
+.grip-space[data-plan-stage] {
+  flex: none;
+  width: 14px;
+}
+
+.menu-space[data-plan-stage] {
+  flex: none;
+  width: 28px;
+}
+
+.chev[data-plan-stage] {
+  flex: none;
+  display: inline-flex;
+  color: var(--sk-text-21);
+  transition: transform 0.15s;
+}
+
+.chev.open[data-plan-stage] {
+  transform: rotate(90deg);
+}
+
+.id[data-plan-stage] {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  color: var(--sk-text-14);
+}
+
+.name[data-plan-stage] {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-8);
+  font-weight: 600;
+  color: var(--sk-text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name.finished[data-plan-stage] {
+  color: var(--sk-text-13);
+}
+
+.marks[data-plan-stage] {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mark[data-plan-stage] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-13);
+  cursor: default;
+}
+
+.dot[data-plan-stage] {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sk-accent);
+}
+
+.dot.working[data-plan-stage] {
+  background: var(--sk-fill-41);
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+
+.dot.error[data-plan-stage] {
+  background: var(--sk-error);
+}
+
+.progress[data-plan-stage] {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 176px;
+}
+
+.track[data-plan-stage] {
+  flex: 1;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--sk-surface-2);
+  overflow: hidden;
+}
+
+.fill[data-plan-stage] {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--sk-fill-39);
+  transition: width 0.3s ease;
+}
+
+.fill.full[data-plan-stage] {
+  background: var(--sk-fill-41);
+}
+
+.count[data-plan-stage] {
+  flex: none;
+  min-width: 44px;
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.menu[data-plan-stage] {
+  flex: none;
+}
+
+.body[data-plan-stage] {
+  padding: 0 10px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meta[data-plan-stage] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding: 2px 10px 4px 46px;
+}
+
+.meta-col[data-plan-stage] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label[data-plan-stage] {
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sk-text-23);
+}
+
+.text[data-plan-stage] {
+  font-size: var(--sk-fs-6);
+  line-height: 1.55;
+  color: var(--sk-text-10);
+  text-wrap: pretty;
+}
+
+.rows[data-plan-stage] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.empty[data-plan-stage] {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  padding-left: 46px;
+  border-radius: 8px;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-23);
+}
+
+.slot[data-plan-stage] {
+  flex: none;
+  border-radius: 8px;
+  background: var(--sk-accent-a14);
+  box-shadow: inset 0 0 0 1px var(--sk-accent-a55);
+  animation: skSlot 0.16s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot[data-plan-stage] > span {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sk-accent-a55);
+}

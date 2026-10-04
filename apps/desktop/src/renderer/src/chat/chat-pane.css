@@ -1,0 +1,64 @@
+.chat > .main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.chat > .main > .head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 14px 0;
+}
+.chat > .main > .head .title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--sk-fs-7);
+  font-weight: 600;
+  color: var(--sk-text-7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat > .main > .head .archive {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-23);
+  cursor: pointer;
+}
+.chat > .main > .head .archive:hover,
+.chat > .main > .head .archive.on {
+  background: var(--sk-selected);
+  color: var(--sk-text-6);
+}
+.chat > .main > .banners {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px 0;
+}
+.chat > .main > .banners:empty {
+  display: none;
+}
+.chat > .main > .empty {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+}

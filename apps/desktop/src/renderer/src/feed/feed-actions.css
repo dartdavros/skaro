@@ -1,0 +1,287 @@
+/* Action lines: collapsible groups and event rows. */
+
+/* Collapsible gray line: "Прочитал 6 файлов" */
+.fd-fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+}
+
+.fd-fold:hover {
+  color: var(--sk-text-13);
+}
+
+.fd-chevron {
+  flex: none;
+  transition: transform 0.15s;
+}
+
+.fd-chevron.open {
+  transform: rotate(90deg);
+}
+
+.fd-fold code,
+.fd-live code {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-19);
+}
+
+.fd-sublist {
+  margin-left: 19px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fd-subrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 2px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+}
+
+.fd-subrow.link {
+  cursor: pointer;
+}
+
+.fd-subrow.link:hover {
+  background: var(--sk-hover);
+}
+
+.fd-subrow .main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sk-text-13);
+}
+
+.fd-subrow.link .main {
+  color: var(--sk-link);
+}
+
+.fd-subrow .meta {
+  flex: none;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-23);
+}
+
+/* Event row: "$ npm test ✓ 4с", "✎ file +3 −1" */
+.fd-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 2px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+
+.fd-row.clickable {
+  cursor: pointer;
+}
+
+.fd-row-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 2px;
+}
+
+.fd-row-wrap > .fd-row {
+  padding: 0;
+}
+
+.fd-row-wrap.clickable {
+  cursor: pointer;
+}
+
+.fd-glyph {
+  flex: none;
+  width: 12px;
+  color: var(--sk-text-21);
+}
+
+.fd-glyph.edit {
+  color: var(--sk-text-13);
+}
+
+.fd-main {
+  flex: 1;
+  min-width: 0;
+  color: var(--sk-text-13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-main.struck {
+  color: var(--sk-text-23);
+  text-decoration: line-through;
+}
+
+.fd-main .dim {
+  color: var(--sk-text-23);
+}
+
+.fd-meta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sk-text-21);
+}
+
+.fd-meta.ok {
+  color: var(--sk-text-13);
+}
+
+.fd-meta.bad {
+  color: var(--sk-error);
+}
+
+.fd-plus {
+  color: var(--sk-green-2);
+}
+
+.fd-minus {
+  color: var(--sk-error);
+}
+
+.fd-desc {
+  margin-left: 21px;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+  font-family: var(--sk-font);
+}
+
+.fd-wait-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 3px;
+  border-radius: 50%;
+  background: var(--sk-accent);
+}
+
+.fd-pulse {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sk-fill-41);
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+
+.fd-expanded {
+  margin: 2px 0 6px 21px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fd-output {
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--sk-surface);
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  line-height: 1.5;
+  color: var(--sk-text-13);
+  white-space: pre;
+  user-select: text;
+}
+
+.fd-output.full {
+  max-height: 560px;
+}
+
+.fd-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  vertical-align: -2px;
+  background: var(--sk-fill-39);
+  animation: skPulse 1.1s steps(2) infinite;
+}
+
+.fd-link-btn {
+  align-self: flex-start;
+  font-size: var(--sk-fs-3);
+  font-weight: 600;
+  color: var(--sk-link);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.fd-link-btn:hover {
+  text-decoration: underline;
+}
+
+.fd-diff {
+  padding: 8px 0;
+  border-radius: 8px;
+  background: var(--sk-surface);
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  line-height: 1.5;
+  max-height: 360px;
+  overflow: auto;
+  user-select: text;
+}
+
+.fd-diff-line {
+  display: flex;
+  gap: 10px;
+  padding: 0 12px;
+  white-space: pre;
+  color: var(--sk-text-23);
+}
+
+.fd-diff-line.add {
+  color: var(--sk-green-2);
+}
+
+.fd-diff-line.del {
+  color: var(--sk-error);
+}
+
+.fd-diff-line.hunk {
+  color: var(--sk-blue-4);
+}
+
+.fd-diff-line .sign {
+  flex: none;
+  width: 10px;
+}
+
+.fd-diff-sep {
+  height: 1px;
+  margin: 6px 12px;
+  background: var(--sk-line-strong);
+}

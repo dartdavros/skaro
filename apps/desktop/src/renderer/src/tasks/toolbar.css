@@ -1,0 +1,144 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.bar[data-task-toolbar] {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.search[data-task-toolbar] {
+  position: relative;
+  /* Gives way first when the row runs out of room (wide filters, "Сбросить"). */
+  flex: 0 1 210px;
+  min-width: 140px;
+}
+
+.glass[data-task-toolbar] {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  display: inline-flex;
+}
+
+input[data-task-toolbar] {
+  width: 100%;
+  height: 31px;
+  padding: 0 10px 0 31px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-fill-3);
+  color: var(--sk-text-2);
+  font-size: var(--sk-fs-5);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--sk-fill-25);
+}
+
+input[data-task-toolbar]:hover {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-fill-31);
+}
+
+input[data-task-toolbar]:focus {
+  background: var(--sk-field-hover);
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}
+
+.ms-id[data-task-toolbar] {
+  flex: none;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.dot[data-task-toolbar] {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.logo[data-task-toolbar] {
+  flex: none;
+  width: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sk-text-6);
+}
+
+.reset[data-task-toolbar] {
+  flex: none;
+  height: 31px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sk-text-17);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reset[data-task-toolbar]:hover {
+  background: var(--sk-hover);
+  color: var(--sk-text-2);
+}
+
+/* "Выбрать несколько": looks like a filter button, filled with the accent while on. */
+.pick[data-task-toolbar] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 31px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sk-deep);
+  color: var(--sk-text-17);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pick.on[data-task-toolbar] {
+  background: var(--sk-accent);
+  color: var(--sk-text-1);
+}
+
+.spacer[data-task-toolbar] {
+  flex: 1;
+}
+
+.seg[data-task-toolbar] {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--sk-deep);
+}
+
+.seg[data-task-toolbar] button:where([data-task-toolbar]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 27px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sk-text-17);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.seg[data-task-toolbar] button.active:where([data-task-toolbar]) {
+  background: var(--sk-bg);
+  color: var(--sk-text-2);
+  box-shadow: 0 1px 2px var(--sk-black-a35);
+}

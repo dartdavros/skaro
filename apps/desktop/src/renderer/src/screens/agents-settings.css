@@ -1,0 +1,241 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.agent[data-agents-settings] {
+  overflow: hidden;
+}
+
+.head[data-agents-settings] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.titles[data-agents-settings] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.name-line[data-agents-settings] {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.name[data-agents-settings] {
+  font-size: var(--sk-fs-8);
+  font-weight: 700;
+  color: var(--sk-text-6);
+}
+
+.version[data-agents-settings] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+  cursor: default;
+}
+
+.state[data-agents-settings] {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-19);
+}
+
+.dot[data-agents-settings] {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dot.pulse[data-agents-settings] {
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+
+.btn[data-agents-settings] {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: var(--sk-fill-23);
+  color: var(--sk-text-6);
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn[data-agents-settings]:hover:not(:disabled) {
+  background: var(--sk-fill-28);
+  color: var(--sk-text-2);
+}
+
+.btn[data-agents-settings]:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.recheck[data-agents-settings] {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-19);
+  cursor: pointer;
+}
+
+.recheck[data-agents-settings]:hover {
+  background: var(--sk-fill-20);
+  color: var(--sk-text-2);
+}
+
+.progress[data-agents-settings] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 14px;
+}
+
+.track[data-agents-settings] {
+  flex: 1;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--sk-fill-20);
+  overflow: hidden;
+}
+
+.fill[data-agents-settings] {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--sk-fill-40);
+  transition: width 0.6s ease;
+}
+
+.progress-text[data-agents-settings] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.value[data-agents-settings] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account[data-agents-settings] {
+  font-size: var(--sk-fs-5);
+  color: var(--sk-text-13);
+}
+
+.mono[data-agents-settings] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-7);
+}
+
+.need-login[data-agents-settings] {
+  flex: 1;
+  font-size: var(--sk-fs-5);
+  color: var(--sk-warn);
+}
+
+/* "Настройки агента" (Settings mockup). */
+.cfg-title[data-agents-settings] {
+  font-size: var(--sk-fs-6);
+  color: var(--sk-text-7);
+  cursor: default;
+}
+
+.cfg-dir[data-agents-settings] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  font-weight: 400;
+  color: var(--sk-text-19);
+}
+
+.cfg-open[data-agents-settings] {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  color: var(--sk-accent);
+  cursor: pointer;
+}
+
+.cfg-open[data-agents-settings]:hover {
+  text-decoration: underline;
+}
+
+.cfg-note[data-agents-settings] {
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.mcp[data-agents-settings] {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+.mcp-row[data-agents-settings] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+}
+
+.mcp-dot[data-agents-settings] {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.mcp-name[data-agents-settings] {
+  flex: 1;
+  min-width: 0;
+  color: var(--sk-text-13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-meta[data-agents-settings] {
+  flex: none;
+}
+
+.field-width[data-agents-settings] {
+  width: 280px;
+  max-width: 100%;
+}
+
+.field-off[data-agents-settings] {
+  width: 280px;
+  max-width: 100%;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--sk-fill-3);
+  color: var(--sk-text-23);
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+}

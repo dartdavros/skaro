@@ -75,7 +75,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--sk-black-a55);
     backdrop-filter: blur(3px);
   }
 
@@ -89,8 +89,8 @@
     border-radius: var(--sk-radius-modal);
     background: var(--sk-modal);
     box-shadow:
-      0 30px 80px rgba(0, 0, 0, 0.6),
-      0 0 0 1px rgba(255, 255, 255, 0.04);
+      0 30px 80px var(--sk-black-a60),
+      0 0 0 1px var(--sk-white-a4);
     animation: skIn 0.16s ease-out;
     outline: none;
   }
@@ -112,13 +112,13 @@
   }
 
   .danger {
-    background: rgba(239, 106, 99, 0.14);
+    background: var(--sk-error-a14);
     color: var(--sk-error);
   }
 
   .caution {
-    background: #332508;
-    color: #e8b356;
+    background: var(--sk-orange-3);
+    color: var(--sk-orange-1);
   }
 
   .neutral {
@@ -133,20 +133,20 @@
   }
 
   .title {
-    font-size: 15px;
+    font-size: var(--sk-fs-10);
     font-weight: 700;
     color: var(--sk-text);
   }
 
   .text {
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     line-height: 1.55;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
     text-wrap: pretty;
   }
 
   .hint {
-    font-size: 12px;
+    font-size: var(--sk-fs-4);
     line-height: 1.5;
     color: var(--sk-text-label);
   }

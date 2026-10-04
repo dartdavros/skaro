@@ -6,15 +6,32 @@ directories:
 files:
   - out/**
   - package.json
+extraResources:
+  - from: build/skaro-bundle.json
+    to: skaro-bundle.json
+  - from: build/icon.png
+    to: icon.png
+asarUnpack:
+  - node_modules/@playwright/**
+  - node_modules/playwright/**
+  - node_modules/playwright-core/**
 win:
+  icon: build/icon.ico
   target: nsis
 mac:
-  target: dmg
+  icon: build/icon.icns
+  target: [dmg, zip]
   category: public.app-category.developer-tools
   # Ad-hoc signing until real signing and notarization (stage 8).
   identity: '-'
 linux:
+  icon: build/icon.png
   target: AppImage
   category: Development
   executableName: skaro
-publish: null
+artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
+publish:
+  provider: github
+  owner: skarodev
+  repo: skaro
+  releaseType: release

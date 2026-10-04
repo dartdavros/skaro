@@ -117,7 +117,7 @@
 <style>
   .md :global(.md-remote-label) {
     flex: 1;
-    font-size: 12px;
-    color: #8a8a8a;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-19);
   }
 </style>

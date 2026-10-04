@@ -1,0 +1,117 @@
+/* Layout shared by the inventory sections; baseline scope and specificity retained. */
+
+.inventory[data-inventory] {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 14px 6px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+
+.intro[data-inventory] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lead[data-inventory] {
+  margin: 0;
+  max-width: 640px;
+  font-size: var(--sk-fs-7);
+  line-height: 1.6;
+  color: var(--sk-text-19);
+}
+
+section[data-inventory] {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.head[data-inventory] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+h2[data-inventory] {
+  margin: 0;
+  font-size: var(--sk-fs-10);
+  font-weight: 700;
+  color: var(--sk-text);
+}
+
+.head[data-inventory] p:where([data-inventory]) {
+  margin: 0;
+  font-size: var(--sk-fs-5);
+  line-height: 1.55;
+  color: var(--sk-text-muted);
+  text-wrap: pretty;
+}
+
+.row[data-inventory] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wrap[data-inventory] {
+  flex-wrap: wrap;
+}
+
+.panel[data-inventory] {
+  padding: 18px;
+  border-radius: var(--sk-radius-card);
+  background: var(--sk-surface);
+}
+
+.panel.tight[data-inventory] {
+  padding: 12px;
+}
+
+.column[data-inventory] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.column-sm[data-inventory] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.narrow[data-inventory] {
+  max-width: 460px;
+  gap: 10px;
+}
+
+.note[data-inventory] {
+  font-size: var(--sk-fs-3);
+  line-height: 1.5;
+  color: var(--sk-text-muted);
+}
+
+.vsep[data-inventory] {
+  width: 1px;
+  height: 22px;
+  background: var(--sk-line-strong);
+}
+
+.log[data-inventory] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-label);
+}
+
+.menus[data-inventory] {
+  align-items: flex-start;
+  min-height: 330px;
+}
+
+.grid2[data-inventory] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}

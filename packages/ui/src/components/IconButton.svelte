@@ -71,7 +71,7 @@
 
   .round {
     border-radius: 50%;
-    color: #8a8a8a;
+    color: var(--sk-text-19);
   }
 
   .round.bright {
@@ -80,14 +80,14 @@
 
   .round:hover:not(:disabled),
   .round.active {
-    background: #383838;
-    color: #e2e2e2;
+    background: var(--sk-fill-32);
+    color: var(--sk-text-4);
   }
 
   .send {
     border-radius: 50%;
     background: var(--sk-accent);
-    color: #ffffff;
+    color: var(--sk-text-1);
   }
 
   .send:hover:not(:disabled) {
@@ -96,21 +96,21 @@
 
   .send:disabled {
     opacity: 1;
-    background: #3a3a3a;
-    color: #8a8a8a;
+    background: var(--sk-fill-33);
+    color: var(--sk-text-19);
   }
 
   .float {
     border-radius: 50%;
-    background: rgba(12, 12, 12, 0.72);
+    background: var(--sk-float-a72);
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.06),
-      0 8px 20px rgba(0, 0, 0, 0.45);
+      0 0 0 1px var(--sk-white-a6),
+      0 8px 20px var(--sk-black-a45);
     color: var(--sk-text);
   }
 
   .float:hover {
-    background: rgba(30, 30, 30, 0.9);
-    color: #ffffff;
+    background: var(--sk-float-hover-a90);
+    color: var(--sk-text-1);
   }
 </style>

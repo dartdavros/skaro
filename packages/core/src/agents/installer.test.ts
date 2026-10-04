@@ -63,7 +63,7 @@ describe('agent packages', () => {
   it('maps agents to platform packages', () => {
     expect(agentPackage('claude-code', WIN)).toMatchObject({
       name: '@anthropic-ai/claude-agent-sdk-win32-x64',
-      npmVersion: '0.3.281',
+      npmVersion: '0.3.285',
       binary: 'claude.exe',
     });
     expect(agentPackage('claude-code', { ...LINUX, musl: true }).name).toBe(
@@ -71,7 +71,7 @@ describe('agent packages', () => {
     );
     expect(agentPackage('codex', { os: 'darwin', arch: 'arm64' })).toMatchObject({
       name: '@openai/codex',
-      npmVersion: '0.156.1-darwin-arm64',
+      npmVersion: '0.159.2-darwin-arm64',
       binary: 'vendor/aarch64-apple-darwin/bin/codex',
       pathDirs: ['vendor/aarch64-apple-darwin/codex-path'],
     });
@@ -89,11 +89,11 @@ describe('AgentInstaller', () => {
       progress.push([done, total]),
     );
 
-    expect(agent.binary).toBe(join(dir, 'agents', 'claude-code', '0.3.281', 'claude.exe'));
+    expect(agent.binary).toBe(join(dir, 'agents', 'claude-code', '0.3.285', 'claude.exe'));
     expect(await readFile(agent.binary, 'utf8')).toBe('fake binary');
     expect(progress.at(-1)).toEqual([tarball.length, tarball.length]);
     expect(await installer.installed('claude-code')).toEqual(agent);
-    expect(requests[0]).toBe('/@anthropic-ai%2Fclaude-agent-sdk-win32-x64/0.3.281');
+    expect(requests[0]).toBe('/@anthropic-ai%2Fclaude-agent-sdk-win32-x64/0.3.285');
   });
 
   it('does not download again when installed', async () => {

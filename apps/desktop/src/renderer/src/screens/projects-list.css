@@ -1,0 +1,76 @@
+.projects .table {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.projects .row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 1.6fr) 132px 104px;
+  gap: 14px;
+  align-items: center;
+}
+
+.projects .head-row {
+  padding: 9px 14px;
+  background: var(--sk-deep);
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sk-text-17);
+}
+
+.projects .item-row {
+  padding: 11px 14px;
+  background: var(--sk-surface);
+  border-bottom: 1px solid var(--sk-fill-3);
+  cursor: pointer;
+  outline: none;
+}
+
+.projects .item-row:hover {
+  background: var(--sk-surface-hover);
+}
+
+.projects .cell-project {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.projects .cell-ms {
+  min-width: 0;
+}
+
+.projects .cell-agent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.projects .cell-time {
+  text-align: right;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-17);
+}
+
+.projects .nothing {
+  padding: 54px 20px;
+  text-align: center;
+  border-radius: 10px;
+  background: var(--sk-surface);
+}
+
+.projects .nothing-title {
+  font-size: var(--sk-fs-10);
+  font-weight: 600;
+  color: var(--sk-text-6);
+}
+
+.projects .nothing-text {
+  margin-top: 6px;
+  font-size: var(--sk-fs-6);
+  color: var(--sk-text-17);
+}

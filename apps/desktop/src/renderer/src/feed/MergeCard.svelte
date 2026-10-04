@@ -3,6 +3,7 @@
   import { Icon, t, tn } from '@skaro/ui';
   import type { MergeAction } from '../../../shared/ipc';
   import { useFeed } from './context.svelte';
+  import './merge-card.css';
 
   /**
    * Merge confirmation in the task chat (D-27, architecture.md 8): what goes where, checks that
@@ -25,6 +26,7 @@
 
   const blocked = $derived(interaction.blockers.length > 0);
   const conflicts = $derived(interaction.blockers.includes('conflicts'));
+  const localChanges = $derived(interaction.localChanges ?? []);
 
   async function act(action: MergeAction): Promise<void> {
     if (busy) return;
@@ -43,7 +45,7 @@
   }
 </script>
 
-<div class="fd-card">
+<div class="fd-card fd-merge-card">
   <span class="fd-card-title">{t('card.merge.title')}</span>
   <div class="route">
     <Icon name="branch" size={12} stroke={1.9} />
@@ -62,6 +64,11 @@
       <span>{t(`card.merge.blocker.${blocker}`, { to: interaction.to })}</span>
     </div>
   {/each}
+  {#if localChanges.length}
+    <div class="files">
+      {#each localChanges as file (file)}<span>{file}</span>{/each}
+    </div>
+  {/if}
   {#if conflicts && interaction.conflicts.length}
     <div class="files">
       {#each interaction.conflicts as file (file)}<span>{file}</span>{/each}
@@ -128,82 +135,3 @@
     {/if}
   </div>
 </div>
-
-<style>
-  .route {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #e8875b;
-    min-width: 0;
-  }
-
-  .branch {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .arrow {
-    flex: none;
-    color: #6f6f6f;
-  }
-
-  .base {
-    flex: none;
-    color: #c8c8c8;
-  }
-
-  .stats {
-    font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #8a8a8a;
-    display: flex;
-    gap: 6px;
-  }
-
-  .line {
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    font-size: 12px;
-    line-height: 1.45;
-  }
-
-  .line :global(svg) {
-    margin-top: 2px;
-  }
-
-  .line.bad {
-    color: #ef6a63;
-  }
-
-  .line.warn {
-    color: #e0a33c;
-  }
-
-  .files {
-    margin-left: 19px;
-    display: flex;
-    flex-direction: column;
-    font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #a6a6a6;
-  }
-
-  .message {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  textarea.fd-input {
-    height: auto;
-    padding: 8px 11px;
-    line-height: 1.5;
-    resize: vertical;
-  }
-</style>

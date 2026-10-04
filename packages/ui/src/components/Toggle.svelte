@@ -3,14 +3,22 @@
   let {
     checked = $bindable(false),
     label,
+    ariaLabel,
     disabled = false,
-  }: { checked?: boolean; label?: string; disabled?: boolean } = $props();
+  }: {
+    checked?: boolean;
+    label?: string;
+    /** The name for a switch whose text sits elsewhere (a settings row). */
+    ariaLabel?: string;
+    disabled?: boolean;
+  } = $props();
 </script>
 
 <button
   type="button"
   role="switch"
   aria-checked={checked}
+  aria-label={label ? undefined : ariaLabel}
   class="row"
   class:plain={!label}
   {disabled}
@@ -44,8 +52,8 @@
 
   .label {
     flex: 1;
-    font-size: 13px;
-    color: #c8c8c8;
+    font-size: var(--sk-fs-6);
+    color: var(--sk-text-7);
   }
 
   .switch {
@@ -54,7 +62,7 @@
     width: 32px;
     height: 18px;
     border-radius: 999px;
-    background: #383838;
+    background: var(--sk-fill-32);
     transition: background 0.15s;
   }
 

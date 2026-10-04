@@ -1,3 +1,10 @@
+import type { Proposal, ProposalState, ProposalResult } from './proposal-model.ts';
+export type * from './proposal-model.ts';
+import type { AgentCapabilities, AgentError } from './session-model.ts';
+export type * from './session-model.ts';
+import type { Interaction, InteractionAnswer } from './interactions.ts';
+export type * from './interactions.ts';
+
 // Canonical agent timeline model (docs/agent-output.md, section 3).
 // The UI only knows these types; adapters project native agent output into them.
 
@@ -33,16 +40,10 @@ export type TimelineEvent =
       t: 'turn.completed';
       turnId: string;
       outcome: 'done' | 'interrupted' | 'failed';
+      /** Internal interruption followed by another turn in the same running task. */
+      continuing?: boolean;
       error?: AgentError;
     };
-
-export interface AgentCapabilities {
-  /** Native tool names the session exposes. */
-  tools?: string[];
-  /** Agent-specific protocol flags used for feature detection. */
-  flags?: string[];
-  agentVersion?: string;
-}
 
 export type ItemStatus = 'queued' | 'running' | 'done' | 'failed' | 'declined' | 'interrupted';
 
@@ -116,10 +117,34 @@ export type ItemBody =
       code: NoticeCode;
       text: string;
       retry?: { attempt: number; max: number; inMs: number };
+      /** Exact base before publication, retained in the run log for rebase merge reversal. */
+      merge?: { before: string; strategy: 'squash' | 'merge' | 'rebase' };
     }
   | { kind: 'unknown'; raw: unknown }
+  /**
+   * Import of documentation (architecture.md 12): the copy of the sources Skaro prepared, added
+   * by Skaro at the start of the import chat.
+   */
+  | {
+      kind: 'import_prep';
+      /** Files the agent reads (as they are or converted to text). */
+      prepared: number;
+      skipped: number;
+      files: { path: string; note: string; skipped: boolean }[];
+    }
   /** The user's answer to an interaction, added by Skaro (not by adapters) so the feed keeps it. */
-  | { kind: 'decision'; interaction: Interaction; answer: InteractionAnswer };
+  | { kind: 'decision'; interaction: Interaction; answer: InteractionAnswer }
+  /**
+   * A change the chat agent proposed through Skaro's MCP tools (agent-output.md 5.4), added by
+   * Skaro. The tool does not hold the turn: the card stays in the feed and the user decides later.
+   */
+  | {
+      kind: 'proposal';
+      proposal: Proposal;
+      state: ProposalState;
+      /** What Skaro created when the proposal was accepted. */
+      result?: ProposalResult;
+    };
 
 export type NoticeCode =
   | 'auth'
@@ -159,104 +184,6 @@ export interface ImageRef {
   /** Image referenced by URL in agent Markdown; loaded only on click. */
   remoteUrl?: string;
 }
-
-export interface Question {
-  id: string;
-  header: string;
-  text: string;
-  multi: boolean;
-  allowFreeText: boolean;
-  secret?: boolean;
-  options: { label: string; description?: string; preview?: string }[];
-}
-
-export type Interaction =
-  | {
-      kind: 'approval';
-      id: string;
-      itemId?: string;
-      action: {
-        type: 'command' | 'file_write' | 'network' | 'mcp' | 'other';
-        title: string;
-        command?: string;
-        paths?: string[];
-        host?: string;
-        reason?: string;
-      };
-      choices: ('allow_once' | 'allow_session' | 'deny')[];
-    }
-  | { kind: 'question'; id: string; questions: Question[] }
-  | { kind: 'plan_approval'; id: string; plan: string }
-  | {
-      kind: 'form';
-      id: string;
-      server: string;
-      title: string;
-      fields: {
-        id: string;
-        label: string;
-        type: 'text' | 'number' | 'select' | 'boolean';
-        options?: string[];
-        required?: boolean;
-      }[];
-    }
-  | { kind: 'login'; id: string; server: string; url: string }
-  | {
-      kind: 'merge';
-      id: string;
-      from: string;
-      to: string;
-      files: number;
-      added: number;
-      removed: number;
-      /** Hard reasons the merge cannot happen now (core GitService.checkMerge). */
-      blockers: ('dirty_base' | 'not_on_base' | 'conflicts' | 'no_changes')[];
-      /** Warnings: base commits the branch lacks, and .skaro/ changes that will be dropped. */
-      baseAhead: number;
-      skaroChanges: string[];
-      conflicts: string[];
-    };
-
-export type AgentErrorCategory =
-  'auth' | 'limit' | 'overloaded' | 'network' | 'context_overflow' | 'refusal' | 'other';
-
-export interface AgentError {
-  category: AgentErrorCategory;
-  /** Original agent text. */
-  message: string;
-}
-
-export type ApprovalAnswer =
-  | { kind: 'approval'; choice: 'allow_once' | 'allow_session' }
-  | { kind: 'approval'; choice: 'deny'; message?: string };
-
-export interface QuestionAnswer {
-  kind: 'question';
-  /** Question id → selected labels and/or free text. */
-  answers: Record<string, string[]>;
-}
-
-export interface PlanApprovalAnswer {
-  kind: 'plan_approval';
-  approve: boolean;
-  message?: string;
-}
-
-/** MCP form: submitted values by field id, or declined. */
-export interface FormAnswer {
-  kind: 'form';
-  action: 'accept' | 'decline';
-  values?: Record<string, string | number | boolean>;
-}
-
-/** MCP sign-in in the browser finished or was cancelled. */
-export interface LoginAnswer {
-  kind: 'login';
-  action: 'done' | 'cancel';
-}
-
-export type InteractionAnswer =
-  ApprovalAnswer | QuestionAnswer | PlanApprovalAnswer | FormAnswer | LoginAnswer;
 
 /** Item as an adapter builds it: turn and start time default to the current ones. */
 export type ItemDraft = Item extends infer I

@@ -1,0 +1,61 @@
+.feed-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.feed-wrap > .fade {
+  position: absolute;
+  left: 0;
+  right: 5px;
+  top: 0;
+  height: 15px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--sk-bg) 0%, var(--sk-bg-a85) 35%, var(--sk-bg-a0) 100%);
+}
+
+.feed-wrap > .scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 34px 26px 30px;
+}
+
+/* Retain DOM, selection and fold state; skip layout/paint of distant replies/actions.
+   Subagents may contain interactive cards/dialogs, so their expanded lists stay uncontained. */
+.feed-wrap > .scroller > .fd-feed > .fd-text,
+.feed-wrap > .scroller > .fd-feed > [data-action-group]:not(:has(.fd-nested)) {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 80px;
+}
+
+.feed-wrap > .down {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 4;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--sk-float-a72);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 0 0 1px var(--sk-white-a6),
+    0 8px 20px var(--sk-black-a45);
+  color: var(--sk-text-6);
+  cursor: pointer;
+}
+
+.feed-wrap > .down:hover {
+  background: var(--sk-float-hover-a90);
+  color: var(--sk-text-1);
+}

@@ -133,8 +133,8 @@
 
   .cmd {
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #e8875b;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-code);
     word-break: break-all;
     white-space: pre-wrap;
   }
@@ -145,8 +145,8 @@
     border: none;
     background: none;
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #7d9ce8;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-link);
     cursor: pointer;
     word-break: break-all;
     text-align: left;
@@ -158,8 +158,8 @@
 
   .host {
     font-family: var(--sk-mono);
-    font-size: 12px;
-    color: #c8c8c8;
+    font-size: var(--sk-fs-4);
+    color: var(--sk-text-7);
     word-break: break-all;
   }
 

@@ -1,0 +1,69 @@
+.chat > .changed {
+  flex: none;
+  width: 216px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 14px 12px 8px;
+}
+.chat > .changed .changed-label {
+  flex: none;
+}
+.chat > .changed .changed-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.chat > .changed .changed-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chat > .changed .changed-row:hover {
+  background: var(--sk-hover);
+}
+.chat > .changed .changed-icon {
+  flex: none;
+  margin-top: 1px;
+  display: inline-flex;
+  color: var(--sk-text-23);
+}
+.chat > .changed .changed-texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat > .changed .changed-title {
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat > .changed .changed-note {
+  font-size: var(--sk-fs-2);
+  color: var(--sk-text-19);
+}
+.chat > .changed .changed-note.pending {
+  color: var(--sk-link);
+}
+.chat > .changed .changed-empty {
+  padding: 8px 9px;
+  font-size: var(--sk-fs-4);
+  line-height: 1.5;
+  color: var(--sk-text-23);
+  text-wrap: pretty;
+}

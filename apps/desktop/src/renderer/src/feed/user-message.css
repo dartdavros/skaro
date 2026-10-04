@@ -1,0 +1,28 @@
+/* Baseline scope and specificity retained across composed views. */
+
+.import[data-user-message] {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  white-space: normal;
+}
+
+.import-source[data-user-message] {
+  font-family: var(--sk-mono);
+  font-size: var(--sk-fs-4);
+  color: var(--sk-blue-2);
+}
+
+.fd-sent-at[data-user-message] {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-21);
+}
+
+.thumb-btn[data-user-message] {
+  padding: 0;
+  border: none;
+  background: none;
+}

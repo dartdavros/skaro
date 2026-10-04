@@ -21,6 +21,7 @@ export type Handlers = {
 export function registerHandlers(
   handlers: Handlers,
   isTrusted: (sender: WebContents) => boolean,
+  invoke?: (method: MethodName, action: () => unknown) => unknown,
 ): void {
   const allowed = new Set<string>(METHODS);
   ipcMain.handle(INVOKE_CHANNEL, (event, method: string, ...args: unknown[]) => {
@@ -29,7 +30,7 @@ export function registerHandlers(
     }
     if (!allowed.has(method)) throw new Error(`unknown method ${method}`);
     const handler = handlers[method as MethodName] as (...a: unknown[]) => unknown;
-    return handler(...args);
+    return invoke ? invoke(method as MethodName, () => handler(...args)) : handler(...args);
   });
 }
 

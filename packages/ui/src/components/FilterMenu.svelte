@@ -42,7 +42,7 @@
         height="11"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#7d7d7d"
+        stroke="var(--sk-text-22)"
         stroke-width="2.4"
         stroke-linecap="round"
         stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg
@@ -74,26 +74,26 @@
     padding: 0 10px 0 11px;
     border: none;
     border-radius: var(--sk-radius);
-    background: #1f1f1f;
-    color: #c8c8c8;
-    font-size: 12.5px;
+    background: var(--sk-fill-16);
+    color: var(--sk-text-7);
+    font-size: var(--sk-fs-5);
     font-weight: 600;
     cursor: pointer;
   }
 
   .trigger.active {
-    background: #262626;
+    background: var(--sk-fill-22);
   }
 
   .trigger:hover {
-    background: #262626;
+    background: var(--sk-fill-22);
     color: var(--sk-text-bright);
   }
 
   .count {
     font-family: var(--sk-mono);
-    font-size: 11px;
-    color: #8a8a8a;
+    font-size: var(--sk-fs-2);
+    color: var(--sk-text-19);
   }
 
   .option {
@@ -111,7 +111,7 @@
 
   .text {
     flex: 1;
-    font-size: 12.5px;
+    font-size: var(--sk-fs-5);
     color: var(--sk-text);
   }
 </style>

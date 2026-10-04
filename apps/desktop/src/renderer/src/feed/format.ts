@@ -1,5 +1,6 @@
 // Small formatting helpers for the feed.
 
+import type { AgentModel } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 
 /** 0:05, 4:36, 1:02:03 */
@@ -19,10 +20,6 @@ export function duration(ms: number): string {
 /** Short command duration: "4с" / "1:12". */
 export function shortDuration(ms: number): string {
   return ms < 60_000 ? `${Math.max(0, Math.round(ms / 1000))}с` : clock(ms);
-}
-
-export function tokens(n: number): string {
-  return n >= 1000 ? t('tokens.k', { n: Math.round(n / 1000) }) : t('tokens.n', { n });
 }
 
 /** A path as the user knows it: relative to the working folder, forward slashes. */
@@ -47,6 +44,44 @@ export function hostOf(url: string): string {
 
 export function agentName(agent: string): string {
   return agent === 'codex' ? 'Codex' : 'Claude Code';
+}
+
+/** Model id as people say it: claude-opus-5-1 → Opus 5.1. */
+export function prettyModel(id: string): string {
+  const claude = /^claude-(opus|sonnet|haiku|fable|mythos)-(\d+)(?:-(\d+))?/.exec(id);
+  if (claude) {
+    const name = claude[1]![0]!.toUpperCase() + claude[1]!.slice(1);
+    return `${name} ${claude[2]}${claude[3] && claude[3].length <= 2 ? `.${claude[3]}` : ''}`;
+  }
+  if (id === 'default') return 'Claude Code';
+  return id;
+}
+
+/** The model's own name ("Opus 5.5") — from the agent's list, else from the id; never "default". */
+export function modelName(id: string | undefined, models: AgentModel[]): string {
+  const known =
+    models.find((m) => m.id === id) ??
+    (!id || id === 'default' ? models.find((m) => m.isDefault) : undefined);
+  if (known) return known.name;
+  return id && id !== 'default' ? prettyModel(id) : '';
+}
+
+/** The effort a model runs with and its levels in order; the model's default when unset. */
+export function modelEffort(
+  id: string | undefined,
+  effort: string | undefined,
+  models: AgentModel[],
+): { effort?: string; efforts: string[] } {
+  const model =
+    models.find((m) => m.id === id) ??
+    (!id || id === 'default' ? models.find((m) => m.isDefault) : undefined);
+  if (!model) return { efforts: [] };
+  const efforts = model.efforts.map((e) => e.id);
+  const chosen =
+    (effort && efforts.includes(effort) ? effort : undefined) ??
+    model.defaultEffort ??
+    efforts[Math.floor(efforts.length / 2)];
+  return { ...(chosen ? { effort: chosen } : {}), efforts };
 }
 
 /** URL of an image for <img>: stored attachment or a file Skaro may show. */

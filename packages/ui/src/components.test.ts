@@ -45,7 +45,7 @@ describe('EffortSlider', () => {
     { id: 'high', label: 'Высокое' },
   ];
 
-  it('moves with the arrow keys and resets to the default', async () => {
+  it('moves with the arrow keys and returns to the default with Home', async () => {
     render(EffortSlider, { props: { levels, value: 'medium', defaultValue: 'medium' } });
     const slider = screen.getByRole('slider');
     await fireEvent.keyDown(slider, { key: 'ArrowRight' });
@@ -55,7 +55,7 @@ describe('EffortSlider', () => {
     await fireEvent.keyDown(slider, { key: 'ArrowLeft' });
     await fireEvent.keyDown(slider, { key: 'ArrowLeft' });
     expect(slider.getAttribute('aria-valuetext')).toBe('Низкое');
-    await fireEvent.click(screen.getByRole('button', { name: /Вернуть по умолчанию/ }));
+    await fireEvent.keyDown(slider, { key: 'Home' });
     expect(slider.getAttribute('aria-valuetext')).toBe('Среднее');
   });
 });
@@ -93,10 +93,11 @@ describe('ActionMenu', () => {
 
 describe('i18n', () => {
   it('translates with parameters and falls back to Russian, then to the key', () => {
-    addMessages('ru', { 'test.only.ru': 'Только {what}' });
-    expect(t('ui.effort.reset', { level: 'Среднее' })).toBe('Вернуть по умолчанию · Среднее');
+    addMessages('ru', { 'test.only.ru': 'Только {what}', 'test.both': 'Уровень · {level}' });
+    addMessages('en', { 'test.both': 'Level · {level}' });
+    expect(t('test.both', { level: 'Среднее' })).toBe('Уровень · Среднее');
     setLocale('en');
-    expect(t('ui.effort.reset', { level: 'Medium' })).toBe('Reset to default · Medium');
+    expect(t('test.both', { level: 'Medium' })).toBe('Level · Medium');
     expect(t('test.only.ru', { what: 'ru' })).toBe('Только ru');
     expect(t('no.such.key')).toBe('no.such.key');
   });

@@ -1,0 +1,88 @@
+/* The model list of the agent modal ("Агент задачи", "Агент чата"). */
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--sk-fill-6);
+}
+.model-list.scroll {
+  max-height: 348px;
+  overflow-y: auto;
+}
+.model-list .model-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.model-list .model-row:hover {
+  background: var(--sk-fill-17);
+}
+.model-list .model-row.on {
+  background: var(--sk-fill-19);
+}
+.model-list .radio {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1.5px var(--sk-fill-36);
+  transition: background 0.12s;
+}
+.model-list .model-row.on .radio {
+  background: var(--sk-accent);
+  box-shadow: none;
+}
+.model-list .radio-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sk-text-1);
+  opacity: 0;
+}
+.model-list .model-row.on .radio-dot {
+  opacity: 1;
+}
+.model-list .model-texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.model-list .model-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.model-list .model-name {
+  font-size: var(--sk-fs-5);
+  font-weight: 600;
+  color: var(--sk-text-7);
+}
+.model-list .model-row.on .model-name {
+  color: var(--sk-text-bright);
+}
+.model-list .model-tag {
+  font-size: var(--sk-fs-1);
+  font-weight: 600;
+  color: var(--sk-text-23);
+}
+.model-list .model-desc {
+  font-size: var(--sk-fs-2);
+  line-height: 1.4;
+  color: var(--sk-text-21);
+}

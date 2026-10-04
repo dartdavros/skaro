@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { FeedRow } from '@skaro/timeline';
   import { t } from '@skaro/ui';
+  import ActionIcon from './ActionIcon.svelte';
   import { useFeed } from './context.svelte';
   import { imageUrl } from './format';
 
@@ -50,7 +51,7 @@
     data-tip={t('feed.tool.tip')}
     onclick={() => (open = !open)}
   >
-    <span class="fd-glyph">⚙</span>
+    <ActionIcon kind="tool" />
     <span class="fd-main"
       >{name}{#if hint}<span class="dim hint">{hint}</span>{/if}</span
     >
@@ -136,10 +137,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--sk-black-a60);
     font-family: var(--sk-mono);
-    font-size: 13px;
+    font-size: var(--sk-fs-6);
     font-weight: 600;
-    color: #ededed;
+    color: var(--sk-text-2);
   }
 </style>
