@@ -1,0 +1,128 @@
+name: Prepare verified update bundle
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_version:
+        description: Stable installer bundle version (always increases)
+        required: true
+        type: string
+      skaro_version:
+        description: Displayed Skaro version (unchanged for agent-only releases)
+        required: true
+        type: string
+      agents_verified:
+        description: Pinned agents passed real canary scenarios and model probes
+        required: true
+        type: boolean
+      test_fixtures_allowed:
+        description: Explicit permission for existing isolated test fixtures and HTTP test servers
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+env:
+  SKARO_BUNDLE_VERSION: ${{ inputs.bundle_version }}
+  SKARO_PRODUCT_VERSION: ${{ inputs.skaro_version }}
+jobs:
+  check:
+    if: inputs.agents_verified && inputs.test_fixtures_allowed
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
+      # This is a release preparation run; the owner permits full checks before a release.
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm -r --parallel --filter '!@skaro/agent-probe' typecheck
+      - run: pnpm test
+  build:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+          - runner: macos-15
+            arch: arm64
+          - runner: ubuntu-24.04
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      SKARO_RELEASE_ARCH: ${{ matrix.arch }}
+      CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CSC_LINK || secrets.WIN_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || secrets.WIN_CSC_KEY_PASSWORD }}
+      MAC_IDENTITY: ${{ secrets.MAC_IDENTITY }}
+      APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
+      - name: Build application
+        run: pnpm build
+      - name: Create signed installers and feeds (never publish)
+        shell: pwsh
+        run: |
+          $arguments = @('exec', 'electron-builder', '--publish', 'never', "--$env:SKARO_RELEASE_ARCH", "--config.extraMetadata.version=$env:SKARO_BUNDLE_VERSION")
+          if ('${{ runner.os }}' -eq 'macOS') {
+            if (-not $env:CSC_LINK -or -not $env:MAC_IDENTITY -or -not $env:APPLE_API_KEY_CONTENT -or -not $env:APPLE_API_KEY_ID -or -not $env:APPLE_API_ISSUER) { throw 'Apple signing and notarization credentials are required' }
+            $env:APPLE_API_KEY = Join-Path $env:RUNNER_TEMP "AuthKey_$($env:APPLE_API_KEY_ID).p8"
+            [System.IO.File]::WriteAllText($env:APPLE_API_KEY, $env:APPLE_API_KEY_CONTENT)
+            $arguments += "--config.mac.identity=$env:MAC_IDENTITY"
+            $arguments += '--config.mac.notarize=true'
+          }
+          if ('${{ runner.os }}' -eq 'Windows' -and -not $env:CSC_LINK) { throw 'Windows signing certificate is required for release artifacts' }
+          pnpm @arguments
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        working-directory: apps/desktop
+      - run: pnpm --filter @skaro/desktop release:manifest platform
+      - uses: actions/upload-artifact@v4
+        with:
+          name: update-${{ matrix.runner }}-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest*.yml
+            apps/desktop/release/skaro-release-*.json
+  assemble:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: update-*
+          merge-multiple: true
+          path: apps/desktop/release
+      - run: pnpm --filter @skaro/desktop release:manifest merge
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skaro-update-bundle-${{ inputs.bundle_version }}
+          path: apps/desktop/release/
