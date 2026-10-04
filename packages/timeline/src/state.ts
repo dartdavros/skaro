@@ -130,7 +130,8 @@ export class Timeline {
           ...s.interactions.filter((i) => i.id !== event.interaction.id),
           event.interaction,
         ];
-        s.status = 'waiting';
+        // A merge card asks the agent nothing: Skaro shows it, also when no turn is running.
+        if (event.interaction.kind !== 'merge') s.status = 'waiting';
         return;
       case 'interaction.closed':
         s.interactions = s.interactions.filter((i) => i.id !== event.id);
