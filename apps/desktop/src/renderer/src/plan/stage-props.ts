@@ -1,4 +1,4 @@
-import type { TaskSummary } from '../../../shared/ipc';
+import type { StageInfo, TaskSummary } from '../../../shared/ipc';
 import type { Stage } from './model';
 import type { PlanDrag } from './plan-drag.svelte';
 
@@ -19,8 +19,13 @@ export type StageProps = {
   now: number;
   canArchive: boolean;
   canDelete: boolean;
+  /** Where the stage stands; absent for "Без этапа" and in the archive. */
+  info?: StageInfo | undefined;
+  slotsFree?: boolean;
+  /** «Запустить», «Продолжить», «Остановить». */
+  onrun?: (action: 'run' | 'stop') => void;
   ontoggle: () => void;
-  onmenu: (action: 'discuss' | 'archive' | 'restore' | 'delete') => void;
+  onmenu: (action: 'open' | 'mergeFinished' | 'discuss' | 'archive' | 'restore' | 'delete') => void;
   onhover: (id: string | undefined) => void;
   onopen: (taskId: string) => void;
   onrestore?: (taskId: string) => void;

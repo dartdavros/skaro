@@ -45,10 +45,14 @@
   } = $props();
 
   const st = $derived(rowStatus(task.status));
+  // Done in the branch of its stage: it needs nothing from the user until the stage is merged.
+  const waitsMerge = $derived(st === 'review' && !!task.staged);
   const tip = $derived(
-    st === 'blocked'
-      ? t('plan.st.blocked', { deps: task.waitsFor.join(', ') })
-      : t(`plan.st.${st}`),
+    waitsMerge
+      ? t('plan.st.stageReview')
+      : st === 'blocked'
+        ? t('plan.st.blocked', { deps: task.waitsFor.join(', ') })
+        : t(`plan.st.${st}`),
   );
   const time = $derived(st === 'todo' || st === 'blocked' ? '' : agoOrDate(task.updatedAt, now));
 </script>
@@ -84,7 +88,9 @@
     >
   {/if}
   <span data-plan-task class="st" data-tip={tip}>
-    {#if st === 'working' || st === 'need' || st === 'review' || st === 'error'}
+    {#if waitsMerge}
+      <Icon name="check" size={13} stroke={2.4} color="var(--sk-link)" />
+    {:else if st === 'working' || st === 'need' || st === 'review' || st === 'error'}
       <span data-plan-task class="dot {st}" class:pulse={task.status === 'in_progress'}></span>
     {:else if st === 'blocked'}
       <Icon name="lock" size={13} stroke={2} color="var(--sk-text-20)" />
@@ -104,6 +110,13 @@
     {#if relation === 'up' || relation === 'down'}
       <span data-plan-task class="rel"
         >{relation === 'up' ? t('plan.rel.up') : t('plan.rel.down')}</span
+      >
+    {/if}
+    {#if waitsMerge}
+      <span data-plan-task class="stage-note">{t('plan.row.stageReview')}</span>
+    {:else if task.after}
+      <span data-plan-task class="stage-note"
+        >{t('plan.row.after')} <span data-plan-task class="mono">{task.after}</span></span
       >
     {/if}
     {#each task.deps as dep (dep)}

@@ -1,0 +1,84 @@
+/* The state line and the run button of a stage in the header of its milestone. */
+
+.marks.hidden[data-plan-stage] {
+  display: none;
+}
+
+.state[data-plan-stage] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--sk-fs-3);
+  color: var(--sk-text-secondary);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.state.bright[data-plan-stage] {
+  color: var(--sk-text);
+}
+
+.state.error[data-plan-stage] {
+  color: #f08b85;
+}
+
+.state-task[data-plan-stage] {
+  font-family: var(--sk-mono);
+}
+
+.state-task.bright[data-plan-stage] {
+  color: var(--sk-text);
+}
+
+.state-dot[data-plan-stage] {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sk-fill-41);
+}
+
+.state-dot.live[data-plan-stage] {
+  animation: skPulse 1.6s ease-in-out infinite;
+}
+
+.state-dot.accent[data-plan-stage] {
+  background: var(--sk-accent);
+}
+
+.state-dot.error[data-plan-stage] {
+  background: var(--sk-error);
+}
+
+.state-dot.ring[data-plan-stage] {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--sk-accent);
+}
+
+.run[data-plan-stage] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 7px;
+  background: var(--sk-surface-2);
+  color: var(--sk-text);
+  font: inherit;
+  font-size: var(--sk-fs-4);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.run[data-plan-stage]:hover:not(:disabled) {
+  background: var(--sk-surface-2-hover);
+}
+
+.run[data-plan-stage]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

@@ -5,6 +5,7 @@ import type { ProjectContext } from './projects';
 import type { ActiveRun, TaskRunDeps } from './tasks';
 import type { TaskMergeHooks } from './task-merge-refresh';
 import { taskSections } from './task-body';
+import { subjectOf } from './task-subject';
 import { mergeToolReply, type MergeInteraction } from './task-merge-card';
 import {
   closeMergeCards,
@@ -26,7 +27,7 @@ export async function requestTaskMerge(
 ): Promise<ToolResult> {
   context.invalidate();
   const artifacts = await context.load();
-  const task = artifacts.tasks.find((task) => task.id === active.taskId);
+  const task = subjectOf(artifacts, active.taskId);
   if (!task) return { text: 'The task no longer exists.', isError: true };
   if (task.status === 'done') {
     closeMergeCards(active, hooks);

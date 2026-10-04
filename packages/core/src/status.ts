@@ -23,9 +23,30 @@ export function indexTasks(tasks: readonly Task[]): TaskIndex {
   return new Map(tasks.map((t) => [t.id, t]));
 }
 
-/** Dependencies that are not done yet. Unknown ids count as unfinished. */
+/**
+ * Tasks of one milestone that work in the milestone's branch: neither has a branch of its own
+ * (a task started before stage execution keeps its own branch and merges by itself).
+ */
+export function sharesStage(task: Task, other: Task): boolean {
+  return (
+    task.milestone !== undefined &&
+    task.milestone === other.milestone &&
+    !task.branch &&
+    !other.branch
+  );
+}
+
+/**
+ * Dependencies that are not done yet. Unknown ids count as unfinished. Inside a stage a
+ * dependency in review is enough: its work is already in the branch the task will run in.
+ */
 export function pendingDependencies(task: Task, index: TaskIndex): string[] {
-  return task.dependsOn.filter((id) => index.get(id)?.status !== 'done');
+  return task.dependsOn.filter((id) => {
+    const dep = index.get(id);
+    if (!dep) return true;
+    if (dep.status === 'done') return false;
+    return !(dep.status === 'review' && sharesStage(task, dep));
+  });
 }
 
 /** A not-started task waits for unfinished dependencies unless the user unblocked it. */

@@ -2,6 +2,7 @@ import type { SkaroScope, ToolResult } from '@skaro/mcp-server';
 import { errorText } from './session-log';
 import { EnvironmentUnavailable } from './task-environments';
 import { key } from './task-run-helpers';
+import { checkoutKey } from './task-stage';
 import type { TaskRunEngine } from './task-run-engine';
 
 /** `start_environment`: the agent of a task asks Skaro for running services. */
@@ -16,7 +17,7 @@ export async function startTaskEnvironment(
     return { text: 'This session is no longer the current run of the task.', isError: true };
   }
   try {
-    const info = await ctx.environments.start(active);
+    const info = await ctx.environments.start(checkoutKey(active));
     const urls = Object.entries(info.urls).map(([name, url]) => `- ${name}: ${url}`);
     return {
       text:

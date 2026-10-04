@@ -30,7 +30,9 @@ describe('projectCards', () => {
     const a = await store.createTask({ title: 'A', milestone: m1.id });
     await store.updateTask(a.id, { status: 'done' });
     const b = await store.createTask({ title: 'B', milestone: m2.id });
-    await store.updateTask(b.id, { status: 'review' });
+    // In review in a branch of its own: what depends on it waits for its merge. (A task that
+    // works in the branch of the milestone would unblock the next one already in review.)
+    await store.updateTask(b.id, { status: 'review', branch: 'skaro/b-own' });
     const c = await store.createTask({ title: 'C', milestone: m2.id, dependsOn: [b.id] });
     const d = await store.createTask({ title: 'D', milestone: m2.id });
     const project = db.addProject({ name: 'Shop', path: root });

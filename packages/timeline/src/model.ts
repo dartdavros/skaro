@@ -118,7 +118,16 @@ export type ItemBody =
       text: string;
       retry?: { attempt: number; max: number; inMs: number };
       /** Exact base before publication, retained in the run log for rebase merge reversal. */
-      merge?: { before: string; strategy: 'squash' | 'merge' | 'rebase' };
+      merge?: {
+        before: string;
+        strategy: 'squash' | 'merge' | 'rebase';
+        /** The merge of a stage: how many of its tasks went in. */
+        tasks?: number;
+        /** «Влить готовое»: the finished tasks went in and the stage goes on. */
+        partial?: boolean;
+      };
+      /** The milestone a stage line is about ("stage_done", "stage_merged"). */
+      stage?: string;
     }
   | { kind: 'unknown'; raw: unknown }
   /**
@@ -159,6 +168,10 @@ export type NoticeCode =
   | 'session_lost'
   /** Skaro merged the task branch (text: target branch, native.ref: commit). */
   | 'merged'
+  /** A stage task is done and waits for the merge of its stage (text: milestone id). */
+  | 'stage_done'
+  /** A stage task went into the base branch with its stage (text: target branch). */
+  | 'stage_merged'
   | 'other';
 
 export type Item = ItemBase & ItemBody;

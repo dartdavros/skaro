@@ -12,6 +12,7 @@
     project,
     section,
     task,
+    stage = false,
     chat = $bindable(),
     doc,
     data,
@@ -28,6 +29,8 @@
     project: ProjectInfo;
     section: string;
     task?: string | undefined;
+    /** The open task names a milestone: the screen of its stage, under "План". */
+    stage?: boolean;
     chat?: string | undefined;
     doc?: string | undefined;
     data: ProjectTasks;
@@ -43,9 +46,17 @@
   } = $props();
 </script>
 
-{#if section === 'tasks' && task}
+{#if task && (stage ? section === 'plan' : section === 'tasks')}
   {#key task}
-    <TaskScreen projectId={project.id} taskId={task} {agents} {ontasks} onspec={openDoc} />
+    <TaskScreen
+      projectId={project.id}
+      taskId={task}
+      {agents}
+      {ontasks}
+      onplan={ontasks}
+      onopen={openTask}
+      onspec={openDoc}
+    />
   {/key}
 {:else if section === 'docs'}
   <DocsScreen

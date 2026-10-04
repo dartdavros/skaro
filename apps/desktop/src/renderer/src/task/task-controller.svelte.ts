@@ -10,6 +10,8 @@ export function createTaskController(
   projectId: string,
   taskId: string,
   getAgents: () => AgentInfo[],
+  /** Opens another task or a stage: «Открыть этап» in the result line of a stage task. */
+  open?: (id: string) => void,
 ) {
   // The screen is keyed by task.
   // svelte-ignore state_referenced_locally
@@ -48,12 +50,16 @@ export function createTaskController(
     modelEffort(timeline?.session?.model || settings?.model, settings?.effort, models),
   );
 
+  // The screen of a stage: before every task is done its field is closed.
+  const stageLeft = $derived(view?.stage ? view.stage.info.total - view.stage.info.finished : 0);
   const placeholder = $derived(
     openQuestion || openApproval
       ? t('composer.answer')
-      : !started
-        ? t('composer.start')
-        : t('composer.placeholder'),
+      : view?.stage && stageLeft > 0
+        ? t('composer.stage.closed')
+        : !started
+          ? t(view?.stage ? 'composer.stage.start' : 'composer.start')
+          : t('composer.placeholder'),
   );
 
   const mergeMessage = $derived(view ? `${view.task.id}: ${view.task.title}` : '');
@@ -126,6 +132,7 @@ export function createTaskController(
     revertMerge: (commit) =>
       guard(() => window.skaro.invoke('task.revertMerge', projectId, taskId, commit)),
     restart: () => void send({ text: t('task.start.message') }).catch(() => undefined),
+    ...(open ? { openStage: open } : {}),
   });
 
   return {

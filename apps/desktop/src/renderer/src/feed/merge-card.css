@@ -62,6 +62,11 @@
   color: var(--sk-text-13);
 }
 
+/* Readiness criteria that hold a stage merge back: words, not paths. */
+.fd-merge-card .files.plain {
+  font-family: inherit;
+}
+
 .fd-merge-card .message {
   display: flex;
   flex-direction: column;

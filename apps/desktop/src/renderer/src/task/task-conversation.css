@@ -66,6 +66,14 @@
   background: var(--sk-accent-hover);
 }
 
+.task-conversation > .empty > .empty-text .mono {
+  font-family: var(--sk-mono);
+}
+
+.task-conversation > .bottom.locked {
+  opacity: 0.45;
+}
+
 .task-conversation > .bottom {
   flex: none;
   padding: 0 14px 10px;

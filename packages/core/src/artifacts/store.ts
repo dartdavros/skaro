@@ -49,7 +49,7 @@ export class ArtifactStore {
   }
   updateMilestone(
     id: string,
-    patch: Partial<Pick<Milestone, 'title' | 'order' | 'body'>>,
+    patch: Partial<Pick<Milestone, 'title' | 'order' | 'body' | 'branch'>>,
   ): Promise<Milestone> {
     return milestones.updateMilestone(this.files, id, patch);
   }
@@ -91,8 +91,11 @@ export class ArtifactStore {
   }
 }
 
-/** Branch name for a task from the config template (`skaro/{id}-{slug}`). */
-export function taskBranch(config: ProjectConfig, task: Pick<Task, 'id' | 'title'>): string {
+/** Branch name for a task, or for a milestone, from the config template (`skaro/{id}-{slug}`). */
+export function taskBranch(
+  config: ProjectConfig,
+  task: Pick<Task | Milestone, 'id' | 'title'>,
+): string {
   return config.branchTemplate
     .replaceAll('{id}', task.id)
     .replaceAll('{slug}', slugify(task.title, 30));

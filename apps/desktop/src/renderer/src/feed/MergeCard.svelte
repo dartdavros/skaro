@@ -3,6 +3,7 @@
   import { Icon, t, tn } from '@skaro/ui';
   import type { MergeAction } from '../../../shared/ipc';
   import { useFeed } from './context.svelte';
+  import MergeStageTasks from './MergeStageTasks.svelte';
   import './merge-card.css';
 
   /**
@@ -19,6 +20,9 @@
   let edited = $state(false);
   let busy = $state<MergeAction['action'] | undefined>();
   let error = $state<string | undefined>();
+  /** A stage merge has a message for the commit of each task instead of one for all. */
+  const stage = $derived(interaction.stage);
+  let messages = $state<Record<string, string>>({});
 
   $effect(() => {
     if (!edited) message = defaultMessage;
@@ -46,7 +50,15 @@
 </script>
 
 <div class="fd-card fd-merge-card">
-  <span class="fd-card-title">{t('card.merge.title')}</span>
+  <span class="fd-card-title"
+    >{t(
+      stage
+        ? stage.partial
+          ? 'card.merge.stage.partialTitle'
+          : 'card.merge.stage.title'
+        : 'card.merge.title',
+    )}</span
+  >
   <div class="route">
     <Icon name="branch" size={12} stroke={1.9} />
     <span class="branch">{interaction.from}</span>
@@ -58,11 +70,19 @@
     <span class="fd-minus">−{interaction.removed}</span>
   </div>
 
+  {#if stage}
+    <MergeStageTasks {stage} editable={!blocked} bind:messages />
+  {/if}
   {#each interaction.blockers as blocker (blocker)}
     <div class="line bad">
       <Icon name="error" size={12} stroke={2} />
       <span>{t(`card.merge.blocker.${blocker}`, { to: interaction.to })}</span>
     </div>
+    {#if blocker === 'criteria' && stage}
+      <div class="files plain">
+        {#each stage.unmet as criterion (criterion)}<span>{criterion}</span>{/each}
+      </div>
+    {/if}
   {/each}
   {#if localChanges.length}
     <div class="files">
@@ -87,7 +107,14 @@
     </div>
   {/if}
 
-  {#if !blocked}
+  {#if stage?.partial}
+    <div class="line warn">
+      <Icon name="warning" size={12} stroke={2} />
+      <span>{t('card.merge.stage.noAcceptance')}</span>
+    </div>
+  {/if}
+
+  {#if !blocked && !stage}
     <label class="message">
       <span class="fd-label">{t('card.merge.message')}</span>
       <textarea class="fd-input" rows="3" bind:value={message} oninput={() => (edited = true)}
@@ -110,16 +137,17 @@
       <button
         type="button"
         class="fd-btn"
-        data-tip={t('card.merge.updateTip')}
+        data-tip={t(stage ? 'card.merge.stage.updateTip' : 'card.merge.updateTip')}
         disabled={!!busy}
-        onclick={() => void act({ action: 'update_branch' })}>{t('card.merge.update')}</button
+        onclick={() => void act({ action: 'update_branch' })}
+        >{t(stage ? 'card.merge.stage.update' : 'card.merge.update')}</button
       >
     {/if}
     {#if conflicts}
       <button
         type="button"
         class="fd-btn primary"
-        data-tip={t('card.merge.resolveTip')}
+        data-tip={t(stage ? 'card.merge.stage.resolveTip' : 'card.merge.resolveTip')}
         disabled={!!busy}
         onclick={() => void act({ action: 'resolve_with_agent' })}>{t('card.merge.resolve')}</button
       >
@@ -127,10 +155,14 @@
       <button
         type="button"
         class="fd-btn primary"
-        data-tip={t('card.merge.confirmTip')}
-        disabled={blocked || !!busy || !message.trim()}
-        onclick={() => void act({ action: 'confirm', message: message.trim() })}
-        >{busy === 'confirm' ? t('card.merge.working') : t('card.merge.confirm')}</button
+        data-tip={stage ? undefined : t('card.merge.confirmTip')}
+        disabled={blocked || !!busy || (!stage && !message.trim())}
+        onclick={() =>
+          void act({
+            action: 'confirm',
+            message: message.trim(),
+            ...(stage ? { messages: $state.snapshot(messages) } : {}),
+          })}>{busy === 'confirm' ? t('card.merge.working') : t('card.merge.confirm')}</button
       >
     {/if}
   </div>

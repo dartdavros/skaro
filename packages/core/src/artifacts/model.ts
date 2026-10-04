@@ -39,6 +39,8 @@ export interface Milestone {
   id: string;
   title: string;
   order: number;
+  /** The branch its tasks share once the first of them started (stage execution). */
+  branch?: string;
   body: string;
   path: string;
 }

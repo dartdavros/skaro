@@ -13,6 +13,10 @@ const HEADINGS: Record<string, keyof TaskSections> = {
   'критерии приёмки': 'criteria',
   'критерии приемки': 'criteria',
   'acceptance criteria': 'criteria',
+  // The readiness criterion of a milestone: what the acceptance of a stage ticks.
+  'критерий готовности': 'criteria',
+  'done when': 'criteria',
+  'definition of done': 'criteria',
   заметки: 'notes',
   notes: 'notes',
   итог: 'summary',

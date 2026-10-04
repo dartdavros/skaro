@@ -2,11 +2,14 @@ import type { TaskRuntime } from '@skaro/core';
 import type { TimelineEvent } from '@skaro/timeline';
 import type { ActiveRun } from './tasks';
 import type { ProjectContext } from './projects';
-import { mergeInteraction } from './task-merge-card';
+import { mergeInteraction, withStage } from './task-merge-card';
 import { closeMergeCards } from './task-merge-result';
+import { subjectOf } from './task-subject';
 
 export interface TaskMergeHooks {
   active: () => ActiveRun[];
+  /** The run of a task with its feed, loaded from its log when it is not in memory. */
+  restore: (projectId: string, taskId: string) => Promise<ActiveRun | undefined>;
   project: (id: string) => ProjectContext;
   skaroEvent: (active: ActiveRun, event: TimelineEvent) => void;
   settleRuntime: (active: ActiveRun) => void;
@@ -61,7 +64,7 @@ export class MergeCardRefresh {
         const context = this.hooks.project(run.projectId);
         try {
           const artifacts = await context.load();
-          if (artifacts.tasks.find((task) => task.id === run.taskId)?.status === 'done') {
+          if (subjectOf(artifacts, run.taskId)?.status === 'done') {
             closeMergeCards(run, this.hooks);
             continue;
           }
@@ -69,6 +72,7 @@ export class MergeCardRefresh {
           const check = await context.git.checkMerge(base, run.run.branch);
           const next = mergeInteraction(card.id, run.run.branch, base, check);
           if (card.message) next.message = card.message;
+          withStage(next, card.stage);
           if (
             !this.closed &&
             !this.busy.has(run.projectId) &&

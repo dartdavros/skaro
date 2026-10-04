@@ -19,7 +19,7 @@ export interface TaskRunDeps {
   emit: <E extends EventName>(event: E, payload: Events[E]) => void;
   locale: () => string;
   /** A system notification ("Настройки" → "Уведомления"). */
-  notify?: (kind: NotifyKind, text: string) => void;
+  notify?: (kind: NotifyKind, text: string, title?: string) => void;
   /** Docker operations of task environments; the system Docker unless a test replaces them. */
   docker?: EnvironmentDocker;
 }

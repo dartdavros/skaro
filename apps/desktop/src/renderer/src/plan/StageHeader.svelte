@@ -2,6 +2,7 @@
   import { ActionMenu, Icon, t } from '@skaro/ui';
   import type { StageController } from './stage-controller.svelte';
   import { doneLike, rowStatus } from './model';
+  import StageRun from './StageRun.svelte';
   let { model }: { model: StageController } = $props();
 
   const left = $derived(model.p.stage.tasks.filter((x) => !doneLike(rowStatus(x.status))).length);
@@ -11,6 +12,30 @@
       : model.p.stage.tasks.length
         ? t('plan.menu.archive.left', { n: left })
         : t('plan.menu.archive.empty'),
+  );
+  // The stage of the milestone: its state line stands where the marks of the tasks were.
+  const info = $derived(model.p.info);
+  const done = $derived(info ? info.finished : model.p.stage.done);
+  const total = $derived(info ? info.total : model.p.stage.total);
+  const pct = $derived(info ? (total ? Math.round((done / total) * 100) : 0) : model.pct);
+  const slotsFree = $derived(model.p.slotsFree ?? true);
+  const run = (action: 'run' | 'stop') => model.p.onrun?.(action);
+  const stageItems = $derived(
+    info
+      ? [
+          {
+            label: t('plan.menu.open'),
+            icon: 'milestone' as const,
+            onselect: () => model.p.onmenu('open'),
+          },
+          {
+            label: t('plan.menu.mergeFinished'),
+            icon: 'merge' as const,
+            ...(info.mergeable ? {} : { tip: t('plan.menu.mergeFinished.none'), disabled: true }),
+            onselect: () => model.p.onmenu('mergeFinished'),
+          },
+        ]
+      : [],
   );
   const items = $derived(
     model.p.archived
@@ -23,6 +48,7 @@
           },
         ]
       : [
+          ...stageItems,
           {
             label: t('plan.discuss'),
             icon: 'chat' as const,
@@ -73,7 +99,10 @@
   >
   <span data-plan-stage class="id">{model.m.id}</span>
   <span data-plan-stage class="name" class:finished={model.finished}>{model.m.title}</span>
-  <div data-plan-stage class="marks">
+  {#if info}
+    <StageRun part="state" {info} {slotsFree} onrun={run} />
+  {/if}
+  <div data-plan-stage class="marks" class:hidden={!!info}>
     {#if model.p.stage.working}
       <span
         data-plan-stage
@@ -102,22 +131,18 @@
   <div
     data-plan-stage
     class="progress"
-    data-tip={model.pct === 100
+    data-tip={pct === 100 && info?.state !== 'awaiting_merge'
       ? t('plan.progress.done')
-      : t('plan.progress.tip', { done: model.p.stage.done, total: model.p.stage.total })}
+      : t('plan.progress.tip', { done, total })}
   >
     <div data-plan-stage class="track">
-      <div
-        data-plan-stage
-        class="fill"
-        class:full={model.pct === 100}
-        style="width: {model.pct}%"
-      ></div>
+      <div data-plan-stage class="fill" class:full={pct === 100} style="width: {pct}%"></div>
     </div>
-    <span data-plan-stage class="count"
-      >{t('plan.progress', { done: model.p.stage.done, total: model.p.stage.total })}</span
-    >
+    <span data-plan-stage class="count">{t('plan.progress', { done, total })}</span>
   </div>
+  {#if info}
+    <StageRun part="button" {info} {slotsFree} onrun={run} />
+  {/if}
   <!-- The menu neither toggles nor drags the milestone. -->
   {#if model.p.stage.loose && !model.p.archived}
     <span data-plan-stage class="menu-space"></span>

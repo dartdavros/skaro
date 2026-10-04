@@ -3,12 +3,15 @@ import {
   indexTasks,
   isBlocked,
   pendingDependencies,
+  sharesStage,
   type ProjectArtifacts,
   type Task,
   type TaskRuntime,
 } from '@skaro/core';
 import type { AgentId, RunInfo, TaskDetail, TaskRef, TaskSummary } from '../shared/ipc';
 import { taskSections } from './task-body';
+import { stageOf } from './task-stage';
+import { subjectOf } from './task-subject';
 
 import type { ActiveRun } from './task-run-model';
 
@@ -26,8 +29,9 @@ export function settingsKey(projectId: string, taskId: string): string {
   return `task.${projectId}.${taskId}.agent`;
 }
 
+/** The task of a run, or the acceptance of a stage when the run is named after a milestone. */
 export function findTask(artifacts: ProjectArtifacts, taskId: string): Task {
-  const task = artifacts.tasks.find((t) => t.id === taskId);
+  const task = subjectOf(artifacts, taskId);
   if (!task) throw new Error(`unknown task ${taskId}`);
   return task;
 }
@@ -60,8 +64,15 @@ export function summary(
 ): TaskSummary {
   const milestone = artifacts.milestones.find((m) => m.id === task.milestone);
   const spec = task.spec ? artifacts.specs.find((s) => s.id === task.spec) : undefined;
+  const base = ref(task, index, runtime);
+  // Tasks of a stage run one after another: only a task of another stage holds one back.
+  const waitsFor = (isBlocked(task, index) ? pendingDependencies(task, index) : []).filter(
+    (id) => !index.get(id) || !sharesStage(task, index.get(id)!),
+  );
   return {
-    ...ref(task, index, runtime),
+    ...base,
+    ...(base.status === 'blocked' && !waitsFor.length ? { status: 'todo' as const } : {}),
+    ...(stageOf(task, artifacts) ? { staged: true } : {}),
     stage: task.status,
     ...(milestone ? { milestone: { id: milestone.id, title: milestone.title } } : {}),
     ...(spec ? { spec: { id: spec.id, title: spec.title, path: spec.path } } : {}),
@@ -69,7 +80,7 @@ export function summary(
     ...extra,
     deps: task.dependsOn,
     ...(task.order !== undefined ? { order: task.order } : {}),
-    waitsFor: isBlocked(task, index) ? pendingDependencies(task, index) : [],
+    waitsFor,
   };
 }
 
@@ -86,7 +97,10 @@ export function detail(
       (id) => (index.get(id) && refOf(index.get(id)!)) ?? { id, title: id, status: 'todo' },
     ),
     blocks: artifacts.tasks.filter((t) => t.dependsOn.includes(task.id)).map(refOf),
-    ...(task.branch ? { branch: task.branch } : {}),
+    // A task of a stage works in the branch of its milestone.
+    ...((task.branch ?? stageOf(task, artifacts)?.branch)
+      ? { branch: task.branch ?? stageOf(task, artifacts)?.branch }
+      : {}),
     ...taskSections(task.body),
     ...requirementsOf(artifacts.specs.find((s) => s.id === task.spec)?.body),
   };

@@ -73,8 +73,15 @@ export interface TaskSummary extends TaskRef {
   agent?: AgentId;
   model?: string;
   deps: string[];
-  /** Dependencies not done yet (a blocked task waits for them). */
+  /**
+   * Dependencies not done yet (a blocked task waits for them). Inside a stage the tasks run in
+   * order anyway: a dependency in the same stage is not listed and does not block.
+   */
   waitsFor: string[];
+  /** Works in the branch of its milestone and is merged with it (stage execution). */
+  staged?: boolean;
+  /** Told to start and waiting its turn in the stage: the task that goes before it. */
+  after?: string;
   /** Last change: the task file or its latest run. */
   updatedAt: number;
   /** Position inside its milestone. */
@@ -91,6 +98,38 @@ export interface MilestoneInfo {
   /** "Цель" and "Критерий готовности" sections of the milestone file. */
   goal?: string;
   criteria?: string;
+}
+
+/**
+ * Where a stage stands: a milestone is the unit of execution, its tasks run one after another
+ * in its branch, then comes its acceptance and its merge. Nothing of it is stored.
+ */
+export type StageState =
+  | 'idle'
+  | 'queued'
+  | 'running'
+  | 'needs_answer'
+  | 'stopped'
+  | 'error'
+  | 'acceptance'
+  | 'acceptance_needs_answer'
+  | 'awaiting_merge'
+  | 'done';
+
+export interface StageInfo {
+  /** The milestone. */
+  id: string;
+  state: StageState;
+  /** The task the state is about: it runs, waits for an answer, failed or waits in line. */
+  task?: string;
+  /** Tasks in review or merged, of all that count (not cancelled, not archived). */
+  finished: number;
+  total: number;
+  /** Finished and not merged yet: «Влить готовое» takes them. */
+  mergeable: number;
+  branch?: string;
+  /** Not started and cannot be: its first task waits for a task of another stage. */
+  waitsFor?: { task: string; stage?: string };
 }
 
 /** A source of an import as the import modal shows it (architecture.md 12.1). */

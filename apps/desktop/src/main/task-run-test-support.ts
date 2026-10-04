@@ -68,7 +68,12 @@ export function taskRunDeps(): TaskRunDeps {
     db,
     dataDir: dir,
     projects,
-    agents: { defaults: () => ({}), readyAgent: (id: string) => id } as unknown as AgentManager,
+    // No agent is installed or started: a run only needs the version its adapter would record.
+    agents: {
+      defaults: () => ({}),
+      readyAgent: (id: string) => id,
+      adapter: () => ({ adapterVersion: 'test' }),
+    } as unknown as AgentManager,
     attachments: new AttachmentStore(join(dir, 'attachments')),
     mcp: {} as McpHttpServer<SkaroScope>,
     emit: () => undefined,

@@ -1,13 +1,13 @@
 // Instructions for the agent of a task (architecture.md 7, step 3): project rules, where the
 // project context is, the task itself, summaries of finished dependencies, Skaro's workflow.
 
-import type { ProjectArtifacts, Task } from '@skaro/core';
+import type { Milestone, ProjectArtifacts, Task } from '@skaro/core';
 import { join } from 'node:path';
 import { taskSections } from './task-body';
 import { agentInteractionInstructions } from './agent-interaction-instructions';
 import { taskEnvironmentInstructions } from './task-environment-instructions';
 
-const LANGUAGES: Record<string, string> = { ru: 'Russian', en: 'English' };
+export const LANGUAGES: Record<string, string> = { ru: 'Russian', en: 'English' };
 
 /** Skaro's own words in the user's language, as the interface names them (owner decisions). */
 const TERMS: Record<string, string> = {
@@ -17,13 +17,13 @@ const TERMS: Record<string, string> = {
     '«архитектура», an ADR is «ADR».',
 };
 
-function terms(locale: string): string[] {
+export function terms(locale: string): string[] {
   const rule = TERMS[locale];
   return rule ? [rule] : [];
 }
 
 /** The user's instructions: app-wide ("Настройки") first, then the project's own. */
-function instructionsOf(artifacts: ProjectArtifacts): string {
+export function instructionsOf(artifacts: ProjectArtifacts): string {
   const all = [artifacts.config.globalInstructions, artifacts.config.agentInstructions]
     .map((text) => text?.trim())
     .filter(Boolean);
@@ -100,11 +100,13 @@ export function taskInstructions(options: {
   root: string;
   cwd: string;
   branch?: string;
+  /** The milestone whose branch and checkout the task shares with its other tasks. */
+  stage?: Pick<Milestone, 'id' | 'title'>;
   locale: string;
   /** The project describes a task environment and Skaro runs it (task-environments.md). */
   managedEnvironment?: boolean;
 }): string {
-  const { task, artifacts, root, cwd, branch } = options;
+  const { task, artifacts, root, cwd, branch, stage } = options;
   const language = LANGUAGES[options.locale] ?? 'English';
   const skaro = join(root, '.skaro');
   const context = [
@@ -136,11 +138,18 @@ export function taskInstructions(options: {
         'questions about it. Change files only if the user asks, and tell them the changes are ' +
         'in the main working copy and are not committed by Skaro.'
       : '',
-    branch
-      ? `Your working folder ${cwd} is a git worktree on branch ${branch}, made for this task. ` +
-        'Change files only inside it. Do not switch branches, merge, rebase onto other branches ' +
-        'or push unless the user asks.'
-      : `Your working folder is ${cwd}, the project's main working copy.`,
+    branch && stage
+      ? `Your working folder ${cwd} is a git worktree on branch ${branch}, shared by the tasks ` +
+        `of milestone ${stage.id} "${stage.title}". They run one after another: the work of the ` +
+        'earlier ones is already committed there and only your task works in it now. The ' +
+        'environment (services and data) belongs to the milestone in the same way. Change files ' +
+        'only inside the folder. Do not switch branches, merge, rebase onto other branches or ' +
+        'push unless the user asks.'
+      : branch
+        ? `Your working folder ${cwd} is a git worktree on branch ${branch}, made for this task. ` +
+          'Change files only inside it. Do not switch branches, merge, rebase onto other branches ' +
+          'or push unless the user asks.'
+        : `Your working folder is ${cwd}, the project's main working copy.`,
     (context.length
       ? 'Project context, read it when it matters for the task (these files are in the main ' +
         `project folder, not in your working folder): ${context.join('; ')}. The ` +
@@ -161,7 +170,11 @@ export function taskInstructions(options: {
         '- Keep the user informed while you work: before each step write one short sentence ' +
           'about what you are doing now. Work in small steps; do not think the whole task ' +
           'through in one long silent pass.',
-        '- Commit your work to the task branch when a piece is done. Commit messages follow ' +
+        (stage
+          ? '- Commit your work to the branch when a piece is done; when the task is done Skaro ' +
+            'folds its commits into one, with the commit message you give to submit_result. '
+          : '- Commit your work to the task branch when a piece is done. ') +
+          'Commit messages follow ' +
           "the repository's commit convention: look at git log, a commitlint config or " +
           'CONTRIBUTING. If the repository has none, use Conventional Commits in English ' +
           '(feat: …, fix: …, docs: …). The project instructions below may say otherwise.',
@@ -178,12 +191,16 @@ export function taskInstructions(options: {
                 'Otherwise tell the user plainly which criteria are not met and why.',
             ]
           : ['- When the work is done, summarize what you did.']),
-        '- When the user asks to merge the task, call the merge_task tool of the skaro MCP ' +
-          'server with a short summary. Skaro follows the current merge setting: in automatic ' +
-          'mode it merges immediately when unblocked; in manual mode it shows a confirmation ' +
-          'card. If submit_result or merge_task reports the task already merged or completed, ' +
-          'report that status and do not call merge_task again to confirm it. Never merge into ' +
-          'the base branch yourself. Skaro does not merge while acceptance criteria are not ticked.',
+        stage
+          ? '- The task is not merged on its own: Skaro merges the whole milestone after its ' +
+            'acceptance. Do not call merge_task; when the user asks to merge, tell them the task ' +
+            'goes into the merge of its milestone. Never merge into the base branch yourself.'
+          : '- When the user asks to merge the task, call the merge_task tool of the skaro MCP ' +
+            'server with a short summary. Skaro follows the current merge setting: in automatic ' +
+            'mode it merges immediately when unblocked; in manual mode it shows a confirmation ' +
+            'card. If submit_result or merge_task reports the task already merged or completed, ' +
+            'report that status and do not call merge_task again to confirm it. Never merge into ' +
+            'the base branch yourself. Skaro does not merge while acceptance criteria are not ticked.',
         `- Write to the user in ${language}: replies, questions, plans and command descriptions.`,
         ...terms(options.locale),
       ].join('\n'),

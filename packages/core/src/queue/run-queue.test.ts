@@ -138,4 +138,24 @@ describe('RunQueue', () => {
     await queue.idle();
     expect(queue.state()).toEqual({ slots: 1, running: [], queued: [] });
   });
+
+  it('a held-back task keeps its place while later ones start, and starts after a poke', async () => {
+    const held = new Set(['B']);
+    const runs = controlledRuns();
+    const queue = new RunQueue({
+      slots: 2,
+      canRun: () => undefined,
+      blocked: (id) => held.has(id),
+      start: runs.start,
+    });
+    queue.enqueue(['A', 'B', 'C']);
+    expect(queue.state()).toEqual({ slots: 2, running: ['A', 'C'], queued: ['B'] });
+
+    await runs.finish('A');
+    expect(queue.state()).toEqual({ slots: 2, running: ['C'], queued: ['B'] });
+
+    held.clear();
+    queue.poke();
+    expect(queue.state()).toEqual({ slots: 2, running: ['C', 'B'], queued: [] });
+  });
 });

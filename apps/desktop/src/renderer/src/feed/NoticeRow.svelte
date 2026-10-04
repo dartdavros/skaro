@@ -11,6 +11,7 @@
   import ActionIcon from './ActionIcon.svelte';
   import './action-groups-i18n';
   import MergedNotice from './MergedNotice.svelte';
+  import StageNotice from './StageNotice.svelte';
 
   /** Service lines: retry, compaction, model switch, MCP failure, session restore, merge. */
   let { row, last }: { row: Extract<FeedRow, { type: 'notice' }>; last: boolean } = $props();
@@ -51,6 +52,8 @@
   </div>
 {:else if item.code === 'merged'}
   <MergedNotice {row} />
+{:else if item.code === 'stage_done' || item.code === 'stage_merged'}
+  <StageNotice {row} />
 {:else if item.code === 'session_lost'}
   <div class="fd-bar warning">
     <Icon name="warning" size={13} stroke={2.2} color="var(--sk-warn)" />

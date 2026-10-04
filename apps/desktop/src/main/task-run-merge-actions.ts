@@ -1,9 +1,10 @@
 import type { MergeAction } from '../shared/ipc';
 import type { ProjectContext } from './projects';
-import { mergeInteraction, type MergeInteraction } from './task-merge-card';
+import { mergeInteraction, withStage, type MergeInteraction } from './task-merge-card';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { key } from './task-run-helpers';
+import { subjectOf } from './task-subject';
 
 /** mergeActions: a focused part of the task-run controller. */
 export class TaskRunMergeActions {
@@ -49,6 +50,7 @@ export class TaskRunMergeActions {
         const check = await context.git.checkMerge(base, branch);
         const next = mergeInteraction(card.id, branch, base, check);
         if (card.message) next.message = card.message;
+        withStage(next, card.stage);
         if (!result.ok) next.conflicts = result.conflicts;
         this.ctx.history.skaroEvent(active, { t: 'interaction.opened', interaction: next });
         return;
@@ -64,12 +66,20 @@ export class TaskRunMergeActions {
           text:
             `Слияние ветки ${branch} в ${base} даёт конфликты:\n${files}\n\n` +
             `Перенеси ветку на свежую ${base} (git rebase ${base}), разреши конфликты, закоммить ` +
-            `результат и снова вызови merge_task.`,
+            `результат и снова вызови ${card.stage ? 'submit_result' : 'merge_task'}.`,
         });
         return;
       }
-      case 'confirm':
+      case 'confirm': {
+        // The messages of the card as the user left them go to the commits of the tasks.
+        const messages = action.messages;
+        if (card.stage && messages)
+          card.stage = {
+            ...card.stage,
+            tasks: card.stage.tasks.map((t) => ({ ...t, message: messages[t.id] ?? t.message })),
+          };
         await this.confirmMerge(active, context, card, action.message);
+      }
     }
   }
 
@@ -86,7 +96,7 @@ export class TaskRunMergeActions {
     );
     if (!active || !card || card.blockers.length) return 'open';
     const context = this.ctx.project(projectId);
-    const task = (await context.load()).tasks.find((t) => t.id === taskId);
+    const task = subjectOf(await context.load(), taskId);
     await this.confirmMerge(
       active,
       context,
