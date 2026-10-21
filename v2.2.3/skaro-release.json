@@ -1,0 +1,226 @@
+{
+  "schema": 1,
+  "bundleVersion": "2.2.3",
+  "skaroVersion": "2.2.3",
+  "claudeSdk": "0.3.285",
+  "adapters": {
+    "codex": "0.0.0",
+    "claude-code": "0.0.0"
+  },
+  "agents": {
+    "codex": {
+      "version": "0.159.2",
+      "shownVersion": "0.159.2"
+    },
+    "claude-code": {
+      "version": "0.3.285",
+      "shownVersion": "2.1.285"
+    }
+  },
+  "platforms": {
+    "darwin-arm64": {
+      "feed": "latest-arm64-mac.yml",
+      "payload": {
+        "name": "Skaro-2.2.3-mac-arm64.dmg",
+        "sha512": "lAXxihYxMvbj2ue0vGG1W7B7iink3pPTntdAbOSeHhw58MU1Q+gXPMhiNmt1ANLBbshAw8jrkroaVInB7ZBNkQ==",
+        "size": 145885023
+      },
+      "agents": {
+        "codex": {
+          "agent": "codex",
+          "version": "0.159.2",
+          "name": "@openai/codex",
+          "npmVersion": "0.159.2-darwin-arm64",
+          "shownVersion": "0.159.2",
+          "binary": "vendor/aarch64-apple-darwin/bin/codex",
+          "pathDirs": [
+            "vendor/aarch64-apple-darwin/codex-path"
+          ],
+          "tarball": "https://registry.npmjs.org/@openai/codex/-/codex-0.159.2-darwin-arm64.tgz",
+          "integrity": "sha512-7SPaPFU0tdqapQ5VEgrF+wb+p9dxfWfLMXMKZMRKoWPn/tLMajlMjYBBnu8o6VtaVH2DHQ6kpnp5TMkv5bqvrg=="
+        },
+        "claude-code": {
+          "agent": "claude-code",
+          "version": "0.3.285",
+          "name": "@anthropic-ai/claude-agent-sdk-darwin-arm64",
+          "npmVersion": "0.3.285",
+          "shownVersion": "2.1.285",
+          "binary": "claude",
+          "pathDirs": [],
+          "tarball": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-darwin-arm64/-/claude-agent-sdk-darwin-arm64-0.3.285.tgz",
+          "integrity": "sha512-2h6iCTH5uPYKA9jBXB7Of0dXZ5hUdu88VnXq9u50AFfMnusy+w83dKgpu+TD+mWiO+mbvMdi1ZsGaoI8HPFTXQ=="
+        }
+      }
+    },
+    "darwin-x64": {
+      "feed": "latest-x64-mac.yml",
+      "payload": {
+        "name": "Skaro-2.2.3-mac-x64.dmg",
+        "sha512": "bkIf3Q3nXx/49egwsq6VmgR/DuDASfygsTwUS6cDzO+2le19ABLsWGHOj0B12aGq+zYgfIQbbkAny2Ia39KVzQ==",
+        "size": 151361821
+      },
+      "agents": {
+        "codex": {
+          "agent": "codex",
+          "version": "0.159.2",
+          "name": "@openai/codex",
+          "npmVersion": "0.159.2-darwin-x64",
+          "shownVersion": "0.159.2",
+          "binary": "vendor/x86_64-apple-darwin/bin/codex",
+          "pathDirs": [
+            "vendor/x86_64-apple-darwin/codex-path"
+          ],
+          "tarball": "https://registry.npmjs.org/@openai/codex/-/codex-0.159.2-darwin-x64.tgz",
+          "integrity": "sha512-VPZGYHH2yVn8S3IuxJk38vxhBADJZp68IBL8hr4quJ2R7jM16l43TLCwRemN+1J27V/cs771fbx63aGRf5F8JA=="
+        },
+        "claude-code": {
+          "agent": "claude-code",
+          "version": "0.3.285",
+          "name": "@anthropic-ai/claude-agent-sdk-darwin-x64",
+          "npmVersion": "0.3.285",
+          "shownVersion": "2.1.285",
+          "binary": "claude",
+          "pathDirs": [],
+          "tarball": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-darwin-x64/-/claude-agent-sdk-darwin-x64-0.3.285.tgz",
+          "integrity": "sha512-r9ulSFGRV+I5ztFvUBGoLCDGM4cJNQcZ/5+WWFCVaVj55FYB8wVcFA1tXvKwXfWYgYgnuglDRgPwQktsNAisPQ=="
+        }
+      }
+    },
+    "linux-arm64": {
+      "feed": "latest-linux-arm64.yml",
+      "payload": {
+        "name": "Skaro-2.2.3-linux-arm64.AppImage",
+        "sha512": "2uLCa3gX4pQwkOtv3XbVy45+98mFfe+3gY2YB4HyUbUUZmL1/4vRu4klq9hgKvwvwqJZAvZloOPv12VHLEUqSA==",
+        "size": 141433427
+      },
+      "agents": {
+        "codex": {
+          "agent": "codex",
+          "version": "0.159.2",
+          "name": "@openai/codex",
+          "npmVersion": "0.159.2-linux-arm64",
+          "shownVersion": "0.159.2",
+          "binary": "vendor/aarch64-unknown-linux-musl/bin/codex",
+          "pathDirs": [
+            "vendor/aarch64-unknown-linux-musl/codex-path"
+          ],
+          "tarball": "https://registry.npmjs.org/@openai/codex/-/codex-0.159.2-linux-arm64.tgz",
+          "integrity": "sha512-Pm0W2PnFeTEqPx+AOIwgOVB4dBtY24cuD0tx1hjCor60CbSAT7WBPZVNUINSrTCDrMndvQC67p71ZEz+gmPPkA=="
+        },
+        "claude-code": {
+          "agent": "claude-code",
+          "version": "0.3.285",
+          "name": "@anthropic-ai/claude-agent-sdk-linux-arm64",
+          "npmVersion": "0.3.285",
+          "shownVersion": "2.1.285",
+          "binary": "claude",
+          "pathDirs": [],
+          "tarball": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-linux-arm64/-/claude-agent-sdk-linux-arm64-0.3.285.tgz",
+          "integrity": "sha512-YbYXqKGtyqpyqY92U8TRcKdrsnO38Ys6oO8aSBqugQyILcv9JEau8/Gtsw1e9cbkGyuNiUP2e2HIiwK3wMa9mg=="
+        }
+      }
+    },
+    "linux-x64": {
+      "feed": "latest-linux.yml",
+      "payload": {
+        "name": "Skaro-2.2.3-linux-x86_64.AppImage",
+        "sha512": "aedpSe5OqbDY9QMOaTSFNwkNz44078If9epsvsKt17eZs/ljOtfiMlG2Kc5JKyJ+pykJEPQCcR5OEwRwdk0XPQ==",
+        "size": 140189584
+      },
+      "agents": {
+        "codex": {
+          "agent": "codex",
+          "version": "0.159.2",
+          "name": "@openai/codex",
+          "npmVersion": "0.159.2-linux-x64",
+          "shownVersion": "0.159.2",
+          "binary": "vendor/x86_64-unknown-linux-musl/bin/codex",
+          "pathDirs": [
+            "vendor/x86_64-unknown-linux-musl/codex-path"
+          ],
+          "tarball": "https://registry.npmjs.org/@openai/codex/-/codex-0.159.2-linux-x64.tgz",
+          "integrity": "sha512-RrCZ1X52wpa1lOsXtCtSyhjOFdQPh7LH5Ccv8HsKmd/2UXbUwxXFqWXFK3JzatquUNGtW/TLox5Y7qVOGkV0/Q=="
+        },
+        "claude-code": {
+          "agent": "claude-code",
+          "version": "0.3.285",
+          "name": "@anthropic-ai/claude-agent-sdk-linux-x64",
+          "npmVersion": "0.3.285",
+          "shownVersion": "2.1.285",
+          "binary": "claude",
+          "pathDirs": [],
+          "tarball": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-linux-x64/-/claude-agent-sdk-linux-x64-0.3.285.tgz",
+          "integrity": "sha512-yVxQ3Xsmme5M9iXnpVQKaBxhGXktl2m2f19fEig30BblvhhRTjF/H1PY4SCA7g9V1D8Ety+0SKMhGZTca4WcWQ=="
+        }
+      }
+    },
+    "win32-arm64": {
+      "feed": "latest-arm64.yml",
+      "payload": {
+        "name": "Skaro-2.2.3-win-arm64.exe",
+        "sha512": "yzN39yr6r/1qB9oYaTIsbxvWEC2X29wMA/TPWaDoMIFxrMGZNYropIgJZkxGFmu9P9Tkccuuhs1I9X4FVh3yVw==",
+        "size": 117539597
+      },
+      "agents": {
+        "codex": {
+          "agent": "codex",
+          "version": "0.159.2",
+          "name": "@openai/codex",
+          "npmVersion": "0.159.2-win32-arm64",
+          "shownVersion": "0.159.2",
+          "binary": "vendor/aarch64-pc-windows-msvc/bin/codex.exe",
+          "pathDirs": [
+            "vendor/aarch64-pc-windows-msvc/codex-path"
+          ],
+          "tarball": "https://registry.npmjs.org/@openai/codex/-/codex-0.159.2-win32-arm64.tgz",
+          "integrity": "sha512-8+xM4Wj2J38ieRse9kzbMRQQc2d+kvck2Zm2+gX2sth5RXPZQ1yqYhFmevHLC8IO73syk2xiIclH0qvoc97pgg=="
+        },
+        "claude-code": {
+          "agent": "claude-code",
+          "version": "0.3.285",
+          "name": "@anthropic-ai/claude-agent-sdk-win32-arm64",
+          "npmVersion": "0.3.285",
+          "shownVersion": "2.1.285",
+          "binary": "claude.exe",
+          "pathDirs": [],
+          "tarball": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-win32-arm64/-/claude-agent-sdk-win32-arm64-0.3.285.tgz",
+          "integrity": "sha512-7vJftvSY9KIt1GCrRipwDAzHzoMGkVuUPuErXkHCf2mjMNZt2YTnAbvMWxx2lV6wyfSzLMgxSJjKsikKYgL91A=="
+        }
+      }
+    },
+    "win32-x64": {
+      "feed": "latest-x64.yml",
+      "payload": {
+        "name": "Skaro-2.2.3-win-x64.exe",
+        "sha512": "lN6CCmVz+FHryJzLaUIpTCS2gMKhEiwFOGhi+LZdMqYKcFlR8HRj96UYP7vgU0WcGKYueSfkR8oi7OtGtHBePA==",
+        "size": 123823129
+      },
+      "agents": {
+        "codex": {
+          "agent": "codex",
+          "version": "0.159.2",
+          "name": "@openai/codex",
+          "npmVersion": "0.159.2-win32-x64",
+          "shownVersion": "0.159.2",
+          "binary": "vendor/x86_64-pc-windows-msvc/bin/codex.exe",
+          "pathDirs": [
+            "vendor/x86_64-pc-windows-msvc/codex-path"
+          ],
+          "tarball": "https://registry.npmjs.org/@openai/codex/-/codex-0.159.2-win32-x64.tgz",
+          "integrity": "sha512-1ZJVTO40/ZaHPUUWc3uCX73jwzJRaDxAjRQEf37dC5Q3h1fp/Z7+1L8oX3bPlXgjhEY6kHW3rm0wz2sdQ5rxNw=="
+        },
+        "claude-code": {
+          "agent": "claude-code",
+          "version": "0.3.285",
+          "name": "@anthropic-ai/claude-agent-sdk-win32-x64",
+          "npmVersion": "0.3.285",
+          "shownVersion": "2.1.285",
+          "binary": "claude.exe",
+          "pathDirs": [],
+          "tarball": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-win32-x64/-/claude-agent-sdk-win32-x64-0.3.285.tgz",
+          "integrity": "sha512-mzHxNJsKDJDKNbGkPZU7FFqqWqQAXbTyuDRyGeeVLCCxy89mfyvIOC4ko2yiPXsIFsK+F2rbVnFOBhsl2dtaow=="
+        }
+      }
+    }
+  }
+}
