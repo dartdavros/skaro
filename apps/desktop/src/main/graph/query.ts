@@ -2,6 +2,7 @@ import type { GraphPage, GraphQuery, GraphNode, GraphEdge } from '@skaro/core/gr
 import type { GraphStore } from './store';
 import { assertScope, validateQuery, cursorFor, nodeMatches } from './query-validation';
 import { overview } from './overview';
+import { cachedOverview } from './overview-cache';
 import { traverse } from './traversal';
 
 export function queryGraph(store: GraphStore, query: GraphQuery): GraphPage {
@@ -14,16 +15,7 @@ export function queryGraph(store: GraphStore, query: GraphQuery): GraphPage {
     reason: string | undefined,
     path: string[] | undefined;
   if (query.operation === 'overview' || query.operation === 'expand') {
-    const defaultView =
-      query.operation === 'overview' &&
-      !query.expanded?.length &&
-      Object.entries(query.filter ?? {}).every(([key, value]) =>
-        key === 'state' ? value === 'current' : !value || (Array.isArray(value) && !value.length),
-      );
-    const cached = defaultView
-      ? store.meta<ReturnType<typeof overview>>(`overview:${snapshot.id}`)
-      : undefined;
-    ({ nodes, edges, aggregated } = cached ?? overview(store, query));
+    ({ nodes, edges, aggregated } = cachedOverview(store, query) ?? overview(store, query));
   } else if (query.operation === 'search') {
     const tokens = (query.text ?? '').match(/[\p{L}\p{N}_-]+/gu)?.slice(0, 12) ?? [];
     if (tokens.length) {
