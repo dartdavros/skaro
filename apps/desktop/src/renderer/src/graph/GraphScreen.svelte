@@ -5,7 +5,6 @@
   import { ProjectGraph } from './data.svelte';
   import { openGraphTarget } from './navigation-target';
   import GraphHeader from './GraphHeader.svelte';
-  import GraphFilters from './GraphFilters.svelte';
   import GraphPlayback from './GraphPlayback.svelte';
   import GraphLegend from './GraphLegend.svelte';
   import GraphCanvas from './GraphCanvas.svelte';
@@ -91,7 +90,6 @@
       void toggleFullscreen();
     }}
   />
-  <GraphFilters {model} />
   <GraphPlayback player={model.playback} onchanged={() => model.persist()} />
   <GraphLegend bind:motion bind:flow />
   <GraphStatus {model} />

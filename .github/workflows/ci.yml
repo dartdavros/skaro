@@ -42,7 +42,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    # Preserve required check names while using the same macOS image as release builds.
+    runs-on: ${{ matrix.os == 'macos-latest' && 'macos-15' || matrix.os }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       SKARO_E2E_PACKAGED: '1'

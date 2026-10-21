@@ -1,0 +1,11 @@
+{
+  "model": "tardis-2005.glb",
+  "era": "2005 / Ninth and Tenth Doctors",
+  "triangles": 40262,
+  "meshObjects": ["Body_Mesh", "Lamp_Glass", "Lamp_Housing"],
+  "glbBytes": 6763556,
+  "animation": false,
+  "pivot": "bounding box centre",
+  "gltfCoordinates": "Y up; front +Z; metres",
+  "referenceAccuracy": "visual reconstruction, dimensions not verified against prop measurements"
+}

@@ -36,7 +36,7 @@ export default ts.config(
     },
   },
   {
-    files: ['apps/desktop/src/renderer/**', 'packages/ui/src/**'],
+    files: ['apps/desktop/src/renderer/**', 'packages/ui/src/**', 'assets/tardis/web/**/*.mjs'],
     languageOptions: {
       globals: { ...globals.browser },
     },

@@ -92,6 +92,14 @@ test('background graph and native graph/C4 sections on the real Chatballs checko
     console.log(await page.locator('.project-nav').innerText());
     await page.getByRole('button', { name: 'Граф связей', exact: true }).click();
     await page.locator('[data-project-graph]').waitFor({ timeout: 30_000 });
+    for (const name of [
+      'Архитектурное состояние',
+      'Слои',
+      'Типы связей',
+      'Происхождение и ограничения',
+    ]) {
+      await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+    }
     console.log('graph screen:', await page.locator('[data-project-graph]').innerText());
     await page
       .locator('[data-project-graph] .sigma-host[data-layout-ready="true"]')
@@ -125,16 +133,12 @@ test('background graph and native graph/C4 sections on the real Chatballs checko
     await page.waitForTimeout(2400);
     expect(await host.getAttribute('data-playback-step')).toBe(step);
     await page.screenshot({ path: join(evidence!, 'scenario.png') });
-    await page.getByRole('button', { name: 'Представление', exact: true }).click();
-    await page.getByRole('option').filter({ hasText: 'Весь проект' }).click();
     const unavailable = accepted.elements.find(
       (node: { state: string; code: string[] }) =>
         node.state === 'planned' && node.code.some((path) => !existsSync(join(root!, path))),
     );
     expect(unavailable).toBeDefined();
     if (unavailable) {
-      await page.getByRole('button', { name: 'Архитектурное состояние', exact: true }).click();
-      await page.getByRole('option').filter({ hasText: 'Все состояния' }).click();
       const path = unavailable.code.find((path: string) => !existsSync(join(root!, path)))!;
       await page.getByRole('textbox', { name: 'Найти элемент' }).fill(unavailable.name);
       await page.getByRole('option').filter({ hasText: unavailable.name }).first().click();
@@ -156,6 +160,8 @@ test('background graph and native graph/C4 sections on the real Chatballs checko
       await page.locator('.graph-alert').getByRole('button').click();
       await page.getByRole('button', { name: 'Снять выделение', exact: true }).click();
     }
+    await page.getByRole('button', { name: 'Представление', exact: true }).click();
+    await page.getByRole('option').filter({ hasText: 'Весь проект' }).click();
     const zoom = page.getByRole('spinbutton');
     await zoom.fill('150%');
     await zoom.press('Enter');
