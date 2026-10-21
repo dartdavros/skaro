@@ -10,6 +10,7 @@
   let {
     controller,
     running,
+    stopping = false,
     agent,
     model,
     modelTip,
@@ -25,6 +26,7 @@
   }: {
     controller: ComposerController;
     running: boolean;
+    stopping?: boolean;
     agent: AgentId;
     model: string;
     modelTip?: string;
@@ -132,6 +134,8 @@
     <button
       type="button"
       class="stop"
+      disabled={stopping}
+      aria-busy={stopping}
       data-tip={t('composer.stop')}
       aria-label={t('composer.stop')}
       onclick={onstop}

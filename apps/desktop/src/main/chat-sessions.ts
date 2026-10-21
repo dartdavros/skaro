@@ -1,4 +1,4 @@
-import { segmentTurns, type AgentSession } from '@skaro/timeline';
+import { operationTimeout, segmentTurns, type AgentSession } from '@skaro/timeline';
 import type { AgentId } from '../shared/ipc';
 import { hasCode } from './new-project';
 import { chatInstructions, importInstructions } from './prompt';
@@ -20,6 +20,9 @@ export class ChatSessions {
   // ── sessions ─────────────────────────────────────────────────────────────
 
   attach(live: LiveChat): Promise<AgentSession> {
+    if (live.stopping || live.stopError)
+      return Promise.reject(new Error(live.stopError ?? 'Chat is stopping'));
+    live.operation.signal.throwIfAborted();
     if (live.session) return Promise.resolve(live.session);
     live.attaching ??= this.startSession(live).finally(() => (live.attaching = undefined));
     return live.attaching;
@@ -27,6 +30,8 @@ export class ChatSessions {
 
   async startSession(live: LiveChat): Promise<AgentSession> {
     const { projectId, chat } = live;
+    const signal = live.operation.signal;
+    signal.throwIfAborted();
     await this.processes.stop(`chat.${chat.id}`);
     const context = this.ctx.project(projectId);
     // Instructions use presence, ids and configuration; document bodies remain available to tools.
@@ -45,6 +50,7 @@ export class ChatSessions {
         : undefined;
     const adapter = this.ctx.deps.agents.adapter(agent);
     const resume = chat.nativeSessionId;
+    signal.throwIfAborted();
     if (live.chat.archived) throw new CommandCancelled();
 
     const segment = live.segments++;
@@ -78,6 +84,7 @@ export class ChatSessions {
     let session: AgentSession;
     try {
       session = await adapter.start({
+        signal,
         cwd: context.root,
         processStarted: (pid, identity) =>
           this.processes.started(`chat.${chat.id}`, pid, false, identity),
@@ -111,7 +118,7 @@ export class ChatSessions {
       if (resume) this.ctx.history.notice(live, 'session_lost', 'error', errorText(error));
       throw error;
     }
-    if (live.chat.archived) {
+    if (live.chat.archived || signal.aborted) {
       await session.close();
       live.grant?.revoke();
       live.grant = undefined;
@@ -119,7 +126,7 @@ export class ChatSessions {
     }
     live.session = session;
     if (resume) this.ctx.history.notice(live, 'session_restored', 'info', '');
-    void this.pump(live, session, segment);
+    live.pumping = this.pump(live, session, segment);
     return session;
   }
 
@@ -147,12 +154,34 @@ export class ChatSessions {
   async detach(live: LiveChat): Promise<void> {
     this.ctx.planningContinuation.userMessage(live);
     const session = live.session;
+    const attaching = live.attaching;
+    const pumping = live.pumping;
+    live.operation.cancel(new CommandCancelled());
     live.session = undefined;
     live.grant?.revoke();
     live.grant = undefined;
-    await session?.close().catch(() => undefined);
-    await this.processes.stop(`chat.${live.chat.id}`);
+    try {
+      await operationTimeout(
+        Promise.all([
+          session?.close(),
+          attaching?.then(
+            (attached) => attached.close(),
+            (error: unknown) => {
+              if (!(error instanceof CommandCancelled) && !live.operation.signal.aborted)
+                throw error;
+            },
+          ),
+        ]).then(async () => {
+          await pumping;
+        }),
+        15_000,
+        'Agent session shutdown was not confirmed',
+      );
+    } finally {
+      await this.processes.stop(`chat.${live.chat.id}`);
+    }
     this.ctx.history.flush(live);
+    if (!live.stopping && !live.stopError) live.operation.renew();
   }
 
   async close(): Promise<void> {

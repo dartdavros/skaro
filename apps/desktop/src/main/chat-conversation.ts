@@ -17,6 +17,7 @@ import { LiveChat } from './chat-model';
 import { saved, lastOf, settingsKey, lastKey, currentTurn, titleOf } from './chat-settings-helpers';
 
 import type { ChatEngine } from './chat-engine';
+import { stopChat } from './chat-stop';
 
 export class ChatConversation {
   private readonly ctx: ChatEngine;
@@ -117,9 +118,13 @@ export class ChatConversation {
   }
 
   private queueDelivery(live: LiveChat, input: MessageInput, revision?: number): Promise<void> {
+    if (live.stopping || live.stopError)
+      return Promise.reject(new Error(live.stopError ?? 'Chat is stopping'));
+    const deliveryRevision = live.operation.capture();
     const next = live.deliveryQueue
       .catch(() => undefined)
       .then(async () => {
+        live.operation.assert(deliveryRevision);
         if (revision !== undefined && revision !== live.planningRevision) return;
         await this.deliverMessage(live, input, revision);
       });
@@ -138,7 +143,9 @@ export class ChatConversation {
   ): Promise<void> {
     if (hasOwnerCommand(live.timeline.state, input.commandId)) return;
     input = live.secrets.input(input);
+    const deliveryRevision = live.operation.capture();
     const session = await this.ctx.sessions.attach(live);
+    live.operation.assert(deliveryRevision);
     assertQuestionsAnswered(live.timeline.state);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
       throw new CommandCancelled();
@@ -216,11 +223,7 @@ export class ChatConversation {
   async interrupt(projectId: string, chatId: string): Promise<void> {
     cancelOwnerMessages(projectId, chatId);
     const live = await this.ctx.history.restore(projectId, chatId);
-    this.ctx.planningContinuation.stop(
-      live,
-      'Interrupted by the owner; resume only on explicit instruction.',
-    );
-    await live.session?.interrupt();
+    return stopChat(this.ctx, live);
   }
 
   /** An archived chat is read-only: its agent process stops. */

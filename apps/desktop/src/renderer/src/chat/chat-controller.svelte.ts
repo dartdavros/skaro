@@ -14,6 +14,7 @@ import { provideFeed } from '../feed/context.svelte';
 import { modelEffort, modelName } from '../feed/format';
 import { ChatSession } from './session.svelte';
 import { historyActions } from '../feed/history-actions';
+import { watchChatCommands } from './chat-command-events';
 export function createChatController(
   projectId: string,
   projectPath: string,
@@ -37,21 +38,12 @@ export function createChatController(
   }
 
   const ownerMessages = new OwnerMessages();
-  if (chatId)
-    void window.skaro.invoke('commands.list', projectId, chatId).then((commands) => {
-      ownerMessages.restore(commands);
-      actionError = commands.find((command) => command.error)?.error;
-    });
-  const stopCommands = window.skaro.on('command.changed', (command) => {
-    if (command.owner !== `${projectId}:${chatId}`) return;
-    if (command.state === 'accepted' || command.state === 'delivering')
-      ownerMessages.restore([command]);
-    if (command.state === 'cancelled') ownerMessages.cancel(command.id);
-    if (command.error) {
-      ownerMessages.failed(command.id, command.error);
-      actionError = command.error;
-    }
-  });
+  const stopCommands = watchChatCommands(
+    projectId,
+    chatId,
+    ownerMessages,
+    (error) => (actionError = error),
+  );
   onDestroy(stopCommands);
   $effect(() => ownerMessages.reconcile(session?.timeline));
   let modal = $state(false);
@@ -292,6 +284,14 @@ export function createChatController(
       reviewing = value;
     },
     send,
+    stop: () =>
+      guard(async () => {
+        if (!chatId) return;
+        const at = Date.now();
+        await window.skaro.invoke('chat.interrupt', projectId, chatId);
+        ownerMessages.cancelThrough(at);
+        await session?.reload();
+      }),
     saveAgentSettings,
     setPermission,
     setArchived,

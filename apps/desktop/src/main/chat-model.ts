@@ -4,6 +4,7 @@ import { type AppDb, type AttachmentStore, type ChatRecord } from '@skaro/core';
 import type { Grant, McpHttpServer, SkaroScope } from '@skaro/mcp-server';
 import {
   Timeline,
+  OperationLifetime,
   type AgentSession,
   type Item,
   type Proposal,
@@ -49,6 +50,10 @@ export class LiveChat {
   flushTimer: NodeJS.Timeout | undefined;
   /** Serializes session start and resume. */
   attaching: Promise<AgentSession> | undefined;
+  pumping: Promise<void> | undefined;
+  readonly operation = new OperationLifetime();
+  stopping: Promise<void> | undefined;
+  stopError: string | undefined;
   proposalQueue: Promise<void> = Promise.resolve();
   deliveryQueue: Promise<void> = Promise.resolve();
   planningRevision = 0;

@@ -6,6 +6,7 @@ import {
   asyncQuestionInput,
   isAsyncQuestion,
   obj,
+  operationTimeout,
   str,
   type AgentSession,
   type Interaction,
@@ -229,7 +230,24 @@ export class CodexSession implements AgentSession {
   private async interruptTurn(id: string): Promise<void> {
     if (!(await this.turns.whenStarted(id)) || this.turns.active !== id) return;
     try {
-      await this.rpc().request('turn/interrupt', { threadId: this.threadId, turnId: id });
+      const completed = this.turns.whenCompleted(id);
+      await operationTimeout(
+        Promise.all([
+          this.rpc()
+            .request('turn/interrupt', { threadId: this.threadId, turnId: id })
+            .catch((error: unknown) => {
+              if (!(
+                error instanceof RpcError &&
+                error.code === -32600 &&
+                error.message === 'turn/interrupt: no active turn to interrupt'
+              ))
+                throw error;
+            }),
+          completed,
+        ]),
+        15_000,
+        'Codex did not confirm interruption',
+      );
     } catch (error) {
       // Confirm the terminal event even when the native RPC reply precedes its notification.
       if (!(

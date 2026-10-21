@@ -3,7 +3,7 @@
   import type { HistoryBlock, HistorySource } from '../../../shared/history';
   import { useFeed } from './context.svelte';
   import { HistoryViewport } from './history-viewport.svelte';
-  import LoadingIndicator from '../LoadingIndicator.svelte';
+  import { useFeedLoading } from './feed-loading.svelte';
   let {
     source,
     children,
@@ -26,6 +26,12 @@
     () => initial,
   );
   const measure = (element: HTMLElement, index: number) => viewport.measure(element, index);
+  const loading = useFeedLoading();
+  const token = Symbol('history');
+  $effect(() => {
+    loading?.track(token, viewport.loading);
+    return () => loading?.track(token, false);
+  });
 </script>
 
 <div class="virtual-blocks" bind:this={viewport.root} style:--history-gap={`${gap}px`}>
@@ -38,9 +44,7 @@
       use:measure={index}
     >
       {#if block}{@render children(block)}
-      {:else}<div class="loading" style:height={`${viewport.window.estimate}px`}>
-          <LoadingIndicator />
-        </div>{/if}
+      {:else}<div aria-hidden="true" style:height={`${viewport.window.estimate}px`}></div>{/if}
     </div>
   {/each}
   {#if viewport.bottom > 0}<div aria-hidden="true" style:height={`${viewport.bottom}px`}></div>{/if}
@@ -56,9 +60,5 @@
   }
   .virtual-blocks > div {
     flex: none;
-  }
-  .loading {
-    display: grid;
-    place-items: center;
   }
 </style>

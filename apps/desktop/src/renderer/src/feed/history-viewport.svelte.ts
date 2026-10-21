@@ -79,7 +79,13 @@ export class HistoryViewport {
     $effect(() => {
       void this.pages.version;
       void this.source();
-      void this.pages.load(this.window.start, this.window.end, this.pinned);
+      void this.pages.load(
+        this.window.start,
+        this.window.end,
+        this.pinned,
+        this.window.visibleStart,
+        this.window.visibleEnd,
+      );
     });
     $effect(() => {
       const root = this.root;
@@ -116,6 +122,16 @@ export class HistoryViewport {
     const selected = this.selection.range;
     if (selected) for (let i = selected.start; i < selected.end; i++) indices.add(i);
     return indices;
+  }
+  get loading(): boolean {
+    return (
+      this.pages.loading &&
+      !this.pages.error &&
+      this.shown.some(
+        ({ index, block }) =>
+          !block && index >= this.window.visibleStart && index < this.window.visibleEnd,
+      )
+    );
   }
   get shown() {
     const indices = this.pinned;

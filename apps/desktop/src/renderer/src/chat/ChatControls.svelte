@@ -18,6 +18,22 @@
     agents: AgentInfo[];
   } = $props();
   let composer: Composer | undefined = $state();
+  let stopping = $state(false);
+  let stopFailed = $state(false);
+  async function stop(): Promise<void> {
+    if (!chatId || stopping) return;
+    stopping = true;
+    controller.actionError = undefined;
+    try {
+      await controller.stop();
+      stopFailed = false;
+    } catch (error) {
+      stopFailed = true;
+      controller.actionError = String(error);
+    } finally {
+      stopping = false;
+    }
+  }
   export function prefill(text: string): void {
     composer?.prefill(text);
   }
@@ -42,7 +58,8 @@
       placeholder={controller.view?.chat.kind === 'import'
         ? t('chat.import.placeholder')
         : t('chat.placeholder')}
-      running={controller.running}
+      running={controller.running || stopFailed}
+      {stopping}
       agent={controller.agentInfo?.id ?? controller.settings.agent}
       model={controller.modelLabel}
       modelTip={t('chat.model.tip')}
@@ -59,8 +76,7 @@
       suggest={(q) => window.skaro.invoke('files.suggest', projectId, '', q)}
       onsend={controller.send}
       onstop={() => {
-        const chat = chatId;
-        if (chat) void window.skaro.invoke('chat.interrupt', projectId, chat);
+        void stop();
       }}
       onmodel={() => (controller.modal = true)}
     />

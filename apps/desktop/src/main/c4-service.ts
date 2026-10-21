@@ -17,6 +17,7 @@ import {
   c4ReviewKey,
   type C4TaskReview,
 } from './c4-review';
+import { readTaskC4Scope, reviewedC4Ids } from './c4-task-scope';
 
 type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 export interface C4ProposalRecord {
@@ -175,7 +176,16 @@ export class C4Service implements C4Handlers {
     const baseHead = (
       await git(checkout, ['rev-parse', artifacts.config.baseBranch])
     ).stdout.trim();
-    const problems = c4CoverageProblems(artifacts, scope.taskId, args);
+    const taskScope = await readTaskC4Scope(checkout, baseHead, artifacts, scope.taskId);
+    const ids = reviewedC4Ids(taskScope, args, artifacts.c4);
+    const reviewedScope = {
+      ...taskScope,
+      elements: [...ids].filter((id) => artifacts.c4?.elements.some((item) => item.id === id)),
+      relationships: [...ids].filter((id) =>
+        artifacts.c4?.relationships.some((item) => item.id === id),
+      ),
+    };
+    const problems = c4CoverageProblems(artifacts, scope.taskId, args, taskScope);
     if (args.changeHash !== (await c4ChangeHash(checkout, baseHead)))
       problems.push('Code changed since context was read.');
     if (
@@ -189,7 +199,8 @@ export class C4Service implements C4Handlers {
     const review: C4TaskReview = {
       ...args,
       baseHead,
-      modelHash: c4ArchitectureHash(artifacts),
+      modelHash: c4ArchitectureHash(artifacts, reviewedScope),
+      scope: reviewedScope,
       runId: scope.runId,
     };
     this.deps.db.setSetting(c4ReviewKey(scope.projectId, scope.taskId), review);

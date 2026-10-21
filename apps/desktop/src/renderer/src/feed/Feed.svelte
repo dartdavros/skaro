@@ -21,6 +21,8 @@
   import PlanCard from './PlanCard.svelte';
   import { installHistoryCopy } from './history-copy.svelte';
   import { useFeed } from './context.svelte';
+  import { provideFeedLoading } from './feed-loading.svelte';
+  import LoadingIndicator from '../LoadingIndicator.svelte';
 
   /**
    * The agent feed: rows, the live line and unanchored cards. Sticks to the bottom while the
@@ -41,6 +43,7 @@
   } = $props();
 
   const scroll = new FeedScroll();
+  const loading = provideFeedLoading();
   let activitySince = $state(Date.now());
 
   const rows = $derived(
@@ -108,6 +111,7 @@
 </script>
 
 <div class="wrap feed-wrap">
+  {#if loading.busy}<div class="feed-loading"><LoadingIndicator /></div>{/if}
   <div class="fade"></div>
   <div class="scroller" bind:this={scroll.scroller}>
     <div class="fd-feed" bind:this={scroll.content}>
@@ -148,3 +152,14 @@
     </button>
   {/if}
 </div>
+
+<style>
+  .feed-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    z-index: 2;
+  }
+</style>

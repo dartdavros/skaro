@@ -14,6 +14,7 @@
   let {
     placeholder,
     running,
+    stopping = false,
     agent,
     model,
     modelTip,
@@ -33,6 +34,7 @@
   }: {
     placeholder: string;
     running: boolean;
+    stopping?: boolean;
     agent: AgentId;
     model: string;
     /** Tip of the model button; the chat says the agent is fixed. */
@@ -80,6 +82,7 @@
   <ComposerBar
     {controller}
     {running}
+    {stopping}
     {agent}
     {model}
     {modelTip}

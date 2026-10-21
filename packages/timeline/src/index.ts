@@ -6,6 +6,8 @@ export * from './replay.ts';
 export * from './run-history.ts';
 export * from './state.ts';
 export * from './agent.ts';
+export * from './operation-timeout.ts';
+export * from './operation-lifetime.ts';
 export * from './limits.ts';
 export * from './activity.ts';
 export * from './effort.ts';

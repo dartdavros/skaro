@@ -86,12 +86,12 @@ export class LiveGraph {
                 ? '#404047'
                 : attributes.color,
           label:
-            this.active.size && !participant
+            this.active.size && !participant && !neighbor
               ? ''
               : focus && graph.hasNode(focus) && !neighbor
                 ? ''
                 : attributes.label,
-          forceLabel: participant || id === focus || attributes.forceLabel,
+          forceLabel: participant || !!neighbor || attributes.forceLabel,
           size: participant || id === focus ? attributes.size + 2 : attributes.size,
           zIndex: id === focus ? 3 : neighbor ? 2 : 0,
         };
