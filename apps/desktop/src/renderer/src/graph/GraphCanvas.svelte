@@ -7,6 +7,7 @@
   import { renderGraph } from './render-data';
   import LoadingView from '../screens/LoadingView.svelte';
   import type { ProjectGraph } from './data.svelte';
+  import '../canvas-background.css';
   let {
     page,
     model,
@@ -127,7 +128,11 @@
   });
 </script>
 
-<div class="graph-canvas" data-node-count={page.nodes.length} data-edge-count={page.edges.length}>
+<div
+  class="graph-canvas canvas-dots"
+  data-node-count={page.nodes.length}
+  data-edge-count={page.edges.length}
+>
   <div class="sigma-host" bind:this={host} role="img" aria-label={t('graph.canvas')}></div>
   <canvas class="graph-effects" bind:this={effects} aria-hidden="true"></canvas>
   {#if error}<div class="graph-error">

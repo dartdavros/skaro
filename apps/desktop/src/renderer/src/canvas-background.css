@@ -1,0 +1,8 @@
+.canvas-dots {
+  background-image: radial-gradient(
+    circle at 0.5px 0.5px,
+    var(--sk-fill-32) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 24px 24px;
+}

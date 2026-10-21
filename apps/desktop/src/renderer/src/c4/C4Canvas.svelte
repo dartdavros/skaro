@@ -1,12 +1,6 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
-  import {
-    SvelteFlow,
-    MiniMap,
-    Background,
-    useSvelteFlow,
-    getViewportForBounds,
-  } from '@xyflow/svelte';
+  import { SvelteFlow, MiniMap, useSvelteFlow, getViewportForBounds } from '@xyflow/svelte';
   import { Banner } from '@skaro/ui';
   import LoadingView from '../screens/LoadingView.svelte';
   import type { C4Model, C4View } from '@skaro/core/c4-view';
@@ -17,6 +11,7 @@
   import { layoutC4 } from './layout';
   import { graphBounds, selectedBounds, loadViewport, saveViewport, viewportKey } from './viewport';
   import '@xyflow/svelte/dist/style.css';
+  import '../canvas-background.css';
   import './styles.css';
   let {
     model,
@@ -113,6 +108,7 @@
   {#if error}<Banner kind="error" text={error} />{/if}
   {#if loading}<LoadingView overlay />{/if}
   <SvelteFlow
+    class="canvas-dots"
     bind:nodes
     bind:edges
     {nodeTypes}
@@ -139,7 +135,6 @@
       if (!loading) saveViewport(key, viewport);
     }}
   >
-    <Background patternColor="var(--sk-line-strong)" gap={24} size={1} />
     <MiniMap
       width={144}
       height={96}
