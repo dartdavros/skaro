@@ -12,6 +12,7 @@ interface CacheInput {
   onpage(page: HistoryPage): void;
   onerror(error?: string): void;
   onchange(): void;
+  onloading?(loading: boolean): void;
   onstale?(): void;
 }
 function sameContent(a: HistorySource | undefined, b: HistorySource): boolean {
@@ -51,17 +52,25 @@ export class HistoryPageCache {
     if (!sameContent(this.source, source)) {
       this.generation++;
       this.pending.clear();
+      this.input.onloading?.(false);
     }
     this.source = source;
     for (const index of this.input.blocks.keys())
       if (index >= source.count) this.input.blocks.delete(index);
   }
 
-  async load(start: number, end: number, pinned: ReadonlySet<number>): Promise<void> {
+  async load(
+    start: number,
+    end: number,
+    pinned: ReadonlySet<number>,
+    visibleStart = start,
+    visibleEnd = end,
+  ): Promise<void> {
     const source = this.source;
     if (!source) return;
     const generation = this.generation;
     const needed = new Set<number>();
+    for (let i = visibleStart; i < visibleEnd; i++) needed.add(Math.floor(i / SIZE) * SIZE);
     for (let i = start; i < end; i++) needed.add(Math.floor(i / SIZE) * SIZE);
     for (const index of pinned) needed.add(Math.floor(index / SIZE) * SIZE);
     for (const page of needed) {
@@ -94,6 +103,8 @@ export class HistoryPageCache {
           }
           return;
         }
+        if (result.start !== page || result.blocks.length !== Math.min(SIZE, source.count - page))
+          throw new Error('History page is incomplete; reload the conversation to retry.');
         result.blocks.forEach((block, offset) =>
           this.input.blocks.set(result.start + offset, block),
         );
@@ -101,7 +112,7 @@ export class HistoryPageCache {
         this.loaded.set(page, historyContentRevision(result.source));
         this.failed.delete(page);
         this.input.onpage(result);
-        this.input.onerror();
+        if (!this.failed.size) this.input.onerror();
       } catch (error) {
         if (generation === this.generation) {
           this.loaded.set(page, historyContentRevision(source));
@@ -113,10 +124,12 @@ export class HistoryPageCache {
     const request: Promise<void> = work.finally(() => {
       if (generation === this.generation && this.pending.get(page) === request) {
         this.pending.delete(page);
+        this.input.onloading?.(this.pending.size > 0);
         this.input.onchange();
       }
     });
     this.pending.set(page, request);
+    this.input.onloading?.(true);
     return request;
   }
 

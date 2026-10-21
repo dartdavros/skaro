@@ -28,14 +28,11 @@ import { imageType } from './session-helpers.ts';
 import { queryOptions } from './session-options.ts';
 import { spawnTapped } from './session-tap.ts';
 import { SessionProcesses } from './session-processes.ts';
+import { AnswerWaiters } from './answer-waiters.ts';
+import { ClaudeInterrupt } from './session-interrupt.ts';
 export { nativeMode } from './session-config.ts';
 export type { ClaudeSessionConfig } from './session-config.ts';
 export { lines } from './session-helpers.ts';
-
-interface Pending {
-  interaction: Interaction;
-  resolve: (answer: InteractionAnswer) => void;
-}
 
 export class ClaudeSession implements AgentSession {
   readonly events: EventChannel<TimelineEvent> = new EventChannel();
@@ -49,9 +46,8 @@ export class ClaudeSession implements AgentSession {
   /** User message uuid → last main-thread assistant uuid before it (resume point for rewind). */
   private readonly resumePoints = new Map<string, string>();
   private readonly interactions = new Map<string, Interaction>();
-  private readonly pending = new Map<string, Pending>();
-  /** Answers that arrived before canUseTool asked for them. */
-  private readonly early = new Map<string, InteractionAnswer>();
+  private readonly answers = new AnswerWaiters();
+  private readonly interruption = new ClaudeInterrupt();
   private mode: PermissionMode;
   private planFirst: boolean;
   private closed = false;
@@ -63,6 +59,7 @@ export class ClaudeSession implements AgentSession {
     this.mode = options.permissionMode;
     this.planFirst = options.planFirst ?? false;
     this.projector = new ClaudeProjector(options.context, (event) => {
+      this.interruption.observe(event);
       if (event.t === 'interaction.opened')
         this.interactions.set(event.interaction.id, event.interaction);
       if (event.t === 'interaction.closed') this.interactions.delete(event.id);
@@ -96,6 +93,8 @@ export class ClaudeSession implements AgentSession {
   }
 
   async send(input: UserInput): Promise<void> {
+    if (this.closed) throw new Error('Claude session is closed');
+    this.answers.resume();
     const uuid = randomUUID();
     if (this.lastAssistant) this.resumePoints.set(uuid, this.lastAssistant);
     else this.resumePoints.set(uuid, '');
@@ -124,16 +123,10 @@ export class ClaudeSession implements AgentSession {
   }
 
   async respond(interactionId: string, answer: InteractionAnswer): Promise<void> {
-    const pending = this.pending.get(interactionId);
-    if (pending) {
-      this.pending.delete(interactionId);
-      pending.resolve(answer);
-      return;
-    }
     // The user may answer before the SDK calls canUseTool for the request.
     if (!this.interactions.has(interactionId))
       throw new Error(`no open interaction ${interactionId}`);
-    this.early.set(interactionId, answer);
+    this.answers.respond(interactionId, answer);
   }
 
   async setModel(model: string, effort?: string): Promise<void> {
@@ -163,7 +156,9 @@ export class ClaudeSession implements AgentSession {
   }
 
   async interrupt(): Promise<void> {
-    await this.q?.interrupt();
+    this.input.clear();
+    this.answers.cancel();
+    if (this.q) await this.interruption.interrupt(this.q, () => this.close());
   }
 
   async stopBackground(taskId: string): Promise<void> {
@@ -174,13 +169,13 @@ export class ClaudeSession implements AgentSession {
     if (this.closed) return this.processes.stopped();
     this.closed = true;
     this.stopQuery();
-    for (const pending of this.pending.values())
-      pending.resolve({ kind: 'approval', choice: 'deny', message: 'Session closed' });
+    this.answers.cancel();
     this.events.close();
     await this.processes.stopped();
   }
 
   private stopQuery(): void {
+    this.input.clear();
     this.input.end();
     this.q?.close();
     this.q = undefined;
@@ -201,20 +196,19 @@ export class ClaudeSession implements AgentSession {
   }
 
   /** Waits for the user's answer to the interaction the projector opened for this call. */
-  private waitForAnswer(interactionId: string): Promise<InteractionAnswer> {
+  private waitForAnswer(interactionId: string, signal?: AbortSignal): Promise<InteractionAnswer> {
     const interaction = this.interactions.get(interactionId);
     if (!interaction) return Promise.resolve({ kind: 'approval', choice: 'allow_once' });
-    const early = this.early.get(interactionId);
-    if (early) {
-      this.early.delete(interactionId);
-      return Promise.resolve(early);
-    }
-    return new Promise((resolve) => {
-      this.pending.set(interactionId, { interaction, resolve });
-    });
+    return this.answers.wait(interactionId, signal);
   }
 
-  private readonly canUseTool: CanUseTool = async (toolName, input, { suggestions, toolUseID }) => {
+  private readonly canUseTool: CanUseTool = async (
+    toolName,
+    input,
+    { suggestions, toolUseID, signal },
+  ) => {
+    if (signal.aborted || this.answers.cancelled)
+      return { behavior: 'deny', message: 'Interrupted by owner', toolUseID };
     // The projector saw the control_request first and opened the interaction.
     const interactionId = this.projector.interactionForToolUse(toolUseID);
     if (!interactionId) return { behavior: 'allow', updatedInput: input, toolUseID };
@@ -226,7 +220,7 @@ export class ClaudeSession implements AgentSession {
         toolUseID,
       };
     }
-    const answer = await this.waitForAnswer(interactionId);
+    const answer = await this.waitForAnswer(interactionId, signal);
     const interaction = this.interactions.get(interactionId);
     let result: PermissionResult;
     if (answer.kind === 'question') {

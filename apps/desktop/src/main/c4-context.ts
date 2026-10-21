@@ -11,6 +11,8 @@ import type { SkaroScope, ToolResult } from '@skaro/mcp-server';
 import type { ProjectContext } from './projects';
 import type { C4ProposalRecord } from './c4-service';
 import { c4ChangeHash, c4ReviewKey } from './c4-fingerprint';
+import { readTaskC4Scope } from './c4-task-scope';
+import { c4CoverageProblems } from './c4-coverage';
 
 /** Send the model once, authored document text and durable proposal facts, without repeated preview payloads. */
 export async function c4Context(
@@ -27,12 +29,24 @@ export async function c4Context(
     scope.kind === 'task'
       ? (await git(checkout, ['rev-parse', artifacts.config.baseBranch])).stdout.trim()
       : undefined;
+  const taskScope = baseHead
+    ? await readTaskC4Scope(checkout, baseHead, artifacts, scope.taskId ?? '')
+    : undefined;
   return {
     text: JSON.stringify(
       {
         schema: C4_MODEL_SCHEMA,
         model: artifacts.c4 ?? null,
-        problems: artifacts.c4Problems,
+        problems: taskScope
+          ? c4CoverageProblems(artifacts, scope.taskId ?? '', undefined, taskScope)
+          : artifacts.c4Problems,
+        ...(taskScope
+          ? {
+              projectProblems: artifacts.c4Problems,
+              reviewPolicy:
+                'Only task-scoped problems block this result. Project-wide gaps are informational here. Artifact-only work cannot publish planned implementation.',
+            }
+          : {}),
         documents: Object.fromEntries(
           [...(await readC4Documents(context.root))].map(([path, body]) => [
             path,
@@ -80,6 +94,7 @@ export async function c4Context(
                 checkout,
                 baseHead,
                 changeHash: await c4ChangeHash(checkout, baseHead),
+                reviewScope: taskScope,
                 specification: artifacts.specs.find(
                   (s) => s.id === artifacts.tasks.find((t) => t.id === scope.taskId)?.spec,
                 ),

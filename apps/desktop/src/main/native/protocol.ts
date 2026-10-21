@@ -11,7 +11,7 @@ export interface NativeConfig {
 }
 export type NativeOptions = Omit<
   SessionOptions,
-  'raw' | 'rawSerialized' | 'secretValues' | 'context' | 'processStarted'
+  'raw' | 'rawSerialized' | 'secretValues' | 'context' | 'processStarted' | 'signal'
 >;
 export interface Request {
   id: number;

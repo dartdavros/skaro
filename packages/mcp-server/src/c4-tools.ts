@@ -114,7 +114,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
       name: 'review_c4',
       available: (scope) => scope.kind === 'task',
       description:
-        'Before submit_result, inspect the actual changed code and its specification against accepted C4. Report the exact revision and changeHash from get_c4_context, affected element/relationship IDs, concrete evidence and aligned. If changes require a model/document update, propose_c4 and obtain its acceptance first. Unresolved questions, stale documents, changed code or a rejected/pending required package block acceptance. A review does not itself publish planned architecture.',
+        'Before submitting implementation, inspect actual changed code against the task requirements and accepted C4. get_c4_context returns task.reviewScope derived from Git and task requirement IDs. Cover that scope, not the entire specification or unrelated parents. Report revision, changeHash, affected IDs, evidence and aligned. Only applicable open questions and stale affected documents block acceptance. Design/document-only Git changes do not require implementation review and cannot realize planned architecture. Required architecture changes still need an accepted propose_c4 package. A review does not itself publish planned architecture.',
       inputSchema: {
         type: 'object',
         properties: {

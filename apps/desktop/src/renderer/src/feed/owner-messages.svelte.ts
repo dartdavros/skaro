@@ -37,6 +37,9 @@ export class OwnerMessages {
   cancel(id: string): void {
     this.pending = this.pending.filter((pending) => pending.input.commandId !== id);
   }
+  cancelThrough(at: number): void {
+    this.pending = this.pending.filter((pending) => pending.at > at);
+  }
   failed(id: string, error: string): void {
     this.pending = this.pending.map((p) => (p.input.commandId === id ? { ...p, error } : p));
   }

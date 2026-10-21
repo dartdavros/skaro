@@ -122,21 +122,31 @@ export async function startNativeSession(
   options: SessionOptions,
 ): Promise<AgentSession> {
   if (closing) throw new Error('The application is closing');
+  options.signal?.throwIfAborted();
   const {
     raw: _raw,
     context: _context,
     processStarted: _process,
     rawSerialized: _encoded,
     secretValues: _secrets,
+    signal,
     ...plain
   } = options;
   const session = new NativeSession(config, options);
+  const abort = () => {
+    void session.close().catch(() => undefined);
+  };
+  signal?.addEventListener('abort', abort, { once: true });
   try {
+    signal?.throwIfAborted();
     await session.call('start', [plain satisfies NativeOptions]);
+    signal?.throwIfAborted();
     return session;
   } catch (error) {
     await session.close();
     throw error;
+  } finally {
+    signal?.removeEventListener('abort', abort);
   }
 }
 export async function closeNativeSessions(): Promise<void> {

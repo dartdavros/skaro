@@ -7,6 +7,7 @@ export class HistoryPages {
   readonly blocks = new SvelteMap<number, HistoryBlock>();
   error = $state<string>();
   version = $state(0);
+  loading = $state(false);
   private readonly cache: HistoryPageCache;
   constructor(
     onerror: (error: string) => void,
@@ -23,13 +24,22 @@ export class HistoryPages {
         if (error) onerror(error);
       },
       onchange: () => this.version++,
+      onloading: (loading) => {
+        this.loading = loading;
+      },
     });
   }
   setSource(source: HistorySource): void {
     this.cache.setSource(source);
   }
-  load(start: number, end: number, pinned: ReadonlySet<number>): Promise<void> {
-    return this.cache.load(start, end, pinned);
+  load(
+    start: number,
+    end: number,
+    pinned: ReadonlySet<number>,
+    visibleStart = start,
+    visibleEnd = end,
+  ): Promise<void> {
+    return this.cache.load(start, end, pinned, visibleStart, visibleEnd);
   }
   position(id: string): number {
     for (const [index, block] of this.blocks) if (block.id === id) return index;

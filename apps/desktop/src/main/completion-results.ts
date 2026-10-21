@@ -97,7 +97,7 @@ export async function assertResultUnchanged(
     throw new Error(`${result.taskId}: branch changed after submission; submit the result again`);
   if (
     !result.c4 ||
-    result.c4.modelHash !== c4ArchitectureHash(artifacts) ||
+    result.c4.modelHash !== c4ArchitectureHash(artifacts, result.c4.scope) ||
     (result.worktree &&
       result.c4.changeHash !==
         (await c4ChangeHash(

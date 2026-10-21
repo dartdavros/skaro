@@ -35,6 +35,8 @@ export type McpServer = (
 };
 
 export interface SessionOptions {
+  /** Cancels session admission/startup; never serialized to a native worker. */
+  signal?: AbortSignal;
   /** Worktree of the task, or the project root for chats. */
   cwd: string;
   model?: string;

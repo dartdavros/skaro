@@ -14,6 +14,9 @@ export class InputQueue implements AsyncIterable<SDKUserMessage> {
     this.ended = true;
     this.wake?.();
   }
+  clear(): void {
+    this.items.length = 0;
+  }
 
   async *[Symbol.asyncIterator](): AsyncIterator<SDKUserMessage> {
     while (true) {
