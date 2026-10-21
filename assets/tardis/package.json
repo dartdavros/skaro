@@ -1,0 +1,16 @@
+{
+  "name": "@skaro/tardis-asset",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node source/build-web.mjs",
+    "build:site": "node source/build-site.mjs",
+    "test": "node --test web/*.test.mjs"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

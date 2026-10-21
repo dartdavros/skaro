@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { C4View } from '@skaro/core/c4-view';
-  import { t } from '@skaro/ui';
+  import { Icon, t } from '@skaro/ui';
+  import { viewKindIcons } from './view-kinds';
   let { views, onopen }: { views: C4View[]; onopen: (viewId: string) => void } = $props();
 </script>
 
@@ -8,7 +9,10 @@
   {#each views as view (view.id)}
     <li>
       <button type="button" data-c4-row={view.id} onclick={() => onopen(view.id)}>
-        <span class="title">{view.title}</span>
+        <span class="heading">
+          <Icon name={viewKindIcons[view.kind]} size={16} />
+          <span class="title">{view.title}</span>
+        </span>
         <span class="kind">{t(`c4.${view.kind}`)}</span>
         <span class="state">{t(`c4.${view.state}`)}</span>
       </button>
@@ -49,6 +53,12 @@
   }
   li:last-child button {
     border-bottom: 0;
+  }
+  .heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
   }
   .title {
     min-width: 0;

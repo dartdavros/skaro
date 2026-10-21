@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { t } from '@skaro/ui';
+  import { Icon, t } from '@skaro/ui';
   import { Maximize2 } from '@lucide/svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import type { C4Model, C4View } from '@skaro/core/c4-view';
   import { layoutC4 } from './layout';
   import C4PreviewSvg from './C4PreviewSvg.svelte';
+  import { viewKindIcons } from './view-kinds';
   import './styles.css';
   import './i18n';
   let { model, view, onopen }: { model: C4Model; view: C4View; onopen: () => void } = $props();
@@ -30,9 +31,8 @@
 <section class="c4-preview" data-c4-preview={view.id} bind:this={root}>
   <button type="button" class="open" onclick={onopen} aria-label={`${t('c4.open')}: ${view.title}`}>
     <div class="preview-header">
-      <span class="title">{view.title}</span><span class="kind"
-        >{t(`c4.${view.kind}`)} · {t(`c4.${view.state}`)}</span
-      ><Maximize2 size={15} strokeWidth={1.8} />
+      <Icon name={viewKindIcons[view.kind]} size={16} />
+      <span class="title">{view.title}</span><Maximize2 size={15} strokeWidth={1.8} />
     </div>
     <div class="preview-body">
       {#if placed}
@@ -49,6 +49,7 @@
     </div>
     <div class="preview-footer">
       <span>C4 · {t('c4.revision', { n: model.revision })}</span>
+      <span class="kind">{t(`c4.${view.kind}`)} · {t(`c4.${view.state}`)}</span>
     </div>
   </button>
 </section>
@@ -100,10 +101,12 @@
   .kind {
     font-size: 11px;
     color: var(--sk-text-muted);
+    text-align: right;
   }
   .preview-footer {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
     padding: 11px 18px;
     border-top: 1px solid var(--sk-line);
     font-size: 11px;

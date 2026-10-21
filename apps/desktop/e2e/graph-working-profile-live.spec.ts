@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { launchApp } from './launch';
+import { checkC4Gallery } from './c4-gallery-release-check';
 import type { SkaroApi } from '../src/shared/ipc';
 
 declare const window: Window & { skaro: SkaroApi };
@@ -44,6 +45,13 @@ test('loads the working graph with its actual saved expansion and native service
     const host = page.locator('.sigma-host');
     await expect(host).toHaveAttribute('data-layout-ready', 'true', { timeout: 30_000 });
     await expect(page.locator('.graph-alert')).toHaveCount(0);
+    for (const name of [
+      'Архитектурное состояние',
+      'Слои',
+      'Типы связей',
+      'Происхождение и ограничения',
+    ])
+      await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
     expect(
       Number(await page.locator('.graph-canvas').getAttribute('data-node-count')),
     ).toBeGreaterThan(0);
@@ -83,6 +91,8 @@ test('loads the working graph with its actual saved expansion and native service
     // Return from another real section: restoration must retain the owner's expansion.
     await page.getByRole('button', { name: 'C4', exact: true }).click();
     await expect(page.locator('[data-c4-gallery]')).toBeVisible({ timeout: 30_000 });
+    const model = await page.evaluate((id) => window.skaro.invoke('graph.model', id), projectId!);
+    await checkC4Gallery(page, model!, evidence!);
     await page.getByRole('button', { name: 'Граф связей', exact: true }).click();
     await expect(host).toHaveAttribute('data-layout-ready', 'true', { timeout: 30_000 });
     await expect(page.locator('.graph-alert')).toHaveCount(0);

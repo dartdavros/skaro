@@ -1,32 +1,38 @@
 <script lang="ts">
-  import type { C4Model } from '@skaro/core/c4-view';
+  import type { C4Model, C4State, C4ViewKind } from '@skaro/core/c4-view';
   import C4Preview from './C4Preview.svelte';
   import C4List from './C4List.svelte';
-  import { ViewSwitch, t } from '@skaro/ui';
+  import C4GalleryToolbar from './C4GalleryToolbar.svelte';
   import './i18n';
   let { model, onopen }: { model: C4Model; onopen: (viewId: string) => void } = $props();
   let view = $state(localStorage.getItem('skaro.c4.gallery') === 'list' ? 'list' : 'grid');
+  let kinds = $state<C4ViewKind[]>([]);
+  let states = $state<C4State[]>([]);
+  const views = $derived(
+    model.views.filter(
+      (item) =>
+        (!kinds.length || kinds.includes(item.kind)) &&
+        (!states.length || states.includes(item.state)),
+    ),
+  );
 </script>
 
 <div class="c4-gallery" data-c4-gallery>
-  <div class="toolbar">
-    <ViewSwitch
-      value={view}
-      options={[
-        { id: 'list', label: t('c4.view.list'), icon: 'list' },
-        { id: 'grid', label: t('c4.view.grid'), icon: 'board' },
-      ]}
-      onchange={(next) => {
-        view = next;
-        localStorage.setItem('skaro.c4.gallery', next);
-      }}
-    />
-  </div>
+  <C4GalleryToolbar
+    views={model.views}
+    bind:kinds
+    bind:states
+    {view}
+    onviewchange={(next) => {
+      view = next;
+      localStorage.setItem('skaro.c4.gallery', next);
+    }}
+  />
   {#if view === 'list'}
-    <C4List views={model.views} {onopen} />
+    <C4List {views} {onopen} />
   {:else}
     <div class="previews">
-      {#each model.views as view (view.id)}
+      {#each views as view (view.id)}
         <C4Preview {model} {view} onopen={() => onopen(view.id)} />
       {/each}
     </div>
@@ -49,11 +55,6 @@
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: 18px;
-  }
-  .toolbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 18px;
   }
   @container (min-width: 960px) {
     .previews {
