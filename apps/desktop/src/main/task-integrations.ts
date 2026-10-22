@@ -86,6 +86,12 @@ export class TaskIntegrations {
     return id?.startsWith('@integration:') ? this.store.find(project!, id.slice(13)) : undefined;
   }
 
+  publicationAgents(): number {
+    return [...this.sessions.values()].filter(
+      ({ operation }) => operation.purpose === 'publication' && operation.state !== 'waiting',
+    ).length;
+  }
+
   blocked(op: IntegrationOperation): boolean {
     const owner = `${op.projectId}\n${op.taskId}`;
     const active = this.ctx.active.get(owner);

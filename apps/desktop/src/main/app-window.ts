@@ -15,6 +15,11 @@ interface Bounds {
 
 let win: BrowserWindow | undefined;
 let state: AppState | undefined;
+let lifecycle: { close: (event: Electron.Event) => void; endSession: () => void } | undefined;
+
+export const setWindowLifecycle = (value: typeof lifecycle) => {
+  lifecycle = value;
+};
 
 function savedBounds(): Bounds {
   const saved = state?.getSetting('window.bounds') as Bounds | null | undefined;
@@ -101,9 +106,15 @@ export function createMainWindow(): void {
   };
   current.on('resize', saveBoundsSoon);
   current.on('move', saveBoundsSoon);
-  current.on('close', () => {
+  current.on('close', (event) => {
     clearTimeout(boundsTimer);
     saveBounds();
+    lifecycle?.close(event);
+  });
+  current.on('query-session-end', () => lifecycle?.endSession());
+  current.on('session-end', () => lifecycle?.endSession());
+  current.on('closed', () => {
+    if (win === current) win = undefined;
   });
   current.on('maximize', () => {
     saveBounds();
@@ -130,8 +141,9 @@ export function createMainWindow(): void {
 }
 
 export function focusWindow(): void {
-  if (!win) return;
+  if (!win || win.isDestroyed()) return;
   if (win.isMinimized()) win.restore();
+  win.show();
   win.focus();
 }
 

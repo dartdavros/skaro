@@ -163,6 +163,10 @@ export class AppDb extends DbTable {
     return this.runtime.getTaskRuntime(projectId);
   }
 
+  taskRuntimeCounts(): Record<TaskRuntime, number> {
+    return this.runtime.counts();
+  }
+
   /**
    * After a restart no agent process is alive: running and queued tasks become idle.
    * Waiting tasks keep their state — their open interactions are shown again (agent-output.md, 6).

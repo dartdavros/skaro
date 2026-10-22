@@ -9,6 +9,7 @@ import type {
   InteractionAnswer,
   TimelineEvent,
 } from '@skaro/timeline';
+import type { ShellEvents } from './app-shell';
 
 import type {
   Locale,
@@ -228,7 +229,7 @@ export interface Methods
 }
 
 /** Events from the main process: name → payload. */
-export interface Events extends HistoryEvents, GraphEvents {
+export interface Events extends HistoryEvents, GraphEvents, ShellEvents {
   'command.changed': import('@skaro/timeline').OwnerCommand;
   'projects.card': ProjectCard;
   'updates.changed': UpdateState;

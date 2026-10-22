@@ -101,6 +101,15 @@ export class ChatSessions implements ProjectToolHandlers {
       if (chat.timeline.state.status !== 'idle') return true;
     return false;
   }
+  activity(): { working: number; waiting: number } {
+    let working = 0;
+    let waiting = 0;
+    for (const chat of this.engine.live.values()) {
+      if (chat.timeline.state.status === 'waiting') waiting++;
+      else if (chat.timeline.state.status === 'working' || chat.attaching) working++;
+    }
+    return { working, waiting };
+  }
   async defaults(projectId: string): Promise<ChatSettings> {
     return this.engine.views.defaults(projectId);
   }

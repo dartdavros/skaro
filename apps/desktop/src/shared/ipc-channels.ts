@@ -147,6 +147,7 @@ export const METHODS = [
 ] as const satisfies readonly MethodName[];
 
 export const EVENTS = [
+  'app.navigate',
   'graph.changed',
   'history.changed',
   'command.changed',

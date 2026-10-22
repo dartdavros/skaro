@@ -75,6 +75,9 @@ export class TaskRuns {
   slots(): RunSlots {
     return this.engine.scheduling.slots();
   }
+  publicationAgents(): number {
+    return this.engine.integrations.publicationAgents();
+  }
   setSlots(slots: number): void {
     return this.engine.scheduling.setSlots(slots);
   }

@@ -1,12 +1,21 @@
 import { OwnerCommands } from './owner-commands';
-import { closeNativeSessions } from './native/client';
 import { app, BrowserWindow, protocol } from 'electron';
 import { join } from 'node:path';
 import type { EventName, Events } from '../shared/ipc';
 import { registerHandlers, sendEvent, type Handlers } from './ipc';
-import { closeBackground } from './background/client';
 import { AppState } from './state';
-import { createMainWindow, focusWindow, mainWindow, setWindowState } from './app-window';
+import {
+  createMainWindow,
+  focusWindow,
+  mainWindow,
+  setWindowState,
+  setWindowLifecycle,
+} from './app-window';
+import { AppLifecycle } from './app-lifecycle';
+import { AppTray } from './app-tray';
+import { agentActivity, type AgentActivity } from './app-agent-activity';
+import { shutdownApp } from './app-shutdown';
+import { CLOSE_TO_TRAY_SETTING, CLOSE_TO_TRAY_DEFAULT } from '../shared/app-shell';
 import { registerMedia } from './app-media';
 import { appHandlers } from './app-handlers';
 import { sessionHandlers } from './session-handlers';
@@ -38,10 +47,17 @@ let updateActivity: UpdateActivity | undefined;
 let overview: import('./project-overview').ProjectOverview | undefined;
 let taskRuns: import('./tasks').TaskRuns | undefined;
 let graph: import('./graph/service').GraphService | undefined;
+let tray: AppTray | undefined;
 function emit<E extends EventName>(event: E, payload: Events[E]): void {
   historyReads?.observe(event, payload);
   updateActivity?.observe(event, payload);
   overview?.observe(event, payload);
+  if (
+    ['task.changed', 'chat.events', 'chats.changed', 'updates.changed', 'command.changed'].includes(
+      event,
+    )
+  )
+    tray?.schedule();
   if (event === 'project.changed')
     void graph?.rebuild((payload as Events['project.changed']).projectId).catch(() => undefined);
   if (event === 'project.changed' || event === 'task.changed')
@@ -77,17 +93,43 @@ if (!locked) {
       resolveHandlers = resolve;
       rejectHandlers = reject;
     });
+    let activity = (): AgentActivity => ({ working: 0, waiting: 0, busy: false });
+    let shutdown = async () => {};
+    let hasUpdate = () => false;
+    const lifecycle = new AppLifecycle({
+      closeToTray: () =>
+        (appState.getSetting(CLOSE_TO_TRAY_SETTING) ?? CLOSE_TO_TRAY_DEFAULT) !== false &&
+        !!tray?.available(),
+      busy: () => activity().busy || appState.db.commands.pending().length > 0,
+      locale: () => appState.getLocale(app.getLocale()),
+      shutdown: async () => {
+        await ready.catch(() => undefined);
+        await shutdown();
+      },
+    });
+    setWindowLifecycle(lifecycle);
+    try {
+      tray = new AppTray({
+        locale: () => appState.getLocale(app.getLocale()),
+        activity: () => activity(),
+        updateAvailable: () => hasUpdate(),
+      });
+    } catch (error) {
+      console.error('System tray:', error);
+    }
     registerHandlers(
       new Proxy({} as Handlers, {
         get:
           (_target, method: string) =>
-          (...args: unknown[]) =>
-            ready.then((handlers) => {
+          (...args: unknown[]) => {
+            if (lifecycle.stopping()) throw new Error('Application is quitting');
+            return ready.then((handlers) => {
               const handler = handlers[method as keyof Handlers] as (
                 ...values: unknown[]
               ) => unknown;
               return handler(...args);
-            }),
+            });
+          },
       }),
       (sender) => sender === mainWindow()?.webContents,
     );
@@ -98,7 +140,8 @@ if (!locked) {
       rejectHandlers(error);
       throw error;
     });
-    const { runs, chats, mcp, projects, ci } = services;
+    const { runs, chats } = services;
+    activity = () => agentActivity(appState.db, runs, chats);
     appState.chatCatalogOverlay = (page) => chats.liveRows(page);
     overview = services.overview;
     graph = services.graph;
@@ -106,12 +149,14 @@ if (!locked) {
     const result = await createUpdates({ ...services, emit });
     updateActivity = result.activity;
     const updates = result.updates;
+    hasUpdate = () => updates.snapshot().components.length > 0;
     if (updates.canRunAgents()) void services.agents.refresh();
     const picked = new Set<string>();
     registerMedia(services, picked);
     const commands = new OwnerCommands(appState.db, (command) => emit('command.changed', command));
+    shutdown = () => shutdownApp(services, commands, updates, historyReads!);
     const handlers = {
-      ...appHandlers(services, updates, mainWindow, emit),
+      ...appHandlers(services, updates, mainWindow, emit, () => tray?.refresh()),
       ...sessionHandlers(services),
       ...fileHandlers(services, mainWindow, picked),
       ...graphHandlers(services.graph),
@@ -137,34 +182,12 @@ if (!locked) {
       }),
     );
     updates.start();
+    tray?.refresh();
     trace('handlers registered');
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
-    });
-
-    let quitting = false;
-    app.on('before-quit', (event) => {
-      if (quitting) return;
-      quitting = true;
-      trace('before quit');
-      updates.stop();
-      event.preventDefault();
-      // Agent processes and the MCP server stop before the app does.
-      void closeNativeSessions()
-        .then(() => commands.close())
-        .then(() => ci.close())
-        .then(() =>
-          Promise.allSettled([runs.close(), chats.close(), mcp.close(), services.graph.close()]),
-        )
-        .then(() => {
-          trace('runs and mcp server closed');
-          projects.close();
-          return historyReads?.close().then(() => closeBackground());
-        })
-        .then(() => {
-          app.quit();
-        });
+      else focusWindow();
     });
   });
 
@@ -174,6 +197,7 @@ if (!locked) {
 
   app.on('will-quit', () => {
     trace('will quit');
+    tray?.destroy();
     state?.close();
   });
   app.on('quit', (_e, code) => trace(`quit, exit code ${code}`));

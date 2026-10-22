@@ -1,0 +1,97 @@
+{
+  "portal": "help.skaro.dev",
+  "locale": "en",
+  "checkedAgainstVersion": "2.2.4",
+  "categories": [
+    {
+      "slug": "getting-started",
+      "name": "Getting Started",
+      "description": "Install Skaro, connect an agent and open your first project.",
+      "sortOrder": 10
+    },
+    {
+      "slug": "working-with-skaro",
+      "name": "Working with Skaro",
+      "description": "Plan tasks, work with agents and merge results.",
+      "sortOrder": 20
+    },
+    {
+      "slug": "maintenance-and-help",
+      "name": "Maintenance & Help",
+      "description": "Update Skaro and resolve common problems.",
+      "sortOrder": 30
+    }
+  ],
+  "articles": [
+    {
+      "slug": "start-here",
+      "category": "getting-started",
+      "title": "Start Here: Your First Project in Skaro",
+      "summary": "Connect a project, plan one useful task and understand how its result reaches your base branch.",
+      "related": ["connect-agents", "plan-work", "run-tasks", "review-and-merge"]
+    },
+    {
+      "slug": "install-windows",
+      "category": "getting-started",
+      "title": "Install Skaro on Windows",
+      "summary": "Choose x64 or ARM64, download the official EXE and handle unsigned-publisher and SmartScreen prompts.",
+      "related": ["connect-agents", "start-here", "update-skaro", "troubleshooting"]
+    },
+    {
+      "slug": "install-macos",
+      "category": "getting-started",
+      "title": "Install Skaro on macOS",
+      "summary": "Install the DMG for Apple Silicon or Intel and allow the first launch of the unnotarized application.",
+      "related": ["connect-agents", "start-here", "update-skaro", "troubleshooting"]
+    },
+    {
+      "slug": "install-linux",
+      "category": "getting-started",
+      "title": "Install Skaro on Linux",
+      "summary": "Download and run the correct AppImage, set executable permissions and diagnose startup errors.",
+      "related": ["connect-agents", "start-here", "update-skaro", "troubleshooting"]
+    },
+    {
+      "slug": "connect-agents",
+      "category": "getting-started",
+      "title": "Connect Codex or Claude Code",
+      "summary": "Download a managed agent, sign in with your account and choose a default model and effort.",
+      "related": ["start-here", "run-tasks", "update-skaro", "troubleshooting"]
+    },
+    {
+      "slug": "plan-work",
+      "category": "working-with-skaro",
+      "title": "Plan Your Work with Project Chat",
+      "summary": "Discuss goals, review proposed work and organize milestones, acceptance criteria and dependencies.",
+      "related": ["start-here", "run-tasks", "review-and-merge"]
+    },
+    {
+      "slug": "run-tasks",
+      "category": "working-with-skaro",
+      "title": "Run Tasks and Work with Agents",
+      "summary": "Check task settings, follow the agent feed and run independent work in separate Git worktrees.",
+      "related": ["connect-agents", "plan-work", "review-and-merge", "troubleshooting"]
+    },
+    {
+      "slug": "review-and-merge",
+      "category": "working-with-skaro",
+      "title": "Review and Merge Task Changes",
+      "summary": "Inspect results, understand automatic and manual merging, and resolve checks or conflicts that block a merge.",
+      "related": ["run-tasks", "plan-work", "troubleshooting"]
+    },
+    {
+      "slug": "update-skaro",
+      "category": "maintenance-and-help",
+      "title": "Update Skaro and Its Agents",
+      "summary": "Check and apply compatible updates on Windows and Linux, or install a new DMG manually on macOS.",
+      "related": ["install-windows", "install-macos", "install-linux", "troubleshooting"]
+    },
+    {
+      "slug": "troubleshooting",
+      "category": "maintenance-and-help",
+      "title": "Troubleshoot Common Problems",
+      "summary": "Resolve installation, sign-in, quota, task and merge problems, and gather useful diagnostics for support.",
+      "related": ["connect-agents", "run-tasks", "review-and-merge", "update-skaro"]
+    }
+  ]
+}

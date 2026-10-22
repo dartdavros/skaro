@@ -20,6 +20,7 @@ export function appHandlers(
   updates: Updates,
   window: () => BrowserWindow | undefined,
   emit: (event: 'project.changed', payload: { projectId: string }) => void,
+  shellChanged: () => void = () => {},
 ): Pick<
   Handlers,
   | 'commands.list'
@@ -87,7 +88,10 @@ export function appHandlers(
     'window.close': () => window()?.close(),
     'window.isMaximized': () => window()?.isMaximized() ?? false,
     'app.getLocale': () => appState.getLocale(app.getLocale()),
-    'app.setLocale': (locale) => appState.setLocale(locale),
+    'app.setLocale': (locale) => {
+      appState.setLocale(locale);
+      shellChanged();
+    },
     'app.getSetting': (key) => appState.getSetting(key),
     'app.setSetting': (key, value) => {
       appState.setSetting(key, value);

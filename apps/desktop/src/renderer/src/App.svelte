@@ -10,7 +10,14 @@
   import SelectionCopy from './SelectionCopy.svelte';
   import UpdatesModal from './updates/UpdatesModal.svelte';
   import { createNavigation } from './app-navigation.svelte';
+  import { updates } from './settings/updates.svelte';
   const nav = createNavigation();
+  $effect(() =>
+    window.skaro.on('app.navigate', (destination) => {
+      if (destination === 'updates') updates.open = true;
+      else nav.view = 'settings';
+    }),
+  );
 </script>
 
 <TooltipHost />

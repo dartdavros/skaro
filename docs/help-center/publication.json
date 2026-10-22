@@ -1,0 +1,191 @@
+{
+  "action": "published",
+  "portal": "help.skaro.dev",
+  "articles": [
+    {
+      "slug": "start-here",
+      "id": 84,
+      "revisionId": 382,
+      "files": [
+        {
+          "name": "appearance.jpg",
+          "path": "/api/v1/help/files/8686cfdb-3ec2-498b-bcf2-d70558625c20/",
+          "sha256": "598ded1a1fdde33dab2e94a7aaaf13f76632582ac1dead0930ff65808ad31258"
+        },
+        {
+          "name": "new-project.jpg",
+          "path": "/api/v1/help/files/dd0760a0-629c-4da8-9c1e-6b99df553708/",
+          "sha256": "62efed9d756efcae7fea80f2209985742ff89c0b87e2edf8676631af7d0b5983"
+        },
+        {
+          "name": "project-workflow.svg",
+          "path": "/api/v1/help/files/2a38014c-4813-4ccd-bcdb-9be2d8b549a1/",
+          "sha256": "2b936936df0db45c4ea05e4dcfb858c3e93184aef7c37bf87177e99764af34b7"
+        },
+        {
+          "name": "task-and-branch-settings.jpg",
+          "path": "/api/v1/help/files/9508b03c-41f3-44da-bd70-ef9e7d671964/",
+          "sha256": "5bcf7a66141c4f8eb5404e9742e84e0a964c82c50fc720030940e79de7b705cc"
+        }
+      ]
+    },
+    {
+      "slug": "install-windows",
+      "id": 85,
+      "revisionId": 384,
+      "files": [
+        {
+          "name": "about.jpg",
+          "path": "/api/v1/help/files/ee048c6d-0e90-4331-ba18-4654ae8299a2/",
+          "sha256": "610463a9f6ba121bf5566c9eddc7aeed4da12d191a7279f66ab6188c6e38a830"
+        },
+        {
+          "name": "download-guide.svg",
+          "path": "/api/v1/help/files/4eef14a8-c923-4006-a02b-1a453445e5b5/",
+          "sha256": "40f9148048b49b8826d3af7b1d531f3c755b44851e43c3209c6114360b73c7c9"
+        },
+        {
+          "name": "github-release.jpg",
+          "path": "/api/v1/help/files/f7026dce-9bf0-46dd-8e8e-02b2b3cdb04f/",
+          "sha256": "1050fcc85b20f06c77b0f05a1d2e522b91c636f2567463657d92749a30210f13"
+        }
+      ]
+    },
+    {
+      "slug": "install-macos",
+      "id": 86,
+      "revisionId": 386,
+      "files": [
+        {
+          "name": "download-guide.svg",
+          "path": "/api/v1/help/files/00046589-ff20-4f44-a4ae-84874e07ba6b/",
+          "sha256": "40f9148048b49b8826d3af7b1d531f3c755b44851e43c3209c6114360b73c7c9"
+        }
+      ]
+    },
+    {
+      "slug": "install-linux",
+      "id": 87,
+      "revisionId": 388,
+      "files": [
+        {
+          "name": "download-guide.svg",
+          "path": "/api/v1/help/files/d6673efc-e821-4de1-8eaf-915c3f4abcf0/",
+          "sha256": "40f9148048b49b8826d3af7b1d531f3c755b44851e43c3209c6114360b73c7c9"
+        }
+      ]
+    },
+    {
+      "slug": "connect-agents",
+      "id": 88,
+      "revisionId": 390,
+      "files": [
+        {
+          "name": "task-agent.jpg",
+          "path": "/api/v1/help/files/9a73136d-379c-4e29-a1f7-f6b3371ec454/",
+          "sha256": "4f64db888d5225aa9f6ba5a71654c5814aa44c9f314ecb186fc75214c6cec9a0"
+        }
+      ]
+    },
+    {
+      "slug": "plan-work",
+      "id": 89,
+      "revisionId": 392,
+      "files": [
+        {
+          "name": "project-chat.jpg",
+          "path": "/api/v1/help/files/bf0bcb9e-9e6c-4b15-887c-5633d0670d25/",
+          "sha256": "8a86221a80ccc0fcf27fb2aeb5aca41bea1a6022c7ba3c73707d0f80e58062fc"
+        },
+        {
+          "name": "project-plan.jpg",
+          "path": "/api/v1/help/files/1189a28e-764f-4088-b963-be564d7a781a/",
+          "sha256": "51f2a2145ecd671ca67a69ed374ed870e8be02e4dc18a5f978150d0c5006a872"
+        }
+      ]
+    },
+    {
+      "slug": "run-tasks",
+      "id": 90,
+      "revisionId": 394,
+      "files": [
+        {
+          "name": "task-agent.jpg",
+          "path": "/api/v1/help/files/894c9bed-419f-4c4f-b40d-06cac5688540/",
+          "sha256": "4f64db888d5225aa9f6ba5a71654c5814aa44c9f314ecb186fc75214c6cec9a0"
+        },
+        {
+          "name": "task-board.jpg",
+          "path": "/api/v1/help/files/7e397a67-7120-4c0e-8268-95f718101a7b/",
+          "sha256": "a3679fb5635d951bd478c09d1c2109571266d68b32fea5d9fb8685b3952be291"
+        },
+        {
+          "name": "task-isolation.svg",
+          "path": "/api/v1/help/files/d81afea4-3779-4c48-9175-08aed53e2436/",
+          "sha256": "06d58b1ca10955ff3360c2ab9417a3be3c072b70e29f63873672f82bab259e87"
+        },
+        {
+          "name": "task-permissions.jpg",
+          "path": "/api/v1/help/files/a41ae78f-fbdf-4981-b3b4-9a356ef41c25/",
+          "sha256": "0a9ebabcf0c5d15b61f361540d99a3a86b02945f4b8cd325fff8a5cd11b9495a"
+        }
+      ]
+    },
+    {
+      "slug": "review-and-merge",
+      "id": 91,
+      "revisionId": 396,
+      "files": [
+        {
+          "name": "task-and-branch-settings.jpg",
+          "path": "/api/v1/help/files/b288bf9f-4fe7-498d-983e-af38ff67c488/",
+          "sha256": "5bcf7a66141c4f8eb5404e9742e84e0a964c82c50fc720030940e79de7b705cc"
+        },
+        {
+          "name": "task-isolation.svg",
+          "path": "/api/v1/help/files/29f494fa-5c0c-4c2d-9fd6-9748ee138a4f/",
+          "sha256": "06d58b1ca10955ff3360c2ab9417a3be3c072b70e29f63873672f82bab259e87"
+        },
+        {
+          "name": "task-result.jpg",
+          "path": "/api/v1/help/files/a155088f-f37f-4a48-99ff-3fcdeb1c4577/",
+          "sha256": "67358410fada4172e7e23da2c6970c23ea801dbc0e4620325a4ba0b6c7e1ba86"
+        }
+      ]
+    },
+    {
+      "slug": "update-skaro",
+      "id": 92,
+      "revisionId": 398,
+      "files": [
+        {
+          "name": "about.jpg",
+          "path": "/api/v1/help/files/2ac9b12e-c619-4630-90d5-2028771d36eb/",
+          "sha256": "610463a9f6ba121bf5566c9eddc7aeed4da12d191a7279f66ab6188c6e38a830"
+        }
+      ]
+    },
+    {
+      "slug": "troubleshooting",
+      "id": 93,
+      "revisionId": 400,
+      "files": [
+        {
+          "name": "about.jpg",
+          "path": "/api/v1/help/files/4d281066-ba84-4596-86f4-8766bb2a261c/",
+          "sha256": "610463a9f6ba121bf5566c9eddc7aeed4da12d191a7279f66ab6188c6e38a830"
+        },
+        {
+          "name": "remaining-quota.jpg",
+          "path": "/api/v1/help/files/c09b3537-2e84-4272-a7f3-c6ffb620abca/",
+          "sha256": "cf4aaafce46f57fa57e37febbd245ecfc5db38de5adb261c880768825a2367d6"
+        },
+        {
+          "name": "task-board.jpg",
+          "path": "/api/v1/help/files/5495c00d-31cf-48c4-bc1b-4fbc92541795/",
+          "sha256": "a3679fb5635d951bd478c09d1c2109571266d68b32fea5d9fb8685b3952be291"
+        }
+      ]
+    }
+  ]
+}
