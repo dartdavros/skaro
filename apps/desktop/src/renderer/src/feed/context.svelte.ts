@@ -5,6 +5,15 @@ import { getContext, setContext } from 'svelte';
 import type { FileDiff, MergeAction, ProposalAction } from '../../../shared/ipc';
 
 export interface FeedActions {
+  architectureReview?(id: string): Promise<import('@skaro/core/c4-view').C4PackageReview>;
+  architectureReviewDetail?(
+    id: string,
+    key: string,
+  ): Promise<import('../../../shared/c4-review').C4ReviewDetail>;
+  architectureReviewModel?(
+    id: string,
+    side: 'before' | 'after',
+  ): Promise<import('@skaro/core/c4-view').C4Model | null>;
   pendingHistory?(): import('../../../shared/history').HistoryPending[];
   rememberHistoryPage?(page: import('../../../shared/history').HistoryPage): void;
   historyError?(error: string): void;

@@ -3,6 +3,7 @@
   import type { ProposalState } from './proposal-state.svelte';
   import ProposalReplanActions from './ProposalReplanActions.svelte';
   import '../c4/i18n';
+  import './architecture-review-i18n';
   let { state }: { state: ProposalState } = $props();
   const item = $derived(state.item);
   const proposal = $derived(state.proposal);
@@ -29,12 +30,13 @@
                 ? t('proposal.doc.create', { path: proposal.path })
                 : t('proposal.doc.update', { path: proposal.path })}</span
       >
-      <span class="stats"
-        ><span class="add">+{diff.stats.added}</span><span class="del">−{diff.stats.removed}</span
-        ></span
-      >
+      {#if diff.stats}<span class="stats"
+          ><span class="add">+{diff.stats.added}</span><span class="del">−{diff.stats.removed}</span
+          ></span
+        >{/if}
     </div>
     <div class="diff">
+      {#if diff.unavailable}<span class="ctx">{t('c4.review.unavailable')}</span>{/if}
       {#each diff.lines as line, i (i)}
         {#if line.gap}
           <span class="ctx">⋯</span>

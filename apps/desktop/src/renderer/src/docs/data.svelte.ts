@@ -17,6 +17,7 @@ export class ProjectDocs {
   selected = $state(ARCHITECTURE);
   /** Text of the open document as it is on disk. */
   text = $state('');
+  attachment = $state.raw<import('@skaro/core/c4-view').C4Attachment>();
   editing = $state(false);
   draft = $state('');
   /** The file changed on disk while it was edited (text there now). */
@@ -128,8 +129,10 @@ export class ProjectDocs {
       ...this.catalog.fixed,
       ...(entry && !this.catalog.fixed.some((fixed) => fixed.path === path) ? [entry] : []),
     ];
-    if (!entry) return '';
-    return window.skaro.invoke('docs.read', this.projectId, path).catch(() => '');
+    if (!entry) { this.attachment = undefined; return ''; }
+    const snapshot = await window.skaro.invoke('docs.document', this.projectId, path);
+    if (revision === this.reading) this.attachment = snapshot.attachment;
+    return snapshot.body;
   }
   lookup(key: { path: string } | { kind: DocumentKind; id: string }) {
     return window.skaro.invoke('docs.lookup', this.projectId, key);

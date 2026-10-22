@@ -60,6 +60,15 @@ export class C4Service implements C4Handlers {
   file(projectId: string, itemId: string, path: string, side: 'before' | 'after'): Promise<string> {
     return background(this.dataDir, 'c4.file', projectId, itemId, path, side);
   }
+  reviewPackage(projectId: string, itemId: string) {
+    return background(this.dataDir, 'c4.review', projectId, itemId);
+  }
+  reviewDetail(projectId: string, itemId: string, key: string) {
+    return background(this.dataDir, 'c4.reviewDetail', projectId, itemId, key);
+  }
+  reviewModel(projectId: string, itemId: string, side: 'before' | 'after') {
+    return background(this.dataDir, 'c4.reviewModel', projectId, itemId, side);
+  }
   private caller(scope: SkaroScope): string {
     this.deps.assertMayWork?.(scope);
     const context = this.deps.projects.get(scope.projectId);
@@ -110,15 +119,59 @@ export class C4Service implements C4Handlers {
     );
     const item = record.item;
     await this.deps.publish(scope, item);
+    const facts = await this.reviewPackage(scope.projectId, item.id);
     return {
-      text: `Saved C4 package ${item.id} for ONE owner decision. Nothing has been applied. Do not propose its documents separately or report them accepted. Read get_c4_context after the owner decides.`,
+      text: JSON.stringify({
+        packageId: item.id,
+        state: 'pending',
+        applied: [],
+        documents: facts.documents.map((d) => d.path),
+        architecture: facts.model.map((c) => ({
+          group: c.group,
+          id: c.id,
+          operation: c.operation,
+          fields: c.fields,
+        })),
+        generatedDocuments: facts.generated,
+        message:
+          'Saved for ONE owner decision. Nothing has been applied. Do not propose its documents separately or report them accepted. Read get_c4_context after the owner decides.',
+      }),
     };
   }
-  decide(projectId: string, id: string, action: 'apply' | 'reject'): Promise<void> {
+  async migrate(scope: SkaroScope): Promise<ToolResult> {
+    this.caller(scope);
+    if (scope.kind !== 'project_chat' || scope.importId)
+      throw new Error('Document migration requires a project chat.');
+    if (
+      (await this.records(scope.projectId)).some((r) =>
+        ['pending', 'accepted'].includes(r.item.state),
+      )
+    )
+      throw new Error('Resolve pending architecture packages before migrating document storage.');
+    const context = this.deps.projects.get(scope.projectId);
+    const record = await background(
+      this.dataDir,
+      'c4.prepareMigration',
+      context.root,
+      this.deps.locale(),
+      scope,
+    );
+    if (!record) return { text: 'No embedded C4 copies remain. Nothing changed.' };
+    await this.deps.publish(scope, record.item);
+    return {
+      text: `Migration package ${record.item.id} awaits one owner decision. Nothing has been applied.`,
+    };
+  }
+  decide(
+    projectId: string,
+    id: string,
+    action: 'apply' | 'reject',
+    fingerprint?: string,
+  ): Promise<void> {
     const previous = this.deciding.get(projectId) ?? Promise.resolve();
     const operation = previous
       .catch(() => undefined)
-      .then(() => this.decideOnce(projectId, id, action));
+      .then(() => this.decideOnce(projectId, id, action, fingerprint));
     this.deciding.set(projectId, operation);
     return operation.finally(() => {
       if (this.deciding.get(projectId) === operation) this.deciding.delete(projectId);
@@ -128,12 +181,18 @@ export class C4Service implements C4Handlers {
     projectId: string,
     id: string,
     action: 'apply' | 'reject',
+    fingerprint?: string,
   ): Promise<void> {
     const record = (await this.records(projectId)).find((r) => r.item.id === id);
     if (!record) throw new Error('Unknown C4 package');
     if (record.item.state === 'applied' && action === 'apply') return;
     if (record.item.state !== 'pending' && record.item.state !== 'accepted')
       throw new Error('This C4 package is already decided');
+    if (action === 'apply' && record.item.state === 'pending') {
+      const review = await this.reviewPackage(projectId, id);
+      if (!fingerprint || fingerprint !== review.fingerprint)
+        throw new Error('Open the current architecture package before accepting it.');
+    }
     if (action === 'reject' && record.item.state === 'accepted')
       throw new Error(
         'A confirmed package must finish recovery; it cannot be rejected after writing starts.',

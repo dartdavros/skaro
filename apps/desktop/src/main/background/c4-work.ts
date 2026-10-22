@@ -6,9 +6,11 @@ import {
   applyC4Package,
   c4PackageStatus,
   c4PackageText,
+  prepareC4DocumentMigration,
   type C4Package,
 } from '@skaro/core';
-import { lineDiff, diffExcerpt, diffStats } from '@skaro/timeline';
+import { c4ReviewWork } from './c4-review-work';
+import { architecturePresentation } from '@skaro/timeline';
 import type { C4ProposalRecord } from '../c4-service';
 import type { BackgroundMethods } from './protocol';
 import { PayloadStore } from './payload-store';
@@ -33,16 +35,6 @@ export function c4Work(store: PayloadStore) {
     }
     const proposal = item.proposal;
     if (proposal.type !== 'architecture') throw new Error('Expected an architecture proposal');
-    // CPU work precedes the write transaction so unrelated artifact reads keep their lane.
-    const before = proposal.before || c4PackageText(pkg, 'before');
-    const after = proposal.after || c4PackageText(pkg, 'after');
-    const diff = lineDiff(before, after);
-    const preview = {
-      ...diffStats(diff),
-      lines: diffExcerpt(diff, 1)
-        .filter((l) => !('text' in l) || l.text.trim())
-        .slice(0, 13),
-    };
     store.transaction(() => {
       const files = pkg.files.map((file) => ({
         path: file.path,
@@ -55,9 +47,13 @@ export function c4Work(store: PayloadStore) {
         fileIndex: files.map((f) => ({ path: f.path, beforeHash: f.before, afterHash: f.after })),
         item: {
           ...item,
-          proposal: { ...proposal, before: '', after: '', files: [], contentRef: item.id, preview },
+          proposal: architecturePresentation(proposal, item.id),
         },
       };
+      const payload = JSON.stringify({ ...pkg, files });
+      const existing = db.prepare('SELECT payload FROM records WHERE id=?').get(item.id);
+      if (existing && existing['payload'] !== payload)
+        throw new Error('An architecture package is immutable; prepare a new proposal.');
       db.prepare(
         `INSERT INTO records VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET state=excluded.state, metadata=excluded.metadata, payload=excluded.payload`,
@@ -67,7 +63,7 @@ export function c4Work(store: PayloadStore) {
         scope.taskId ?? scope.chatId ?? '',
         item.state,
         JSON.stringify(compact),
-        JSON.stringify({ ...pkg, files }),
+        payload,
       );
     });
   }
@@ -96,9 +92,14 @@ export function c4Work(store: PayloadStore) {
         : db
             .prepare('SELECT metadata FROM records WHERE project=? AND owner=?')
             .all(projectId, ownerId);
-    return rows.map((r) => JSON.parse(String(r['metadata'])) as C4ProposalRecord);
+    return rows.map((r) => {
+      const record = JSON.parse(String(r['metadata'])) as C4ProposalRecord;
+      if (record.item.proposal.type === 'architecture')
+        record.item.proposal = architecturePresentation(record.item.proposal, record.item.id);
+      return record;
+    });
   }
-  function pkg(projectId: string, itemId: string): C4Package {
+  function pkg(projectId: string, itemId: string, paths?: string[]): C4Package {
     migrate(projectId);
     const row = db
       .prepare('SELECT payload FROM records WHERE project=? AND id=?')
@@ -107,14 +108,46 @@ export function c4Work(store: PayloadStore) {
     const saved = JSON.parse(String(row['payload'])) as StoredPackage;
     return {
       ...saved,
-      files: saved.files.map((f) => ({
-        path: f.path,
-        before: f.before === null ? null : store.read(f.before),
-        after: store.read(f.after),
-      })),
+      files: saved.files
+        .filter((f) => !paths || paths.includes(f.path))
+        .map((f) => ({
+          path: f.path,
+          before: f.before === null ? null : store.read(f.before),
+          after: store.read(f.after),
+        })),
     };
   }
+  function recordPackage(prepared: C4Package, scope: C4ProposalRecord['scope']): C4ProposalRecord {
+    const item: C4ProposalRecord['item'] = {
+      id: `skaro-c4-${randomUUID()}`,
+      turnId: '',
+      kind: 'proposal',
+      state: 'pending',
+      status: 'done',
+      startedAt: Date.now(),
+      native: { agent: 'skaro', type: 'proposal', ref: 'architecture' },
+      proposal: {
+        type: 'architecture',
+        packageId: prepared.id,
+        title: prepared.title,
+        summary: prepared.summary,
+        baseRevision: prepared.baseRevision,
+        task: prepared.task,
+      },
+    };
+    save({ scope, package: prepared, item });
+    return list(scope.projectId, scope.taskId ?? scope.chatId).find((r) => r.item.id === item.id)!;
+  }
   return {
+    ...c4ReviewWork(pkg),
+    'c4.prepareMigration': async (root, locale, scope) => {
+      migrate(scope.projectId);
+      // Guard again in the storage lane; preparing a migration cannot invalidate a pending package.
+      if (list(scope.projectId).some((r) => ['pending', 'accepted'].includes(r.item.state)))
+        throw new Error('Resolve pending architecture packages before document migration.');
+      const prepared = await prepareC4DocumentMigration(root, locale);
+      return prepared && recordPackage(prepared, scope);
+    },
     'c4.files': (project, id) => {
       migrate(project);
       const row = db
@@ -181,30 +214,7 @@ export function c4Work(store: PayloadStore) {
         ...args,
         ...(scope.kind === 'task' ? { task: { id: scope.taskId!, runId: scope.runId! } } : {}),
       });
-      const item: C4ProposalRecord['item'] = {
-        id: `skaro-c4-${randomUUID()}`,
-        turnId: '',
-        kind: 'proposal',
-        state: 'pending',
-        status: 'done',
-        startedAt: Date.now(),
-        native: { agent: 'skaro', type: 'proposal', ref: 'architecture' },
-        proposal: {
-          type: 'architecture',
-          packageId: prepared.id,
-          title: prepared.title,
-          summary: prepared.summary,
-          baseRevision: prepared.baseRevision,
-          files: prepared.files,
-          before: '',
-          after: '',
-          task: prepared.task,
-        },
-      };
-      save({ scope, package: prepared, item });
-      return list(scope.projectId, scope.taskId ?? scope.chatId).find(
-        (r) => r.item.id === item.id,
-      )!;
+      return recordPackage(prepared, scope);
     },
   } satisfies Pick<BackgroundMethods, Extract<keyof BackgroundMethods, `c4.${string}`>>;
 }

@@ -16,7 +16,8 @@ import type { ChatEngine } from './chat-engine';
 import { serializeTaskMutation } from './project-task-mutations';
 import { prepareImportC4 } from './c4-import';
 import { saveState } from './imports';
-import { c4ImportBody, c4ImportRefs } from './c4-import-preview';
+import { c4ImportBody, c4ImportRefs, c4ImportAttachment } from './c4-import-preview';
+import { authoredBody } from '@skaro/core';
 
 export class ChatImportReview {
   private readonly ctx: ChatEngine;
@@ -36,6 +37,7 @@ export class ChatImportReview {
       milestones[s.key] = `M${String(next++).padStart(2, '0')}`;
     }
     return {
+      c4: c4ImportAttachment(state, artifacts),
       milestones,
       items: state.staged.map((s) => ({
         key: s.key,
@@ -44,7 +46,7 @@ export class ChatImportReview {
         update: !!s.updates,
         sources: s.sources,
         body: c4ImportBody(state, s, artifacts),
-        ...(s.before !== undefined ? { before: s.before } : {}),
+        ...(s.before !== undefined ? { before: authoredBody(s.before) } : {}),
         ...(s.milestone ? { milestone: s.milestone } : {}),
         dependsOn: s.dependsOn ?? [],
         ...(s.spec ? { spec: s.spec } : {}),

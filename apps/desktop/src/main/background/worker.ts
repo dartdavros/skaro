@@ -1,5 +1,5 @@
 import { parentPort, workerData, threadId } from 'node:worker_threads';
-import { configureC4Locks, ArtifactStore } from '@skaro/core';
+import { configureC4Locks, ArtifactStore, authoredBody, readC4DocumentSnapshot } from '@skaro/core';
 import { c4Work } from './c4-work';
 import { PayloadStore } from './payload-store';
 import type { BackgroundMethods } from './protocol';
@@ -132,7 +132,11 @@ parentPort!.on(
       }
       if (request.method === 'artifacts.read') {
         const [root, path] = request.args as [string, string];
-        return (await new ArtifactIndex(store, root).read(path)).body;
+        return authoredBody((await new ArtifactIndex(store, root).read(path)).body);
+      }
+      if (request.method === 'artifacts.document') {
+        const [root, path] = request.args as [string, string];
+        return readC4DocumentSnapshot(root, path);
       }
       if (request.method === 'artifacts.requirements') {
         const [root, path] = request.args as [string, string];

@@ -5,7 +5,6 @@ import { C4_MODEL_PATH } from './model.ts';
 import { readC4Model } from './shape.ts';
 import { validateC4Model } from './validate.ts';
 import { validateC4Documents } from './documents.ts';
-import { authoredBody, projectC4Document } from './render.ts';
 import { readC4File } from './io.ts';
 
 export async function readC4Documents(root: string): Promise<Map<string, string>> {
@@ -58,7 +57,7 @@ export interface C4ProjectState {
   problems: string[];
 }
 
-export async function inspectC4Project(root: string, locale = 'en'): Promise<C4ProjectState> {
+export async function inspectC4Project(root: string, _locale = 'en'): Promise<C4ProjectState> {
   const raw = await readC4File(root, C4_MODEL_PATH);
   if (raw === null)
     return {
@@ -74,25 +73,6 @@ export async function inspectC4Project(root: string, locale = 'en'): Promise<C4P
   }
   const documents = await readC4Documents(root);
   const problems = [...validateC4Model(model), ...validateC4Documents(model, documents)];
-  // Projection comparison is locale-independent: both languages generate the same diagram.
-  for (const [path, ids] of [
-    ['architecture.md', model.views.map((v) => v.id)],
-    ...model.specifications.map((s) => [s.path, s.views]),
-  ] as [string, string[]][]) {
-    const text = documents.get(path);
-    if (!text) {
-      problems.push(`${path}: C4 document missing`);
-      continue;
-    }
-    const generated = projectC4Document(authoredBody(text), model, ids, locale);
-    const alternative = projectC4Document(
-      authoredBody(text),
-      model,
-      ids,
-      locale === 'ru' ? 'en' : 'ru',
-    );
-    if (text !== generated && text !== alternative)
-      problems.push(`${path}: C4 projection is missing or stale`);
-  }
+  if (!documents.has('architecture.md')) problems.push('architecture.md: C4 document missing');
   return { model, problems };
 }

@@ -20,6 +20,7 @@ export function sessionHandlers({
   | 'c4.file'
   | 'c4.content'
   | 'c4.decide'
+  | keyof import('../shared/c4-review').C4ReviewMethods
   | keyof import('../shared/task-catalog').TaskCatalogMethods
   | 'tasks.list'
   | 'tasks.slots'
@@ -39,6 +40,7 @@ export function sessionHandlers({
   | 'docs.page'
   | 'docs.lookup'
   | 'docs.read'
+  | 'docs.document'
   | 'docs.write'
   | 'docs.create'
   | 'docs.createSpec'
@@ -82,7 +84,11 @@ export function sessionHandlers({
     'c4.files': (projectId, itemId) => c4.files(projectId, itemId),
     'c4.file': (projectId, itemId, path, side) => c4.file(projectId, itemId, path, side),
     'c4.content': (projectId, itemId, side) => c4.content(projectId, itemId, side),
-    'c4.decide': (projectId, itemId, action) => c4.decide(projectId, itemId, action),
+    'c4.decide': (projectId, itemId, action, fingerprint) =>
+      c4.decide(projectId, itemId, action, fingerprint),
+    'c4.review': (projectId, itemId) => c4.reviewPackage(projectId, itemId),
+    'c4.reviewDetail': (projectId, itemId, key) => c4.reviewDetail(projectId, itemId, key),
+    'c4.reviewModel': (projectId, itemId, side) => c4.reviewModel(projectId, itemId, side),
     'tasks.list': (projectId) => runs.list(projectId),
     'plan.catalog': (project) => runs.catalog.plan(project),
     'plan.relations': (project, id) => runs.catalog.relations(project, id),
@@ -121,6 +127,7 @@ export function sessionHandlers({
     'docs.page': (projectId, kind, start) => docs.page(projectId, kind, start),
     'docs.lookup': (projectId, key) => docs.lookup(projectId, key),
     'docs.read': (projectId, path) => docs.read(projectId, path),
+    'docs.document': (projectId, path) => docs.document(projectId, path),
     'docs.write': (projectId, path, text) => docs.write(projectId, path, text),
     'docs.create': (projectId, name) => docs.create(projectId, name),
     'docs.createSpec': (projectId, title) => docs.createSpec(projectId, title),
@@ -166,7 +173,12 @@ export function sessionHandlers({
     'chat.clear': (projectId, chatId) => chats.clear(projectId, chatId),
     'chat.proposal': (projectId, chatId, itemId, action) =>
       itemId.startsWith('skaro-c4-') && action.action !== 'revert'
-        ? c4.decide(projectId, itemId, action.action)
+        ? c4.decide(
+            projectId,
+            itemId,
+            action.action,
+            action.action === 'apply' ? action.fingerprint : undefined,
+          )
         : chats.proposal(projectId, chatId, itemId, action),
   };
 }

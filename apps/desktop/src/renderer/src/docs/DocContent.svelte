@@ -7,6 +7,7 @@
   import DocEmpty from './DocEmpty.svelte';
   import DocHeader from './DocHeader.svelte';
   import DocPage from './DocPage.svelte';
+  import C4DocumentSection from '../c4/C4DocumentSection.svelte';
   let { model, doc }: { model: DocsController; doc: DocEntry } = $props();
 </script>
 
@@ -40,6 +41,9 @@
       empty={model.missing ? emptyDoc : undefined}
       onlink={model.link}
     >
+      {#snippet attachment()}
+        {#if model.docs.attachment}<C4DocumentSection attachment={model.docs.attachment} />{/if}
+      {/snippet}
       {#snippet header()}
         <DocHeader
           {doc}

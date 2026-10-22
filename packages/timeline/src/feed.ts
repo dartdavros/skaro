@@ -8,6 +8,7 @@ import type { FileChange, InteractionAnswer, Item } from './model.ts';
 import type { TimelineState, TurnState } from './state.ts';
 import { isAsyncQuestion, type AsyncQuestion } from './async-question.ts';
 import { questionHistory } from './feed-questions.ts';
+import { architecturePresentation } from './architecture-proposal.ts';
 
 type Of<K extends Item['kind']> = Extract<Item, { kind: K }>;
 
@@ -190,7 +191,20 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
           rows.push({ type: 'unknown', id: item.id, item });
           break;
         case 'proposal':
-          rows.push({ type: 'proposal', id: item.id, item });
+          rows.push({
+            type: 'proposal',
+            id: item.id,
+            item:
+              item.proposal.type === 'architecture'
+                ? {
+                    ...item,
+                    proposal: architecturePresentation(
+                      item.proposal,
+                      item.proposal.contentRef ?? item.id,
+                    ),
+                  }
+                : item,
+          });
           break;
         case 'import_prep':
           rows.push({ type: 'import_prep', id: item.id, item });

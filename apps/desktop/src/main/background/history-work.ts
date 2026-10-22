@@ -1,7 +1,12 @@
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AttachmentStore } from '@skaro/core';
-import { Timeline, type TimelineEvent, type TimelineState } from '@skaro/timeline';
+import {
+  Timeline,
+  architecturePresentation,
+  type TimelineEvent,
+  type TimelineState,
+} from '@skaro/timeline';
 import { replayHistory } from './history-replay';
 import type { PayloadStore } from './payload-store';
 import type { ProposalItem } from './protocol';
@@ -29,7 +34,7 @@ export function historyWork(store: PayloadStore) {
       throw error;
     });
     if (!info) return { timeline: new Timeline().state, seq: 0, segments: 0 };
-    const fingerprint = `v2:${agent}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
+    const fingerprint = `v3:${agent}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
     const cached = store.db
       .prepare('SELECT snapshot FROM histories WHERE path=? AND fingerprint=?')
       .get(path, fingerprint);
@@ -53,7 +58,11 @@ export function historyWork(store: PayloadStore) {
             compact.set(event.item.id, item);
           }
         }
-        if (item) event.item = { ...event.item, proposal: item.proposal };
+        if (item && item.proposal.type === 'architecture')
+          event.item = {
+            ...event.item,
+            proposal: architecturePresentation(item.proposal, item.proposal.contentRef ?? item.id),
+          };
       }
       timeline.apply(event);
       seq++;
@@ -61,7 +70,7 @@ export function historyWork(store: PayloadStore) {
     const segments = await replayHistory(path, startedAt, agent, attachments.context(), emit);
     const snapshot = { timeline: timeline.state, seq, segments };
     const after = await stat(path);
-    if (`v2:${agent}:${after.size}:${after.mtimeMs}:${after.ctimeMs}` === fingerprint)
+    if (`v3:${agent}:${after.size}:${after.mtimeMs}:${after.ctimeMs}` === fingerprint)
       store.db
         .prepare(
           `INSERT INTO histories VALUES (?, ?, ?)

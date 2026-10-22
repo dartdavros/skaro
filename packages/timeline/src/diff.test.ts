@@ -2,8 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { diffExcerpt, diffStats, lineDiff } from './diff.ts';
 import { feedRows, withoutSkaroNote, withSkaroNote } from './feed.ts';
 import { emptyTimeline } from './state.ts';
+import { compareText } from './diff.ts';
+import { readFile } from 'node:fs/promises';
 
 describe('lineDiff', () => {
+  it('compares distant edits in the real C4 documentation without replacing the middle', async () => {
+    const text = await readFile(new URL('../../../docs/c4.md', import.meta.url), 'utf8');
+    const before = Array.from({ length: 20 }, () => text).join('\n');
+    const lines = before.split('\n');
+    lines[1] += ' ';
+    lines[lines.length - 2] += ' ';
+    const after = lines.join('\n');
+    expect(diffStats(lineDiff(before, after))).toEqual({ added: 2, removed: 2 });
+    expect(compareText(before, after)).toMatchObject({ status: 'exact', added: 2, removed: 2 });
+  });
   it('keeps common lines and marks added and removed ones', () => {
     const lines = lineDiff('# A\n## Каталог\nold\n', '# A\n## Платежи\nnew\n## Каталог\n');
     expect(lines).toEqual([

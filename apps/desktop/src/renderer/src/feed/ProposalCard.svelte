@@ -2,6 +2,7 @@
   import type { FeedRow } from '@skaro/timeline';
   import { onDestroy } from 'svelte';
   import { ProposalState } from './proposal-state.svelte';
+  import ArchitectureProposal from './ArchitectureProposal.svelte';
   import ProposalSummary from './ProposalSummary.svelte';
   import ProposalDocument from './ProposalDocument.svelte';
   import ProposalAdr from './ProposalAdr.svelte';
@@ -28,7 +29,11 @@
 </script>
 
 <div class="proposal" id="proposal-{model.item.id}" bind:this={root}>
-  {#if model.summaryLine}<ProposalSummary state={model} />{:else if model.diff}<ProposalDocument
+  {#if model.proposal.type === 'architecture'}<ArchitectureProposal
+      state={model}
+    />{:else if model.summaryLine}<ProposalSummary
+      state={model}
+    />{:else if model.diff}<ProposalDocument
       state={model}
     />{:else if model.proposal.type === 'adr' || model.proposal.type === 'spec'}<ProposalAdr
       state={model}

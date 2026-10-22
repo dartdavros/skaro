@@ -11,5 +11,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "diff": "8.0.2"
   }
 }

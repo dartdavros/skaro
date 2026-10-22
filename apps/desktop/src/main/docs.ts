@@ -52,6 +52,12 @@ export class Docs {
     if (!(await context.documentEntry({ path }))) throw new Error(`unknown document ${path}`);
     return context.readDocument(path);
   }
+  async document(projectId: string, path: string) {
+    const context = this.deps.projects.get(projectId);
+    this.inner(path);
+    if (!(await context.documentEntry({ path }))) throw new Error(`unknown document ${path}`);
+    return context.readDocumentSnapshot(path);
+  }
 
   async write(projectId: string, path: string, text: string): Promise<void> {
     const context = this.deps.projects.get(projectId);

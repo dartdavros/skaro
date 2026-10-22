@@ -1,4 +1,4 @@
-import { diffExcerpt, diffStats, lineDiff, type FeedRow } from '@skaro/timeline';
+import { diffPreview, type FeedRow } from '@skaro/timeline';
 import { t, tn } from '@skaro/ui';
 import type { ProposalAction } from '../../../shared/ipc';
 import { useFeed } from './context.svelte';
@@ -6,7 +6,6 @@ import { proposalSummary } from './proposal-summary';
 import { togglePlanTask } from './plan-selection';
 import { SvelteSet } from 'svelte/reactivity';
 import { replanCanDecide, type ReplanOperation } from './proposal-replan';
-const MAX_LINES = 12;
 export class ProposalState {
   private readonly getRow: () => Extract<FeedRow, { type: 'proposal' }>;
   constructor(getRow: () => Extract<FeedRow, { type: 'proposal' }>) {
@@ -39,36 +38,14 @@ export class ProposalState {
   adrTitle = $state('');
   adrBody = $state('');
   diff = $derived.by(() => {
-    if (this.proposal.type === 'architecture' && this.proposal.preview) {
-      const preview = this.proposal.preview;
-      return {
-        stats: { added: preview.added, removed: preview.removed },
-        lines: preview.lines
-          .slice(0, MAX_LINES)
-          .map((l) => ('gap' in l ? { gap: true, op: ' ', text: '' } : { gap: false, ...l })),
-        more: preview.lines.length > MAX_LINES,
-      };
-    }
     if (
       this.proposal.type !== 'doc' &&
       this.proposal.type !== 'task' &&
       this.proposal.type !== 'task_replan' &&
-      this.proposal.type !== 'architecture' &&
       this.proposal.type !== 'spec_change'
     )
       return undefined;
-    const lines = lineDiff(this.proposal.before ?? '', this.proposal.after);
-    // Blank lines carry nothing on a card; the viewer shows the whole text.
-    const excerpt = diffExcerpt(lines, 1)
-      .map((l) =>
-        'op' in l ? { gap: false, op: l.op, text: l.text } : { gap: true, op: ' ', text: '' },
-      )
-      .filter((l) => l.gap || l.text.trim() !== '');
-    return {
-      stats: diffStats(lines),
-      lines: excerpt.slice(0, MAX_LINES),
-      more: excerpt.length > MAX_LINES,
-    };
+    return diffPreview(this.proposal.before ?? '', this.proposal.after);
   });
   plan = $derived(this.proposal.type === 'plan' ? this.proposal : undefined);
   accepted = $derived(this.item.state === 'accepted');

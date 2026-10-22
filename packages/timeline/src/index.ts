@@ -15,6 +15,7 @@ export * from './feed.ts';
 export * from './feed-groups.ts';
 export * from './feed-action-summary.ts';
 export * from './diff.ts';
+export { architecturePresentation } from './architecture-proposal.ts';
 export * from './async-question.ts';
 export * from './unknown-shape.ts';
 export { assertQuestionsAnswered, validateQuestionAnswer } from './question-barrier.ts';

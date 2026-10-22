@@ -21,6 +21,7 @@ export interface C4Handlers {
   context(scope: SkaroScope): Promise<ToolResult>;
   propose(args: ProposeC4Args, scope: SkaroScope): Promise<ToolResult>;
   review(args: ReviewC4Args, scope: SkaroScope): Promise<ToolResult>;
+  migrate?(scope: SkaroScope): Promise<ToolResult>;
 }
 
 export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
@@ -56,6 +57,17 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
     return value as string[];
   };
   return [
+    {
+      name: 'migrate_c4_documents',
+      available: (scope) => scope.kind === 'project_chat' && !scope.importId && !!handlers.migrate,
+      description:
+        'Prepare an owner-reviewed format-only package removing legacy embedded C4 copies from Markdown documents. Preserves authored content, architecture and requirement coverage. No files change before acceptance. Resolve all pending architecture packages first. Run only when the owner requests this migration.',
+      inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      call: call(
+        () => undefined,
+        (_args, scope) => handlers.migrate!(scope),
+      ),
+    },
     {
       name: 'get_c4_context',
       available,
