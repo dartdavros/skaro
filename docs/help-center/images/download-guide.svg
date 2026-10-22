@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
+  <title id="title">Choose the Skaro download for your computer</title>
+  <desc id="desc">Windows uses EXE, macOS uses DMG, and Linux uses AppImage. All provide x64 and arm64 downloads. Apple Silicon uses arm64; Intel Macs use x64.</desc>
+  <rect width="1200" height="400" rx="20" fill="#171717"/>
+  <g font-family="Arial, sans-serif" fill="#f3f3f3">
+    <text x="48" y="58" font-size="28" font-weight="700">Choose your OS, then your processor</text>
+    <text x="48" y="91" font-size="17" fill="#b5b5b5">Download the installer from github.com/dartdavros/skaro/releases</text>
+    <g fill="#242424" stroke="#404040"><rect x="48" y="125" width="350" height="218" rx="12"/><rect x="425" y="125" width="350" height="218" rx="12"/><rect x="802" y="125" width="350" height="218" rx="12"/></g>
+    <text x="72" y="168" font-size="25" font-weight="700">Windows</text>
+    <text x="72" y="201" font-size="18" fill="#b5b5b5">EXE installer</text>
+    <text x="72" y="249" font-size="18">x64 → x64-based processor</text>
+    <text x="72" y="284" font-size="18">arm64 → ARM-based processor</text>
+    <text x="449" y="168" font-size="25" font-weight="700">macOS</text>
+    <text x="449" y="201" font-size="18" fill="#b5b5b5">DMG disk image</text>
+    <text x="449" y="249" font-size="18">x64 → Intel</text>
+    <text x="449" y="284" font-size="18">arm64 → Apple Silicon</text>
+    <text x="826" y="168" font-size="25" font-weight="700">Linux</text>
+    <text x="826" y="201" font-size="18" fill="#b5b5b5">AppImage executable</text>
+    <text x="826" y="249" font-size="18">x64 → x86_64</text>
+    <text x="826" y="284" font-size="18">arm64 → aarch64 / arm64</text>
+    <text x="48" y="375" font-size="16" fill="#b5b5b5">Source-code archives are not application installers.</text>
+  </g>
+</svg>

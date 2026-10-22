@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc">
+  <title id="title">Separate worktrees for independent tasks</title>
+  <desc id="desc">The base branch provides two task worktrees. Each task has a working folder and branch. Accepted results merge back one task at a time. Shared databases and ports are not isolated by Git.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#a6a6a6" stroke-width="1.5"/></marker></defs>
+  <rect width="1200" height="440" rx="20" fill="#171717"/>
+  <g font-family="Arial, sans-serif" fill="#f3f3f3">
+    <text x="42" y="54" font-size="28" font-weight="700">Independent tasks, separate working copies</text>
+    <g fill="#242424" stroke="#404040"><rect x="42" y="157" width="270" height="116" rx="12"/><rect x="445" y="106" width="310" height="100" rx="12"/><rect x="445" y="248" width="310" height="100" rx="12"/><rect x="891" y="157" width="267" height="116" rx="12"/></g>
+    <g font-size="22" font-weight="700"><text x="66" y="202">Base branch</text><text x="469" y="145">Task A</text><text x="469" y="287">Task B</text><text x="915" y="202">Updated base</text></g>
+    <g font-size="17" fill="#b5b5b5"><text x="66" y="236">Your main working folder</text><text x="469" y="178">Own worktree + branch</text><text x="469" y="320">Own worktree + branch</text><text x="915" y="236">Merge one task at a time</text></g>
+    <g fill="none" stroke="#a6a6a6" stroke-width="2" marker-end="url(#arrow)"><path d="M312 195H370V156H433"/><path d="M312 235H370V298H433"/><path d="M755 156H821V195H879"/><path d="M755 298H821V235H879"/></g>
+    <text x="42" y="391" font-size="17">A worktree separates Git files, not external databases, ports, provider quota or security permissions.</text>
+    <text x="42" y="418" font-size="16" fill="#b5b5b5">Use the project's real environment setup for each task. Merge only after the required checks and dependencies.</text>
+  </g>
+</svg>
