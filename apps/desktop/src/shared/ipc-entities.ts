@@ -183,6 +183,8 @@ export interface ImportReviewItem {
 }
 
 export interface ImportReview {
+  /** One model snapshot shared by all staged documents. */
+  c4?: { model: import('@skaro/core/c4-view').C4Model; views: Record<string, string[]> };
   items: ImportReviewItem[];
   /** Numbers new milestones get, by key: "M04". */
   milestones: Record<string, string>;

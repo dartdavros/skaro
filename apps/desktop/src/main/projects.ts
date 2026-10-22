@@ -90,6 +90,18 @@ export class ProjectContext {
       ? background(this.dataDir, 'artifacts.read', this.root, path.slice('.skaro/'.length))
       : parseMarkdown(await readFile(join(this.root, path), 'utf8')).body;
   }
+  readDocumentSnapshot(path: string) {
+    if (this.dataDir)
+      return background(
+        this.dataDir,
+        'artifacts.document',
+        this.root,
+        path.slice('.skaro/'.length),
+      );
+    return import('@skaro/core').then(({ readC4DocumentSnapshot }) =>
+      readC4DocumentSnapshot(this.root, path.slice('.skaro/'.length)),
+    );
+  }
 
   invalidate(paths?: string[]): void {
     this.memory.forget(`${this.id}:full`);

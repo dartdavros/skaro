@@ -1,3 +1,4 @@
+import type { C4ReviewMethods } from '../../shared/c4-review';
 import type { ChatCatalogMethods } from '../../shared/chat-catalog';
 import type { C4Package, ConfigDefaults } from '@skaro/core';
 import type { TimelineState, TimelineEvent, Item } from '@skaro/timeline';
@@ -7,7 +8,10 @@ import type { C4ProposalRecord } from '../c4-service';
 
 export type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 export interface BackgroundMethods
-  extends ReturnType<typeof import('./task-catalog-work').taskCatalogWork>, ChatCatalogMethods {
+  extends
+    ReturnType<typeof import('./task-catalog-work').taskCatalogWork>,
+    ChatCatalogMethods,
+    C4ReviewMethods {
   'registry.session': (
     key: string,
     view:
@@ -102,6 +106,10 @@ export interface BackgroundMethods
     checkout: string,
   ) => Promise<ToolResult>;
   'artifacts.read': (root: string, path: string) => Promise<string>;
+  'artifacts.document': (
+    root: string,
+    path: string,
+  ) => Promise<import('@skaro/core').C4DocumentSnapshot>;
   'c4.list': (projectId: string, ownerId?: string) => C4ProposalRecord[];
   'c4.package': (projectId: string, itemId: string) => C4Package;
   'c4.save': (record: C4ProposalRecord) => void;
@@ -110,6 +118,11 @@ export interface BackgroundMethods
     args: ProposeC4Args & { locale: string; codeRoot: string },
     scope: SkaroScope,
   ) => Promise<C4ProposalRecord>;
+  'c4.prepareMigration': (
+    root: string,
+    locale: string,
+    scope: SkaroScope,
+  ) => Promise<C4ProposalRecord | undefined>;
   'c4.apply': (root: string, projectId: string, itemId: string) => Promise<void>;
   'c4.status': (root: string, projectId: string, itemId: string) => Promise<string>;
   'c4.content': (projectId: string, itemId: string, side: 'before' | 'after') => string;

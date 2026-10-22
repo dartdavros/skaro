@@ -4,7 +4,7 @@ import { C4_MODEL_PATH } from './model.ts';
 import { readC4Model } from './shape.ts';
 import { validateC4Model } from './validate.ts';
 import { C4_DOCUMENT_PATH, c4BodyHash, validateC4Documents } from './documents.ts';
-import { projectC4Document } from './render.ts';
+import { authoredBody } from './render.ts';
 import { readC4Documents, validateC4Code } from './project.ts';
 import { readC4File, withC4Lock } from './io.ts';
 import { recoverC4Transaction } from './transaction.ts';
@@ -44,7 +44,7 @@ export async function prepareC4Package(root: string, args: PrepareC4Package): Pr
         throw new Error(`C4: invalid document path ${doc.path}`);
       if (changed.has(doc.path)) throw new Error(`C4: duplicate document ${doc.path}`);
       changed.add(doc.path);
-      after.set(doc.path, doc.content.trimEnd() + '\n');
+      after.set(doc.path, authoredBody(doc.content) + '\n');
     }
     if (!after.has('architecture.md'))
       throw new Error('C4: architecture.md is required in the first package');
@@ -101,20 +101,6 @@ export async function prepareC4Package(root: string, args: PrepareC4Package): Pr
           );
     }
     if (problems.length) throw new Error(problems.join('\n'));
-    after.set(
-      'architecture.md',
-      projectC4Document(
-        after.get('architecture.md')!,
-        model,
-        model.views.map((v) => v.id),
-        args.locale,
-      ),
-    );
-    for (const spec of model.specifications)
-      after.set(
-        spec.path,
-        projectC4Document(after.get(spec.path)!, model, spec.views, args.locale),
-      );
     const files = [...after]
       .filter(([path, content]) => before.get(path) !== content)
       .map(([path, content]) => ({ path, before: before.get(path) ?? null, after: content }));

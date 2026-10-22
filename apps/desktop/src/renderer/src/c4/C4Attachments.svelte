@@ -3,11 +3,15 @@
   import { readC4Model, validateC4Model, type C4Model } from '@skaro/core/c4-view';
   import C4Preview from './C4Preview.svelte';
   import C4Viewer from './C4Viewer.svelte';
-  let { source }: { source: string } = $props();
+  let {
+    source,
+    attachment,
+  }: { source?: string; attachment?: { model: C4Model; views: string[] } } = $props();
   let opened = $state<string>();
   const parsed = $derived.by((): { model?: C4Model; views: string[]; error?: string } => {
     try {
-      const payload = JSON.parse(source) as { model: unknown; views: unknown };
+      const payload =
+        attachment ?? (JSON.parse(source ?? '') as { model: unknown; views: unknown });
       const model = readC4Model(payload.model);
       const errors = validateC4Model(model);
       if (errors.length) throw new Error(errors.join('\n'));

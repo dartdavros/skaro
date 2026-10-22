@@ -7,7 +7,7 @@ export function authoredBody(body: string): string {
   return body.replace(/\n?<!-- skaro:c4:start -->[\s\S]*?<!-- skaro:c4:end -->\n?/g, '').trimEnd();
 }
 
-/** Portable structured attachment. Both document and proposal use the same native C4 UI. */
+/** Legacy self-contained export only. Persisted sources and package reviews never embed a model. */
 export function c4Section(model: C4Model, views: string[], locale: string): string {
   const ru = locale === 'ru';
   return [

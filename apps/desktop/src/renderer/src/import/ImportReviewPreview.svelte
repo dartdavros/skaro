@@ -2,6 +2,8 @@
   import { Icon, t } from '@skaro/ui';
   import type { ImportReviewState } from './import-review-state.svelte';
   import { blocks, sourceLabel } from './import-review-format';
+  import C4DocumentSection from '../c4/C4DocumentSection.svelte';
+  import '../feed/architecture-review-i18n';
   let { state }: { state: ImportReviewState } = $props();
   const current = $derived(state.current);
   const diff = $derived(state.diff);
@@ -32,13 +34,14 @@
                       : current.title,
             })}</span
           >
-          <span class="stats"
-            ><span class="add">+{diff.stats.added}</span><span class="del"
-              >−{diff.stats.removed}</span
-            ></span
-          >
+          {#if diff.stats}<span class="stats"
+              ><span class="add">+{diff.stats.added}</span><span class="del"
+                >−{diff.stats.removed}</span
+              ></span
+            >{/if}
         </div>
         <div class="diff-lines">
+          {#if diff.unavailable}<span class="ctx">{t('c4.review.unavailable')}</span>{/if}
           {#each diff.lines as line, i (i)}
             <span
               class:add={line.op === '+'}
@@ -47,6 +50,7 @@
               >{line.op === ' ' ? ' ' : line.op === '-' ? '−' : '+'} {line.text}</span
             >
           {/each}
+          {#if diff.more}<span class="ctx">⋯</span>{/if}
         </div>
       </div>
     {:else if current.type === 'milestone' || current.type === 'task'}
@@ -67,6 +71,7 @@
         {/each}
       </div>
     {/if}
+    {#if state.attachment}<C4DocumentSection attachment={state.attachment} />{/if}
     <div class="sources">
       <span class="sk-label">{t('import.review.sources')}</span>
       {#each current.sources as source (source)}

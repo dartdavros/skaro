@@ -1,5 +1,6 @@
 import type { HistoryBlock, HistoryPage, HistorySource } from '../../shared/history';
 import type { PayloadStore } from './payload-store';
+import { architecturePresentation } from '@skaro/timeline';
 
 /** Nested ranges inherit the same content version without rewriting stored rows. */
 export function readHistoryPage(
@@ -18,6 +19,14 @@ export function readHistoryPage(
     .all(source.owner, source.key, start, start + limit)
     .map((row) => {
       const block = JSON.parse(String(row['value'])) as HistoryBlock;
+      if (
+        block.type === 'row' &&
+        block.row.type === 'proposal' &&
+        block.row.item.proposal.type === 'architecture'
+      ) {
+        const p = block.row.item.proposal;
+        block.row.item.proposal = architecturePresentation(p, p.contentRef ?? block.row.item.id);
+      }
       const inherit = (nested: HistorySource) =>
         Object.assign(nested, {
           revision: source.revision,

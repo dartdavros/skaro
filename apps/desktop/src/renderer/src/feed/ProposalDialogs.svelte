@@ -1,16 +1,25 @@
 <script lang="ts">
   import { Button, Modal, TextField, t } from '@skaro/ui';
   import type { ProposalState } from './proposal-state.svelte';
+  import ArchitectureReview from './ArchitectureReview.svelte';
   import ProposalContent from './ProposalContent.svelte';
   let { state }: { state: ProposalState } = $props();
   const proposal = $derived(state.proposal);
 </script>
 
-{#if proposal.type === 'doc' || proposal.type === 'task' || proposal.type === 'spec_change' || proposal.type === 'task_replan' || proposal.type === 'architecture'}
+{#if proposal.type === 'architecture' && state.viewer}
+  <ArchitectureReview
+    itemId={state.item.id}
+    title={proposal.title}
+    onclose={() => (state.viewer = false)}
+  />
+{/if}
+
+{#if proposal.type === 'doc' || proposal.type === 'task' || proposal.type === 'spec_change' || proposal.type === 'task_replan'}
   <Modal
     bind:open={state.viewer}
     width={760}
-    title={proposal.type === 'task_replan' || proposal.type === 'architecture'
+    title={proposal.type === 'task_replan'
       ? proposal.title
       : proposal.type === 'doc'
         ? proposal.path

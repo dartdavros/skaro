@@ -57,6 +57,7 @@ export async function createServices(
     version: app.getVersion(),
     tools: [
       ...c4Tools({
+        migrate: (scope) => c4.migrate(scope),
         context: (scope) =>
           scope.kind === 'task' ? runs.c4Tool(scope, () => c4.context(scope)) : c4.context(scope),
         propose: (args, scope) =>

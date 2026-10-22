@@ -18,6 +18,7 @@
     editing = false,
     header,
     empty,
+    attachment,
     onlink,
   }: {
     blocks?: Block[];
@@ -28,6 +29,7 @@
     editing?: boolean;
     header?: Snippet;
     empty?: Snippet;
+    attachment?: Snippet;
     onlink: (href: string) => void;
   } = $props();
 
@@ -75,6 +77,7 @@
         <article data-doc-page>
           {@render header?.()}
           <DocArticle bind:this={article} {blocks} {projection} {copyText} {onlink} />
+          {@render attachment?.()}
           {#if editing && !(projection?.view?.count ?? blocks.length)}<span
               data-doc-page
               class="blank">{t('docs.blank')}</span

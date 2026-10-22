@@ -198,7 +198,13 @@ export function createTaskController(
       guard(() => {
         if (action.action === 'revert')
           throw new Error('C4 packages require a new reverse proposal.');
-        return window.skaro.invoke('c4.decide', projectId, itemId, action.action);
+        return window.skaro.invoke(
+          'c4.decide',
+          projectId,
+          itemId,
+          action.action,
+          action.action === 'apply' ? action.fingerprint : undefined,
+        );
       }),
     merge: (id: string, action: MergeAction) =>
       window.skaro.invoke('task.merge', projectId, taskId, id, action),

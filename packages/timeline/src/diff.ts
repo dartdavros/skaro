@@ -1,30 +1,40 @@
-// Line diff for proposal cards (a document or a task before and after). Pure, no dependencies.
+import { diffArrays, structuredPatch, formatPatch } from 'diff';
 
 export interface DiffLine {
   op: '+' | '-' | ' ';
   text: string;
 }
 
-/** Above this many cells the middle part is shown as removed and added whole. */
-const MAX_CELLS = 4_000_000;
+export type TextComparison =
+  { status: 'exact'; added: number; removed: number; patch: string } | { status: 'unavailable' };
+
+/** A resource limit is an unavailable comparison, never a fabricated replacement. */
+export function compareText(before: string, after: string): TextComparison {
+  const patch = structuredPatch('before', 'after', before, after, undefined, undefined, {
+    context: 3,
+    timeout: 2000,
+  });
+  if (!patch) return { status: 'unavailable' };
+  let added = 0,
+    removed = 0;
+  for (const hunk of patch.hunks)
+    for (const line of hunk.lines) {
+      if (line.startsWith('+')) added++;
+      if (line.startsWith('-')) removed++;
+    }
+  return { status: 'exact', added, removed, patch: formatPatch(patch) };
+}
 
 /** Lines of `after` against `before`: kept, removed and added, in order. */
 export function lineDiff(before: string, after: string): DiffLine[] {
-  const a = splitLines(before);
-  const b = splitLines(after);
-  let start = 0;
-  while (start < a.length && start < b.length && a[start] === b[start]) start++;
-  let endA = a.length;
-  let endB = b.length;
-  while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) {
-    endA--;
-    endB--;
-  }
-  const head = a.slice(0, start).map((text): DiffLine => ({ op: ' ', text }));
-  const tail = a.slice(endA).map((text): DiffLine => ({ op: ' ', text }));
-  const midA = a.slice(start, endA);
-  const midB = b.slice(start, endB);
-  return [...head, ...middle(midA, midB), ...tail];
+  const changes = diffArrays(splitLines(before), splitLines(after), { timeout: 2000 });
+  if (!changes) throw new Error('Text comparison exceeded its resource budget');
+  return changes.flatMap((change) =>
+    change.value.map((text): DiffLine => ({
+      op: change.added ? '+' : change.removed ? '-' : ' ',
+      text,
+    })),
+  );
 }
 
 export function diffStats(lines: DiffLine[]): { added: number; removed: number } {
@@ -35,6 +45,31 @@ export function diffStats(lines: DiffLine[]): { added: number; removed: number }
     else if (line.op === '-') removed++;
   }
   return { added, removed };
+}
+
+/** A presentation budget bounds both lines and characters; full source stays in the viewer. */
+export function diffPreview(before: string, after: string) {
+  try {
+    const lines = lineDiff(before, after);
+    const excerpt = diffExcerpt(lines, 1).filter((l) => !('text' in l) || l.text.trim() !== '');
+    let remaining = 1800;
+    let truncated = false;
+    const shown = excerpt.slice(0, 12).map((l) => {
+      if (!('text' in l)) return { gap: true, op: ' ' as const, text: '' };
+      const text = l.text.slice(0, Math.min(240, remaining));
+      remaining -= text.length;
+      truncated ||= text.length !== l.text.length;
+      return { gap: false, op: l.op, text: text + (text.length < l.text.length ? '…' : '') };
+    });
+    return {
+      stats: diffStats(lines),
+      lines: shown,
+      more: truncated || excerpt.length > 12,
+      unavailable: false,
+    };
+  } catch {
+    return { stats: undefined, lines: [], more: false, unavailable: true };
+  }
 }
 
 /**
@@ -71,47 +106,4 @@ function splitLines(text: string): string[] {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   if (lines.at(-1) === '') lines.pop();
   return lines;
-}
-
-/** Longest common subsequence of the lines that differ. */
-function middle(a: string[], b: string[]): DiffLine[] {
-  if (!a.length) return b.map((text) => ({ op: '+', text }));
-  if (!b.length) return a.map((text) => ({ op: '-', text }));
-  if (a.length * b.length > MAX_CELLS) {
-    return [
-      ...a.map((text): DiffLine => ({ op: '-', text })),
-      ...b.map((text): DiffLine => ({ op: '+', text })),
-    ];
-  }
-  const n = a.length;
-  const m = b.length;
-  // lcs[i][j] = LCS length of a[i..] and b[j..], stored row by row.
-  const lcs = new Uint32Array((n + 1) * (m + 1));
-  for (let i = n - 1; i >= 0; i--) {
-    for (let j = m - 1; j >= 0; j--) {
-      lcs[i * (m + 1) + j] =
-        a[i] === b[j]
-          ? lcs[(i + 1) * (m + 1) + j + 1]! + 1
-          : Math.max(lcs[(i + 1) * (m + 1) + j]!, lcs[i * (m + 1) + j + 1]!);
-    }
-  }
-  const out: DiffLine[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < n && j < m) {
-    if (a[i] === b[j]) {
-      out.push({ op: ' ', text: a[i]! });
-      i++;
-      j++;
-    } else if (lcs[(i + 1) * (m + 1) + j]! >= lcs[i * (m + 1) + j + 1]!) {
-      out.push({ op: '-', text: a[i]! });
-      i++;
-    } else {
-      out.push({ op: '+', text: b[j]! });
-      j++;
-    }
-  }
-  while (i < n) out.push({ op: '-', text: a[i++]! });
-  while (j < m) out.push({ op: '+', text: b[j++]! });
-  return out;
 }

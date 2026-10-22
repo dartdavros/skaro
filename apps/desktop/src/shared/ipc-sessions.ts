@@ -158,6 +158,8 @@ export interface ChatView {
 export type ProposalAction =
   | {
       action: 'apply';
+      /** Exact immutable architecture package inspected by the owner. */
+      fingerprint?: string;
       /** Plan: refs of the tasks to create. */
       tasks?: string[];
       /** ADR: the text after "Изменить". */

@@ -1,4 +1,4 @@
-import { diffExcerpt, diffStats, lineDiff } from '@skaro/timeline';
+import { diffPreview } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 import { SvelteMap } from 'svelte/reactivity';
 import type { ImportReview, ImportReviewItem } from '../../../shared/ipc';
@@ -49,6 +49,11 @@ export class ImportReviewState {
   on = (key: string) => !this.off[key];
   picked = $derived(this.items.filter((i) => this.on(i.key)));
   current = $derived(this.items.find((i) => i.key === this.selected));
+  attachment = $derived(
+    this.current && this.review?.c4?.views[this.current.key]?.length
+      ? { model: this.review.c4.model, views: this.review.c4.views[this.current.key]! }
+      : undefined,
+  );
   core = $derived(this.items.filter((i) => i.type === 'brief' || i.type === 'architecture'));
   milestones = $derived(this.items.filter((i) => i.type === 'milestone'));
   tasks = $derived(this.items.filter((i) => i.type === 'task'));
@@ -59,13 +64,7 @@ export class ImportReviewState {
   );
   diff = $derived.by(() => {
     if (!this.current?.update || this.current.before === undefined) return undefined;
-    const lines = lineDiff(this.current.before, this.current.body);
-    return {
-      stats: diffStats(lines),
-      lines: diffExcerpt(lines, 1)
-        .map((l) => ('op' in l ? { op: l.op, text: l.text } : { op: ' ', text: '⋯' }))
-        .filter((l) => l.text.trim() !== ''),
-    };
+    return diffPreview(this.current.before, this.current.body);
   });
   set(keys: string[], value: boolean): void {
     const next = { ...this.off };

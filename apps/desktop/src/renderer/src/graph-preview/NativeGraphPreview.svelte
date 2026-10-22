@@ -14,11 +14,10 @@
   let error = $state('');
   onMount(() => {
     void window.skaro
-      .invoke('docs.read', projectId, '.skaro/architecture.md')
+      .invoke('graph.model', projectId)
       .then((source) => {
-        const payload = /```skaro-c4\s*\n([\s\S]*?)\n```/.exec(source);
-        if (!payload) throw new Error('The architecture has no accepted C4 projection.');
-        const parsed = readC4Model(JSON.parse(payload[1]!).model);
+        if (!source) throw new Error('The project has no accepted C4 model.');
+        const parsed = readC4Model(source);
         const errors = validateC4Model(parsed);
         if (errors.length) throw new Error(errors.join('; '));
         model = parsed;
