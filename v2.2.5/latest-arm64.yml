@@ -1,0 +1,5 @@
+version: 2.2.5
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.5/Skaro-2.2.5-win-arm64.exe
+    sha512: 5UKELB+RKhnLmSmeroztQ/kKN5vzkxqzc01cnAkUS2fjhoUqvGY1s2wQXfHKEug9u7NQAoQas+0o+zJ0OCxt2g==
+    size: 117542266
