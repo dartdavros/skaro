@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { i18n, Segmented, setLocale, t, type Locale } from '@skaro/ui';
+  import { i18n, Segmented, setLocale, t, Toggle, type Locale } from '@skaro/ui';
+  import { CLOSE_TO_TRAY_DEFAULT, CLOSE_TO_TRAY_SETTING } from '../../../shared/app-shell';
   import Row from './Row.svelte';
   import Section from './Section.svelte';
   import { applyFeedFont, Setting } from './setting.svelte';
 
   /** "Внешний вид": the interface language and the font of the agent feed. */
   const font = new Setting<string>('ui.feedFont', 'normal');
+  const closeToTray = new Setting<boolean>(CLOSE_TO_TRAY_SETTING, CLOSE_TO_TRAY_DEFAULT);
 
   function setLanguage(locale: Locale): void {
     if (locale === i18n.locale) return;
@@ -39,6 +41,12 @@
         { value: 'normal', label: t('settings.font.normal') },
         { value: 'large', label: t('settings.font.large') },
       ]}
+    />
+  </Row>
+  <Row tall title={t('settings.closeToTray')}>
+    <Toggle
+      ariaLabel={t('settings.closeToTray')}
+      bind:checked={() => closeToTray.value, (on) => closeToTray.set(on)}
     />
   </Row>
 </Section>

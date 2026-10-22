@@ -2,6 +2,7 @@
 // failed, or was merged. Shown only while the Skaro window is not in focus.
 
 import { BrowserWindow, Notification } from 'electron';
+import { focusWindow } from './app-window';
 
 export type NotifyKind = 'need' | 'review' | 'error' | 'merged';
 
@@ -49,12 +50,7 @@ export class Notifier {
     const sound = this.deps.setting('notify.sound') !== false;
     const words = title ?? (TEXT[this.deps.locale()] ?? TEXT['en']!)[kind];
     const notification = new Notification({ title: words, body: task, silent: !sound });
-    notification.on('click', () => {
-      const win = BrowserWindow.getAllWindows()[0];
-      if (!win) return;
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    });
+    notification.on('click', focusWindow);
     notification.show();
   }
 }

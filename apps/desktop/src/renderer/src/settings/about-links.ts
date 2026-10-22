@@ -1,5 +1,7 @@
+import { HELP_CENTER_URL } from '../../../shared/app-shell';
+
 export const ABOUT_LINKS = {
-  help: 'https://help.skaro.dev/',
+  help: HELP_CENTER_URL,
   site: 'https://skaro.dev',
   issues: 'https://github.com/dartdavros/skaro/issues',
   author: 'https://ermolaev.tech',

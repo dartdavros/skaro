@@ -3,6 +3,15 @@ import type { TaskRuntime } from '../status.ts';
 import { type Row, opt } from './rows.ts';
 
 export class DbRuntime extends DbTable {
+  counts(): Record<TaskRuntime, number> {
+    const counts = { idle: 0, queued: 0, running: 0, waiting: 0, failed: 0 };
+    const rows = this.db
+      .prepare('SELECT state, COUNT(*) AS count FROM task_runtime GROUP BY state')
+      .all();
+    for (const row of rows) counts[row['state'] as TaskRuntime] = Number(row['count']);
+    return counts;
+  }
+
   // ── runtime task state ───────────────────────────────────────────────────
 
   setTaskRuntime(projectId: string, taskId: string, state: TaskRuntime, runId?: string): void {
