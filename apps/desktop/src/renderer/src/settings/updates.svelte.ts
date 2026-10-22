@@ -79,9 +79,3 @@ class Updates {
 }
 
 export const updates = new Updates();
-
-export const LINKS = {
-  github: 'https://github.com/dartdavros/skaro',
-  site: 'https://skaro.dev',
-  community: 'https://github.com/dartdavros/skaro/discussions',
-};

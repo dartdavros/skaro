@@ -48,9 +48,10 @@ addMessages('ru', {
   'settings.update.banner': 'Доступна версия Skaro {v}.',
   'settings.update.banner.text': 'Агенты обновятся вместе с ней.',
   'settings.update.more': 'Подробнее',
-  'settings.link.github': 'GitHub',
+  'settings.link.help': 'Центр помощи',
   'settings.link.site': 'Сайт',
-  'settings.link.community': 'Сообщество',
+  'settings.link.issues': 'Сообщить о проблеме',
+  'settings.link.author': 'Автор',
 });
 
 addMessages('en', {
@@ -100,7 +101,8 @@ addMessages('en', {
   'settings.update.banner': 'Skaro {v} is available.',
   'settings.update.banner.text': 'Agents update together with it.',
   'settings.update.more': 'Details',
-  'settings.link.github': 'GitHub',
+  'settings.link.help': 'Help center',
   'settings.link.site': 'Website',
-  'settings.link.community': 'Community',
+  'settings.link.issues': 'Report an issue',
+  'settings.link.author': 'Author',
 });
