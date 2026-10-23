@@ -12,6 +12,7 @@ import { CompletionStore } from './completion-store';
 import { acceptedResult } from './completion-results';
 import { projectCompletion } from './completion-feed';
 import { assertPublicationDependencies } from './completion-dependencies';
+import { IntegrationPending, currentIntegration } from './integration-model';
 
 /** Chat adapter. All sources of a merge use the same durable coordinator. */
 export class TaskMerges {
@@ -146,6 +147,15 @@ export class TaskMerges {
       async (): Promise<MergeInteraction | undefined> => {
         const previous = active.timeline.state.interactions.find((item) => item.kind === 'merge');
         if (refresh && (!previous || active.switching)) return undefined;
+        const integration = currentIntegration(
+          this.hooks.integrations.deps.store.all(active.projectId),
+          active.taskId,
+          ['preparing', 'resolving', 'verifying', 'ready', 'waiting', 'paused', 'failed'],
+        );
+        if (integration?.localChanges && integration.publish) {
+          closeMergeCards(active, this.hooks);
+          return undefined;
+        }
         context.invalidate();
         const artifacts = await context.load();
         const task = artifacts.tasks.find((item) => item.id === active.taskId);
@@ -190,12 +200,12 @@ export class TaskMerges {
     message: string,
   ) {
     if (active.switching) throw new Error('The agent is being changed; retry after the handoff');
-    const result = await this.coordinator.merge(
-      active.projectId,
-      active.taskId,
-      false,
-      message || undefined,
-    );
+    const result = await this.coordinator
+      .merge(active.projectId, active.taskId, false, message || undefined)
+      .catch((error: unknown) => {
+        if (error instanceof IntegrationPending) closeMergeCards(active, this.hooks);
+        throw error;
+      });
     active.merged = result;
     return result;
   }

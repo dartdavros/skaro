@@ -4,7 +4,9 @@ import { join } from 'node:path';
 import { git } from '@skaro/core';
 import { expect, it } from 'vitest';
 import { AUTO_MERGE_KEY } from '../shared/ipc';
+import { IntegrationStore } from './integration-store';
 import {
+  dir,
   repo,
   worktree,
   db,
@@ -116,18 +118,22 @@ it('returns the recorded merge after submit_result, including after restoring th
   expect(await expectMergedWithoutCard()).toBe(commit);
 }, 30_000);
 
-it('keeps a blocked automatic merge in the existing card and preserves local edits', async () => {
+it('starts a preserved local resolution for automatic merging without a blocked card', async () => {
   db.setSetting(AUTO_MERGE_KEY, true);
   await writeFile(join(repo, 'feature.txt'), 'owner edits');
   const result = await tasks.mergeTask({}, scope());
-  expect(result.text).toContain('blocked');
+  expect(result.isError).not.toBe(true);
   expect(db.listMerges(projectId, taskId)).toEqual([]);
   expect(await readFile(join(repo, 'feature.txt'), 'utf8')).toBe('owner edits');
   const card = (await tasks.open(projectId, taskId)).timeline?.interactions.find(
     (i) => i.kind === 'merge',
   );
-  expect(card?.kind === 'merge' && card.blockers).toContain('dirty_base');
-});
+  expect(card).toBeUndefined();
+  const operation = new IntegrationStore(db, dir).all(projectId).at(-1)!;
+  expect(operation.publish).toBe(true);
+  expect(operation.localChanges?.paths).toContain('feature.txt');
+  expect(operation.state).toBe('resolving');
+}, 30_000);
 
 it('does not merge incomplete criteria even in automatic mode', async () => {
   db.setSetting(AUTO_MERGE_KEY, true);

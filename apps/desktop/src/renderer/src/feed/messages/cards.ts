@@ -73,6 +73,8 @@ export const ru = {
   'card.merge.updateTip': 'Перенести ветку задачи на свежую базовую ветку',
   'card.merge.resolve': 'Разрешить конфликты с агентом',
   'card.merge.resolveTip': 'Агент перенесёт ветку и разрешит конфликты',
+  'card.merge.localResolveTip':
+    'Skaro сохранит локальные правки, совместит их через агента и продолжит слияние автоматически',
   'card.merge.blocker.dirty_base': 'Слияние затронет файлы с локальными изменениями',
   'card.merge.blocker.not_on_base': 'В основной рабочей копии выбрана не ветка {to}',
   'card.merge.blocker.no_changes': 'В ветке задачи нет изменений кода',
@@ -164,6 +166,8 @@ export const en = {
   'card.merge.updateTip': 'Rebase the task branch onto the latest base branch',
   'card.merge.resolve': 'Resolve conflicts with the agent',
   'card.merge.resolveTip': 'The agent rebases the branch and resolves the conflicts',
+  'card.merge.localResolveTip':
+    'Skaro preserves local edits, reconciles them with the agent and continues the merge automatically',
   'card.merge.blocker.dirty_base': 'The merge would overwrite local changes',
   'card.merge.blocker.not_on_base': 'The main working copy is not on {to}',
   'card.merge.blocker.no_changes': 'The task branch has no code changes',

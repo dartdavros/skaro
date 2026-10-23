@@ -1,31 +1,21 @@
-import type { ProjectCheck } from '@skaro/core';
+import { GitBaseChangedError, LocalChangesChangedError, type ProjectCheck } from '@skaro/core';
 import { CompletionMonitor } from './completion-monitor';
-import type { TaskRunDeps } from './task-run-model';
-import { CompletionStore, type CompletionOperation, type TaskResult } from './completion-store';
+import { CompletionStore, type TaskResult } from './completion-store';
 import { captureResult } from './completion-capture';
-import { acceptedResult, assertResultUnchanged } from './completion-results';
-import { publishCandidate, publishCompletion, retireCandidates } from './completion-publication';
+import { acceptedResult, assertResultUnchanged, wasReverted } from './completion-results';
+import { publishCandidate, retireCandidates } from './completion-publication';
 import { mergeMilestoneTasks } from './completion-milestone';
 import { finishCompletion } from './completion-projection';
 import { reconcileCompletions } from './completion-recovery';
 import type { ProjectContext } from './projects';
-import type { IntegrationService } from './integration-service';
-import type { IntegrationOperation } from './integration-model';
+import { IntegrationPending, type IntegrationOperation } from './integration-model';
 import { assertPublicationDependencies } from './completion-dependencies';
+import { publishWithLocalChanges } from './completion-local-publication';
+import { assertLocalIntegration } from './integration-local-changes';
+import { retryLocalIntegration } from './completion-local-retry';
 
-export interface CompletionHooks {
-  integrations: IntegrationService;
-  deps: Pick<TaskRunDeps, 'db' | 'projects' | 'emit'>;
-  busy: (projectId: string, taskId: string) => boolean;
-  completed: (
-    projectId: string,
-    operation: CompletionOperation,
-    unblocked: string[],
-  ) => Promise<void>;
-  failed: (projectId: string, taskId: string | undefined, error: string) => void;
-  /** Hands a merge conflict to the agent of the task; false when the task has no run to ask. */
-  conflicted?: (projectId: string, taskId: string, conflicts: string[]) => Promise<boolean>;
-}
+export type { CompletionHooks } from './completion-hooks';
+import type { CompletionHooks } from './completion-hooks';
 
 /** Owns execution facts and publication. It never needs a chat, agent session or timeline. */
 export class CompletionCoordinator {
@@ -127,12 +117,28 @@ export class CompletionCoordinator {
   publishCandidate(candidate: IntegrationOperation) {
     return this.serialized(candidate.projectId, async () => {
       await this.captured(candidate.projectId);
-      return this.mergeResults(
-        candidate.projectId,
-        candidate.results.map((result) => result.taskId),
-        candidate.message,
-        candidate,
-      );
+      try {
+        await assertLocalIntegration(this.hooks.deps.projects.get(candidate.projectId), candidate);
+        return await this.mergeResults(
+          candidate.projectId,
+          candidate.results.map((result) => result.taskId),
+          candidate.message,
+          candidate,
+        );
+      } catch (error) {
+        if (
+          !candidate.localChanges ||
+          !(error instanceof LocalChangesChangedError || error instanceof GitBaseChangedError)
+        )
+          throw error;
+        const next = await retryLocalIntegration(this.hooks, candidate, error);
+        return this.mergeResults(
+          next.projectId,
+          next.results.map((result) => result.taskId),
+          next.message,
+          next,
+        );
+      }
     });
   }
 
@@ -202,7 +208,7 @@ export class CompletionCoordinator {
     for (const item of tasks) results.push(await acceptedResult(this.hooks.deps.db, context, item));
     assertPublicationDependencies(artifacts, results, store);
     for (const result of results) {
-      if (this.reverted(store, result))
+      if (wasReverted(store, result))
         throw new Error(`${result.taskId}: merge was reverted; submit a revised result`);
       await assertResultUnchanged(context, result);
     }
@@ -245,7 +251,14 @@ export class CompletionCoordinator {
         this.mergingNow.set(projectId, target);
         this.hooks.deps.emit('project.changed', { projectId });
         try {
-          await publishCompletion(context, artifacts, store, operation, text);
+          await publishWithLocalChanges(
+            context,
+            artifacts,
+            store,
+            operation,
+            text,
+            this.hooks.integrations,
+          );
         } finally {
           this.mergingNow.delete(projectId);
         }
@@ -259,21 +272,15 @@ export class CompletionCoordinator {
     } catch (error) {
       // A published candidate must be projected even if a later notification failed.
       operation.error = String(error);
-      if (operation.state !== 'completed') operation.state = 'failed';
+      if (error instanceof IntegrationPending) {
+        operation.state = 'integrating';
+        operation.integrationId = error.operation.id;
+        delete operation.error;
+      } else if (operation.state !== 'completed') operation.state = 'failed';
       store.save(operation);
       this.hooks.deps.emit('project.changed', { projectId });
       throw error;
     }
-  }
-
-  private reverted(store: CompletionStore, result: TaskResult): boolean {
-    return store
-      .operations()
-      .some(
-        (op) =>
-          op.state === 'reverted' &&
-          op.results.some((item) => item.taskId === result.taskId && item.head === result.head),
-      );
   }
 
   private reconcile(context: ProjectContext): Promise<void> {

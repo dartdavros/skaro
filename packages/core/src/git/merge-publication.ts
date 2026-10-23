@@ -13,6 +13,12 @@ import {
 } from './merge-files.ts';
 import { localMergeObstacles } from './merge-safety.ts';
 import { identicalUntrackedAdditions } from './merge-identical.ts';
+import {
+  assertLocalChanges,
+  LocalChangesChangedError,
+  type LocalChangesResolution,
+} from './local-changes.ts';
+import { localPublicationFiles, prepareLocalIndex } from './local-publication.ts';
 export { captureFiles } from './merge-files.ts';
 
 /** Keep the real index locked, while read-tree carries unrelated staged and unstaged work forward. */
@@ -24,6 +30,7 @@ export async function publishMerge(
   base: string,
   managed: FileImages,
   guards: FileImages = new Map(),
+  local?: LocalChangesResolution,
 ): Promise<void> {
   const index = (
     await git(repo, ['rev-parse', '--path-format=absolute', '--git-path', 'index'])
@@ -56,17 +63,21 @@ export async function publishMerge(
       if (!sameImage(image, await fileImage(join(repo, path))))
         throw new Error(`Merge metadata changed during preparation: ${path}`);
     const obstacles = await localMergeObstacles(repo, before, commit, [...managed.keys()]);
-    if (obstacles.length)
+    if (obstacles.some((path) => !local?.snapshot.paths.includes(path)))
       throw new Error(`Local changes would be overwritten: ${obstacles.join(', ')}`);
-    const paths = (
-      await git(repo, ['diff', '--name-only', '--no-renames', '-z', before, commit])
-    ).stdout
-      .split('\0')
-      .filter(Boolean);
+    const resolved = local
+      ? await localPublicationFiles(repo, before, commit, checkout, local, managed)
+      : undefined;
+    const paths =
+      resolved?.paths ??
+      (await git(repo, ['diff', '--name-only', '--no-renames', '-z', before, commit])).stdout
+        .split('\0')
+        .filter(Boolean);
     original = await captureFiles(repo, paths);
-    planned = await captureFiles(checkout, paths);
+    planned = resolved?.planned ?? (await captureFiles(checkout, paths));
     await copyFile(index, temporaryIndex);
     await copyFile(index, join(dir, 'original-index'));
+    if (local) await prepareLocalIndex(repo, temporaryIndex, commit, paths, local, managed);
     await writeFile(
       join(dir, 'journal.json'),
       JSON.stringify({
@@ -80,26 +91,36 @@ export async function publishMerge(
       }),
     );
     // Managed metadata is explicitly part of this commit. Other .skaro files retain their staging.
-    const metadata = [...managed.keys()].filter((path) => paths.includes(path));
-    if (metadata.length)
-      await git(repo, ['restore', `--source=${commit}`, '--staged', '--', ...metadata], { env });
-    const untracked = (await git(repo, ['ls-files', '--others', '-z'])).stdout
-      .split('\0')
-      .filter((path) => paths.includes(path));
-    const identical = await identicalUntrackedAdditions(repo, before, commit, untracked);
-    // Adopt matching additions only in the private index. Their working files need no write.
-    if (identical.length)
-      await git(
-        repo,
-        ['--literal-pathspecs', 'restore', `--source=${commit}`, '--staged', '--', ...identical],
-        { env },
-      );
-    // Dry run checks Git's own index/worktree rules before touching any files.
-    // Managed files will match the staged target when the actual update runs.
-    touched = true;
-    for (const path of metadata) await putFile(join(repo, path), planned.get(path)!);
-    await git(repo, ['read-tree', '-n', '-m', '-u', before, commit], { env });
-    await git(repo, ['read-tree', '-m', '-u', before, commit], { env });
+    if (local) {
+      await assertLocalChanges(repo, local.snapshot);
+      // Check unrelated dirty paths touched by an agent's compatibility edits as well.
+      const extra = await localMergeObstacles(repo, before, local.working, [...managed.keys()]);
+      if (extra.some((path) => !local.snapshot.paths.includes(path)))
+        throw new LocalChangesChangedError(extra);
+      touched = true;
+      await restoreFiles(repo, planned, original);
+    } else {
+      const metadata = [...managed.keys()].filter((path) => paths.includes(path));
+      if (metadata.length)
+        await git(repo, ['restore', `--source=${commit}`, '--staged', '--', ...metadata], { env });
+      const untracked = (await git(repo, ['ls-files', '--others', '-z'])).stdout
+        .split('\0')
+        .filter((path) => paths.includes(path));
+      const identical = await identicalUntrackedAdditions(repo, before, commit, untracked);
+      // Adopt matching additions only in the private index. Their working files need no write.
+      if (identical.length)
+        await git(
+          repo,
+          ['--literal-pathspecs', 'restore', `--source=${commit}`, '--staged', '--', ...identical],
+          { env },
+        );
+      // Dry run checks Git's own index/worktree rules before touching any files.
+      // Managed files will match the staged target when the actual update runs.
+      touched = true;
+      for (const path of metadata) await putFile(join(repo, path), planned.get(path)!);
+      await git(repo, ['read-tree', '-n', '-m', '-u', before, commit], { env });
+      await git(repo, ['read-tree', '-m', '-u', before, commit], { env });
+    }
     await git(repo, [
       'update-ref',
       '-m',

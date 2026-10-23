@@ -15,6 +15,7 @@ export function integrationFingerprint(request: IntegrationRequest, baseHead: st
         baseHead,
         results: request.results.map((r) => [r.taskId, r.head, r.criteria, r.verification]),
         checks: request.checks,
+        localChanges: request.localChanges?.id,
       }),
     )
     .digest('hex');

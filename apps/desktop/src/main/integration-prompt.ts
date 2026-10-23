@@ -1,6 +1,7 @@
 import type { ProjectArtifacts } from '@skaro/core';
 import type { IntegrationOperation } from './integration-model';
 import { agentInteractionInstructions } from './agent-interaction-instructions';
+import { localResolutionInstructions } from './integration-local-changes';
 
 export function integrationInstructions(
   op: IntegrationOperation,
@@ -32,6 +33,7 @@ export function integrationInstructions(
       'and related code. Resolve the actual conflicts and necessary compatibility changes; never select ' +
       'one side wholesale or remove behavior to make the merge pass. Do not implement the pending task yet.',
     `Conflict paths: ${JSON.stringify(op.conflicts)}.`,
+    ...localResolutionInstructions(op),
     `Last recorded failure: ${op.error ?? 'none'}. Retained check evidence: ${JSON.stringify(op.checkRuns ?? [])}.`,
     'Stage your resolution. Skaro owns commit, merge continuation and publication: do not commit, rebase, ' +
       'reset, switch branches, merge other inputs, push, edit .skaro or change the accepted source worktrees.',

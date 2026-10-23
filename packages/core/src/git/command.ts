@@ -25,10 +25,10 @@ export class GitError extends Error {
 export function git(
   cwd: string,
   args: string[],
-  options: { allowFail?: boolean; env?: Record<string, string> } = {},
+  options: { allowFail?: boolean; env?: Record<string, string>; input?: string | Buffer } = {},
 ): Promise<GitResult> {
   return new Promise((resolve, reject) => {
-    execFile(
+    const child = execFile(
       'git',
       args,
       {
@@ -44,5 +44,7 @@ export function git(
         else resolve(result);
       },
     );
+    child.stdin?.on('error', () => undefined); // A failing Git command may close stdin early.
+    child.stdin?.end(options.input);
   });
 }
