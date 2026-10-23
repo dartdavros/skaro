@@ -17,7 +17,7 @@
   );
 </script>
 
-{#if questions.length}<div class="questions">
+{#if questions.length}<div data-pinned-zone class="questions">
     {#each questions as interaction (interaction.id)}<QuestionCard {interaction} />{/each}
   </div>{/if}
 <PinnedBackground {state} />

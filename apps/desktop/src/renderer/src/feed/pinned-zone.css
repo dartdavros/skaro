@@ -1,7 +1,31 @@
 /* Baseline scope and specificity retained across composed views. */
 
+.questions[data-pinned-zone],
 .plan[data-pinned-zone] {
-  border-radius: 10px;
+  /* The bottom area has 14px side padding; the feed has 26px. */
+  width: calc(100% - 24px);
+  max-width: 720px;
+  margin-inline: auto;
+  position: relative;
+  z-index: 0;
+}
+
+:is(.questions, .plan)[data-pinned-zone]:has(+ .composer) {
+  margin-bottom: -6px;
+}
+
+:is(.questions, .plan)[data-pinned-zone] + .composer {
+  z-index: 1;
+  box-shadow: 0 -4px 10px var(--sk-black-a12);
+}
+
+.questions[data-pinned-zone] > .question:last-child {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.plan[data-pinned-zone] {
+  border-radius: 10px 10px 0 0;
   background: var(--sk-surface);
   padding: 10px 12px;
   display: flex;
