@@ -26,9 +26,12 @@ export function integrationInstructions(
             body: task.body,
           })),
       ),
-    `Accepted base behaviors overlapping these inputs: ${JSON.stringify(op.baseResults ?? [])}. ` +
-      'Cover their requirements and regression checks too. Legacy results may lack executable checks; ' +
-      'derive those checks from the real project tests and acceptance evidence.',
+    op.purpose === 'publication'
+      ? 'This is a merge: Skaro runs the mandatory project checks and the checks you submit. Saved checks ' +
+        'of accepted results are not re-run; check the build and the behavior your resolution touches.'
+      : `Accepted base behaviors overlapping these inputs: ${JSON.stringify(op.baseResults ?? [])}. ` +
+        'Cover their requirements and regression checks too. Legacy results may lack executable checks; ' +
+        'derive those checks from the real project tests and acceptance evidence.',
     'Preserve the requirements and behavior of all input tasks and the base. Inspect Git base/ours/theirs ' +
       'and related code. Resolve the actual conflicts and necessary compatibility changes; never select ' +
       'one side wholesale or remove behavior to make the merge pass. Do not implement the pending task yet.',

@@ -51,6 +51,8 @@ export interface IntegrationOperation extends IntegrationRequest {
   verificationPlan?: ProjectCheck[];
   checkReplacements?: { replaces: string; check: ProjectCheck }[];
   shellFailureRecovered?: boolean;
+  /** A merge plan without the saved checks of accepted results (D-45). */
+  mergeChecks?: true;
   error?: string;
   verification?: { head: string; checks: ProjectCheck[]; completedAt: number };
   checkRuns?: {
