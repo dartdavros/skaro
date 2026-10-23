@@ -112,3 +112,17 @@ export async function assertResultUnchanged(
       `${result.taskId}: C4 acceptance is missing or stale; review architecture and submit the result again`,
     );
 }
+
+/** A revised accepted result is required after an explicit revert. */
+export function wasReverted(
+  store: import('./completion-store').CompletionStore,
+  result: TaskResult,
+): boolean {
+  return store
+    .operations()
+    .some(
+      (op) =>
+        op.state === 'reverted' &&
+        op.results.some((item) => item.taskId === result.taskId && item.head === result.head),
+    );
+}

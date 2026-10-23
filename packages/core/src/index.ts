@@ -8,6 +8,7 @@ export { readEnvironment } from './artifacts/environment.ts';
 export * from './status.ts';
 export * from './db/appdb.ts';
 export * from './git/git.ts';
+export * from './git/local-changes.ts';
 export * from './queue/run-queue.ts';
 export * from './agents/pins.ts';
 export * from './agents/installer.ts';

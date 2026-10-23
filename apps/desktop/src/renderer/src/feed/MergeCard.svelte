@@ -30,6 +30,10 @@
 
   const blocked = $derived(interaction.blockers.length > 0);
   const conflicts = $derived(interaction.blockers.includes('conflicts'));
+  const localBlocked = $derived(interaction.blockers.includes('dirty_base'));
+  const resolvable = $derived(
+    interaction.blockers.every((blocker) => blocker === 'conflicts' || blocker === 'dirty_base'),
+  );
   const localChanges = $derived(interaction.localChanges ?? []);
 
   async function act(action: MergeAction): Promise<void> {
@@ -143,12 +147,18 @@
         >{t(stage ? 'card.merge.stage.update' : 'card.merge.update')}</button
       >
     {/if}
-    {#if conflicts}
+    {#if conflicts || localBlocked}
       <button
         type="button"
         class="fd-btn primary"
-        data-tip={t(stage ? 'card.merge.stage.resolveTip' : 'card.merge.resolveTip')}
-        disabled={!!busy}
+        data-tip={t(
+          localBlocked
+            ? 'card.merge.localResolveTip'
+            : stage
+              ? 'card.merge.stage.resolveTip'
+              : 'card.merge.resolveTip',
+        )}
+        disabled={!!busy || !resolvable}
         onclick={() => void act({ action: 'resolve_with_agent' })}>{t('card.merge.resolve')}</button
       >
     {:else}

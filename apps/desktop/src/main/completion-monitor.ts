@@ -1,5 +1,5 @@
 import { projectRecords } from './project-records';
-import { MergeBlockedError } from '@skaro/core';
+import { MergeBlockedError, localChangesFingerprint } from '@skaro/core';
 import { AUTO_MERGE_KEY } from '../shared/ipc';
 import type { CompletionHooks } from './completion-coordinator';
 import { CompletionStore, criteriaRevision } from './completion-store';
@@ -90,13 +90,19 @@ export class CompletionMonitor {
 
   private async scan(): Promise<void> {
     try {
-      if (Date.now() - this.lastHeadCheck > 30_000) {
+      if (Date.now() - this.lastHeadCheck > 5000) {
         this.lastHeadCheck = Date.now();
         for await (const project of projectRecords(this.hooks.deps.db)) {
           if (this.closed) return;
-          const head = await this.hooks.deps.projects
-            .get(project.id)
-            .git.head()
+          const context = this.hooks.deps.projects.get(project.id);
+          const blocked = Object.values(
+            new CompletionStore(this.hooks.deps.db, project.id).issues(),
+          ).some((issue) => issue.includes('dirty_base'));
+          const head = await Promise.all([
+            context.git.head(),
+            blocked ? localChangesFingerprint(context.root) : Promise.resolve(''),
+          ])
+            .then((values) => JSON.stringify(values))
             .catch(() => '');
           if (this.closed) return;
           if (this.heads.get(project.id) !== head) this.dirty.add(project.id);
@@ -159,6 +165,7 @@ export class CompletionMonitor {
                 if (this.hooks.busy(project.id, target)) continue;
                 const fingerprint = JSON.stringify([
                   await context.git.head(artifacts.config.baseBranch),
+                  await localChangesFingerprint(context.root),
                   artifacts.config,
                   artifacts.tasks.map((task) => [
                     task.id,

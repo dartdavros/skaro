@@ -21,8 +21,7 @@ import { executeIntegration } from './integration-execution';
 import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
 import { IntegrationControls } from './integration-controls';
-import { recoverIntegrationStarts } from './integration-recovery';
-import { recoverLegacyCheckShell } from './integration-shell-recovery';
+import { recoverIntegrations } from './integration-resume';
 import { randomUUID } from 'node:crypto';
 
 /** Connects the integration protocol to task scheduling, permissions, environments and recovery. */
@@ -228,58 +227,8 @@ export class TaskIntegrations {
     }
   }
 
-  async recover(): Promise<void> {
-    if (this.closed) return;
-    for await (const project of projectRecords(this.ctx.deps.db))
-      for (const op of this.store.all(project.id)) {
-        if (this.closed) return;
-        if (this.operations.has(op.id)) continue;
-        if (['applied', 'stale'].includes(op.state) && !op.worker && !op.executor) continue;
-        try {
-          await this.ctx.processes.stop(`verification-${op.id}`);
-          if (op.worker) {
-            await this.ctx.processes.stop(op.worker);
-            op.worker = undefined;
-            this.service.save(op);
-          }
-          op.executor = undefined;
-          this.service.save(op);
-          await this.history.recover(op);
-          await this.controls.recover(op);
-          if (recoverLegacyCheckShell(op)) {
-            this.service.save(op);
-            await this.history.notice(
-              op,
-              'Skaro восстановил оболочку сохранённой проверки. Проверка кандидата продолжится автоматически.',
-            );
-          }
-          // A merge candidate from before merges went per task is not resumed: only one that
-          // is already verified is published; the tasks of the others are merged one by one.
-          if (op.purpose === 'publication' && !['ready', 'applied', 'stale'].includes(op.state)) {
-            op.state = 'stale';
-            this.service.save(op);
-            await this.history.notice(
-              op,
-              'Слияние через отдельного кандидата отменено: каждая задача вливается сама.',
-            );
-            continue;
-          }
-          if (['preparing', 'resolving', 'verifying'].includes(op.state)) this.enqueue(op);
-          if (op.state === 'ready') {
-            if (op.purpose === 'dependencies')
-              this.ctx.queue.enqueue([`${op.projectId}\n${op.taskId}`]);
-            else if (op.publish) this.enqueue(op);
-          }
-        } catch (error) {
-          op.error = errorText(error);
-          op.state = 'failed';
-          this.service.save(op);
-          this.ctx.startup.fail(op.projectId, op.taskId, op.error);
-          this.setRuntime(op, 'failed');
-          await this.history.notice(op, op.error, true);
-        }
-      }
-    await recoverIntegrationStarts(this.ctx);
+  recover(): Promise<void> {
+    return recoverIntegrations(this.ctx);
   }
 
   async close(): Promise<void> {

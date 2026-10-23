@@ -8,6 +8,7 @@ import { key } from './task-run-helpers';
 import { subjectOf, updateSubject } from './task-subject';
 import { CompletionStore } from './completion-store';
 import { stageIdOf } from './task-stage';
+import { IntegrationPending } from './integration-model';
 
 /** A task is merged on its own by Git; a conflict goes back to its agent, checkout and environment. */
 export class TaskRunMergeActions {
@@ -42,9 +43,15 @@ export class TaskRunMergeActions {
       return;
     }
     if (action.action === 'update_branch') return this.updateBranch(active, context);
-    if (action.action === 'resolve_with_agent') return this.conflicted(active, card.conflicts);
+    if (action.action === 'resolve_with_agent' && !card.blockers.includes('dirty_base'))
+      return this.conflicted(active, card.conflicts);
     try {
-      await this.confirmMerge(active, context, card, action.message);
+      await this.confirmMerge(
+        active,
+        context,
+        card,
+        action.action === 'confirm' ? action.message : (card.message ?? ''),
+      );
     } catch (error) {
       if (!(await this.handed(active, error))) throw error;
     }
@@ -109,6 +116,7 @@ export class TaskRunMergeActions {
 
   /** The base moved under the card: the conflict that appeared goes to the agent of the task. */
   private async handed(active: ActiveRun, error: unknown): Promise<boolean> {
+    if (error instanceof IntegrationPending) return true;
     if (!(error instanceof MergeBlockedError) || !error.check.blockers.includes('conflicts'))
       return false;
     await this.conflicted(active, error.check.conflicts);

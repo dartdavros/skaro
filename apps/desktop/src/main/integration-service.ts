@@ -12,6 +12,7 @@ import { affectedBaseResults } from './integration-inputs';
 import { integrationChecks, reviseIntegrationChecks } from './integration-checks';
 import { runIntegrationChecks } from './integration-check-runner';
 import type { IntegrationCheck } from '@skaro/mcp-server';
+import { integrationHeads, checkpointLocalLayers } from './integration-local-changes';
 
 export interface IntegrationDeps {
   store: IntegrationStore;
@@ -66,7 +67,11 @@ export class IntegrationService {
       }
       let op = this.deps.store
         .all(request.projectId)
-        .findLast((item) => item.fingerprint === fingerprint);
+        .findLast(
+          (item) =>
+            item.fingerprint === fingerprint &&
+            (!request.localChanges || !['stale', 'applied'].includes(item.state)),
+        );
       if (!op) {
         for (const saved of this.deps.store.all(request.projectId))
           if (
@@ -114,7 +119,7 @@ export class IntegrationService {
     await admitIntegration(this.deps.project(op.projectId), op, (op) => this.save(op));
     const pendingHead = await mergeHead(op.worktree);
     if (pendingHead) {
-      if (pendingHead !== op.results[op.cursor]?.head)
+      if (pendingHead !== integrationHeads(op)[op.cursor])
         throw new Error('Unexpected merge input in candidate.');
       op.conflicts = await unmergedFiles(op.worktree);
       if (op.conflicts.length || op.needsVerification) {
@@ -125,8 +130,8 @@ export class IntegrationService {
       }
       await commitIntegration(op, (op) => this.save(op));
     }
-    while (op.cursor < op.results.length) {
-      const head = op.results[op.cursor]!.head;
+    while (op.cursor < integrationHeads(op).length) {
+      const head = integrationHeads(op)[op.cursor]!;
       const present = await git(op.worktree, ['merge-base', '--is-ancestor', head, 'HEAD'], {
         allowFail: true,
       });
@@ -195,7 +200,7 @@ export class IntegrationService {
     const context = this.deps.project(op.projectId);
     await admitIntegration(context, op, (op) => this.save(op));
     const pendingHead = await mergeHead(op.worktree);
-    if (pendingHead && pendingHead !== op.results[op.cursor]?.head)
+    if (pendingHead && pendingHead !== integrationHeads(op)[op.cursor])
       throw new Error('Unexpected merge input in candidate.');
     op.head = await commitIntegration(op, (op) => this.save(op));
     this.save(op);
@@ -235,6 +240,7 @@ export class IntegrationService {
   }
 
   save(op: IntegrationOperation): void {
+    checkpointLocalLayers(op);
     this.deps.store.save(op);
     this.deps.changed(op);
   }

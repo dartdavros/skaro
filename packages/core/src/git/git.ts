@@ -38,6 +38,8 @@ export interface DiffStats {
 }
 
 export interface MergeOptions {
+  /** Verified local layers, applied without including them in the task commit. */
+  localResolution?: import('./local-changes.ts').LocalChangesResolution;
   base: string;
   /** Durable integration was verified against this exact base before publication. */
   expectedBaseHead?: string;

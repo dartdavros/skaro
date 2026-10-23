@@ -53,6 +53,7 @@ export function createTaskController(
     !!timeline &&
       (timeline.items.length > 0 ||
         !!view?.history?.count ||
+        timeline.interactions.some((interaction) => interaction.kind === 'merge') ||
         (!!view?.stage && timeline.interactions.length > 0)),
   );
   const settings = $derived(view?.settings);

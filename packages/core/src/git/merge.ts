@@ -13,6 +13,7 @@ import { serializedMerge } from './merge-queue.ts';
 import { localMergeObstacles } from './merge-safety.ts';
 import { captureFiles, publishMerge } from './merge-publication.ts';
 import { recoverPublications } from './merge-recovery.ts';
+import { assertLocalChanges, LocalChangesChangedError } from './local-changes.ts';
 
 export function merge(
   service: GitService,
@@ -26,6 +27,12 @@ async function prepareMerge(service: GitService, options: MergeOptions) {
   if (options.expectedBaseHead && (await service.head(options.base)) !== options.expectedBaseHead)
     throw new GitBaseChangedError();
   const check = await service.checkMerge(options.base, options.branch);
+  if (options.localResolution) {
+    await assertLocalChanges(service.repo, options.localResolution.snapshot);
+    if (check.localChanges?.some((path) => !options.localResolution!.snapshot.paths.includes(path)))
+      throw new LocalChangesChangedError();
+    check.blockers = check.blockers.filter((blocker) => blocker !== 'dirty_base');
+  }
   if (options.allowMetadataOnly && options.managedPaths?.length)
     check.blockers = check.blockers.filter((blocker) => blocker !== 'no_changes');
   if (check.blockers.length) throw new MergeBlockedError(check);
@@ -86,11 +93,20 @@ async function prepareMerge(service: GitService, options: MergeOptions) {
       await git(checkout, ['commit', '--no-verify', '-m', options.message]);
     const commit = await service.head('HEAD', checkout);
     const obstacles = await localMergeObstacles(service.repo, before, commit, extra);
-    if (obstacles.length)
+    if (obstacles.some((path) => !options.localResolution?.snapshot.paths.includes(path)))
       throw new MergeBlockedError({ ...check, blockers: ['dirty_base'], localChanges: obstacles });
     await options.prepared?.({ before, commit });
     if ((await service.head(options.base)) !== before) throw new GitBaseChangedError();
-    await publishMerge(service.repo, checkout, before, commit, options.base, managed, guards);
+    await publishMerge(
+      service.repo,
+      checkout,
+      before,
+      commit,
+      options.base,
+      managed,
+      guards,
+      options.localResolution,
+    );
     return { commit, check, before };
   } finally {
     // This is Skaro's private checkout: no services or ignored user data run here.

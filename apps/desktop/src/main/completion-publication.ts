@@ -137,11 +137,23 @@ export async function publishCandidate(
   integration: IntegrationOperation,
 ): Promise<void> {
   await integrations.assertReady(integration);
-  const head = integration.head;
+  const head = integration.localChanges ? integration.publicationHead : integration.head;
+  if (!head || (integration.localChanges && !integration.localIndexHead))
+    throw new Error('Local resolution has no durable layer boundaries.');
   await context.git.merge({
     ...(await publication(context, artifacts, store, operation, message)),
     expectedBaseHead: integration.baseHead,
     branch: head,
+    ...(integration.localChanges
+      ? {
+          localResolution: {
+            snapshot: integration.localChanges,
+            index: integration.localIndexHead!,
+            working: integration.head,
+            worktree: integration.worktree,
+          },
+        }
+      : {}),
     worktree: integration.worktree,
     verify: async (candidate) => {
       // The exact code tree was checked in the durable environment. Publication adds only metadata.
@@ -170,6 +182,7 @@ export function retireCandidates(
   for (const saved of integrations.deps.store.all(projectId))
     if (
       saved.purpose === 'publication' &&
+      !saved.localChanges &&
       !saved.worker &&
       !saved.executor &&
       !['applied', 'stale'].includes(saved.state) &&

@@ -3,6 +3,7 @@ import type { TaskResult } from './completion-store';
 import type { AgentId, MergeProgress } from '../shared/ipc';
 
 export interface IntegrationRequest {
+  localChanges?: import('@skaro/core').LocalChangesSnapshot;
   projectId: string;
   taskId: string;
   purpose: 'dependencies' | 'publication';
@@ -17,6 +18,9 @@ export interface IntegrationRequest {
 }
 
 export interface IntegrationOperation extends IntegrationRequest {
+  /** Boundaries before/after staged local edits; local layers never enter the published commit. */
+  publicationHead?: string;
+  localIndexHead?: string;
   id: string;
   fingerprint: string;
   baseHead: string;
