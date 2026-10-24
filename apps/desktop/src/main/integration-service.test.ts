@@ -108,7 +108,7 @@ it('repeats the saved failure of a candidate as a failure already recorded', asy
   expect((repeated as Error).message).toBe('usage limit reached');
 }, 45_000);
 
-it('keeps the regression plan of an accepted base result touching incoming paths', async () => {
+it('keeps the regression plan of an accepted base result only when preparing dependencies', async () => {
   const first = await f.task('Published behavior');
   await f.commit();
   const source = await f.checkout(first);
@@ -121,17 +121,23 @@ it('keeps the regression plan of an accepted base result touching incoming paths
   const second = await f.task('Incoming behavior');
   await f.commit();
   await f.accept(second, await f.checkout(second), 'shared.txt');
+  const request = {
+    projectId: f.projectId,
+    taskId: second.id,
+    base: 'main',
+    results: [f.journal.result(second.id)!],
+    checks: [],
+  };
+  // A merge (D-45) does not re-run saved checks: a clean candidate without project checks is ready.
+  const merge = await f.integrations.prepare({ ...request, purpose: 'publication' });
+  expect(merge.baseResults?.map((item) => item.taskId)).toEqual([first.id]);
+  expect(integrationChecks(merge)).toEqual([]);
   await expect(
-    f.integrations.prepare({
-      projectId: f.projectId,
-      taskId: second.id,
-      purpose: 'publication',
-      base: 'main',
-      results: [f.journal.result(second.id)!],
-      checks: [],
-    }),
+    f.integrations.prepare({ ...request, purpose: 'dependencies' }),
   ).rejects.toBeInstanceOf(IntegrationPending);
-  const op = f.integrations.deps.store.all(f.projectId).find((item) => item.taskId === second.id)!;
+  const op = f.integrations.deps.store
+    .all(f.projectId)
+    .find((item) => item.taskId === second.id && item.purpose === 'dependencies')!;
   expect(op.baseResults?.map((item) => item.taskId)).toEqual([first.id]);
   expect(integrationChecks(op)).toContainEqual(check);
 }, 45_000);
