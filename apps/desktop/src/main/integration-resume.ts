@@ -3,6 +3,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
 import { recoverIntegrationStarts } from './integration-recovery';
 import { recoverLegacyCheckShell } from './integration-shell-recovery';
+import { dropInheritedMergeChecks } from './integration-merge-checks';
 
 export async function recoverIntegrations(ctx: TaskRunEngine): Promise<void> {
   const integration = ctx.integrations;
@@ -44,6 +45,13 @@ export async function recoverIntegrations(ctx: TaskRunEngine): Promise<void> {
             'Слияние через отдельного кандидата отменено: каждая задача вливается сама.',
           );
           continue;
+        }
+        if (dropInheritedMergeChecks(op)) {
+          integration.service.save(op);
+          await integration.history.notice(
+            op,
+            'Skaro убрал из проверки слияния сохранённые проверки прежних задач: выполняются проверки проекта и проверки разрешения. Агент слияния продолжит автоматически.',
+          );
         }
         if (['preparing', 'resolving', 'verifying'].includes(op.state)) integration.enqueue(op);
         if (op.state === 'ready') {

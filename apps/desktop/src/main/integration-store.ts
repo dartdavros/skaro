@@ -101,6 +101,7 @@ export class IntegrationStore {
       attempts: 0,
       sequence: 0,
       updatedAt: Date.now(),
+      ...(request.purpose === 'publication' ? { mergeChecks: true as const } : {}),
     };
     if (request.publish) this.publish(op, request);
     else this.save(op);

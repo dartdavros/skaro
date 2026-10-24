@@ -26,7 +26,9 @@ import { trace } from './trace';
 import { HistoryReads, setHistoryReads } from './history-read-service';
 import { registerProjectLogos } from './app-logo';
 import { graphHandlers } from './graph/handlers';
+import { keepLoopbackDirect } from './loopback-proxy';
 trace(`main loaded, pid ${process.pid}`);
+keepLoopbackDirect();
 // Tests run against their own data dir.
 if (process.env['SKARO_USER_DATA']) {
   app.setPath('userData', process.env['SKARO_USER_DATA']);

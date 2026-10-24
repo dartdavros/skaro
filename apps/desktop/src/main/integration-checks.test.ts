@@ -3,6 +3,7 @@ import type { IntegrationOperation } from './integration-model';
 import { integrationChecks, reviseIntegrationChecks } from './integration-checks';
 import { integrationFailure } from './integration-failure';
 import { recoverLegacyCheckShell } from './integration-shell-recovery';
+import { dropInheritedMergeChecks } from './integration-merge-checks';
 import { readVerificationPlan } from '../../../../packages/mcp-server/src/verification-plan';
 
 const old = { name: 'Ruff', run: '$files = Get-ChildItem *.py; ruff check @files' };
@@ -114,6 +115,54 @@ it('treats the same command under a stated shell as a correction, not a second c
   op.verificationPlan = revised.plan;
   // Listing the inherited check again without a shell must not bring cmd.exe back.
   expect(reviseIntegrationChecks(op, [old]).plan).toEqual([build, corrected]);
+});
+
+it('replaces a command saved under two names with either name as one check', () => {
+  const op = operation();
+  // T-168: one command inherited under cmd.exe and named differently under PowerShell.
+  op.verificationPlan = [old, { ...old, name: 'Ruff again', shell: 'powershell' }];
+  const corrected = { name: 'Ruff again', run: 'ruff check changed.py', replaces: old.run };
+  const revised = reviseIntegrationChecks(op, [corrected]);
+  expect(revised.plan).toEqual([build, { name: 'Ruff again', run: corrected.run }]);
+  expect(() => reviseIntegrationChecks(op, [{ ...corrected, name: 'Skip Ruff' }])).toThrow(
+    'Ruff or Ruff again',
+  );
+});
+
+it('runs only project checks and the agent checks for a merge, keeping them across retries', () => {
+  const op = { ...operation(), purpose: 'publication' as const, mergeChecks: true as const };
+  op.baseResults = [{ ...op.results[0]!, taskId: 'T-050', verification: [regression] }];
+  expect(integrationChecks(op)).toEqual([build]);
+  const resolution = { name: 'Settings tests', run: 'npm test settings' };
+  const revised = reviseIntegrationChecks(op, [resolution, old]);
+  expect(revised.plan).toEqual([build, resolution, old]);
+  op.verificationPlan = revised.plan;
+  expect(integrationChecks(op)).toEqual(revised.plan);
+  expect(dropInheritedMergeChecks(op)).toBe(false);
+  expect(op.verificationPlan).toEqual(revised.plan);
+});
+
+it('drops inherited checks of a merge saved before D-45 once and returns it to its agent', () => {
+  const op = { ...operation(), purpose: 'publication' as const, state: 'waiting' as const };
+  op.baseResults = [{ ...op.results[0]!, taskId: 'T-050', verification: [regression] }];
+  const resolution = { name: 'Settings tests', run: 'npm test settings' };
+  const repaired = { ...regression, run: 'pytest affected --reuse-db' };
+  op.verificationPlan = [build, old, repaired, resolution];
+  op.checkReplacements = [{ replaces: regression.run, check: repaired }];
+  op.attempts = 1;
+  const evidence = [{ ...old, head: op.head, state: 'failed' as const }];
+  op.checkRuns = evidence;
+  expect(dropInheritedMergeChecks(op)).toBe(true);
+  expect(op.verificationPlan).toEqual([build, resolution]);
+  expect(op.checkReplacements).toEqual([]);
+  expect(integrationChecks(op)).toEqual([build, resolution]);
+  expect(op).toMatchObject({ state: 'resolving', needsVerification: true, attempts: 0 });
+  expect(op.checkRuns).toBe(evidence);
+  expect(dropInheritedMergeChecks(op)).toBe(false);
+  const preparing = operation();
+  preparing.verificationPlan = [build, old];
+  expect(dropInheritedMergeChecks(preparing)).toBe(false);
+  expect(integrationChecks(preparing)).toEqual([build, old]);
 });
 
 it('recovers only the known legacy shell failure once, preserving the candidate and evidence', () => {
