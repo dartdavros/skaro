@@ -165,6 +165,23 @@ it('drops inherited checks of a merge saved before D-45 once and returns it to i
   expect(integrationChecks(preparing)).toEqual([build, old]);
 });
 
+it('drops every repair in the replacement chain of an inherited merge check', () => {
+  const op = { ...operation(), purpose: 'publication' as const, state: 'waiting' as const };
+  op.baseResults = [{ ...op.results[0]!, taskId: 'T-050', verification: [regression] }];
+  const resolution = { name: 'Settings tests', run: 'npm test settings' };
+  const repaired = { ...regression, run: 'pytest affected --reuse-db' };
+  const cached = { ...regression, run: 'pwsh cached-check.ps1 -Check regression' };
+  op.verificationPlan = [build, cached, resolution];
+  op.checkReplacements = [
+    { replaces: regression.run, check: repaired },
+    { replaces: repaired.run, check: cached },
+  ];
+  expect(dropInheritedMergeChecks(op)).toBe(true);
+  expect(op.verificationPlan).toEqual([build, resolution]);
+  expect(op.checkReplacements).toEqual([]);
+  expect(integrationChecks(op)).toEqual([build, resolution]);
+});
+
 it('recovers only the known legacy shell failure once, preserving the candidate and evidence', () => {
   const op = operation();
   op.error = 'The resolver ended without a verified integration.';

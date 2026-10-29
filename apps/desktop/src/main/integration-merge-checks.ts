@@ -20,17 +20,21 @@ export function dropInheritedMergeChecks(op: IntegrationOperation): boolean {
       .map((check) => check.run),
   );
   const replacements = op.checkReplacements ?? [];
-  const dropped = new Set([
-    ...inherited,
-    ...replacements
-      .filter((replacement) => inherited.has(replacement.replaces))
-      .map((replacement) => replacement.check.run),
-  ]);
+  // A repaired inherited check may be repaired again: its whole replacement chain is inherited.
+  const dropped = new Set(inherited);
+  for (let grown = true; grown;) {
+    grown = false;
+    for (const replacement of replacements)
+      if (dropped.has(replacement.replaces) && !dropped.has(replacement.check.run)) {
+        dropped.add(replacement.check.run);
+        grown = true;
+      }
+  }
   const plan = op.verificationPlan ?? [];
   const kept = plan.filter((check) => !dropped.has(check.run));
   if (kept.length === plan.length) return false;
   op.verificationPlan = kept;
-  op.checkReplacements = replacements.filter((replacement) => !inherited.has(replacement.replaces));
+  op.checkReplacements = replacements.filter((replacement) => !dropped.has(replacement.replaces));
   if (!['resolving', 'verifying', 'waiting', 'failed'].includes(op.state)) return true;
   // The removed checks were the blocker, not the resolution: its agent continues without waiting.
   op.verification = undefined;
