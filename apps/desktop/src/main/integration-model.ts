@@ -51,8 +51,11 @@ export interface IntegrationOperation extends IntegrationRequest {
   verificationPlan?: ProjectCheck[];
   checkReplacements?: { replaces: string; check: ProjectCheck }[];
   shellFailureRecovered?: boolean;
-  /** A merge plan without the saved checks of accepted results (D-45). */
-  mergeChecks?: true;
+  /**
+   * A merge plan without the saved checks of accepted results (D-45). `true` was set by 2.2.8,
+   * which kept the repairs of repaired inherited checks; such a plan is migrated once more.
+   */
+  mergeChecks?: true | typeof MERGE_CHECKS;
   error?: string;
   verification?: { head: string; checks: ProjectCheck[]; completedAt: number };
   checkRuns?: {
@@ -162,6 +165,9 @@ export function integrationWorking(
 ): boolean {
   return operations.some((op) => participatesIn(op, taskId) && !!(op.worker || op.executor));
 }
+
+/** Revision of the D-45 merge plan migration. */
+export const MERGE_CHECKS = 2 as const;
 
 export function integrationQueueKey(op: Pick<IntegrationOperation, 'projectId' | 'id'>): string {
   return `${op.projectId}\n@integration:${op.id}`;

@@ -51,6 +51,13 @@ export class UpdateJournal {
       join(this.dir, `applied-${value.manifest.bundleVersion}-${randomUUID()}.json`),
     );
   }
+  /** Keeps a download overtaken by a newer installation for diagnostics only. */
+  async retire(value: PendingUpdate): Promise<void> {
+    await rename(
+      join(this.dir, 'pending.json'),
+      join(this.dir, `superseded-${value.manifest.bundleVersion}-${randomUUID()}.json`),
+    );
+  }
   async backup(version: string, executable: string, platform: Platform): Promise<string> {
     return backupApplication(this.dir, version, executable, platform);
   }

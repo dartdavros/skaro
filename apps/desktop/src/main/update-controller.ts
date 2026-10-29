@@ -1,5 +1,5 @@
 import { AgentInstaller, type AgentId, type Platform } from '@skaro/core';
-import type { UpdateState } from '../shared/updates';
+import type { UpdateComponent, UpdateState } from '../shared/updates';
 import { changedComponents, newer, releasePlatform, type ReleaseManifest } from './update-release';
 import { fetchRelease } from './update-feed';
 import type { BundleVersions } from './update-current';
@@ -111,6 +111,12 @@ export class Updates {
     this.pending = pending;
     this.target = pending.manifest;
     const decision = recoveryDecision(pending, this.deps.current);
+    if (decision === 'superseded') {
+      await this.deps.journal.retire(pending);
+      this.pending = undefined;
+      this.target = undefined;
+      return;
+    }
     if (decision !== 'resume') {
       this.unverified = true;
       this.deps.activity.quarantine(true);
@@ -152,34 +158,48 @@ export class Updates {
   check(): Promise<UpdateState> {
     if (this.operation) return this.operation;
     if (this.unverified) return this.initialize();
-    if (this.state.phase === 'ready' || this.state.phase === 'applying' || this.pending)
-      return Promise.resolve(this.snapshot());
+    if (this.state.phase === 'applying') return Promise.resolve(this.snapshot());
     return this.run('check', async () => {
+      if (this.pending) {
+        // A downloaded update stays offered until a newer release replaces it.
+        const latest = await this.latest().catch(() => undefined);
+        const version = latest?.target?.bundleVersion ?? '';
+        if (!latest || !newer(version, this.pending.manifest.bundleVersion)) return this.snapshot();
+        this.target = latest.target;
+        return this.patch({ phase: 'available', components: latest.components, retry: undefined });
+      }
       this.patch({ phase: 'checking', error: undefined });
-      const next = await fetchRelease(this.deps.platform, this.deps.fetch);
-      const installed = await this.deps.installed();
-      const compatible =
-        next &&
-        newer(next.bundleVersion, this.deps.current.bundleVersion) &&
-        (next.skaroVersion === this.deps.current.skaroVersion ||
-          newer(next.skaroVersion, this.deps.current.skaroVersion));
-      const components = compatible ? changedComponents(next, this.deps.current, installed) : [];
-      this.target = components.length ? next : undefined;
+      const latest = await this.latest();
+      this.target = latest.target;
       return this.patch({
-        phase: components.length ? 'available' : 'idle',
-        components,
+        phase: latest.target ? 'available' : 'idle',
+        components: latest.components,
         checked: true,
         retry: undefined,
       });
     });
   }
+  /** The newest compatible release; an earlier check may have found an older one. */
+  private async latest(): Promise<{ target?: ReleaseManifest; components: UpdateComponent[] }> {
+    const next = await fetchRelease(this.deps.platform, this.deps.fetch);
+    const installed = await this.deps.installed();
+    const compatible =
+      next &&
+      newer(next.bundleVersion, this.deps.current.bundleVersion) &&
+      (next.skaroVersion === this.deps.current.skaroVersion ||
+        newer(next.skaroVersion, this.deps.current.skaroVersion));
+    const components = compatible ? changedComponents(next, this.deps.current, installed) : [];
+    return components.length ? { target: next, components } : { components };
+  }
   download(): Promise<UpdateState> {
     if (this.operation) return this.operation;
     return this.run('download', async () => {
-      if (!this.target || !this.state.components.length)
-        throw new Error('No compatible update is available');
       if (!this.deps.installable) throw new Error('UPDATES_PACKAGED_ONLY');
       this.patch({ phase: 'downloading', error: undefined, progress: 0 });
+      const latest = await this.latest();
+      if (!latest.target) throw new Error('No compatible update is available');
+      this.target = latest.target;
+      this.patch({ components: latest.components });
       const selected = releasePlatform(this.target, this.deps.platform);
       const files = await this.deps.driver.download(this.target, (percent) =>
         this.patch({ progress: Math.round(percent * 0.7) }),

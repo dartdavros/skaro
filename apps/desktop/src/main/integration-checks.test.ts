@@ -4,6 +4,7 @@ import { integrationChecks, reviseIntegrationChecks } from './integration-checks
 import { integrationFailure } from './integration-failure';
 import { recoverLegacyCheckShell } from './integration-shell-recovery';
 import { dropInheritedMergeChecks } from './integration-merge-checks';
+import { MERGE_CHECKS } from './integration-model';
 import { readVerificationPlan } from '../../../../packages/mcp-server/src/verification-plan';
 
 const old = { name: 'Ruff', run: '$files = Get-ChildItem *.py; ruff check @files' };
@@ -130,7 +131,7 @@ it('replaces a command saved under two names with either name as one check', () 
 });
 
 it('runs only project checks and the agent checks for a merge, keeping them across retries', () => {
-  const op = { ...operation(), purpose: 'publication' as const, mergeChecks: true as const };
+  const op = { ...operation(), purpose: 'publication' as const, mergeChecks: MERGE_CHECKS };
   op.baseResults = [{ ...op.results[0]!, taskId: 'T-050', verification: [regression] }];
   expect(integrationChecks(op)).toEqual([build]);
   const resolution = { name: 'Settings tests', run: 'npm test settings' };
@@ -166,7 +167,9 @@ it('drops inherited checks of a merge saved before D-45 once and returns it to i
 });
 
 it('drops every repair in the replacement chain of an inherited merge check', () => {
-  const op = { ...operation(), purpose: 'publication' as const, state: 'waiting' as const };
+  // Skaro 2.2.8 marked such a plan migrated while keeping the repairs of repairs.
+  const op = { ...operation(), purpose: 'publication' as const, state: 'paused' as const };
+  op.mergeChecks = true;
   op.baseResults = [{ ...op.results[0]!, taskId: 'T-050', verification: [regression] }];
   const resolution = { name: 'Settings tests', run: 'npm test settings' };
   const repaired = { ...regression, run: 'pytest affected --reuse-db' };
@@ -180,6 +183,8 @@ it('drops every repair in the replacement chain of an inherited merge check', ()
   expect(op.verificationPlan).toEqual([build, resolution]);
   expect(op.checkReplacements).toEqual([]);
   expect(integrationChecks(op)).toEqual([build, resolution]);
+  expect(op).toMatchObject({ state: 'resolving', mergeChecks: MERGE_CHECKS });
+  expect(dropInheritedMergeChecks(op)).toBe(false);
 });
 
 it('recovers only the known legacy shell failure once, preserving the candidate and evidence', () => {

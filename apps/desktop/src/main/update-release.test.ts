@@ -66,6 +66,10 @@ describe('release compatibility', () => {
     expect(recoveryDecision(pending, actual)).toBe('confirm');
     expect(recoveryDecision({ ...pending, applying: false }, actual)).toBe('confirm');
     expect(recoveryDecision(pending, { ...actual, bundleVersion: '2.0.3' })).toBe('resume');
+    // A newer installation overtook the downloaded bundle: it must not be offered again.
+    expect(
+      recoveryDecision({ ...pending, applying: false }, { ...actual, bundleVersion: '2.0.5' }),
+    ).toBe('superseded');
     for (const changed of [
       { ...actual, skaroVersion: '2.1.0' },
       { ...actual, claudeSdk: '0.3.281' },
