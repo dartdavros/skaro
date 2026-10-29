@@ -1,0 +1,5 @@
+version: 2.2.9
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.9/Skaro-2.2.9-win-x64.exe
+    sha512: M2IL6roE2k499SDyK1gSIv2wipNYI2aLqTgtZjtZMDg6O02GLhrRwvr7OPexX0TDg/n5K0J1/xKsSKMvcHtJfQ==
+    size: 123836310
