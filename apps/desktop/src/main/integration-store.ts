@@ -1,7 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { AppDb } from '@skaro/core';
-import type { IntegrationOperation, IntegrationRequest } from './integration-model';
+import {
+  MERGE_CHECKS,
+  type IntegrationOperation,
+  type IntegrationRequest,
+} from './integration-model';
 import type { CompletionOperation } from './completion-store';
 import type { MessageInput } from '../shared/ipc';
 
@@ -101,7 +105,7 @@ export class IntegrationStore {
       attempts: 0,
       sequence: 0,
       updatedAt: Date.now(),
-      ...(request.purpose === 'publication' ? { mergeChecks: true as const } : {}),
+      ...(request.purpose === 'publication' ? { mergeChecks: MERGE_CHECKS } : {}),
     };
     if (request.publish) this.publish(op, request);
     else this.save(op);

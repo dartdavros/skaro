@@ -1,5 +1,5 @@
 import type { ProjectCheck } from '@skaro/core';
-import type { IntegrationOperation } from './integration-model';
+import { MERGE_CHECKS, type IntegrationOperation } from './integration-model';
 
 const key = (check: ProjectCheck) => JSON.stringify([check.run, check.shell ?? 'system']);
 
@@ -10,8 +10,8 @@ const key = (check: ProjectCheck) => JSON.stringify([check.run, check.shell ?? '
  * resolution too, so the retained candidate returns to its agent to submit those checks again.
  */
 export function dropInheritedMergeChecks(op: IntegrationOperation): boolean {
-  if (op.purpose !== 'publication' || op.mergeChecks) return false;
-  op.mergeChecks = true;
+  if (op.purpose !== 'publication' || op.mergeChecks === MERGE_CHECKS) return false;
+  op.mergeChecks = MERGE_CHECKS;
   const project = new Set(op.checks.map(key));
   const inherited = new Set(
     [...op.results, ...(op.baseResults ?? [])]
@@ -35,7 +35,7 @@ export function dropInheritedMergeChecks(op: IntegrationOperation): boolean {
   if (kept.length === plan.length) return false;
   op.verificationPlan = kept;
   op.checkReplacements = replacements.filter((replacement) => !dropped.has(replacement.replaces));
-  if (!['resolving', 'verifying', 'waiting', 'failed'].includes(op.state)) return true;
+  if (!['resolving', 'verifying', 'waiting', 'paused', 'failed'].includes(op.state)) return true;
   // The removed checks were the blocker, not the resolution: its agent continues without waiting.
   op.verification = undefined;
   op.error = undefined;
