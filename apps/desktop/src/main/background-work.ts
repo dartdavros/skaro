@@ -26,7 +26,9 @@ export class BackgroundWork {
       (job) => job.state === 'running' || now - (job.endedAt ?? now) < RECENT_MS,
     );
     const running = this.jobs.filter((job) => job.state === 'running');
-    const recent = this.jobs
+    // Reversed first: work that ended in the same millisecond still lists the newest on top.
+    const recent = [...this.jobs]
+      .reverse()
       .filter((job) => job.state !== 'running')
       .sort((a, b) => (b.endedAt ?? 0) - (a.endedAt ?? 0))
       .slice(0, RECENT_LIMIT);
