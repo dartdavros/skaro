@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { git } from '@skaro/core';
 import { afterEach, beforeEach, expect, it } from 'vitest';
@@ -136,4 +136,22 @@ it('reprepares on a newer base while retaining manual publication authorization'
   expect((await git(fixture.repo, ['show', ':README.md'])).stdout).toBe(
     taskText + 'owner staged\n',
   );
+}, 60_000);
+
+it('preserves the owner edits that sit beside the merged files, not unrelated folders', async () => {
+  const task = await fixture.task('Preserve related local work');
+  await fixture.commit();
+  const worktree = await fixture.checkout(task);
+  await fixture.accept(task, worktree, 'README.md');
+  // The owner's README imports an uncommitted sibling; a file elsewhere is not part of the merge.
+  await writeFile(join(fixture.repo, 'README.md'), 'owner edit, see notes\n');
+  await writeFile(join(fixture.repo, 'notes.md'), 'owner sibling\n');
+  await mkdir(join(fixture.repo, 'other'));
+  await writeFile(join(fixture.repo, 'other', 'draft.md'), 'unrelated\n');
+  await expect(fixture.coordinator.merge(fixture.projectId, task.id)).rejects.toBeInstanceOf(
+    IntegrationPending,
+  );
+  const op = fixture.integrations.deps.store.all(fixture.projectId).at(-1)!;
+  expect(op.localChanges?.paths).toContain('notes.md');
+  expect(op.localChanges?.paths).not.toContain('other/draft.md');
 }, 60_000);

@@ -65,6 +65,8 @@ export class TaskRunViews {
           }
         }
         this.ctx.merges.watch(active);
+        // Opening a task that stopped before this card existed shows what it waits for.
+        if (task.status === 'in_progress') this.ctx.events.showWaitCard(active, task.body);
       }
     }
     const runtime = this.ctx.deps.db.getTaskRuntime(projectId);

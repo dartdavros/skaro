@@ -1,12 +1,18 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { setTimeout } from 'node:timers/promises';
 
-/** Expire metadata first; interrupted, bounded row cleanup resumes on the next job. */
+const BATCH = 5000;
+
+/**
+ * Expire metadata first, then remove every row of the expired snapshots. Each published index
+ * adds a whole snapshot, so cleanup must finish rather than stop on a time budget: a bounded
+ * trickle fell behind and kept discarded snapshots in the file. Batches yield to reads in WAL mode;
+ * an interrupted run resumes from the garbage journal, and freed pages are reused by the next index.
+ */
 export async function pruneSnapshots(
   db: DatabaseSync,
   retained: (string | undefined)[],
 ): Promise<void> {
-  const deadline = performance.now() + 1000;
   db.exec('BEGIN IMMEDIATE');
   try {
     const expired = (db.prepare('SELECT id FROM snapshots').all() as { id: string }[]).filter(
@@ -22,18 +28,19 @@ export async function pruneSnapshots(
     db.exec('ROLLBACK');
     throw error;
   }
-  for (const { snapshot } of db.prepare('SELECT snapshot FROM garbage').all() as {
-    snapshot: string;
-  }[]) {
-    for (const table of ['nodes', 'edges', 'unresolved', 'search']) {
-      const remove = db.prepare(`DELETE FROM ${table} WHERE rowid IN
-        (SELECT rowid FROM ${table} WHERE snapshot=? LIMIT 500)`);
-      while (remove.run(snapshot).changes) {
-        // Give interactive reads I/O priority; the journal resumes unfinished work.
-        if (performance.now() >= deadline) return;
-        await setTimeout(10);
-      }
-    }
-    db.prepare('DELETE FROM garbage WHERE snapshot=?').run(snapshot);
+  const garbage = (db.prepare('SELECT snapshot FROM garbage').all() as { snapshot: string }[]).map(
+    ({ snapshot }) => snapshot,
+  );
+  if (!garbage.length) return;
+  for (const table of ['nodes', 'edges', 'unresolved']) {
+    // Each of these tables leads an index with its snapshot column: a batch reads only its rows.
+    const remove = db.prepare(`DELETE FROM ${table} WHERE rowid IN
+      (SELECT rowid FROM ${table} WHERE snapshot=? LIMIT ${BATCH})`);
+    for (const snapshot of garbage) while (remove.run(snapshot).changes) await setTimeout(10);
   }
+  // The full-text table cannot index its snapshot column: one pass removes all expired rows.
+  db.prepare(`DELETE FROM search WHERE snapshot IN (${garbage.map(() => '?').join(',')})`).run(
+    ...garbage,
+  );
+  for (const snapshot of garbage) db.prepare('DELETE FROM garbage WHERE snapshot=?').run(snapshot);
 }

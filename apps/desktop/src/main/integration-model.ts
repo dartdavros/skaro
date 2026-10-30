@@ -41,6 +41,8 @@ export interface IntegrationOperation extends IntegrationRequest {
   conflicts: string[];
   needsVerification: boolean;
   attempts: number;
+  /** Failed publications of this verified candidate; they repeat without a new verification. */
+  publishFailures?: number;
   worker?: string;
   /** Queue executor lease, acquired before the first asynchronous Git action. */
   executor?: string;
@@ -52,10 +54,10 @@ export interface IntegrationOperation extends IntegrationRequest {
   checkReplacements?: { replaces: string; check: ProjectCheck }[];
   shellFailureRecovered?: boolean;
   /**
-   * A merge plan without the saved checks of accepted results (D-45). `true` was set by 2.2.8,
-   * which kept the repairs of repaired inherited checks; such a plan is migrated once more.
+   * A merge plan without the saved checks of accepted results (D-45). Earlier revisions
+   * (`true` by 2.2.8, 2 by 2.2.10) kept repaired inherited checks; such a plan is migrated again.
    */
-  mergeChecks?: true | typeof MERGE_CHECKS;
+  mergeChecks?: true | 2 | typeof MERGE_CHECKS;
   error?: string;
   verification?: { head: string; checks: ProjectCheck[]; completedAt: number };
   checkRuns?: {
@@ -167,7 +169,7 @@ export function integrationWorking(
 }
 
 /** Revision of the D-45 merge plan migration. */
-export const MERGE_CHECKS = 2 as const;
+export const MERGE_CHECKS = 3 as const;
 
 export function integrationQueueKey(op: Pick<IntegrationOperation, 'projectId' | 'id'>): string {
   return `${op.projectId}\n@integration:${op.id}`;

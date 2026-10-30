@@ -60,6 +60,8 @@ export class ActiveRun {
   attaching: Promise<AgentSession> | undefined;
   /** Work that waits for the running turn to end (cleanup after a merge). */
   afterTurn: (() => Promise<void>) | undefined;
+  /** Skaro's own messages to the agent: their echo is orchestration, not the owner's words. */
+  readonly internalInputs = new Set<string>();
   /** A handoff freezes side effects from the old session until its successor is published. */
   switching = false;
   handoffError: string | undefined;

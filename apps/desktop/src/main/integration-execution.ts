@@ -6,6 +6,7 @@ import { assertResultUnchanged } from './completion-results';
 import { integrationChecks } from './integration-checks';
 import { runIntegrationWorker } from './integration-worker';
 import { errorText } from './session-log';
+import { showEnvironmentStart } from './integration-check-feed';
 import { IntegrationAgentUnavailable, integrationFailure } from './integration-failure';
 
 /** Execute one queue lease; continuation is emitted only after the candidate is verified. */
@@ -14,6 +15,7 @@ export async function executeIntegration(
   op: IntegrationOperation,
 ): Promise<void> {
   const integration = ctx.integrations;
+  let publishing = false;
   try {
     if (
       (await integration.history.state(op)).state.interactions.some((i) => i.kind === 'question')
@@ -44,10 +46,15 @@ export async function executeIntegration(
     if (op.state === 'verifying' && !op.needsVerification && integrationChecks(op).length) {
       const key = integrationEnvironmentKey(op);
       ctx.environments.bindIntegration(key, op.worktree);
-      const environment = await ctx.environments.describe(key);
-      ctx.deps.db.setSetting(`integration.${op.id}.env`, environment.variables);
       integration.assertExecuting(op);
       try {
+        // The checks ran against this candidate's own services; they are stopped after a restart.
+        if ((await ctx.environments.describe(key)).config)
+          await showEnvironmentStart(integration.history, op, () => ctx.environments.start(key));
+        integration.assertExecuting(op);
+        const environment = await ctx.environments.describe(key);
+        ctx.deps.db.setSetting(`integration.${op.id}.env`, environment.variables);
+        integration.assertExecuting(op);
         await integration.service.serial(op.id, () =>
           integration.service.verify(op, [], environment.variables),
         );
@@ -91,8 +98,10 @@ export async function executeIntegration(
       .catch((error) => integration.history.notice(op, errorText(error), true));
     if (integration.closing) return;
     if (op.purpose === 'dependencies') ctx.queue.enqueue([`${op.projectId}\n${op.taskId}`]);
-    else if (op.publish) await ctx.merges.coordinator.publishCandidate(op);
-    else {
+    else if (op.publish) {
+      publishing = true;
+      await ctx.merges.coordinator.publishCandidate(op);
+    } else {
       const active = await ctx.history.restore(op.projectId, op.taskId);
       if (active) await ctx.merges.showCard(active, ctx.project(op.projectId));
     }
@@ -107,6 +116,20 @@ export async function executeIntegration(
       // A verified candidate remains ready for continuation after restart.
       if (op.state !== 'ready') op.state = op.needsVerification ? 'resolving' : 'preparing';
       integration.service.save(op);
+      return;
+    }
+    // A verified candidate that failed to go into the base (a locked file, Git busy) is published
+    // again as it is: its resolution and checks are not what failed.
+    if (publishing && op.state === 'ready' && (op.publishFailures ?? 0) < 2) {
+      op.publishFailures = (op.publishFailures ?? 0) + 1;
+      op.error = errorText(error);
+      integration.service.save(op);
+      await integration.history.notice(
+        op,
+        `Не удалось влить проверенный результат: ${op.error}. Skaro повторит вливание без новой проверки.`,
+        true,
+      );
+      setTimeout(() => integration.enqueue(op), op.publishFailures * 60_000).unref();
       return;
     }
     op.error = errorText(error);

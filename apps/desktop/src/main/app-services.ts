@@ -31,6 +31,8 @@ import { C4Service } from './c4-service';
 import { proposeC4Specification } from './c4-specification';
 import { ProjectOverview } from './project-overview';
 import { GraphService } from './graph/service';
+import { backgroundWork } from './background-work';
+import { reportGraph } from './background-graph';
 
 export async function createServices(
   appState: AppState,
@@ -40,7 +42,11 @@ export async function createServices(
   const db = appState.db;
   const attachments = new AttachmentStore(join(dataDir, 'attachments'));
   const projects = new Projects(db, (projectId) => emit('project.changed', { projectId }), dataDir);
-  const graph = new GraphService(appState, dataDir, (status) => emit('graph.changed', status));
+  backgroundWork.attach((state) => emit('background.changed', state));
+  const graph = new GraphService(appState, dataDir, (status) => {
+    emit('graph.changed', status);
+    reportGraph(status, db.getProject(status.projectId)?.name ?? '');
+  });
   const overview = new ProjectOverview(db, projects, (card) => emit('projects.card', card));
   const agents = new AgentManager({
     // Development and tests share one download of the agents.

@@ -17,13 +17,28 @@
   );
 </script>
 
-{#if questions.length}<div class="questions">
-    {#each questions as interaction (interaction.id)}<QuestionCard {interaction} />{/each}
-  </div>{/if}
-<PinnedBackground {state} />
-<PinnedPlan {state} />
+<!-- Cards above the input keep the input's column, not the whole pane. -->
+<div class="pinned">
+  {#if questions.length}<div class="questions">
+      {#each questions as interaction (interaction.id)}<QuestionCard {interaction} />{/each}
+    </div>{/if}
+  <PinnedBackground {state} />
+  <PinnedPlan {state} />
+</div>
 
 <style>
+  .pinned {
+    width: 100%;
+    max-width: 744px;
+    box-sizing: border-box;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .pinned:not(:has(*)) {
+    display: none;
+  }
   .questions {
     display: flex;
     flex-direction: column;

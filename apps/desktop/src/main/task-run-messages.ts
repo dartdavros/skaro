@@ -1,7 +1,9 @@
 import { QuestionAnswers } from './question-answers';
 import { cancelOwnerMessages, CommandCancelled } from './owner-commands';
 import { withSkaroNote, assertQuestionsAnswered, validateQuestionAnswer } from '@skaro/timeline';
-import { isAsyncQuestion, type InteractionAnswer } from '@skaro/timeline';
+import { isAsyncQuestion, type Interaction, type InteractionAnswer } from '@skaro/timeline';
+import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
+import { readSubject, updateSubject } from './task-subject';
 import type { MessageInput } from '../shared/ipc';
 import { withoutSecrets } from './session-log';
 import { key } from './task-run-helpers';
@@ -34,6 +36,20 @@ export class TaskRunMessages {
     } else {
       await this.ctx.scheduling.enqueue(projectId, taskId, input);
     }
+  }
+
+  /** Skaro's own message: the agent continues; the feed shows the decision, not this text. */
+  async continueAfter(active: ActiveRun, text: string): Promise<void> {
+    active.internalInputs.add(text.trim());
+    // Skaro's own waiting card asked for this very step; it is answered by continuing.
+    for (const open of active.timeline.state.interactions)
+      if (open.id.startsWith(WAIT_CARD))
+        this.ctx.history.skaroEvent(active, {
+          t: 'interaction.closed',
+          id: open.id,
+          resolution: 'cancelled',
+        });
+    await this.turn(active, { text });
   }
 
   /** Straight to the agent: only for a turn that holds its slot. */
@@ -77,6 +93,13 @@ export class TaskRunMessages {
       );
     if (
       interaction?.kind === 'question' &&
+      interaction.id.startsWith(WAIT_CARD) &&
+      answer.kind === 'question' &&
+      answer.answers['criteria']?.includes(ACCEPT_AS_IS)
+    )
+      return this.acceptAsIs(active, interaction, answer);
+    if (
+      interaction?.kind === 'question' &&
       (isAsyncQuestion(interaction) ||
         !active.session ||
         !active.timeline.state.turns.some((turn) => !turn.outcome))
@@ -92,21 +115,44 @@ export class TaskRunMessages {
         : interactionId;
       await active.session.respond(nativeId, answer);
     }
-    if (!interaction) return;
-    // The decision stays in the feed (and the log) after the card closes.
+    if (interaction) this.decision(active, interaction, answer);
+  }
+
+  /** The decision stays in the feed (and the log) after the card closes. */
+  private decision(active: ActiveRun, interaction: Interaction, answer: InteractionAnswer): void {
     this.ctx.history.skaroEvent(active, {
       t: 'item.upsert',
       item: {
-        id: `skaro-decision-${interactionId}`,
+        id: `skaro-decision-${interaction.id}`,
         turnId: isAsyncQuestion(interaction) ? '' : (active.timeline.state.turns.at(-1)?.id ?? ''),
         kind: 'decision',
         interaction,
         answer: withoutSecrets(interaction, answer),
         status: 'done',
         startedAt: Date.now(),
-        native: { agent: 'skaro', type: 'decision', ref: interactionId },
+        native: { agent: 'skaro', type: 'decision', ref: interaction.id },
       },
     });
+  }
+
+  /** The owner accepts the result without the unmet criteria: Skaro ticks them, as by hand. */
+  private async acceptAsIs(
+    active: ActiveRun,
+    interaction: Interaction,
+    answer: InteractionAnswer,
+  ): Promise<void> {
+    const { projectId, taskId } = active;
+    this.ctx.history.skaroEvent(active, {
+      t: 'interaction.closed',
+      id: interaction.id,
+      resolution: 'answered',
+    });
+    this.decision(active, interaction, answer);
+    const context = this.ctx.project(projectId);
+    const task = await readSubject(context, taskId);
+    await updateSubject(context, taskId, { body: acceptedBody(task.body) });
+    this.ctx.changed(projectId, taskId);
+    await this.ctx.results.criteriaChanged(projectId, taskId);
   }
 
   async interrupt(projectId: string, taskId: string): Promise<void> {

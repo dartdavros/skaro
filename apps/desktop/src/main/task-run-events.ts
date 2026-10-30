@@ -1,10 +1,11 @@
 import { type TaskRuntime } from '@skaro/core';
 import { currentActivity, persistsAfterTurn, type TimelineEvent } from '@skaro/timeline';
 import { errorText } from './session-log';
-import { FLUSH_MS } from './task-run-helpers';
+import { FLUSH_MS, key } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { readSubject, updateSubject } from './task-subject';
+import { awaitsDecision, waitCard } from './task-wait-card';
 
 /** events: a focused part of the task-run controller. */
 export class TaskRunEvents {
@@ -15,6 +16,13 @@ export class TaskRunEvents {
 
   onEvent(active: ActiveRun, event: TimelineEvent): void {
     event = active.secrets.redact(event);
+    if (
+      event.t === 'item.upsert' &&
+      event.item.kind === 'message' &&
+      event.item.role === 'user' &&
+      active.internalInputs.has(event.item.text.trim())
+    )
+      return;
     if (this.ctx.active.get(`${active.projectId}\n${active.taskId}`) !== active) return;
     const affectsActivity =
       event.t === 'activity' ||
@@ -75,6 +83,26 @@ export class TaskRunEvents {
     }
   }
 
+  /**
+   * A finished turn that asked nothing through a card still waits for the owner: Skaro shows that
+   * card itself, unless a proposal already asks, the owner wrote the next step or answered it.
+   */
+  showWaitCard(active: ActiveRun, body: string): void {
+    const state = active.timeline.state;
+    if (
+      active.switching ||
+      state.turns.at(-1)?.outcome !== 'done' ||
+      state.turns.some((turn) => !turn.outcome) ||
+      state.interactions.some((item) => item.kind === 'question') ||
+      awaitsDecision(state) ||
+      this.ctx.queuedInputs.get(key(active.projectId, active.taskId))?.length
+    )
+      return;
+    const interaction = waitCard(active.run.id, body, state);
+    if (state.items.some((item) => item.id === `skaro-decision-${interaction.id}`)) return;
+    this.ctx.history.skaroEvent(active, { t: 'interaction.opened', interaction });
+  }
+
   async onTurnCompleted(
     active: ActiveRun,
     outcome: 'done' | 'interrupted' | 'failed',
@@ -126,6 +154,7 @@ export class TaskRunEvents {
       // interrupted turn must never commit new edits under a previous report's checked criteria.
       if (task.status === 'review') await this.ctx.stages.sync(projectId, taskId);
       else {
+        if (outcome === 'done') this.showWaitCard(active, task.body);
         this.ctx.deps.notify?.('need', label);
         this.ctx.results.statusChanged(projectId, taskId);
       }
