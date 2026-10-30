@@ -1,0 +1,5 @@
+version: 2.2.11
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.11/Skaro-2.2.11-mac-x64.dmg
+    sha512: YamtHqmFrDhrS6FCTGH30ByoUPSTZJj+4R7nssNVrUujqIuMKm3np69iD4Sda7yRDQs6dvPeIFw3R3dUCrxapg==
+    size: 151409670
