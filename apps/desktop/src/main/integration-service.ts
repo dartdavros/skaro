@@ -12,6 +12,7 @@ import { affectedBaseResults } from './integration-inputs';
 import { integrationChecks, reviseIntegrationChecks } from './integration-checks';
 import { runIntegrationChecks } from './integration-check-runner';
 import type { IntegrationCheck } from '@skaro/mcp-server';
+import type { Item } from '@skaro/timeline';
 import { integrationHeads, checkpointLocalLayers } from './integration-local-changes';
 
 export interface IntegrationDeps {
@@ -21,6 +22,8 @@ export interface IntegrationDeps {
   changed: (op: IntegrationOperation) => void;
   processStarted?: (op: IntegrationOperation, pid: number) => void | Promise<void>;
   stopProcesses?: (op: IntegrationOperation) => Promise<void>;
+  /** A check row for the candidate feed: started, live output, finished. */
+  checkChanged?: (op: IntegrationOperation, item: Item) => void;
 }
 
 /** The same recoverable integration protocol prepares dependencies and publication candidates. */
@@ -79,7 +82,8 @@ export class IntegrationService {
             saved.purpose === request.purpose &&
             !saved.worker &&
             !saved.executor &&
-            ['preparing', 'resolving', 'verifying', 'ready'].includes(saved.state)
+            // A new candidate supersedes every unfinished one of the task, stopped ones included.
+            !['applied', 'stale'].includes(saved.state)
           ) {
             saved.state = 'stale';
             this.save(saved);

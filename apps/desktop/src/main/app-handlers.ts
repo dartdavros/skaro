@@ -10,6 +10,7 @@ import { createFolder, inspectFolder, hasCode } from './new-project';
 import { openEditor, openTerminal } from './external-apps';
 import { LOGO_EXTENSIONS, readLogo } from './project-logo';
 import type { Updates } from './update-controller';
+import { backgroundWork } from './background-work';
 import type { Handlers } from './ipc';
 import type { Services } from './app-services';
 import { background } from './background/client';
@@ -41,6 +42,7 @@ export function appHandlers(
   | 'updates.state'
   | 'updates.download'
   | 'updates.apply'
+  | 'background.state'
   | 'app.pickApp'
   | 'projects.list'
   | 'projects.get'
@@ -117,6 +119,7 @@ export function appHandlers(
     'updates.state': () => updates.snapshot(),
     'updates.download': () => updates.download(),
     'updates.apply': () => updates.apply(),
+    'background.state': () => backgroundWork.snapshot(),
     'app.pickApp': async () => {
       const result = await dialog.showOpenDialog({
         properties: ['openFile'],

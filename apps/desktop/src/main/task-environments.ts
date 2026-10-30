@@ -28,6 +28,7 @@ import { removeCompose } from './task-compose';
 import { refreshEnvironmentPorts } from './task-environment-ports';
 import { startEnvironmentServices, type EnvironmentStartOptions } from './task-environment-start';
 import { environmentLink, environmentLinkAddress } from './task-environment-link';
+import { backgroundWork, environmentJob, freedResult } from './background-work';
 
 export interface EnvironmentDeps {
   db: Pick<AppDb, 'getSetting' | 'setSetting' | 'getProject'>;
@@ -58,6 +59,7 @@ export class TaskEnvironments {
   private readonly deps: EnvironmentDeps;
   private readonly registry: EnvironmentRegistry;
   private readonly docker: EnvironmentDocker;
+  private pruned = 0;
   /** Docker work runs one at a time: parallel builds and starts are what made tasks hang. */
   private work: Promise<unknown> = Promise.resolve();
   private allocation: Promise<unknown> = Promise.resolve();
@@ -259,12 +261,24 @@ export class TaskEnvironments {
           .some((owner) => owner.projectId === key.projectId && owner.taskId === key.taskId)
       )
         continue;
+      const job = backgroundWork.start(...environmentJob(this.deps.db, key));
       const failures = await this.remove(key).catch((error: unknown) => [String(error)]);
       if (!failures.length) {
         const name = this.registry.find(key)?.name;
         if (name) await removeCompose(this.deps.dataDir, name);
         this.registry.remove(key);
-      }
+        backgroundWork.finish(job);
+      } else backgroundWork.fail(job, failures.join('; '));
     }
+    // Removed and recreated containers leave anonymous volumes, untagged images and cache behind:
+    // they go with every removal and at least hourly, not on each frequent limit pass.
+    if (!stale.length && Date.now() - this.pruned < 60 * 60_000) return;
+    this.pruned = Date.now();
+    const job = backgroundWork.start('docker.prune');
+    const { failures, reclaimed } = await this.docker.prune();
+    if (failures.length) {
+      console.error('Docker cleanup:', failures.join('; '));
+      backgroundWork.fail(job, failures.join('; '));
+    } else backgroundWork.finish(job, freedResult(reclaimed));
   }
 }

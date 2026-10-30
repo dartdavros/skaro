@@ -1,4 +1,5 @@
-import { mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { replaceFile } from '../fs-replace.ts';
+import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -84,7 +85,7 @@ export async function writeC4File(root: string, path: string, body: string): Pro
   const temporary = `${target}.${randomUUID()}.tmp`;
   try {
     await writeFile(temporary, body, { flag: 'wx' });
-    await rename(temporary, target);
+    await replaceFile(temporary, target);
   } finally {
     await rm(temporary, { force: true });
   }

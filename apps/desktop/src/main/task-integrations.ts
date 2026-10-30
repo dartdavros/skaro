@@ -57,6 +57,10 @@ export class TaskIntegrations {
         this.assertExecuting(op);
       },
       stopProcesses: (op) => ctx.processes.stop(`verification-${op.id}`),
+      checkChanged: (op, item) =>
+        void this.history
+          .event(op, { t: 'item.upsert', item })
+          .catch((error: unknown) => console.error('[integration] check row', error)),
     });
   }
 

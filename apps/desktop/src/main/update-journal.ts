@@ -3,7 +3,7 @@ import { isAbsolute, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { AgentId, Platform } from '@skaro/core';
 import { parseRelease, type ReleaseManifest } from './update-release';
-import { backupApplication } from './update-backup';
+import { backupApplication, removeOlderBackups } from './update-backup';
 
 export interface PendingUpdate {
   manifest: ReleaseManifest;
@@ -57,6 +57,10 @@ export class UpdateJournal {
       join(this.dir, 'pending.json'),
       join(this.dir, `superseded-${value.manifest.bundleVersion}-${randomUUID()}.json`),
     );
+  }
+  /** Older copies of the application are not needed once an update is confirmed. */
+  retireBackups(keep?: string): Promise<void> {
+    return removeOlderBackups(this.dir, keep);
   }
   async backup(version: string, executable: string, platform: Platform): Promise<string> {
     return backupApplication(this.dir, version, executable, platform);

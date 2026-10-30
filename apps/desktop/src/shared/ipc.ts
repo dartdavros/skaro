@@ -94,6 +94,8 @@ export interface Methods
   'updates.state': () => UpdateState;
   'updates.download': () => UpdateState;
   'updates.apply': () => UpdateState;
+  /** Skaro's own work outside the agent feeds, for the title bar. */
+  'background.state': () => import('./background').BackgroundState;
   /** "Другой…": an application picked by the user; undefined if cancelled. */
   'app.pickApp': () => string | undefined;
   'projects.list': () => ProjectInfo[];
@@ -244,6 +246,7 @@ export interface Events extends HistoryEvents, GraphEvents, ShellEvents {
   'command.changed': import('@skaro/timeline').OwnerCommand;
   'projects.card': ProjectCard;
   'updates.changed': UpdateState;
+  'background.changed': import('./background').BackgroundState;
   'window.maximized': boolean;
   'agents.changed': AgentInfo[];
   /** Artifacts of a project changed (task list and task details). */

@@ -24,6 +24,7 @@ async function environments(config: string, hasData: () => boolean) {
     docker: {
       ...systemDocker,
       hasData: async () => hasData(),
+      prune: async () => ({ failures: [], reclaimed: 0 }),
       remove: async (_containers, projects) => {
         removed.push(...projects);
         return [];

@@ -1,5 +1,5 @@
 import { promises as fs } from 'original-fs';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Platform } from '@skaro/core';
 
@@ -42,4 +42,19 @@ export async function backupApplication(
       { cause: error },
     );
   }
+}
+
+/** After a confirmed update only its own copy of the previous application stays for recovery. */
+export async function removeOlderBackups(updatesDir: string, keep?: string): Promise<void> {
+  const root = resolve(updatesDir, 'previous');
+  const kept = keep ? relative(root, resolve(keep)).split(sep)[0] : undefined;
+  let entries: string[];
+  try {
+    entries = await fs.readdir(root);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  for (const name of entries)
+    if (name !== kept) await fs.rm(join(root, name), { recursive: true, force: true });
 }

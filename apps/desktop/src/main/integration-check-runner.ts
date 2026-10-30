@@ -1,6 +1,7 @@
 import { git, runShell, type ProjectCheck } from '@skaro/core';
 import type { IntegrationOperation } from './integration-model';
 import type { IntegrationDeps } from './integration-service';
+import { checkItem } from './integration-check-feed';
 
 /** Execute and retain evidence for real checks on the immutable integration candidate. */
 export async function runIntegrationChecks(
@@ -20,6 +21,12 @@ export async function runIntegrationChecks(
     };
     op.checkRuns.push(evidence);
     save(op);
+    const index = op.checkRuns.length - 1;
+    const startedAt = Date.now();
+    // The feed shows each check as it runs; a failed write never decides the verification.
+    const show = (item = checkItem(op, evidence, index, startedAt)) =>
+      deps.checkChanged?.(op, item);
+    show();
     let lastOutputSave = 0;
     const timeout = setTimeout(() => {
       void (deps.stopProcesses?.(op) ?? Promise.resolve())
@@ -39,15 +46,19 @@ export async function runIntegrationChecks(
           if (Date.now() - lastOutputSave >= 250) {
             lastOutputSave = Date.now();
             save(op);
+            show();
           }
         },
       });
       evidence.state = 'passed';
       save(op);
+      show(checkItem(op, evidence, index, startedAt, Date.now()));
     } catch (error) {
       evidence.state = 'failed';
       evidence.error = error instanceof Error ? error.message : String(error);
       save(op);
+      const item = checkItem(op, evidence, index, startedAt, Date.now());
+      show(cancellation.signal.aborted ? { ...item, status: 'interrupted' } : item);
       throw error;
     } finally {
       clearTimeout(timeout);

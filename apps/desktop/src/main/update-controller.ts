@@ -113,6 +113,11 @@ export class Updates {
     const decision = recoveryDecision(pending, this.deps.current);
     if (decision === 'superseded') {
       await this.deps.journal.retire(pending);
+      await this.deps.journal
+        .retireBackups(pending.backup)
+        .catch((error: unknown) =>
+          console.error('[updates] Could not remove older backups', error),
+        );
       this.pending = undefined;
       this.target = undefined;
       return;
@@ -126,6 +131,11 @@ export class Updates {
         );
       await this.verifyAgents(pending);
       await this.deps.journal.confirm(pending);
+      await this.deps.journal
+        .retireBackups(pending.backup)
+        .catch((error: unknown) =>
+          console.error('[updates] Could not remove older backups', error),
+        );
       this.pending = undefined;
       this.target = undefined;
       this.unverified = false;

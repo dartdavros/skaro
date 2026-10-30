@@ -73,3 +73,34 @@ export function ownProjects(
       !all.some((c) => labelsOf(c)[COMPOSE_PROJECT] === project && !ownedIds.has(c.Id)),
   );
 }
+
+/**
+ * Removes what no container can use any more: anonymous volumes of removed containers, untagged
+ * images and build cache unused for a day. Named volumes keep their data; recent cache keeps
+ * rebuilds fast. Docker leaves these behind for every removed or recreated container.
+ */
+export async function pruneUnusedDocker(): Promise<{ failures: string[]; reclaimed: number }> {
+  const failures: string[] = [];
+  let reclaimed = 0;
+  for (const args of [
+    ['volume', 'prune', '--force'],
+    ['image', 'prune', '--force'],
+    ['builder', 'prune', '--force', '--filter', 'until=24h'],
+  ])
+    await docker(args, { timeoutMs: 600_000 })
+      .then((output) => (reclaimed += reclaimedBytes(output)))
+      .catch((error: unknown) => {
+        failures.push(
+          `${args[0]}: ${error instanceof Error ? error.message.trim() : String(error)}`,
+        );
+      });
+  return { failures, reclaimed };
+}
+
+const UNITS: Record<string, number> = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9, TB: 1e12 };
+
+/** "Total reclaimed space: 18.39GB" (volumes, images) or "Total: 4.138GB" (build cache). */
+export function reclaimedBytes(output: string): number {
+  const match = /Total(?: reclaimed space)?:\s*([\d.]+)\s*([KMGT]?B)/i.exec(output);
+  return match ? Number(match[1]) * (UNITS[match[2]!.toUpperCase()] ?? 0) : 0;
+}

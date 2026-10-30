@@ -131,15 +131,27 @@ export class CompletionCoordinator {
           !(error instanceof LocalChangesChangedError || error instanceof GitBaseChangedError)
         )
           throw error;
-        const next = await retryLocalIntegration(this.hooks, candidate, error);
-        return this.mergeResults(
-          next.projectId,
-          next.results.map((result) => result.taskId),
-          next.message,
-          next,
-        );
+        return this.retryCandidate(candidate, error);
       }
     });
+  }
+
+  /** A candidate prepared without part of the owner's related edits starts again with them. */
+  rescopeCandidate(candidate: IntegrationOperation, paths: string[]) {
+    return this.serialized(candidate.projectId, async () => {
+      await this.captured(candidate.projectId);
+      return this.retryCandidate(candidate, new LocalChangesChangedError(paths));
+    });
+  }
+
+  private async retryCandidate(candidate: IntegrationOperation, error: unknown) {
+    const next = await retryLocalIntegration(this.hooks, candidate, error);
+    return this.mergeResults(
+      next.projectId,
+      next.results.map((result) => result.taskId),
+      next.message,
+      next,
+    );
   }
 
   private captured(projectId: string): Promise<unknown> {

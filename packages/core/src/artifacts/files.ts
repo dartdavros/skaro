@@ -1,5 +1,6 @@
+import { replaceFile } from '../fs-replace.ts';
 import { watch, type FSWatcher } from 'node:fs';
-import { mkdir, readdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { dirname, join, sep } from 'node:path';
 import { str } from './conversion.ts';
@@ -85,7 +86,7 @@ export class ArtifactFiles {
     try {
       await writeFile(temporary, content, { flag: 'wx' });
       this.ownWrites.set(abs, content);
-      await rename(temporary, abs);
+      await replaceFile(temporary, abs);
     } finally {
       await rm(temporary, { force: true });
     }

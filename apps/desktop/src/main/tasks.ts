@@ -59,6 +59,20 @@ export class TaskRuns {
       t: 'item.upsert',
       item: { ...item, turnId: previous?.turnId ?? active.timeline.state.turns.at(-1)?.id ?? '' },
     });
+    // The agent ended its turn to wait for this decision: Skaro hands it over and the task goes on.
+    const decided = item.state === 'applied' || item.state === 'rejected';
+    if (!decided || (previous?.kind === 'proposal' && previous.state === item.state)) return;
+    const context = this.engine.project(scope.projectId);
+    context.invalidate();
+    const task = (await context.load()).tasks.find((t) => t.id === scope.taskId);
+    // A finished task has nothing to continue; its feed keeps the decision.
+    if (task && !['done', 'cancelled'].includes(task.status))
+      // The decision is already applied; a failed hand-over leaves the owner to continue the task.
+      await this.engine.messages
+        .continueAfter(active, architectureDecision(item))
+        .catch((error: unknown) =>
+          console.error(`${scope.taskId} continue after C4 decision:`, error),
+        );
   }
   revertMerge(projectId: string, taskId: string, commit: string): Promise<void> {
     return this.engine.mergeActions.revert(projectId, taskId, commit);
@@ -245,4 +259,11 @@ export class TaskRuns {
   close(): Promise<void> {
     return this.engine.sessions.close();
   }
+}
+
+function architectureDecision(item: Extract<Item, { kind: 'proposal' }>): string {
+  const title = item.proposal.type === 'architecture' ? item.proposal.title : '';
+  return item.state === 'applied'
+    ? `The owner accepted the architecture package "${title}" and Skaro applied it. Continue the task.`
+    : `The owner rejected the architecture package "${title}". Continue the task without it.`;
 }

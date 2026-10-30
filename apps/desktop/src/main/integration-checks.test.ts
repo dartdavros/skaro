@@ -5,6 +5,7 @@ import { integrationFailure } from './integration-failure';
 import { recoverLegacyCheckShell } from './integration-shell-recovery';
 import { dropInheritedMergeChecks } from './integration-merge-checks';
 import { MERGE_CHECKS } from './integration-model';
+import { checkItem } from './integration-check-feed';
 import { readVerificationPlan } from '../../../../packages/mcp-server/src/verification-plan';
 
 const old = { name: 'Ruff', run: '$files = Get-ChildItem *.py; ruff check @files' };
@@ -157,7 +158,7 @@ it('drops inherited checks of a merge saved before D-45 once and returns it to i
   expect(op.verificationPlan).toEqual([build, resolution]);
   expect(op.checkReplacements).toEqual([]);
   expect(integrationChecks(op)).toEqual([build, resolution]);
-  expect(op).toMatchObject({ state: 'resolving', needsVerification: true, attempts: 0 });
+  expect(op).toMatchObject({ state: 'verifying', needsVerification: false, attempts: 0 });
   expect(op.checkRuns).toBe(evidence);
   expect(dropInheritedMergeChecks(op)).toBe(false);
   const preparing = operation();
@@ -183,8 +184,23 @@ it('drops every repair in the replacement chain of an inherited merge check', ()
   expect(op.verificationPlan).toEqual([build, resolution]);
   expect(op.checkReplacements).toEqual([]);
   expect(integrationChecks(op)).toEqual([build, resolution]);
-  expect(op).toMatchObject({ state: 'resolving', mergeChecks: MERGE_CHECKS });
+  expect(op).toMatchObject({ state: 'verifying', mergeChecks: MERGE_CHECKS });
   expect(dropInheritedMergeChecks(op)).toBe(false);
+});
+
+it('drops a repaired inherited check by its name after an earlier migration lost the chain', () => {
+  // Skaro 2.2.8 removed the first repair and kept the second one, which replaces the first.
+  const op = { ...operation(), purpose: 'publication' as const, state: 'waiting' as const };
+  op.mergeChecks = 2;
+  op.baseResults = [{ ...op.results[0]!, taskId: 'T-050', verification: [regression] }];
+  const resolution = { name: 'Settings tests', run: 'npm test settings' };
+  const cached = { ...regression, run: 'pwsh cached-check.ps1 -Check regression' };
+  op.verificationPlan = [build, cached, resolution];
+  op.checkReplacements = [{ replaces: 'pytest affected --reuse-db', check: cached }];
+  expect(dropInheritedMergeChecks(op)).toBe(true);
+  expect(op.verificationPlan).toEqual([build, resolution]);
+  expect(op.checkReplacements).toEqual([]);
+  expect(op).toMatchObject({ state: 'verifying', needsVerification: false });
 });
 
 it('recovers only the known legacy shell failure once, preserving the candidate and evidence', () => {
@@ -227,4 +243,26 @@ it('validates shell metadata and permits replacements only for integration verif
   expect(readVerificationPlan([check])).toContain('Only verify_integration');
   expect(readVerificationPlan([{ ...old, shell: 'unrecognized' }], true)).toContain('Check shell');
   expect(readVerificationPlan([{ ...old, replaces: ' ' }], true)).toContain('non-empty');
+});
+
+it('shows a check Skaro runs as a command row with its name, live output and exit code', () => {
+  const op = operation();
+  const run = { ...build, head: op.head, state: 'running' as const, output: 'building' };
+  expect(checkItem(op, run, 2, 1000)).toMatchObject({
+    id: 'skaro-check-candidate-2',
+    kind: 'command',
+    command: build.run,
+    description: build.name,
+    output: 'building',
+    outputLive: true,
+    status: 'running',
+  });
+  expect(checkItem(op, { ...run, state: 'passed' }, 2, 1000, 4000)).toMatchObject({
+    status: 'done',
+    exitCode: 0,
+    durationMs: 3000,
+    outputLive: false,
+  });
+  const failed = { ...run, state: 'failed' as const, error: 'Build: exit 2\nno space left' };
+  expect(checkItem(op, failed, 2, 1000, 4000)).toMatchObject({ status: 'failed', exitCode: 2 });
 });

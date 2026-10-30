@@ -9,6 +9,7 @@
   import TitleBar from './TitleBar.svelte';
   import SelectionCopy from './SelectionCopy.svelte';
   import UpdatesModal from './updates/UpdatesModal.svelte';
+  import BackgroundModal from './background/BackgroundModal.svelte';
   import { createNavigation } from './app-navigation.svelte';
   import { updates } from './settings/updates.svelte';
   const nav = createNavigation();
@@ -23,6 +24,7 @@
 <TooltipHost />
 <SelectionCopy />
 <UpdatesModal />
+<BackgroundModal />
 <NewProjectModal bind:open={nav.newProject} oncreated={(p) => void nav.projectAdded(p)} />
 
 <div class="app">

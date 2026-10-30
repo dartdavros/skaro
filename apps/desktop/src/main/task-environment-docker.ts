@@ -5,6 +5,7 @@ import {
   environmentHasData,
   inspectContainers,
   labelsOf,
+  pruneUnusedDocker,
   removeEnvironment,
   stopContainers,
   type DockerContainer,
@@ -18,6 +19,8 @@ export interface EnvironmentDocker {
   remove: (containers: DockerContainer[], projects: string[]) => Promise<string[]>;
   hasData: (name: string) => Promise<boolean>;
   ports: (count: number, taken: ReadonlySet<number>) => Promise<number[]>;
+  /** Removes what Docker keeps after containers are gone; failures come back, never thrown. */
+  prune: () => Promise<{ failures: string[]; reclaimed: number }>;
 }
 
 export const systemDocker: EnvironmentDocker = {
@@ -26,6 +29,7 @@ export const systemDocker: EnvironmentDocker = {
   remove: removeEnvironment,
   hasData: environmentHasData,
   ports: allocatePorts,
+  prune: pruneUnusedDocker,
 };
 
 export function sameTask(a: TaskKey | undefined, b: TaskKey): boolean {

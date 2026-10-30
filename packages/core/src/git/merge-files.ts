@@ -5,13 +5,13 @@ import {
   mkdir,
   readFile,
   readlink,
-  rename,
   rm,
   rmdir,
   symlink,
   writeFile,
 } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { replaceFile } from '../fs-replace.ts';
 
 export type FileImage =
   | { kind: 'missing' | 'directory' }
@@ -55,7 +55,7 @@ export async function putFile(path: string, image: FileImage): Promise<void> {
     try {
       await writeFile(temporary, Buffer.from(image.data, 'base64'), { flag: 'wx' });
       await chmod(temporary, image.mode);
-      await rename(temporary, path);
+      await replaceFile(temporary, path);
     } finally {
       await rm(temporary, { force: true });
     }
