@@ -3,6 +3,25 @@
 История выполнения [плана](builtin-agent-plan.md). Результаты каждого этапа
 относятся к его объёму; они не означают готовность всего встроенного агента.
 
+## Начало BA-6, 31.10.2026
+
+Добавлены run_check/check_evidence поверх существующего executor и approval.
+Реальная команда git diff --check на настоящем checkout сохранила fingerprints
+HEAD/index/tracked/dirty/untracked inputs и hash приватного output. Проверены
+allow_once, read-only отказ до intent, dedup без нового процесса, process paging,
+отказ поддельной sequence/hash ссылке и утрата подтверждения удалённого output.
+Шесть целевых сценариев в builtin-checks/context/native-worker прошли без
+fixtures и fake API; проверка нового command evidence выполнена повторно
+после добавления read-only отказа и чтения output через process paging.
+Штатная сборка main/workers/preload/renderer, TypeScript runtime/desktop main,
+lint и форматирование прошли; полный suite
+не запускался. UI и продуктовый submit_result не менялись.
+
+Это первый проверенный блок, не закрытая BA-6. Открыты среда/зависимости,
+browser evidence, цикл исправлений и completion/C4 gates. Неизвестные зависимости
+не считаются безопасными; exit code 0 не включает автоматическую приёмку.
+Контракт и ограничения — [builtin-agent-checks.md](builtin-agent-checks.md).
+
 ## Продолжение BA-5, 31.10.2026
 
 ### Закрытие BA-5

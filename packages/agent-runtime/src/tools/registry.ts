@@ -11,6 +11,7 @@ import { RuntimeContext } from '../context/service.ts';
 import { contextHistoryPage } from '../context/history.ts';
 import { ExtensionRegistry, type RuntimeExtensionHost } from '../extensions/registry.ts';
 import { sessionFileScope } from './session-scope.ts';
+import { runCheck, checkEvidence } from '../verification/checks.ts';
 
 export class ToolRegistry {
   readonly scope: PathScope;
@@ -54,6 +55,10 @@ export class ToolRegistry {
     signal.throwIfAborted();
     if (this.extensions.has(name)) return this.extensions.invoke(id, name, args, signal);
     switch (name) {
+      case 'run_check':
+        return runCheck(id, args, this.scope, this.processes, this.journal, signal);
+      case 'check_evidence':
+        return checkEvidence(args, this.scope, this.journal, signal);
       case 'context_read': {
         const context = await RuntimeContext.create(this.journal);
         if (!context) throw new Error('Host context is not configured');

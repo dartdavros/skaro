@@ -3,6 +3,18 @@ import { z } from 'zod';
 const path = z.string().min(1).max(4096);
 const integer = (max: number) => z.number().int().min(0).max(max);
 export const schemas = {
+  run_check: z.strictObject({
+    name: z.string().min(1).max(200),
+    criteria: z.array(z.string().min(1).max(200)).min(1).max(100),
+    command: z.string().min(1).max(100_000),
+    cwd: path.optional(),
+    shell: z.enum(['powershell', 'cmd', 'sh', 'bash']).optional(),
+    timeoutMs: z.number().int().min(100).max(3_600_000).default(120_000),
+  }),
+  check_evidence: z.strictObject({
+    sequence: z.number().int().min(1),
+    hash: z.string().regex(/^[a-f0-9]{64}$/),
+  }),
   find_files: z.strictObject({
     path: path.optional(),
     pattern: z.string().max(512).optional(),
@@ -100,6 +112,7 @@ export const toolCatalog = () =>
 export const writeTools = new Set<ToolName>([
   'apply_patch',
   'exec_command',
+  'run_check',
   'write_stdin',
   'stop_process',
   'update_plan',

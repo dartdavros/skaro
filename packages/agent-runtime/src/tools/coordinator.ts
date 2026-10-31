@@ -112,6 +112,7 @@ export class ToolCoordinator {
       (extensionWrite ||
         name === 'apply_patch' ||
         name === 'exec_command' ||
+        name === 'run_check' ||
         (name === 'write_stdin' && (args.chars !== undefined || args.end === true)))
     )
       throw new Error('Read-only scope forbids this tool');
@@ -124,6 +125,7 @@ export class ToolCoordinator {
       throw new Error('An unknown effect outcome blocks new tools');
     const command =
       name === 'exec_command' ||
+      name === 'run_check' ||
       (name === 'write_stdin' && (args.chars !== undefined || args.end === true));
     const writes = name === 'apply_patch';
     const requires =
@@ -136,7 +138,9 @@ export class ToolCoordinator {
       action: {
         type: command ? 'command' : extensionWrite ? 'mcp' : 'file_write',
         title: name,
-        ...(name === 'exec_command' ? { command: String(args.command) } : {}),
+        ...(name === 'exec_command' || name === 'run_check'
+          ? { command: String(args.command) }
+          : {}),
         ...(name === 'apply_patch' ? { paths: [String(args.path)] } : {}),
         reason:
           builtinSandboxStatus(config.permissionMode).detail +
