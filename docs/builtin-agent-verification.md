@@ -5,6 +5,28 @@
 
 ## Продолжение BA-5, 31.10.2026
 
+### Закрытие BA-5
+
+BA-5 принят в текущем поддерживаемом Windows-контуре. Закрыты HTTP MCP и
+внутренний port на настоящих службах/handlers зарегистрированного Skaro,
+границы четырёх API-профилей, блокирование route change открытым вопросом,
+точный ответ после compact/restart и обновление system frame нового поручения
+на настоящей сохранённой модельной сессии. Проектные scopes, schema, allow_once
+до intent, dedup и отказ от replay отозванного HTTP grant проверены фактически.
+
+Настоящий browser/media прогон выполнен на существующем Chatballs T-171:
+readiness 200 с PostgreSQL/Redis, navigation, PNG screenshot 119 790 bytes,
+console 0 errors/0 warnings, private artifact SHA256, отсутствие base64 в
+journal и подтверждённый выход MCP процесса. Screenshot просмотрен: форма
+входа настоящего приложения. Учётные записи/seed не менялись, model requests — 0.
+Исправлен необходимый для Chrome OS env allowlist в MCP, без model credentials.
+Connection refused, два timeout и отказ schema до screenshot intent сохранены;
+приёмка не ослаблена. [Точная таблица и proof IDs](builtin-agent-ba5-acceptance.md).
+
+Ниже сохранена история промежуточных прогонов; их незакрытые пункты отражают
+состояние на тот момент. BA-4 direct live отложен владельцем, BA-7 task/chat,
+BA-8 UI и BA-9 платформенная приёмка не объявляются выполненными.
+
 BA-4 зафиксирован коммитом `fcd8685`. Реализованы scoped context и ревизии,
 локальный compact с сохранением primary journal/точных решений, paged documents
 и публичная история без закрытого native state. Добавлены host-selected skills,

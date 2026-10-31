@@ -5,6 +5,8 @@
 import { randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import type { ProcessAdmissionPort, ScopedOperationPort } from '@skaro/timeline';
+import { scopedOperationPort } from './scoped-port.ts';
 
 export interface ToolResult {
   text: string;
@@ -66,6 +68,14 @@ export class McpHttpServer<S> {
   get url(): string {
     if (!this.server) throw new Error('MCP server is not listening');
     return `http://127.0.0.1:${this.port}/mcp`;
+  }
+
+  /** Bind the same live catalogue/handlers; internal callers receive no HTTP token. */
+  operations(
+    scope: S & import('@skaro/timeline').SkaroScope,
+    admissions: Pick<ProcessAdmissionPort, 'requireActive'>,
+  ): ScopedOperationPort {
+    return scopedOperationPort({ tools: this.tools, scope, admissions });
   }
 
   /** Access for one agent session. */

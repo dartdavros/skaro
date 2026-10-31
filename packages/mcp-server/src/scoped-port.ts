@@ -3,9 +3,9 @@ import type { ScopedOperationPort, ProcessAdmissionPort, SkaroScope } from '@ska
 import type { Tool } from './server.ts';
 
 /** Internal transport over the exact existing handlers/availability, never a second workflow. */
-export function scopedOperationPort(input: {
-  tools: readonly Tool<SkaroScope>[];
-  scope: SkaroScope;
+export function scopedOperationPort<S extends SkaroScope>(input: {
+  tools: readonly Tool<S>[];
+  scope: S;
   admissions: Pick<ProcessAdmissionPort, 'requireActive'>;
 }): ScopedOperationPort {
   const scope = structuredClone(input.scope);

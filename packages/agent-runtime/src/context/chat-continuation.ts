@@ -16,7 +16,8 @@ export function continueContextChatRequest(
     JSON.stringify(stored.route) !== JSON.stringify(request.route) ||
     value?.schema !== 1 ||
     value.context?.revision !== fresh.context!.revision ||
-    value.context?.epoch !== fresh.context!.epoch
+    value.context?.epoch !== fresh.context!.epoch ||
+    JSON.stringify(value.messages?.[0]) !== JSON.stringify(fresh.messages[0])
   )
     return fresh;
   if (

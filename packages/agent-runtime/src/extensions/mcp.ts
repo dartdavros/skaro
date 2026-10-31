@@ -6,6 +6,7 @@ import type { RuntimeExtension, RuntimeExtensionHost } from './registry.ts';
 import { mcpTransport, type McpProcessHost } from './mcp-transport.ts';
 import { UnknownToolOutcome } from '../tools/effect-error.ts';
 import { ModelSecretGuard } from '../models/secret-guard.ts';
+import { mcpContent, type McpImageStore } from './mcp-content.ts';
 
 /** No server annotation can grant writes, access a model credential or bypass a host allowlist. */
 export async function connectMcpExtension(input: {
@@ -15,6 +16,7 @@ export async function connectMcpExtension(input: {
   signal: AbortSignal;
   processes?: McpProcessHost;
   allowed: readonly { name: string; readOnly: boolean }[];
+  images?: McpImageStore;
 }): Promise<RuntimeExtensionHost> {
   if (
     !/^[a-zA-Z0-9_-]{1,64}$/.test(input.id) ||
@@ -92,13 +94,8 @@ export async function connectMcpExtension(input: {
             });
             active.throwIfAborted();
             requireSafe(result);
-            if (
-              !Array.isArray(result.content) ||
-              result.content.some((part) => part.type !== 'text')
-            )
-              throw new Error('MCP response requires an unsupported content type');
             return {
-              text: result.content.map((part) => part.text).join('\n'),
+              ...(await mcpContent(result.content, input.images, active)),
               ...(result.isError ? { isError: true } : {}),
             };
           } catch {

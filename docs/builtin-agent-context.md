@@ -1,6 +1,7 @@
 # BA-5: контекст, compact и расширения
 
-Дата: 31.10.2026. Этап начат, полная приёмка не закрыта.
+Дата: 31.10.2026. BA-5 принят в поддерживаемом контуре Windows.
+Критерии и границы — [итоговая приёмка](builtin-agent-ba5-acceptance.md).
 BA-4 зафиксирован коммитом `fcd8685`
 `:sparkles: feat(agent): add BYOK vault and native model connectors`.
 Контекст и расширения добавлены во внутренний runtime; продуктовый host/RPC,
@@ -102,7 +103,8 @@ close останавливает проверенное дерево до зак
 `scopedOperationPort` в mcp-server и `bindSkaroOperations` вызывают существующие
 handlers с неизменным bound SkaroScope, availability/schema и admission checks.
 Нового completion/merge/C4 workflow нет. Host RPC, подключение этого порта
-в продуктовые task/chat и живая HTTP-проверка настоящего app server ещё открыты.
+в продуктовые task/chat относятся к BA-7. Настоящий app server и его внутренний
+port проверены через `McpHttpServer.operations` на одном каталоге и handlers.
 
 ## Фактическая проверка и остаток
 
@@ -114,18 +116,19 @@ paging, stale revision, compact без удаления записей, restart,
 Штатный `taskBrowserServer` запускает настоящий установленный Playwright MCP
 0.0.83 с isolated/headless browser. Проверены allowlist, invalid args,
 ожидание allow_once до effect intent, реальный browser_tabs list, dedup и
-подтверждённый выход процесса. Навигация, screenshot и приложение над заглушками
-не запускались. Это не browser-приёмка продуктового интерфейса Skaro.
+подтверждённый выход процесса. Последующая приёмка проверила navigation,
+readiness и screenshot настоящего Chatballs T-171; результаты приведены
+в итоговой таблице. Это не browser-приёмка продуктового интерфейса Skaro.
 
 Публичная история дополнительно проверена на шести настоящих BA-4 model
 responses: 74 981 символ исходных records → 11 347 символ публичных записей,
 private native fields — 0. Новых запросов модели эта проверка не выполняла.
 
-Незакрытая приёмка: native compaction конкретного API, все смены маршрутов, живой HTTP MCP
-на продуктовых handlers, полноценная browser-работа в задаче и media bridge,
-macOS/Linux stdio и продуктовый host lifecycle. Разрешённые ранее OpenRouter
-payload/budget не расширяются самим включением context. Непроверенные случаи
-не объявляются готовыми.
+Границы маршрутов, HTTP MCP на настоящих handlers и task browser/media приняты
+в итоговом прогоне. Native compaction опциональна; direct API остаются BA-4,
+task/chat host lifecycle — BA-7. macOS/Linux stdio явно недоступны до проверки
+process-tree backend. Разрешённые OpenRouter payload/budget не расширяются
+самим включением context; непроверенные случаи не объявляются готовыми.
 
 Подготовленный live entry:
 
@@ -192,5 +195,6 @@ USD receipts и сохраняет резервы неизвестных исх�
 без подтверждённых receipts, всего $0.28447606. Цепочки SHA256 проверены.
 Повторная сверка `/key` остановилась на credential-stage; свежий account usage
 не подтверждён, стоимость сценария доказана сохранёнными request receipts.
-Закрыт именно этот критерий для указанного маршрута и Windows; перечисленные
-выше оставшиеся критерии BA-5 и продуктовая интеграция остаются открытыми.
+Закрыт этот критерий для указанного маршрута и Windows. Последующая приёмка
+закрыла остальные критерии поддерживаемого контура BA-5; продуктовая интеграция
+и платформенные границы перечислены в итоговой таблице.

@@ -28,6 +28,10 @@ class OwnedStdio extends StdioClientTransport {
         (entry): entry is [string, string] => entry[1] !== undefined,
       ),
     );
+    // Windows browser subprocesses need their OS profile/cache directories.
+    // Keep the inherited set explicit; model credentials and arbitrary env stay excluded.
+    for (const name of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA'])
+      if (process.env[name]) env[name] = process.env[name];
     for (const [name, value] of Object.entries(config.env ?? {})) {
       if (
         /^(OPENAI|ANTHROPIC|DEEPSEEK|OPENROUTER)_/i.test(name) ||

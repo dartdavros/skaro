@@ -14,6 +14,7 @@ export { inspectSkill } from './context/skills.ts';
 export type * from './context/model.ts';
 export type * from './extensions/registry.ts';
 export { connectMcpExtension } from './extensions/mcp.ts';
+export { createMcpImageStore } from './extensions/mcp-content.ts';
 export { bindSkaroOperations } from './extensions/skaro.ts';
 export type * from './models/chat-types.ts';
 export type * from './models/connector-auth.ts';

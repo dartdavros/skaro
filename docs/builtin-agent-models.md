@@ -158,4 +158,5 @@ BA-4 выше описывают ограничения, действовавш�
 их continuation/cancel/error/cache semantics ещё не подтверждены сервисом.
 Не проверены live signed reasoning, изображения, все routing/fallback режимы,
 произвольные compatible endpoints и все платформы/архитектуры.
-BA-5–BA-9, продуктовый host и UI/design gates остаются открытыми.
+BA-5 принят в поддерживаемом Windows-контуре; BA-6–BA-9, продуктовый host
+и UI/design gates остаются открытыми.
