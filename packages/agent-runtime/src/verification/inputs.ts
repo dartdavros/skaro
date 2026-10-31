@@ -5,6 +5,7 @@ import { createReadStream } from 'node:fs';
 import { lstat, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { PathScope } from '../tools/path-scope.ts';
+import { cleanCommandEnvironment } from '../tools/command-env.ts';
 
 const execute = promisify(execFile);
 export const fingerprint = (value: unknown) =>
@@ -29,8 +30,9 @@ export async function captureCheckInputs(
 ): Promise<CheckInputs> {
   const git = async (args: string[]) =>
     (
-      await execute('git', ['--no-optional-locks', ...args], {
+      await execute('git', ['--no-optional-locks', '-c', 'core.fsmonitor=false', ...args], {
         cwd: scope.root,
+        env: cleanCommandEnvironment(),
         signal,
         windowsHide: true,
         encoding: 'utf8',

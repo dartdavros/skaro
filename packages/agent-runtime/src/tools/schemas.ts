@@ -2,8 +2,26 @@ import { z } from 'zod';
 
 const path = z.string().min(1).max(4096);
 const integer = (max: number) => z.number().int().min(0).max(max);
+const evidenceReference = z.strictObject({
+  sequence: z.number().int().min(1),
+  hash: z.string().regex(/^[a-f0-9]{64}$/),
+});
 export const schemas = {
+  diagnose_check: z.strictObject({
+    evidence: evidenceReference,
+    category: z.enum([
+      'implementation',
+      'command',
+      'infrastructure',
+      'flaky',
+      'unrelated',
+      'unknown',
+    ]),
+    reason: z.string().min(1).max(8192),
+    correction: z.string().min(1).max(8192),
+  }),
   run_check: z.strictObject({
+    retryOf: evidenceReference.optional(),
     name: z.string().min(1).max(200),
     criteria: z.array(z.string().min(1).max(200)).min(1).max(100),
     command: z.string().min(1).max(100_000),

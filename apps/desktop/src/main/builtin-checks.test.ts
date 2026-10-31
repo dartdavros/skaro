@@ -63,8 +63,25 @@ it.skipIf(process.platform !== 'win32')(
       expect(valid.result.value).toMatchObject({
         inputsCurrent: true,
         outputCurrent: true,
+        environmentCurrent: true,
         acceptance: 'requires-environment-and-criteria-review',
       });
+      const previousLanguage = process.env.LANG;
+      try {
+        process.env.LANG = previousLanguage === 'C' ? 'POSIX' : 'C';
+        const changedEnvironment = await session.execute({
+          id: 'environment-change',
+          action: { type: 'tool', name: 'check_evidence', args: value.evidence },
+        });
+        expect(changedEnvironment.result.value).toMatchObject({
+          inputsCurrent: true,
+          environmentCurrent: false,
+          outputCurrent: true,
+        });
+      } finally {
+        if (previousLanguage === undefined) delete process.env.LANG;
+        else process.env.LANG = previousLanguage;
+      }
       const count = session.journal.records.length;
       const replay = await session.execute({
         id: 'real-check',
@@ -102,10 +119,74 @@ it.skipIf(process.platform !== 'win32')(
         action: { type: 'tool', name: 'check_evidence', args: value.evidence },
       });
       expect(missing.result.value).toMatchObject({ outputCurrent: false });
+
+      // A genuine comparison of the two distinct scoped instruction files returns exit 1.
+      // No project/API is fabricated and no failure is planted in the source.
+      const comparison = {
+        name: 'Compare scoped instructions',
+        criteria: ['instructions-differ'],
+        command: 'git diff --exit-code --no-index -- AGENTS.md apps/desktop/AGENTS.md',
+      };
+      const failure = (await approvedTool(
+        session,
+        'comparison',
+        'run_check',
+        comparison,
+      )) as unknown as typeof value;
+      expect(failure.outcome).toBe('failed');
+      await expect(
+        approvedTool(session, 'no-diagnosis', 'run_check', {
+          ...comparison,
+          retryOf: failure.evidence,
+        }),
+      ).rejects.toThrow('recorded diagnosis');
+      expect(session.journal.state.processes['no-diagnosis']).toBeUndefined();
+      const diagnosis = await session.execute({
+        id: 'diagnose',
+        action: {
+          type: 'tool',
+          name: 'diagnose_check',
+          args: {
+            evidence: failure.evidence,
+            category: 'command',
+            reason: 'These real scoped instruction files are different by design.',
+            correction: 'Keep the failure visible; equality is not a valid acceptance requirement.',
+          },
+        },
+      });
+      expect(diagnosis.result.error).toBeUndefined();
+      await expect(
+        approvedTool(session, 'weakened', 'run_check', {
+          ...comparison,
+          command: 'git diff --check',
+          retryOf: failure.evidence,
+        }),
+      ).rejects.toThrow('preserve command');
+      expect(session.journal.state.processes.weakened).toBeUndefined();
+      await expect(
+        approvedTool(session, 'weakened-timeout', 'run_check', {
+          ...comparison,
+          timeoutMs: 120001,
+          retryOf: failure.evidence,
+        }),
+      ).rejects.toThrow('preserve command');
+      expect(session.journal.state.processes['weakened-timeout']).toBeUndefined();
+      const retried = (await approvedTool(session, 'comparison-again', 'run_check', {
+        ...comparison,
+        retryOf: failure.evidence,
+      })) as unknown as typeof value;
+      expect(retried.outcome).toBe('failed');
+      expect(session.journal.find('check:comparison:result')!.result.value).toMatchObject({
+        outcome: 'failed',
+      });
+      expect(session.journal.find('check:comparison-again:result')!.result.value).toMatchObject({
+        retryOf: failure.evidence,
+        outcome: 'failed',
+      });
     } finally {
       await session.dispose();
       await rm(directory, { recursive: true, force: true });
     }
   },
-  120_000,
+  180_000,
 );

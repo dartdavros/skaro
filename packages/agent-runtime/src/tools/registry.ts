@@ -12,6 +12,7 @@ import { contextHistoryPage } from '../context/history.ts';
 import { ExtensionRegistry, type RuntimeExtensionHost } from '../extensions/registry.ts';
 import { sessionFileScope } from './session-scope.ts';
 import { runCheck, checkEvidence } from '../verification/checks.ts';
+import { recordCheckDiagnosis } from '../verification/repairs.ts';
 
 export class ToolRegistry {
   readonly scope: PathScope;
@@ -55,6 +56,8 @@ export class ToolRegistry {
     signal.throwIfAborted();
     if (this.extensions.has(name)) return this.extensions.invoke(id, name, args, signal);
     switch (name) {
+      case 'diagnose_check':
+        return recordCheckDiagnosis(id, schemas.diagnose_check.parse(args), this.journal);
       case 'run_check':
         return runCheck(id, args, this.scope, this.processes, this.journal, signal);
       case 'check_evidence':

@@ -5,6 +5,25 @@
 
 ## Начало BA-6, 31.10.2026
 
+Продолжение после `70abc14`: измеряемое host окружение фиксируется до/после
+команды и повторно проверяется по OS/runtime/executable hash и очищенному env.
+Изменение LANG в изолированном процессе теста дало environmentCurrent=false
+при inputsCurrent/outputCurrent=true; значение восстановлено. Секретные значения
+env не сохраняются. Неизвестные toolchain/dependencies/services остаются открытыми.
+Git metadata также использует очищенный env с отключённым fsmonitor hook;
+cwd проверки ограничен основным project scope.
+
+Диагноз хранится как гипотеза модели с категорией и ссылкой на реальный отказ.
+Retry требует диагноза и сохраняет command/cwd/shell/timeout/имя/criterion IDs.
+Реальный git diff --no-index сравнил два разных scoped AGENTS.md и вернул exit 1;
+повтор без диагноза, замена команды и увеличение timeout отклонены до процесса.
+Разрешённый повтор также сохранил отказ. Никакого planted дефекта/fixture нет;
+это проверка истории неуспеха, не приёмка исправления значимого дефекта BA-6.
+Целевой builtin-checks и два compiled native-worker сценария прошли.
+Штатная сборка main/workers/preload/renderer, TypeScript desktop/runtime,
+ESLint, Prettier и diff check прошли. Изменённые исходники меньше 300 строк;
+полный suite не запускался, модельные API не вызывались.
+
 Добавлены run_check/check_evidence поверх существующего executor и approval.
 Реальная команда git diff --check на настоящем checkout сохранила fingerprints
 HEAD/index/tracked/dirty/untracked inputs и hash приватного output. Проверены
