@@ -24,6 +24,7 @@ export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void
           ctx.queue.enqueue([`${project.id}\n${task.id}`]);
           continue;
         }
+        if (await ctx.continuation.recover(project.id, task)) continue;
         // Prior versions lost the request before recording a run. Retry only this diagnosed defect.
         if (
           runtime.get(task.id)?.state !== 'failed' ||

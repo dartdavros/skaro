@@ -10,6 +10,7 @@ import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { QuestionAnswers } from './question-answers';
 import { presentationEvent } from './timeline-presentation';
+import { isLegacyWaitCard } from './task-wait-card';
 
 /** history: a focused part of the task-run controller. */
 export class TaskRunHistory {
@@ -67,6 +68,14 @@ export class TaskRunHistory {
     active.commitMessage = handoff?.commitMessage ?? result?.message;
     active.verification = result?.verification;
     this.ctx.active.set(k, active);
+    // Generic wait cards never represented an owner decision; do not restore their tool barrier.
+    for (const interaction of [...active.timeline.state.interactions])
+      if (isLegacyWaitCard(interaction))
+        this.skaroEvent(active, {
+          t: 'interaction.closed',
+          id: interaction.id,
+          resolution: 'cancelled',
+        });
     // A live turn cannot survive a restart; async questions still wait for a later reply.
     const turn = active.timeline.state.turns.at(-1);
     if (turn && !turn.outcome) {

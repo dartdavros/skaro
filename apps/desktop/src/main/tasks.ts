@@ -210,6 +210,15 @@ export class TaskRuns {
   submitResult(args: SubmitResultArgs, scope: SkaroScope): Promise<ToolResult> {
     return taskTool(this.engine, scope, () => this.engine.results.submitResult(args, scope));
   }
+  reportBlocker(reason: string, scope: SkaroScope): Promise<ToolResult> {
+    return taskTool(this.engine, scope, async () => {
+      const active = this.engine.requireActive(scope.projectId, scope.taskId!);
+      this.engine.continuation.block(active, reason);
+      return {
+        text: 'The external blocker is recorded. The task remains incomplete; automatic continuation is suspended. Report the precise blocker without asking for a generic continue message.',
+      };
+    });
+  }
   startEnvironment(scope: SkaroScope): Promise<ToolResult> {
     if (scope.kind === 'integration') return this.engine.integrations.environment(scope);
     return taskTool(this.engine, scope, () => startTaskEnvironment(this.engine, scope));

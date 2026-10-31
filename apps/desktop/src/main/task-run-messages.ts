@@ -23,6 +23,10 @@ export class TaskRunMessages {
     let active = await this.ctx.history.restore(projectId, taskId);
     if (!active) return this.ctx.scheduling.start(projectId, taskId, input);
     active = await this.ctx.handoff.recover(active);
+    if (!input.internal) {
+      const task = await readSubject(this.ctx.project(projectId), taskId);
+      if (task.status === 'in_progress') this.ctx.continuation.execution(active).start();
+    }
     await this.turn(active, input);
   }
 
@@ -40,7 +44,8 @@ export class TaskRunMessages {
 
   /** Skaro's own message: the agent continues; the feed shows the decision, not this text. */
   async continueAfter(active: ActiveRun, text: string): Promise<void> {
-    active.internalInputs.add(text.trim());
+    // The owner's package decision also resumes runs created before execution intent existed.
+    this.ctx.continuation.execution(active).start();
     // Skaro's own waiting card asked for this very step; it is answered by continuing.
     for (const open of active.timeline.state.interactions)
       if (open.id.startsWith(WAIT_CARD))
@@ -49,20 +54,26 @@ export class TaskRunMessages {
           id: open.id,
           resolution: 'cancelled',
         });
-    await this.turn(active, { text });
+    await this.turn(active, { text, internal: true });
   }
 
   /** Straight to the agent: only for a turn that holds its slot. */
   async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
+    if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
     input = active.secrets.input(input);
     assertQuestionsAnswered(active.timeline.state);
     const session = await this.ctx.sessions.attach(active);
+    if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
     assertQuestionsAnswered(active.timeline.state);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
       throw new CommandCancelled();
-    const message = input.commandId
-      ? { ...input, text: withSkaroNote(`command_id: ${input.commandId}`, input.text) }
-      : input;
+    const note = [
+      input.commandId && `command_id: ${input.commandId}`,
+      input.internal && 'orchestration: task',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const message = { ...input, text: withSkaroNote(note, input.text) };
     if (active.timeline.state.status === 'idle') await session.send(message);
     else await session.steer(message);
   }
@@ -156,6 +167,7 @@ export class TaskRunMessages {
   }
 
   async interrupt(projectId: string, taskId: string): Promise<void> {
+    this.ctx.continuation.stop(projectId, taskId);
     cancelOwnerMessages(projectId, taskId);
     this.ctx.startup.delivered(projectId, taskId);
     await this.ctx.integrations.controls.interrupt(projectId, taskId);

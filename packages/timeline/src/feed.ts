@@ -72,6 +72,9 @@ export type FeedRow =
 /** Skaro's own MCP tools are shown as cards, never as tool rows (agent-output.md 5.4). */
 function hidden(item: Item): boolean {
   return (
+    (item.kind === 'message' &&
+      item.role === 'user' &&
+      /^<skaro-note>[\s\S]*?\norchestration: task\n[\s\S]*?<\/skaro-note>/.test(item.text)) ||
     (item.kind === 'tool' && item.server === 'skaro') ||
     (item.kind === 'proposal' && item.state === 'superseded')
   );

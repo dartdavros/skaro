@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { expand, runShell, waitReady, type TaskKey } from '@skaro/core';
+import { ensureSourceServices, expand, runShell, waitReady, type TaskKey } from '@skaro/core';
 import { admitCompose } from './task-compose';
 import type { EnvironmentDescription } from './task-environment-description';
 import type { EnvironmentRegistry } from './task-environment-registry';
@@ -83,6 +83,13 @@ export async function startEnvironmentServices(
         !!deps.registry.find(key)?.created && (await deps.docker.hasData(identity.name));
       if (!timing.reusedData)
         await timed('createMs', async () => {
+          if (config!.source)
+            await ensureSourceServices(
+              identity.root,
+              config!.source,
+              identity.name,
+              options.signal,
+            );
           const failures = await deps.remove();
           if (failures.length)
             throw new Error(`Cannot prepare a clean environment: ${failures.join('; ')}`);

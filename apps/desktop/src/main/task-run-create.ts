@@ -83,5 +83,6 @@ async function createLockedTaskRun(
   });
   const active = new ActiveRun(projectId, taskId, run, new Timeline());
   ctx.active.set(key(projectId, taskId), active);
+  ctx.continuation.execution(active).start();
   return active;
 }

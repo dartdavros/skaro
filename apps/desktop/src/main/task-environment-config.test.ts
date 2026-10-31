@@ -24,6 +24,22 @@ afterEach(() => {
   registry.remove(other);
 });
 
+it('persists declared source services through the MCP tool with stale-write protection', async () => {
+  registry.ensure(key, 'project');
+  const source = { project: 'main-project', services: ['postgres'] };
+  const tool = configureEnvironmentTool(async (args) => ({
+    text: JSON.stringify(configureEnvironment(registry, key, config, args)),
+  }));
+  const scope = { kind: 'task' as const, ...key, runId: 'r' };
+  expect((await tool.call({ source }, scope)).isError).toBe(true);
+  await tool.call({ source, expected_source: null }, scope);
+  expect(environmentConfig(new EnvironmentRegistry(db), key, config).source).toEqual(source);
+  expect(() =>
+    configureEnvironment(registry, key, config, { source, expectedSource: null }),
+  ).toThrow('source services changed');
+  expect(config.source).toBeUndefined();
+});
+
 it('reads, saves and reloads a task launch command through the MCP tool without changing defaults', async () => {
   registry.ensure(key, 'project');
   registry.ensure(other, 'project');

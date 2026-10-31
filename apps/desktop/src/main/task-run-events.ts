@@ -16,13 +16,6 @@ export class TaskRunEvents {
 
   onEvent(active: ActiveRun, event: TimelineEvent): void {
     event = active.secrets.redact(event);
-    if (
-      event.t === 'item.upsert' &&
-      event.item.kind === 'message' &&
-      event.item.role === 'user' &&
-      active.internalInputs.has(event.item.text.trim())
-    )
-      return;
     if (this.ctx.active.get(`${active.projectId}\n${active.taskId}`) !== active) return;
     const affectsActivity =
       event.t === 'activity' ||
@@ -84,13 +77,14 @@ export class TaskRunEvents {
   }
 
   /**
-   * A finished turn that asked nothing through a card still waits for the owner: Skaro shows that
-   * card itself, unless a proposal already asks, the owner wrote the next step or answered it.
+   * Only a refused submission needs Skaro's criteria decision. An ended turn on its own does not
+   * ask for input, and an architecture proposal already carries its own decision.
    */
   showWaitCard(active: ActiveRun, body: string): void {
     const state = active.timeline.state;
     if (
       active.switching ||
+      this.ctx.continuation.execution(active).read().enabled ||
       state.turns.at(-1)?.outcome !== 'done' ||
       state.turns.some((turn) => !turn.outcome) ||
       state.interactions.some((item) => item.kind === 'question') ||
@@ -99,6 +93,7 @@ export class TaskRunEvents {
     )
       return;
     const interaction = waitCard(active.run.id, body, state);
+    if (!interaction) return;
     if (state.items.some((item) => item.id === `skaro-decision-${interaction.id}`)) return;
     this.ctx.history.skaroEvent(active, { t: 'interaction.opened', interaction });
   }
@@ -146,10 +141,9 @@ export class TaskRunEvents {
           return;
         }
       }
-      // The turn ended: "На ревью" only when every criterion is ticked, else the agent waits
-      // for the user ("Нужен ответ", derived from "В работе" with no agent working).
-      // Older task files may still hold the "failed" stage.
+      // Only accepted results enter review; legacy task files may still hold a failed stage.
       if (task.status === 'failed') await updateSubject(context, taskId, { status: 'in_progress' });
+      if (outcome === 'done' && (await this.ctx.continuation.afterTurn(active, task))) return;
       // Acceptance is explicit (submit_result or the owner's criterion action). An ended or
       // interrupted turn must never commit new edits under a previous report's checked criteria.
       if (task.status === 'review') await this.ctx.stages.sync(projectId, taskId);
@@ -160,6 +154,7 @@ export class TaskRunEvents {
       }
     } catch (error) {
       this.ctx.history.notice(active, 'other', 'error', errorText(error));
+      this.ctx.setRuntime(projectId, taskId, 'failed', active.run.id);
     }
     this.ctx.changed(projectId, taskId);
   }
