@@ -1,7 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { ClaudeProjector } from '@skaro/adapter-claude/projector';
-import { CodexProjector } from '@skaro/adapter-codex/projector';
+import { projectorFor } from '@skaro/agents';
 import {
   isRunLogMeta,
   segmentTurns,
@@ -24,8 +23,7 @@ export async function replayHistory(
   let segments = 0;
   const context = { now: () => now, attachImage: attachments.attachImage };
   const emit = (event: TimelineEvent) => saved(segmentTurns(segment, event));
-  const create = (): Projector =>
-    agent === 'codex' ? new CodexProjector(context, emit) : new ClaudeProjector(context, emit);
+
   let projector: Projector | undefined;
   const input = createReadStream(path, { encoding: 'utf8' });
   const lines = createInterface({ input, crlfDelay: Infinity });
@@ -43,13 +41,13 @@ export async function replayHistory(
         if (raw.line.skaro === 'segment') {
           segment++;
           segments++;
-          projector = create();
+          projector = (await projectorFor(raw.line.agent, raw.line.adapterVersion))(context, emit);
         } else if (raw.line.skaro === 'event') {
           // Saved events already contain scoped turn ids.
           saved(raw.line.event);
         }
       } else {
-        projector ??= create();
+        projector ??= (await projectorFor(agent))(context, emit);
         if (raw.dir === 'in') projector.input(raw.line);
         else if (raw.dir === 'out') projector.output(raw.line);
       }

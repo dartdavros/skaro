@@ -89,7 +89,7 @@ async function assertNoMergeCard(db: AppDb, userData: string, task: LiveReviewTa
     const events = replayRunLog(
       lines,
       entry.startedAt,
-      projectorFor(entry.agent),
+      await projectorFor(entry.agent),
       (image) => attachments.save(image),
       (event) => (entry.previousRunId ? runEvent(event, entry.id) : event),
     );

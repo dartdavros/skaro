@@ -1,3 +1,4 @@
+import { agentDefinition } from '@skaro/agents';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { continuationTimeline } from '@skaro/timeline';
@@ -151,8 +152,8 @@ export class TaskRunHandoff {
         'other',
         'info',
         this.ctx.deps.locale() === 'ru'
-          ? `Агент изменён: ${active.run.agent === 'codex' ? 'Codex' : 'Claude Code'} → ${saved.agent === 'codex' ? 'Codex' : 'Claude Code'}. Работа продолжится со следующего сообщения.`
-          : `Agent changed: ${active.run.agent === 'codex' ? 'Codex' : 'Claude Code'} → ${saved.agent === 'codex' ? 'Codex' : 'Claude Code'}. Work continues with the next message.`,
+          ? `Агент изменён: ${agentDefinition(active.run.agent).presentation.name} → ${agentDefinition(saved.agent).presentation.name}. Работа продолжится со следующего сообщения.`
+          : `Agent changed: ${agentDefinition(active.run.agent).presentation.name} → ${agentDefinition(saved.agent).presentation.name}. Work continues with the next message.`,
       );
       await this.ctx.history.drain(successor);
       this.ctx.setRuntime(projectId, taskId, 'idle', run.id);

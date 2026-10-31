@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { codexBinary } from './adapters.ts';
+import { probeBinary } from './adapters.ts';
 
 function normalized(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalized);
@@ -49,8 +49,8 @@ export function compareSchemas(before: Record<string, string>, after: Record<str
   };
 }
 
-export function exportProtocol(out: string, baseline?: string) {
-  const binary = codexBinary().binary;
+export async function exportProtocol(out: string, baseline?: string) {
+  const binary = (await probeBinary('codex')).binary;
   const root = join(out, 'codex-schema');
   mkdirSync(root);
   // No server is started: this is the actual binary's local schema exporter.

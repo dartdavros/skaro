@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { agentName } from '@skaro/agents/catalog';
+  import type { AgentId } from '@skaro/agents';
   import { t } from '../i18n.svelte.ts';
   import AgentLogo from './AgentLogo.svelte';
   import Checkbox from './Checkbox.svelte';
@@ -22,7 +24,7 @@
     title: string;
     stage?: string;
     time?: string;
-    agent?: 'claude-code' | 'codex';
+    agent?: AgentId;
     state?: DotState;
     stateTip?: string;
     selected?: boolean;
@@ -48,9 +50,7 @@
   {#if stage}<span class="stage">{stage}</span>{/if}
   <div class="bottom">
     <span class="time">{time ?? ''}</span>
-    {#if agent}<span data-tip={agent === 'codex' ? 'Codex' : 'Claude Code'}
-        ><AgentLogo {agent} /></span
-      >{/if}
+    {#if agent}<span data-tip={agentName(agent)}><AgentLogo {agent} /></span>{/if}
   </div>
 </div>
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { modelEffortDefault } from '@skaro/timeline';
   import { AgentLogo, EffortSlider, Select, t } from '@skaro/ui';
-  import { AGENT_NAMES } from '../tasks/model';
+  import { agentCatalog, agentName } from '@skaro/agents/catalog';
   import type { AgentDefaultsProps } from './agent-defaults-props';
   import { createAgentDefaultsController } from './agent-defaults-controller.svelte';
   let { projectId, settings, onchange }: AgentDefaultsProps = $props();
@@ -21,7 +21,7 @@
 </script>
 
 <div data-agent-defaults class="agents">
-  {#each ['claude-code', 'codex'] as const as id (id)}
+  {#each agentCatalog() as { id } (id)}
     {@const on = settings.defaultAgent === id}
     <div
       data-agent-defaults
@@ -36,7 +36,7 @@
     >
       <span data-agent-defaults class="logo"><AgentLogo agent={id} size={21} /></span>
       <div data-agent-defaults class="names">
-        <span data-agent-defaults class="name">{AGENT_NAMES[id]}</span>
+        <span data-agent-defaults class="name">{agentName(id)}</span>
         <span data-agent-defaults class="state">{state.agentState(id)}</span>
       </div>
     </div>

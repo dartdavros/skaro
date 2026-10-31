@@ -13,7 +13,8 @@
     "@openai/codex": "0.159.2",
     "@skaro/adapter-claude": "workspace:*",
     "@skaro/adapter-codex": "workspace:*",
-    "@skaro/timeline": "workspace:*"
+    "@skaro/timeline": "workspace:*",
+    "@skaro/agents": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

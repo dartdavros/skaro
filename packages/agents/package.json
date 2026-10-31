@@ -1,0 +1,19 @@
+{
+  "name": "@skaro/agents",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./build": "./src/build.ts",
+    "./catalog": "./src/catalog.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@skaro/adapter-claude": "workspace:*",
+    "@skaro/adapter-codex": "workspace:*",
+    "@skaro/timeline": "workspace:*"
+  }
+}

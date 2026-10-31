@@ -1,3 +1,4 @@
+import { agentCatalog } from '@skaro/agents';
 import { app, dialog, shell, type BrowserWindow } from 'electron';
 import { PROJECT_DEFAULTS_KEY, type ExternalApp } from '../shared/ipc';
 import {
@@ -69,6 +70,7 @@ export function appHandlers(
   | 'projects.openIn'
   | 'tabs.get'
   | 'tabs.set'
+  | 'agents.catalog'
   | 'agents.list'
   | 'agents.refresh'
   | 'agents.install'
@@ -220,6 +222,7 @@ export function appHandlers(
     },
     'tabs.get': () => appState.getTabs(),
     'tabs.set': (tabs) => appState.setTabs(tabs),
+    'agents.catalog': () => agentCatalog(),
     'agents.list': () => agents.list(),
     'agents.refresh': () => agents.refresh(),
     'agents.install': (agent) => agents.install(agent),
@@ -233,7 +236,7 @@ export function appHandlers(
       return agents.adapter(agent).limits(app.getPath('home'));
     },
     'agents.openConfigDir': async (agent) => {
-      const error = await shell.openPath(agents.configDir(agent));
+      const error = await shell.openPath(await agents.configDir(agent));
       if (error) throw new Error(error);
     },
     'agents.commands': (agent, projectId) =>

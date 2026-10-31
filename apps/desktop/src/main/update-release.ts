@@ -1,3 +1,4 @@
+import { RELEASE_AGENT_IDS, matchesLegacyBundlePins, type LegacyBundlePins } from '@skaro/agents';
 import { isDeepStrictEqual } from 'node:util';
 import {
   agentPackage,
@@ -10,7 +11,7 @@ import type { UpdateComponent } from '../shared/updates';
 
 export const RELEASE_ROOT = 'https://github.com/dartdavros/skaro/releases';
 export const RELEASE_API = 'https://api.github.com/repos/dartdavros/skaro/releases/latest';
-export const AGENT_IDS: AgentId[] = ['codex', 'claude-code'];
+export const AGENT_IDS = RELEASE_AGENT_IDS;
 export const PLATFORM_KEYS = [
   'win32-x64',
   'win32-arm64',
@@ -45,11 +46,10 @@ export interface ReleasePlatform {
   payload: { name: string; sha512: string; size: number };
   agents: Record<AgentId, AgentPackage & AgentArtifact>;
 }
-export interface ReleaseManifest {
+export interface ReleaseManifest extends LegacyBundlePins {
   schema: 1;
   bundleVersion: string;
   skaroVersion: string;
-  claudeSdk: string;
   adapters: Record<AgentId, string>;
   agents: Record<AgentId, ReleaseAgent>;
   platforms: Record<string, ReleasePlatform>;
@@ -86,11 +86,7 @@ export function parseRelease(value: unknown): ReleaseManifest {
     )
       fail();
   }
-  if (
-    m.claudeSdk !== m.agents['claude-code'].version ||
-    !m.platforms ||
-    !Object.keys(m.platforms).length
-  )
+  if (!matchesLegacyBundlePins(m, m.agents) || !m.platforms || !Object.keys(m.platforms).length)
     fail();
   for (const [key, platform] of Object.entries(m.platforms)) {
     const base = key.replace(/-musl$/, '');

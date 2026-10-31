@@ -71,6 +71,7 @@ export const METHODS = [
   'import.openSource',
   'tabs.get',
   'tabs.set',
+  'agents.catalog',
   'agents.list',
   'agents.refresh',
   'agents.install',

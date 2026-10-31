@@ -1,3 +1,4 @@
+import { RELEASE_AGENT_IDS } from '../../../packages/agents/src/index.ts';
 // Produces immutable release metadata alongside real electron-builder artifacts.
 import { readFile, readdir, writeFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -59,7 +60,7 @@ if (mode === 'platform') {
     }),
   );
   const agents = {};
-  for (const id of ['codex', 'claude-code']) {
+  for (const id of RELEASE_AGENT_IDS) {
     const pkg = agentPackage(id, { os, arch, musl: false });
     const name = pkg.name.startsWith('@')
       ? '@' + encodeURIComponent(pkg.name.slice(1))

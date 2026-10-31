@@ -1,3 +1,4 @@
+import { setAgentCatalog } from '@skaro/agents/catalog';
 import '@skaro/ui/tokens.css';
 import { setLocale } from '@skaro/ui';
 import { mount } from 'svelte';
@@ -9,7 +10,12 @@ import { bootstrap, loadBootstrap } from './bootstrap';
 async function start(): Promise<void> {
   // Running in a plain browser (UI review): an in-memory bridge stands in for the preload.
   if (import.meta.env.DEV && !('skaro' in window)) await import('./mock-bridge');
-  await loadBootstrap();
+  await Promise.all([
+    loadBootstrap(),
+    import.meta.env.SKARO_AGENT_CATALOG
+      ? Promise.resolve(setAgentCatalog(import.meta.env.SKARO_AGENT_CATALOG))
+      : window.skaro.invoke('agents.catalog').then(setAgentCatalog),
+  ]);
   setLocale(bootstrap?.locale ?? (await window.skaro.invoke('app.getLocale')));
   const target = document.getElementById('app');
   if (!target) throw new Error('#app element is missing');

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { agentPresentation } from '@skaro/agents/catalog';
   import './board-card.css';
   import { AgentLogo, Checkbox, Icon, t } from '@skaro/ui';
   import type { TaskSummary } from '../../../shared/ipc';
@@ -136,7 +137,7 @@
   <div class="bottom">
     {#if task.agent}
       <span class="agent" data-tip={agentLine(task)}
-        ><AgentLogo agent={task.agent} size={task.agent === 'codex' ? 16 : 17} /></span
+        ><AgentLogo agent={task.agent} size={agentPresentation(task.agent).boardLogoSize} /></span
       >
     {/if}
     <span

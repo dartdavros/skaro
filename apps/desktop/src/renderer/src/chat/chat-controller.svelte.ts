@@ -1,3 +1,4 @@
+import { chatDefaults } from './chat-defaults';
 import { OwnerMessages } from '../feed/owner-messages.svelte';
 import { cleanError } from '../feed/action-error';
 import type { AgentModel, InteractionAnswer, PermissionMode } from '@skaro/timeline';
@@ -30,12 +31,7 @@ export function createChatController(
 
   // Plain (not a proxy): it goes to the main process as is.
   let draft = $state.raw<ChatSettings | undefined>();
-  if (!chatId) {
-    void window.skaro
-      .invoke('chats.defaults', projectId)
-      .then((s) => (draft = s))
-      .catch(() => (draft = { agent: 'claude-code' }));
-  }
+  if (!chatId) void chatDefaults(projectId).then((settings) => (draft = settings));
 
   const ownerMessages = new OwnerMessages();
   const stopCommands = watchChatCommands(

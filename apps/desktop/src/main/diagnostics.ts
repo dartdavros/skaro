@@ -1,9 +1,10 @@
+import { isAgentId, diagnosticVersions } from '@skaro/agents';
 import { projectRecords } from './project-records';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { createInterface } from 'node:readline';
-import { AGENT_PINS, type AppDb } from '@skaro/core';
+import { type AppDb } from '@skaro/core';
 import { isRunLogMeta, unknownShape, type TimelineEvent } from '@skaro/timeline';
 import type { Diagnostics } from '../shared/diagnostics';
 import { projectorFor } from './session-log';
@@ -17,7 +18,7 @@ export async function collectDiagnostics(
   const report: Diagnostics = {
     format: 1,
     createdAt: new Date().toISOString(),
-    versions: { ...versions, codex: AGENT_PINS.codex, claude: AGENT_PINS['claude-code'] },
+    versions: { ...versions, ...diagnosticVersions() },
     platform: { os: process.platform, arch: process.arch },
     logs: { scanned: 0, unavailable: 0, invalidLines: 0, projectionErrors: 0 },
     unknownEvents: 0,
@@ -44,8 +45,7 @@ export async function collectDiagnostics(
         const id = `${segment}/${event.item.id}`;
         if (seen.has(id)) return;
         seen.add(id);
-        const agent =
-          record.agent === 'codex' || record.agent === 'claude-code' ? record.agent : 'unknown';
+        const agent = isAgentId(projectionAgent) ? projectionAgent : 'unknown';
         const typeHash = createHash('sha256').update(event.item.native.type).digest('hex');
         const key = `${agent}/${typeHash}`;
         const entry = counts.get(key) ?? {
@@ -58,12 +58,17 @@ export async function collectDiagnostics(
         counts.set(key, entry);
         report.unknownEvents++;
       };
-      const makeProjector = () =>
-        projectorFor(record.agent)(
+      let projectionAgent = record.agent;
+      const makeProjector = async (id = projectionAgent, version?: string) =>
+        (await projectorFor(id, version))(
           { now: () => 0, attachImage: () => ({ id: '', mime: '' }) },
           emit,
         );
-      let projector = makeProjector();
+      if (!isAgentId(projectionAgent)) {
+        report.logs.unavailable++;
+        continue;
+      }
+      let projector = await makeProjector();
       const input = createReadStream(path, { encoding: 'utf8' });
       const lines = createInterface({ input, crlfDelay: Infinity });
       try {
@@ -80,7 +85,8 @@ export async function collectDiagnostics(
             if (raw.dir === 'meta' && isRunLogMeta(raw.line)) {
               if (raw.line.skaro === 'segment') {
                 segment++;
-                projector = makeProjector();
+                projectionAgent = raw.line.agent;
+                projector = await makeProjector(projectionAgent, raw.line.adapterVersion);
               } else if (raw.line.skaro === 'event') emit(raw.line.event);
             } else if (raw.dir === 'out') projector.output(raw.line);
             else if (raw.dir === 'in') projector.input(raw.line);

@@ -2,7 +2,7 @@
 import type { ProjectionContext, Emit } from '@skaro/timeline';
 import { CodexProjectionState } from './projector-state.ts';
 export { displayCommand } from './projector-helpers.ts';
-export const CODEX_ADAPTER_VERSION = '0.1.0';
+export { CODEX_ADAPTER_VERSION } from './version.ts';
 export class CodexProjector {
   private readonly state: CodexProjectionState;
   constructor(ctx: ProjectionContext, emit: Emit) {

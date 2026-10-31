@@ -215,7 +215,7 @@ replaced_by: "0005"     # необязательно
 
 ```ts
 interface AgentAdapter {
-  id: 'claude-code' | 'codex';
+  id: string; // зарегистрированный ID; AgentId приложения выводится из реестра
   adapterVersion: string;
   status(): Promise<{ installed: boolean; version?: string; authenticated?: boolean; account?: string }>;
   login(): Promise<void>;                       // вход через браузер средствами самого агента
@@ -228,6 +228,11 @@ interface AgentAdapter {
 ```
 
 Установка закреплённых версий — отдельный `AgentInstaller` в ядре; адаптер получает путь к установленному бинарнику. Контракт — `packages/timeline/src/agent.ts`.
+
+Подключение адаптеров, загрузка runtime/проекторов, каталог UI и метаданные
+дистрибутивов объединены реестром `packages/agents/src/registrations.ts`.
+Определение каждого агента принадлежит его пакету адаптера. Границы модулей,
+сохранение manifest v1 и порядок добавления описаны в [ADR-0046](adr/0046-agent-registry.md).
 
 `AgentSession`, события ленты и модели данных — в [agent-output.md](agent-output.md), раздел 3.
 

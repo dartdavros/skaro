@@ -1,3 +1,4 @@
+import { requireAgentId } from '@skaro/agents';
 import type { ProjectConfig, Task } from '@skaro/core';
 import type { AgentSettings } from '../shared/ipc';
 
@@ -12,7 +13,7 @@ export function taskAgentPreferences(
   if (started) {
     const model = saved?.model ?? started.model ?? task.model;
     return {
-      agent: started.agent === 'codex' ? 'codex' : 'claude-code',
+      agent: requireAgentId(started.agent),
       ...(model ? { model } : {}),
       effort: saved?.effort ?? 'high',
     };
@@ -29,7 +30,7 @@ export function taskAgentPreferences(
       : undefined) ??
     'high';
   return {
-    agent: configured === 'codex' ? 'codex' : 'claude-code',
+    agent: requireAgentId(configured),
     ...(model ? { model } : {}),
     effort,
   };

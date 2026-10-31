@@ -1,3 +1,4 @@
+import { DEFAULT_AGENT } from '@skaro/agents';
 import type { AppDb } from '@skaro/core';
 import type { Events, EventName, ProjectCard } from '../shared/ipc';
 import type { Projects } from './projects';
@@ -63,7 +64,7 @@ export class ProjectOverview {
       ...(cached.get(p.id) ?? {
         counts: { working: 0, needs: 0, review: 0, failed: 0, blocked: 0 },
         running: [],
-        agent: 'claude-code' as const,
+        agent: DEFAULT_AGENT,
         activeAt: p.lastOpenedAt ?? p.createdAt,
         missing: false,
         unloaded: true,

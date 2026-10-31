@@ -12,8 +12,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { ClaudeProjector } from '@skaro/adapter-claude';
-import { CodexProjector } from '@skaro/adapter-codex';
+import { PROBE_AGENTS, probeAgentId, projectorFor } from '@skaro/agents';
 import { replayRawLog } from '@skaro/timeline';
 import { checkAdapters, type Agent } from './adapters.ts';
 import { describe } from './describe.ts';
@@ -35,12 +34,11 @@ const { positionals, values } = parseArgs({
 });
 
 /** Rebuilds the canonical timeline from raw.jsonl (principle P2) and diffs it with canonical.jsonl. */
-function replay(agent: Agent, id: string): boolean {
+async function replay(agent: Agent, id: string): Promise<boolean> {
   const dir = join(GOLDEN, agent, id);
   const events = replayRawLog(
     readFileSync(join(dir, 'raw.jsonl'), 'utf8'),
-    (ctx, emit) =>
-      agent === 'claude' ? new ClaudeProjector(ctx, emit) : new CodexProjector(ctx, emit),
+    await projectorFor(probeAgentId(agent)),
     sha256,
   );
   const expected = readFileSync(join(dir, 'canonical.jsonl'), 'utf8').split('\n').filter(Boolean);
@@ -74,7 +72,7 @@ async function main(): Promise<void> {
   if (command === 'sanitize') {
     // Re-applies the sanitizer to already recorded fixtures.
     const sanitize = createSanitizer();
-    for (const agent of ['claude', 'codex'] as const) {
+    for (const agent of PROBE_AGENTS) {
       for (const s of scenarios) {
         for (const file of ['raw.jsonl', 'canonical.jsonl']) {
           const path = join(GOLDEN, agent, s.id, file);
@@ -91,12 +89,12 @@ async function main(): Promise<void> {
       id === 'all'
         ? scenarios.map((s) => s.id).filter((i) => existsSync(join(GOLDEN, agent, i, 'raw.jsonl')))
         : [id];
-    const ok = ids.map((i) => replay(agent, i)).every(Boolean);
+    const ok = (await Promise.all(ids.map((i) => replay(agent, i)))).every(Boolean);
     process.exitCode = ok ? 0 : 1;
     return;
   }
   const agent = command as Agent;
-  if (agent !== 'claude' && agent !== 'codex') throw new Error(`unknown agent ${agent}`);
+  probeAgentId(agent);
   const [id] = rest;
   const selected = id === 'all' ? scenarios : scenarios.filter((s) => s.id === id);
   if (!selected.length) throw new Error(`unknown scenario ${id}`);

@@ -1,22 +1,8 @@
 // Helpers shared by task runs and chats: raw logs, projectors, secrets in answers.
 
 import { readFile } from 'node:fs/promises';
-import { ClaudeProjector } from '@skaro/adapter-claude/projector';
-import { CodexProjector } from '@skaro/adapter-codex/projector';
-import type {
-  Emit,
-  Interaction,
-  InteractionAnswer,
-  ProjectionContext,
-  Projector,
-  RawLine,
-} from '@skaro/timeline';
-
-export function projectorFor(agent: string): (ctx: ProjectionContext, emit: Emit) => Projector {
-  return agent === 'codex'
-    ? (ctx, emit) => new CodexProjector(ctx, emit)
-    : (ctx, emit) => new ClaudeProjector(ctx, emit);
-}
+export { projectorFor } from '@skaro/agents';
+import type { Interaction, InteractionAnswer, RawLine } from '@skaro/timeline';
 
 export async function readRunLog(path: string, required = false): Promise<RawLine[]> {
   let text: string;

@@ -1,3 +1,4 @@
+import { RELEASE_AGENT_IDS } from '@skaro/agents';
 import { app, net } from 'electron';
 import { join } from 'node:path';
 import {
@@ -39,7 +40,7 @@ export async function createUpdates(options: {
     dir: process.env['SKARO_AGENTS_DIR'] ?? join(dataDir, 'agents'),
   });
   const installed = async (): Promise<AgentId[]> => {
-    const ids: AgentId[] = ['codex', 'claude-code'];
+    const ids = RELEASE_AGENT_IDS;
     const found = await Promise.all(ids.map((id) => installer.installed(id)));
     return ids.filter((_id, index) => found[index] !== undefined);
   };

@@ -1,3 +1,4 @@
+import { requireAgentId } from '@skaro/agents';
 import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import type { ChatRange, ChatCatalog, ChatPage } from '../../shared/chat-catalog';
@@ -53,7 +54,7 @@ export class ChatCatalogReader {
       .map((row): ChatSummary => ({
         id: String(row['id']),
         title: String(row['title']),
-        agent: row['agent'] === 'codex' ? 'codex' : 'claude-code',
+        agent: requireAgentId(row['agent']),
         archived: Boolean(row['archived']),
         updatedAt: Number(row['updated_at']),
         live: false,

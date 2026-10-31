@@ -1,15 +1,17 @@
 <script lang="ts">
+  import { agentCatalog, defaultAgent } from '@skaro/agents/catalog';
+  import type { AgentId } from '@skaro/agents';
   import { AgentLogo, Button, EffortSlider, Modal } from '@skaro/ui';
 
   let { open = $bindable() }: { open: boolean } = $props();
 
-  let agent = $state<'claude-code' | 'codex'>('claude-code');
+  let agent = $state<AgentId>(defaultAgent());
   let effort = $state('medium');
 </script>
 
 <Modal bind:open title="Агент задачи">
   <div data-inventory class="agents">
-    {#each [{ id: 'claude-code', name: 'Claude Code' }, { id: 'codex', name: 'Codex' }] as const as option (option.id)}
+    {#each agentCatalog() as option (option.id)}
       <button
         data-inventory
         type="button"

@@ -1,3 +1,4 @@
+import { instructionFiles } from '@skaro/agents';
 // The Skaro block in AGENTS.md and CLAUDE.md (architecture.md 3): links to the brief, the
 // architecture, the ADRs and the specifications between markers; the rest of the files is never touched.
 
@@ -6,7 +7,6 @@ import { join } from 'node:path';
 
 const BEGIN = '<!-- skaro:begin -->';
 const END = '<!-- skaro:end -->';
-const FILES = ['AGENTS.md', 'CLAUDE.md'];
 
 const TEXT: Record<string, string> = {
   ru: [
@@ -45,7 +45,7 @@ export function withBlock(content: string, block: string | undefined): string {
 /** Puts the block into AGENTS.md and CLAUDE.md, or takes it out (files left empty go away). */
 export async function syncAgentFiles(root: string, on: boolean, locale: string): Promise<void> {
   const block = on ? (TEXT[locale] ?? TEXT['en']!) : undefined;
-  for (const name of FILES) {
+  for (const name of instructionFiles()) {
     const path = join(root, name);
     const content = await readFile(path, 'utf8').catch(() => undefined);
     if (content === undefined && !on) continue;

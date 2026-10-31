@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isAgentId } from '@skaro/agents/catalog';
   import { AgentLogo, Icon, ViewSwitch, t } from '@skaro/ui';
   import type { MilestoneInfo } from '../../../shared/ipc';
   import type { TaskFacets } from '../../../shared/task-catalog';
@@ -75,7 +76,7 @@
   >
     {#snippet marker(a: string)}
       <span data-task-toolbar class="logo">
-        {#if a === 'claude-code' || a === 'codex'}
+        {#if isAgentId(a)}
           <AgentLogo agent={a} size={12} />
         {:else}
           <svg
