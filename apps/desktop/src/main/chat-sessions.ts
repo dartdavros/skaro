@@ -163,6 +163,7 @@ export class ChatSessions {
     try {
       await operationTimeout(
         Promise.all([
+          this.ctx.planningContinuation.settled(live),
           session?.close(),
           attaching?.then(
             (attached) => attached.close(),

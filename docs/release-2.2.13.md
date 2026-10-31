@@ -15,6 +15,9 @@
   compatible with previous clients.
 - The decision and extension boundaries are documented in
   [ADR-0046](adr/0046-agent-registry.md).
+- Closing a chat now waits for an in-flight planning continuation to settle.
+  Cancelled continuations discard stale wakeups and errors, so they cannot
+  restart after cancellation or access storage that is already closing.
 
 ## Verification
 

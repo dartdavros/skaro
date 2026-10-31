@@ -26,6 +26,11 @@ export class ChatPlanningContinuation {
     live.planningContinuations = 0;
     if (live.planningTimer) clearTimeout(live.planningTimer);
     live.planningTimer = undefined;
+    live.planningWake = false;
+  }
+
+  settled(live: LiveChat): Promise<void> {
+    return live.planningPending ?? Promise.resolve();
   }
 
   onEvent(live: LiveChat, event: TimelineEvent): void {
@@ -50,13 +55,17 @@ export class ChatPlanningContinuation {
     live.planningTimer = setTimeout(() => {
       live.planningTimer = undefined;
       live.planningSending = true;
-      void this.continue(live, revision)
+      live.planningPending = this.continue(live, revision)
         .catch((error: unknown) => {
+          // Cancellation owns the old operation: it must not pause a newer plan or
+          // report errors through storage that its owner may already be closing.
+          if (revision !== live.planningRevision) return;
           this.stop(live, error instanceof Error ? error.message : String(error));
           this.ctx.history.notice(live, 'other', 'error', String(error));
         })
         .finally(() => {
           live.planningSending = false;
+          live.planningPending = undefined;
           if (live.planningWake) {
             live.planningWake = false;
             this.schedule(live);
