@@ -1,10 +1,11 @@
+import { PROBE_AGENTS } from '@skaro/agents';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { claudeBinary, type Agent } from './adapters.ts';
+import { probeBinary } from './adapters.ts';
 import { readPerformed, recordingEvents, recordingReport } from './compatibility.ts';
 import { exportProtocol } from './protocol-schema.ts';
 import { recordScenario } from './record.ts';
@@ -35,7 +36,7 @@ const baseline = values.baseline
   : resolve(dirname(fileURLToPath(import.meta.url)), '../../../fixtures/golden');
 console.log(`Local records: ${out}`);
 const runs = [];
-for (const agent of ['codex', 'claude'] as const satisfies readonly Agent[]) {
+for (const agent of [...PROBE_AGENTS].reverse()) {
   for (const scenario of selected) {
     try {
       const recorded = await recordScenario(agent, scenario, {
@@ -59,13 +60,13 @@ for (const agent of ['codex', 'claude'] as const satisfies readonly Agent[]) {
 }
 let protocol;
 try {
-  protocol = exportProtocol(out, baseline);
+  protocol = await exportProtocol(out, baseline);
 } catch {
   protocol = { ok: false, exportError: true };
 }
 let claudeVersion: string | null = null;
 try {
-  claudeVersion = execFileSync(claudeBinary(), ['--version'], {
+  claudeVersion = execFileSync((await probeBinary('claude')).binary, ['--version'], {
     encoding: 'utf8',
     windowsHide: true,
   }).trim();

@@ -1,3 +1,4 @@
+import { defaultAgent } from '@skaro/agents/catalog';
 import { t } from '@skaro/ui';
 import { agentReady, type AgentId, type AgentInfo } from '../../../shared/ipc';
 import { agents } from '../agents.svelte';
@@ -5,7 +6,7 @@ import { AgentModels, effortLabel } from './agent-models.svelte';
 import type { AssignmentProps } from './assignment-props';
 
 export function createAssignmentController(p: AssignmentProps) {
-  let agent = $state<AgentId>(agents.list.find(agentReady)?.id ?? 'claude-code');
+  let agent = $state<AgentId>(agents.list.find(agentReady)?.id ?? defaultAgent());
   let modelId = $state('');
   let effort = $state('');
   const models = new AgentModels();

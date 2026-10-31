@@ -98,7 +98,7 @@ describe('saved project planning with real persistence', () => {
         .split('\n')
         .map((line) => JSON.parse(line));
       const replayed = Timeline.from(
-        replayRunLog(lines, w.live.chat.createdAt, projectorFor('codex'), (image) =>
+        replayRunLog(lines, w.live.chat.createdAt, await projectorFor('codex'), (image) =>
           w.engine.deps.attachments.save(image),
         ),
       );

@@ -1,3 +1,4 @@
+import { requireAgentId } from '@skaro/agents';
 import { TaskListViews } from './task-list-views';
 import { presentationState } from './timeline-presentation';
 import { historyReads } from './history-read-service';
@@ -192,7 +193,7 @@ export class TaskRunViews {
       saved?.agent || started ? configured : this.ctx.deps.agents.readyAgent(configured);
     const { model, effort } = preferences;
     return {
-      agent: agent === 'codex' ? 'codex' : 'claude-code',
+      agent: requireAgentId(agent),
       ...(model ? { model } : {}),
       ...(effort ? { effort } : {}),
       permissionMode: saved?.permissionMode ?? artifacts.config.permissionMode,

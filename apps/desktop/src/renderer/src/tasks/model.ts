@@ -1,7 +1,8 @@
+import { agentName } from '@skaro/agents/catalog';
 // "Задачи" (Tasks mockup): statuses as the board shows them, columns, filters and list groups.
 
 import { t } from '@skaro/ui';
-import type { AgentId, MergeProgress, TaskStatus, TaskSummary } from '../../../shared/ipc';
+import type { MergeProgress, TaskStatus, TaskSummary } from '../../../shared/ipc';
 
 /** The eight statuses of the mockup; "queued" counts as "В работе" everywhere but its label. */
 import { activeKind, boardStatus, columnOf, needsYou } from '../../../shared/task-presentation';
@@ -35,15 +36,10 @@ export function statusLabel(status: TaskStatus): string {
   return t(`task.status.${status}`);
 }
 
-export const AGENT_NAMES: Record<AgentId, string> = {
-  'claude-code': 'Claude Code',
-  codex: 'Codex',
-};
-
 /** "Claude Code · Opus 5", or "—" when no agent is assigned. */
 export function agentLine(task: TaskSummary): string {
   if (!task.agent) return '—';
-  return task.model ? `${AGENT_NAMES[task.agent]} · ${task.model}` : AGENT_NAMES[task.agent];
+  return task.model ? `${agentName(task.agent)} · ${task.model}` : agentName(task.agent);
 }
 
 export interface Filters {

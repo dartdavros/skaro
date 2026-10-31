@@ -3,7 +3,7 @@
   import { AgentLogo, EffortSlider, Select, t, tn } from '@skaro/ui';
   import { agents } from '../agents.svelte';
   import Dialog from './Dialog.svelte';
-  import { AGENT_NAMES } from './model';
+  import { agentCatalog, agentName } from '@skaro/agents/catalog';
   import type { AssignmentProps } from './assignment-props';
   import { createAssignmentController } from './assignment-controller.svelte';
   let { projectId, count, onconfirm, onclose }: AssignmentProps = $props();
@@ -32,7 +32,7 @@
   </div>
 
   <div data-task-assign-dialog class="agents">
-    {#each ['claude-code', 'codex'] as const as id (id)}
+    {#each agentCatalog() as { id } (id)}
       {@const info = agents.list.find((a) => a.id === id)}
       <div
         data-task-assign-dialog
@@ -46,7 +46,7 @@
       >
         <span data-task-assign-dialog class="logo"><AgentLogo agent={id} size={18} /></span>
         <div data-task-assign-dialog class="names">
-          <span data-task-assign-dialog class="name">{AGENT_NAMES[id]}</span>
+          <span data-task-assign-dialog class="name">{agentName(id)}</span>
           <span data-task-assign-dialog class="state">{state.agentState(info)}</span>
         </div>
       </div>

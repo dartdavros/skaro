@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest';
-import { CodexAdapter } from '@skaro/adapter-codex';
-import { ClaudeAdapter } from '@skaro/adapter-claude';
+import { createAgentAdapter } from '@skaro/agents';
 import {
   operationTimeout,
   type AgentAdapter,
@@ -17,15 +16,13 @@ for (const agent of ['codex', 'claude-code'] as const) {
   it.skipIf(!root || !binary)(
     `${agent}: confirms interruption through the genuine installed runtime`,
     async () => {
-      const adapter: AgentAdapter =
-        agent === 'codex'
-          ? new CodexAdapter({
-              binary: async () => ({ binary: binary!, pathDirs: [] }),
-              openUrl: () => {
-                throw new Error('Interactive login is outside this check');
-              },
-            })
-          : new ClaudeAdapter({ executable: async () => binary! });
+      const adapter: AgentAdapter = await createAgentAdapter(agent, {
+        installed: async () => ({ binary: binary!, pathDirs: [] }),
+        authRevision: new SharedArrayBuffer(4),
+        openUrl: () => {
+          throw new Error('Interactive login is outside this check');
+        },
+      });
       const events: TimelineEvent[] = [];
       let resolveStarted!: () => void;
       const started = new Promise<void>((resolve) => {

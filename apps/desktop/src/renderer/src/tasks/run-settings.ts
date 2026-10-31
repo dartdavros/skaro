@@ -11,7 +11,7 @@ export function runSettings(
 ): AgentSettings {
   if (started) return { ...task };
   return {
-    agent: project.defaultAgent === 'codex' ? 'codex' : 'claude-code',
+    agent: project.defaultAgent,
     ...(project.defaultModel ? { model: project.defaultModel } : {}),
     effort: project.defaultEffort ?? 'high',
     permissionMode: project.permissionMode,

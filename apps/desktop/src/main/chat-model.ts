@@ -60,6 +60,7 @@ export class LiveChat {
   planningContinuations = 0;
   planningTimer: ReturnType<typeof setTimeout> | undefined;
   planningSending = false;
+  planningPending: Promise<void> | undefined;
   planningSent = false;
   planningWake = false;
 

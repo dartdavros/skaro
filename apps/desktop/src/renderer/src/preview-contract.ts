@@ -14,6 +14,7 @@ export type PreviewMethods = Omit<
   | 'task.stopEnvironmentReview'
   | 'diagnostics.export'
   | 'agents.limits'
+  | 'agents.catalog'
   | 'files.pasteImage'
 > & {
   'app.checkUpdate': () => { current: string };
@@ -30,7 +31,8 @@ export function invokePreview(handlers: object, method: MethodName, args: unknow
     method === 'task.stopEnvironmentReview' ||
     method === 'diagnostics.export' ||
     method === 'files.pasteImage' ||
-    method === 'agents.limits'
+    method === 'agents.limits' ||
+    method === 'agents.catalog'
   )
     throw new Error('This operation requires the real Electron application');
   return (handlers as Record<string, (...args: unknown[]) => unknown>)[method]!(...args);

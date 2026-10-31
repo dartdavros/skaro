@@ -72,6 +72,7 @@ it('migrates 28 applied plain refs into a 75-task saved plan and creates only 47
     } finally {
       const live = reopened.live.get(w.live.chat.id)!;
       reopened.planningContinuation.userMessage(live);
+      await reopened.planningContinuation.settled(live);
       reopened.history.flush(live);
       live.log?.end();
       if (live.log) await finished(live.log);

@@ -65,7 +65,10 @@ export async function planningWorkspace() {
     engine,
     live,
     async close() {
-      engine.planningContinuation.userMessage(live);
+      for (const entry of engine.live.values()) engine.planningContinuation.userMessage(entry);
+      await Promise.all(
+        [...engine.live.values()].map((entry) => engine.planningContinuation.settled(entry)),
+      );
       engine.history.flush(live);
       if (live.log) {
         live.log.end();

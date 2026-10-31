@@ -1,3 +1,4 @@
+import { defaultAgent } from '@skaro/agents/catalog';
 import { selectedEffort, type AgentModel } from '@skaro/timeline';
 import { t, tn } from '@skaro/ui';
 import type { AgentSettings, ChatSettings, ImportSource } from '../../../shared/ipc';
@@ -27,7 +28,7 @@ export function createImportController(p: ImportProps) {
   void window.skaro
     .invoke('chats.defaults', p.projectId)
     .then((s) => (settings = s))
-    .catch(() => (settings = { agent: 'claude-code' }));
+    .catch(() => (settings = { agent: defaultAgent() }));
 
   $effect(() => {
     const request = ++modelRequest;

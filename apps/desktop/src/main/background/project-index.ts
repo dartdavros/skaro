@@ -1,3 +1,4 @@
+import { DEFAULT_AGENT } from '@skaro/agents';
 import { join } from 'node:path';
 import { AppDb } from '@skaro/core';
 import { logoReference } from '../project-logo-reference';
@@ -50,7 +51,7 @@ export class ProjectIndex {
               {
                 counts: { working: 0, needs: 0, review: 0, failed: 0, blocked: 0 },
                 running: [],
-                agent: 'claude-code',
+                agent: DEFAULT_AGENT,
                 missing: false,
                 unloaded: cached ? !!cached.unloaded : true,
                 ...cached,

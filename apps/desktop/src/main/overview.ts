@@ -1,3 +1,4 @@
+import { requireAgentId, DEFAULT_AGENT } from '@skaro/agents';
 // "Проекты" (Projects mockup): one card per project — task statuses, the current milestone, tasks
 // agents work on now, branch and last activity; and opening the folder in other apps.
 
@@ -10,7 +11,7 @@ import {
   type AppDb,
   type ProjectRecord,
 } from '@skaro/core';
-import type { AgentId, ProjectCard } from '../shared/ipc';
+import type { ProjectCard } from '../shared/ipc';
 import type { Projects } from './projects';
 
 export async function projectCards(db: AppDb, projects: Projects): Promise<ProjectCard[]> {
@@ -44,7 +45,7 @@ export async function projectCardFrom(
     ...(project.logo ? { logo: project.logo } : {}),
     counts: { working: 0, needs: 0, review: 0, failed: 0, blocked: 0 },
     running: [],
-    agent: 'claude-code',
+    agent: DEFAULT_AGENT,
     activeAt: Math.max(project.createdAt, project.lastOpenedAt ?? 0, db.shell.activity(project.id)),
   };
   if (card.missing) return card;
@@ -56,7 +57,7 @@ export async function projectCardFrom(
   if (branch) card.branch = branch;
   if (!artifacts) return card;
 
-  card.agent = artifacts.config.defaultAgent === 'codex' ? 'codex' : 'claude-code';
+  card.agent = requireAgentId(artifacts.config.defaultAgent);
   if (artifacts.config.defaultModel) card.model = artifacts.config.defaultModel;
 
   const tasks = artifacts.tasks.filter((t) => !t.archived);
@@ -72,7 +73,7 @@ export async function projectCardFrom(
         card.running.push({
           id: task.id,
           title: task.title,
-          agent: (run?.agent === 'codex' ? 'codex' : 'claude-code') as AgentId,
+          agent: requireAgentId(run?.agent ?? DEFAULT_AGENT),
           ...(run?.model ? { model: run.model } : {}),
         });
       }

@@ -2,10 +2,9 @@
 // adapters, account status, models and "/" commands, and the sandbox self-check (D-28).
 
 import { mkdir } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { ClaudeAdapter } from '@skaro/adapter-claude/adapter';
-import { CodexAdapter, CodexAuthRevision } from '@skaro/adapter-codex';
+import { AGENT_IDS, agentDefinition, requireAgentId } from '@skaro/agents';
+import { lazyAgentAdapter } from './agent-runtime';
 import { nativeAdapter } from './native/adapter';
 import { AgentInstaller, agentPackage, type AgentId } from '@skaro/core';
 import type {
@@ -17,13 +16,7 @@ import type {
 } from '@skaro/timeline';
 import { agentDefaultsKey, agentReady, type AgentInfo } from '../shared/ipc';
 
-export const AGENT_IDS: readonly AgentId[] = ['claude-code', 'codex'];
-
-/** Approximate download size shown before the first download (bytes). */
-const DOWNLOAD_SIZE: Record<AgentId, number> = {
-  'claude-code': 230e6,
-  codex: 90e6,
-};
+export { AGENT_IDS } from '@skaro/agents';
 
 interface Store {
   getSetting(key: string): unknown;
@@ -45,7 +38,7 @@ export class AgentManager {
   private readonly store: Store;
   private readonly onChange: (agents: AgentInfo[]) => void;
   private readonly attachmentsDir?: string;
-  private readonly authRevision = new SharedArrayBuffer(4);
+  private readonly authRevisions = new Map(AGENT_IDS.map((id) => [id, new SharedArrayBuffer(4)]));
 
   constructor(options: {
     agentsDir: string;
@@ -63,26 +56,28 @@ export class AgentManager {
     this.store = options.store;
     this.onChange = options.onChange;
     this.attachmentsDir = options.attachmentsDir;
-    this.adapters = {
-      'claude-code': new ClaudeAdapter({
-        executable: async () => (await this.installer.installed('claude-code'))?.binary,
-      }),
-      codex: new CodexAdapter({
-        authRevision: new CodexAuthRevision(this.authRevision),
-        binary: async () => {
-          const installed = await this.installer.installed('codex');
-          return installed && { binary: installed.binary, pathDirs: installed.pathDirs };
-        },
-        openUrl: options.openUrl,
-      }),
-    };
+    this.adapters = Object.fromEntries(
+      AGENT_IDS.map((id) => [
+        id,
+        lazyAgentAdapter(id, {
+          installed: () => this.installer.installed(id),
+          authRevision: this.authRevisions.get(id)!,
+          openUrl: options.openUrl,
+        }),
+      ]),
+    ) as Record<AgentId, AgentAdapter>;
     for (const id of AGENT_IDS) {
-      this.info.set(id, { id, installed: false, sizeBytes: DOWNLOAD_SIZE[id], checking: true });
+      this.info.set(id, {
+        id,
+        installed: false,
+        sizeBytes: agentDefinition(id).downloadSize,
+        checking: true,
+      });
     }
   }
 
   adapter(id: AgentId): AgentAdapter {
-    const adapter = this.adapters[id];
+    const adapter = this.adapters[requireAgentId(id)];
     if (!this.attachmentsDir) return adapter;
     return nativeAdapter(adapter, async () => {
       const installed = await this.installer.installed(id);
@@ -92,7 +87,7 @@ export class AgentManager {
         binary: installed.binary,
         pathDirs: installed.pathDirs ?? [],
         attachmentsDir: this.attachmentsDir!,
-        authRevision: this.authRevision,
+        authRevision: this.authRevisions.get(id)!,
       };
     });
   }
@@ -103,6 +98,7 @@ export class AgentManager {
 
   /** The preferred agent if it is ready, else the first ready one (an absent agent is inactive). */
   readyAgent(preferred: AgentId): AgentId {
+    requireAgentId(preferred);
     const list = this.list();
     // Installation/auth checks are still pending; requireReady waits instead of switching.
     if (list.find((a) => a.id === preferred)?.checking) return preferred;
@@ -117,7 +113,7 @@ export class AgentManager {
   async requireReady(id: AgentId): Promise<void> {
     let info = this.info.get(id);
     if (!info || info.checking) info = await (this.checks.get(id) ?? this.refreshOne(id));
-    const name = id === 'codex' ? 'Codex' : 'Claude Code';
+    const name = agentDefinition(id).presentation.name;
     const ru = this.locale() === 'ru';
     if (!info?.installed) {
       throw new Error(
@@ -153,6 +149,7 @@ export class AgentManager {
   }
 
   refreshOne(id: AgentId): Promise<AgentInfo> {
+    requireAgentId(id);
     const running = this.checks.get(id);
     if (running) return running;
     const check = this.check(id).finally(() => this.checks.delete(id));
@@ -171,14 +168,14 @@ export class AgentManager {
         version: status.installed ? agentPackage(id).shownVersion : undefined,
         authenticated: status.authenticated,
         account: status.account,
-        sizeBytes: DOWNLOAD_SIZE[id],
+        sizeBytes: agentDefinition(id).downloadSize,
         ...(previous.download ? { download: previous.download } : {}),
       };
     } catch (error) {
       next = {
         id,
         installed: (await this.installer.installed(id)) !== undefined,
-        sizeBytes: DOWNLOAD_SIZE[id],
+        sizeBytes: agentDefinition(id).downloadSize,
         error: error instanceof Error ? error.message : String(error),
       };
     }
@@ -188,6 +185,7 @@ export class AgentManager {
 
   /** Downloads the pinned binary; progress goes out through `onChange`. */
   install(id: AgentId): Promise<void> {
+    requireAgentId(id);
     const running = this.downloads.get(id);
     if (running) return running;
     const task = (async () => {
@@ -217,32 +215,30 @@ export class AgentManager {
   }
 
   async login(id: AgentId): Promise<void> {
-    await this.adapters[id].login();
+    await this.adapter(id).login();
     await this.refreshOne(id);
   }
 
   /** Models of an agent (cached per working folder). */
   listModels(id: AgentId, cwd: string): Promise<AgentModel[]> {
-    return this.cached(this.models, `${id}\n${cwd}`, () => this.adapters[id].listModels(cwd));
+    return this.cached(this.models, `${id}\n${cwd}`, () => this.adapter(id).listModels(cwd));
   }
 
   /** The user's agent settings; before the agent is downloaded, only where they live. */
-  userConfig(id: AgentId, cwd: string): Promise<AgentUserConfig> {
+  async userConfig(id: AgentId, cwd: string): Promise<AgentUserConfig> {
     if (!this.info.get(id)?.installed) {
-      return Promise.resolve({ dir: this.configDir(id), mcp: [], skills: 0, hooks: 0 });
+      return Promise.resolve({ dir: await this.configDir(id), mcp: [], skills: 0, hooks: 0 });
     }
-    return this.cached(this.configs, `${id}\n${cwd}`, () => this.adapters[id].userConfig(cwd));
+    return this.cached(this.configs, `${id}\n${cwd}`, () => this.adapter(id).userConfig(cwd));
   }
 
   /** ~/.claude or ~/.codex, or where the environment points them. */
-  configDir(id: AgentId): string {
-    return id === 'codex'
-      ? (process.env['CODEX_HOME'] ?? join(homedir(), '.codex'))
-      : (process.env['CLAUDE_CONFIG_DIR'] ?? join(homedir(), '.claude'));
+  async configDir(id: AgentId): Promise<string> {
+    return (await agentDefinition(id).loadRuntime()).configDir();
   }
 
   listCommands(id: AgentId, cwd: string): Promise<AgentCommand[]> {
-    return this.cached(this.commands, `${id}\n${cwd}`, () => this.adapters[id].listCommands(cwd));
+    return this.cached(this.commands, `${id}\n${cwd}`, () => this.adapter(id).listCommands(cwd));
   }
 
   /** D-28 self-check before the first run, remembered per agent version. */

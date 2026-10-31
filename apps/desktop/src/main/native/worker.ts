@@ -1,6 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads';
-import { CodexSession, CodexAuthRevision } from '@skaro/adapter-codex';
-import { ClaudeAdapter } from '@skaro/adapter-claude';
+import { createAgentAdapter } from '@skaro/agents';
 import { AttachmentStore } from '@skaro/core';
 import {
   isRunLogMeta,
@@ -62,17 +61,14 @@ function optionsOf(options: NativeOptions): SessionOptions {
 
 async function start(options: NativeOptions): Promise<void> {
   const resolved = optionsOf(options);
-  if (config.agent === 'codex') {
-    const codex = new CodexSession(resolved, {
-      binary: config.binary,
-      pathDirs: config.pathDirs,
-      authRevision: new CodexAuthRevision(config.authRevision),
-    });
-    session = codex;
-    await codex.start();
-  } else {
-    session = await new ClaudeAdapter({ executable: async () => config.binary }).start(resolved);
-  }
+  const adapter = await createAgentAdapter(config.agent, {
+    installed: async () => ({ binary: config.binary, pathDirs: config.pathDirs }),
+    authRevision: config.authRevision,
+    openUrl: () => {
+      throw new Error('Sign-in belongs to the main process');
+    },
+  });
+  session = await adapter.start(resolved);
   const started = session;
   void (async () => {
     for await (const event of started.events)

@@ -1,3 +1,4 @@
+import { RELEASE_AGENT_IDS, agentDefinition } from '@skaro/agents';
 /** Execution approvals belong to the runtime; questions are reserved for missing decisions. */
 export function agentInteractionInstructions(): string {
   return (
@@ -16,8 +17,12 @@ export function agentInteractionInstructions(): string {
       '- Ask only for a missing product decision, indispensable information that cannot be ' +
         'discovered, or explicit owner consent required by project instructions. Explain the ' +
         'specific unresolved choice and its consequences; suspend this session until every question has been answered.',
-      "- Use the agent's blocking structured question tool for those decisions (request_user_input in " +
-        'Codex, AskUserQuestion in Claude), so Skaro shows a question card. Do not finish a turn ' +
+      "- Use the agent's blocking structured question tool for those decisions (" +
+        RELEASE_AGENT_IDS.map((id) => {
+          const agent = agentDefinition(id);
+          return `${agent.questionTool} in ${agent.questionAgentName}`;
+        }).join(', ') +
+        '), so Skaro shows a question card. Do not finish a turn ' +
         'with a plain-text permission question. If that tool is unavailable, report the precise ' +
         'blocker rather than pretending a card was shown or repeatedly asking in chat.',
       '- Actually call the structured question tool before saying a question was sent. A plan, ' +

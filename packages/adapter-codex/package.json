@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./projector": "./src/projector.ts"
+    "./projector": "./src/projector.ts",
+    "./definition": "./src/definition.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."

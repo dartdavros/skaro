@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { agentName } from '@skaro/agents/catalog';
   import { Banner, Button, Modal, Progress, t } from '@skaro/ui';
   import { updates } from '../settings/updates.svelte';
   import './i18n';
@@ -16,7 +17,6 @@
         ? t('updates.apply')
         : t('updates.update'),
   );
-  const names = { skaro: 'Skaro', codex: 'Codex', 'claude-code': 'Claude Code' };
   const open = (url: string) => void window.skaro.invoke('shell.openExternal', url);
 </script>
 
@@ -24,7 +24,7 @@
   <div class="components">
     {#each state?.components ?? [] as component (component.id)}
       <div class="row">
-        <span class="name">{names[component.id]}</span>
+        <span class="name">{component.id === 'skaro' ? 'Skaro' : agentName(component.id)}</span>
         <span class="versions">{component.current} → {component.latest}</span>
         <a
           href={component.url}

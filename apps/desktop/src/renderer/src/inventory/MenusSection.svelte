@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { agentCatalog, isAgentId } from '@skaro/agents/catalog';
   import { ActionMenu, AgentLogo, FilterMenu, Select, StatusDot } from '@skaro/ui';
   import InventorySection from './InventorySection.svelte';
   import { models, statuses } from './data';
@@ -23,14 +24,11 @@
     <FilterMenu
       label="Агент"
       width={196}
-      options={[
-        { value: 'claude-code', label: 'Claude Code' },
-        { value: 'codex', label: 'Codex' },
-      ]}
+      options={agentCatalog().map((agent) => ({ value: agent.id, label: agent.name }))}
       bind:selected={agentFilter}
     >
       {#snippet marker(value)}
-        <AgentLogo agent={value === 'codex' ? 'codex' : 'claude-code'} size={15} />
+        {#if isAgentId(value)}<AgentLogo agent={value} size={15} />{/if}
       {/snippet}
     </FilterMenu>
     <Select options={models} bind:value={model} label="Модель" />

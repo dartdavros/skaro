@@ -1,3 +1,4 @@
+import { DEFAULT_AGENT } from '@skaro/agents';
 // Project artifacts stored in .skaro/ (docs/architecture.md, section 3).
 
 /** Stored task status. "Blocked" and "needs answer" are computed, not stored. */
@@ -153,7 +154,7 @@ export type InheritableSetting = Exclude<keyof ConfigDefaults, 'agentInstruction
 
 export const DEFAULT_CONFIG: ProjectConfig = {
   checks: [],
-  defaultAgent: 'claude-code',
+  defaultAgent: DEFAULT_AGENT,
   defaultEffort: 'high',
   permissionMode: 'auto',
   baseBranch: 'main',

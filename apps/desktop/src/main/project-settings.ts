@@ -1,3 +1,4 @@
+import { requireAgentId } from '@skaro/agents';
 // "Параметры проекта" (ProjectSettings mockup): .skaro/config.yaml as the screen edits it. Values
 // equal to the app-wide defaults ("Настройки") are not written, so the project keeps following them.
 
@@ -9,7 +10,7 @@ import { agentDefaultsChanged } from './task-agent-preferences';
 
 export function toSettings(config: ProjectConfig): ProjectSettings {
   return {
-    defaultAgent: config.defaultAgent === 'codex' ? 'codex' : 'claude-code',
+    defaultAgent: requireAgentId(config.defaultAgent),
     ...(config.defaultModel ? { defaultModel: config.defaultModel } : {}),
     ...(config.defaultEffort ? { defaultEffort: config.defaultEffort } : {}),
     permissionMode: config.permissionMode,

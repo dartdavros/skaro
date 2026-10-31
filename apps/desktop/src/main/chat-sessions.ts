@@ -1,3 +1,4 @@
+import { agentDefinition } from '@skaro/agents';
 import { operationTimeout, segmentTurns, type AgentSession } from '@skaro/timeline';
 import type { AgentId } from '../shared/ipc';
 import { hasCode } from './new-project';
@@ -44,10 +45,9 @@ export class ChatSessions {
       this.ctx.settings.settings(chat),
     );
     // Codex runs its sandbox in the mode the self-check chose (D-28).
-    const sandbox =
-      agent === 'codex'
-        ? await this.ctx.deps.agents.sandbox(agent).catch(() => undefined)
-        : undefined;
+    const sandbox = agentDefinition(agent).chatSandboxCheck
+      ? await this.ctx.deps.agents.sandbox(agent).catch(() => undefined)
+      : undefined;
     const adapter = this.ctx.deps.agents.adapter(agent);
     const resume = chat.nativeSessionId;
     signal.throwIfAborted();
@@ -163,6 +163,7 @@ export class ChatSessions {
     try {
       await operationTimeout(
         Promise.all([
+          this.ctx.planningContinuation.settled(live),
           session?.close(),
           attaching?.then(
             (attached) => attached.close(),

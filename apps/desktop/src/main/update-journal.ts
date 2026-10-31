@@ -1,3 +1,4 @@
+import { isAgentId } from '@skaro/agents';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -31,7 +32,7 @@ export class UpdateJournal {
     parseRelease(pending.manifest);
     if (
       !Array.isArray(pending.agents) ||
-      pending.agents.some((id) => id !== 'codex' && id !== 'claude-code') ||
+      pending.agents.some((id) => !isAgentId(id)) ||
       !Array.isArray(pending.files) ||
       pending.files.some((file) => typeof file !== 'string' || !isAbsolute(file)) ||
       typeof pending.applying !== 'boolean'

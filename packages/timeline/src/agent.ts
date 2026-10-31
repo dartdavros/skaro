@@ -145,7 +145,7 @@ export interface AgentUserConfig {
 }
 
 export interface AgentAdapter {
-  readonly id: 'claude-code' | 'codex';
+  readonly id: string;
   readonly adapterVersion: string;
   status(): Promise<AgentStatus>;
   /** Opens the agent's own sign-in (browser); resolves when it finishes. */

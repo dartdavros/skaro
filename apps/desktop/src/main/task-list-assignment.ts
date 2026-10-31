@@ -1,3 +1,4 @@
+import { isAgentId } from '@skaro/agents';
 import type { AppDb, ProjectArtifacts, RunRecord, Task } from '@skaro/core';
 import type { AgentId } from '../shared/ipc';
 import { taskAgentPreferences, type TaskAgentPreferences } from './task-agent-preferences';
@@ -14,7 +15,7 @@ export function taskListAssignment(
   );
   if (saved?.followProject && !run) return taskAgentPreferences(artifacts.config, task, saved);
   const agent = saved?.agent ?? run?.agent ?? task.agent;
-  if (agent !== 'claude-code' && agent !== 'codex') return {};
+  if (!isAgentId(agent)) return {};
   const model = saved?.model ?? run?.model ?? task.model;
   return { agent, ...(model ? { model } : {}) };
 }

@@ -1,9 +1,10 @@
+import { defaultAgent } from '@skaro/agents/catalog';
 import type { AgentLimits } from '@skaro/timeline';
 import type { AgentId, AgentSettings } from '../../../shared/ipc';
 
 export class LimitsController {
   draft = $state<AgentSettings>({
-    agent: 'claude-code',
+    agent: defaultAgent(),
     permissionMode: 'ask',
     isolation: 'worktree',
     planFirst: false,

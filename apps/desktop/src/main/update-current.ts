@@ -1,13 +1,19 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { AGENT_PINS, agentPackage, type AgentId } from '@skaro/core';
+import { agentPackage, type AgentId } from '@skaro/core';
+import {
+  RELEASE_AGENT_IDS,
+  agentDefinition,
+  legacyBundlePins,
+  matchesLegacyBundlePins,
+  type LegacyBundlePins,
+} from '@skaro/agents';
 import type { ReleaseAgent, ReleaseManifest } from './update-release';
 import { STABLE_VERSION } from './update-release';
 
-export interface BundleVersions {
+export interface BundleVersions extends LegacyBundlePins {
   bundleVersion: string;
   skaroVersion: string;
-  claudeSdk: string;
   adapters: Record<AgentId, string>;
   agents: Record<AgentId, ReleaseAgent>;
 }
@@ -19,7 +25,7 @@ export async function currentBundle(
   packaged: boolean,
 ): Promise<BundleVersions> {
   const agents = Object.fromEntries(
-    ['codex', 'claude-code'].map((id) => {
+    RELEASE_AGENT_IDS.map((id) => {
       const pkg = agentPackage(id as AgentId);
       return [id, { version: pkg.version, shownVersion: pkg.shownVersion }];
     }),
@@ -28,8 +34,10 @@ export async function currentBundle(
     return {
       bundleVersion: version,
       skaroVersion: version,
-      claudeSdk: AGENT_PINS['claude-code'],
-      adapters: { codex: '0.0.0', 'claude-code': '0.0.0' },
+      ...legacyBundlePins(agents),
+      adapters: Object.fromEntries(
+        RELEASE_AGENT_IDS.map((id) => [id, agentDefinition(id).package.version]),
+      ) as Record<AgentId, string>,
       agents,
     };
   const bundled = JSON.parse(
@@ -38,10 +46,10 @@ export async function currentBundle(
   if (
     bundled.bundleVersion !== version ||
     !STABLE_VERSION.test(bundled.skaroVersion) ||
-    bundled.claudeSdk !== AGENT_PINS['claude-code']
+    !matchesLegacyBundlePins(bundled, agents)
   )
     throw new Error('Installed Skaro bundle does not match its compiled pins');
-  for (const id of ['codex', 'claude-code'] as const) {
+  for (const id of RELEASE_AGENT_IDS) {
     if (
       bundled.agents?.[id]?.version !== agents[id].version ||
       bundled.agents[id].shownVersion !== agents[id].shownVersion ||
@@ -56,8 +64,8 @@ export function sameBundle(expected: ReleaseManifest, actual: BundleVersions): b
   return (
     expected.bundleVersion === actual.bundleVersion &&
     expected.skaroVersion === actual.skaroVersion &&
-    expected.claudeSdk === actual.claudeSdk &&
-    ['codex', 'claude-code'].every((id) => {
+    matchesLegacyBundlePins(actual, expected.agents) &&
+    RELEASE_AGENT_IDS.every((id) => {
       const agent = id as AgentId;
       return (
         expected.adapters[agent] === actual.adapters[agent] &&

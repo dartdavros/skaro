@@ -3,7 +3,7 @@ import type { OwnedProcess } from '../process-identity';
 
 export type SessionMethod = Exclude<keyof AgentSession, 'events'>;
 export interface NativeConfig {
-  agent: 'codex' | 'claude-code';
+  agent: import('@skaro/agents').AgentId;
   binary: string;
   pathDirs: string[];
   attachmentsDir: string;

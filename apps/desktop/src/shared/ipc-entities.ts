@@ -2,7 +2,8 @@ import type { AgentActivity, PermissionMode } from '@skaro/timeline';
 
 export type Locale = 'ru' | 'en';
 
-export type AgentId = 'claude-code' | 'codex';
+import type { AgentId } from '@skaro/agents';
+export type { AgentId } from '@skaro/agents';
 
 export interface AgentInfo {
   id: AgentId;

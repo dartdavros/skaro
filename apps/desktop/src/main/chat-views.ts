@@ -1,3 +1,4 @@
+import { requireAgentId } from '@skaro/agents';
 import { type ChatRecord } from '@skaro/core';
 import type { ChatSettings, ChatSummary, ChatView } from '../shared/ipc';
 import { lastKey } from './chat-settings-helpers';
@@ -30,7 +31,7 @@ export class ChatViews {
     const last = this.ctx.deps.db.getSetting<ChatSettings | null>(lastKey(projectId), null);
     if (last && agents.readyAgent(last.agent) === last.agent) return last;
     const { config } = await this.ctx.project(projectId).summary();
-    const configured = config.defaultAgent === 'codex' ? 'codex' : 'claude-code';
+    const configured = requireAgentId(config.defaultAgent);
     // An absent agent is inactive: a new chat starts with a ready one.
     const agent = agents.readyAgent(configured);
     return {
@@ -112,7 +113,7 @@ export class ChatViews {
     return {
       id: chat.id,
       title: chat.title,
-      agent: chat.agent === 'codex' ? 'codex' : 'claude-code',
+      agent: requireAgentId(chat.agent),
       archived: chat.archived,
       ...(this.ctx.importReview.importRecord(chat.id) ? { kind: 'import' as const } : {}),
       live: live !== undefined && live.timeline.state.status !== 'idle',

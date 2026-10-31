@@ -1,3 +1,4 @@
+import { defaultAgent } from '@skaro/agents/catalog';
 import type { ProjectCard } from '../../shared/ipc';
 import { bootstrap } from './bootstrap';
 
@@ -11,7 +12,7 @@ class ProjectOverview {
           unloaded: true,
           refreshing: true,
           activeAt: 0,
-          agent: 'claude-code',
+          agent: defaultAgent(),
           running: [],
           counts: { working: 0, needs: 0, review: 0, failed: 0, blocked: 0 },
         },

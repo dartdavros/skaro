@@ -1,49 +1,17 @@
-// Agent versions pinned by this Skaro release (D-23, D-26) and where their binaries live.
-
-export type AgentId = 'claude-code' | 'codex';
-
-/** Pinned versions. Bump together with adapter golden tests (agent-output.md, section 8). */
-export const AGENT_PINS: Record<AgentId, string> = {
-  'claude-code': '0.3.285', // @anthropic-ai/claude-agent-sdk (Claude Code 2.1.285)
-  codex: '0.159.2', // @openai/codex
-};
-
-/** The agent's own version, shown to the user ("Claude Code 2.1.281"): moves with the pins. */
-const SHOWN_VERSIONS: Record<AgentId, string> = {
-  'claude-code': '2.1.285',
-  codex: '0.159.2',
-};
-
+// Platform detection stays in core; distribution details belong to registered adapters.
+import { agentDefinition, requireAgentId } from '@skaro/agents';
+import type { AgentId } from '@skaro/agents';
+import type { AgentDistribution, AgentPin } from '@skaro/timeline';
+export { AGENT_PINS } from '@skaro/agents';
+export type { AgentId } from '@skaro/agents';
 export interface Platform {
   os: NodeJS.Platform;
   arch: string;
-  /** Linux only: musl-based distributions need musl builds. */
   musl?: boolean;
 }
-
-export interface AgentPackage {
+export interface AgentPackage extends AgentDistribution {
   agent: AgentId;
-  /** Pinned version: the install folder and the sandbox check are keyed by it. */
-  version: string;
-  /** The agent's own version, shown to the user. */
-  shownVersion: string;
-  /** npm package and version that carry the binary for this platform. */
-  name: string;
-  npmVersion: string;
-  /** Executable, relative to the unpacked package. */
-  binary: string;
-  /** Directories (relative) to prepend to PATH when running the agent. */
-  pathDirs: string[];
 }
-
-const CODEX_TRIPLES: Record<string, string> = {
-  'win32-x64': 'x86_64-pc-windows-msvc',
-  'win32-arm64': 'aarch64-pc-windows-msvc',
-  'darwin-x64': 'x86_64-apple-darwin',
-  'darwin-arm64': 'aarch64-apple-darwin',
-  'linux-x64': 'x86_64-unknown-linux-musl',
-  'linux-arm64': 'aarch64-unknown-linux-musl',
-};
 
 let musl: boolean | undefined;
 
@@ -73,38 +41,9 @@ export function currentPlatform(): Platform {
 export function agentPackage(
   agent: AgentId,
   platform: Platform = currentPlatform(),
-  pin?: { version: string; shownVersion: string },
+  pin?: AgentPin,
 ): AgentPackage {
-  const key = `${platform.os}-${platform.arch}`;
-  const exe = platform.os === 'win32' ? '.exe' : '';
-  const version = pin?.version ?? AGENT_PINS[agent];
-  const shownVersion = pin?.shownVersion ?? SHOWN_VERSIONS[agent];
-  if (agent === 'claude-code') {
-    if (
-      !['win32', 'darwin', 'linux'].includes(platform.os) ||
-      !['x64', 'arm64'].includes(platform.arch)
-    ) {
-      throw new Error(`Claude Code is not available for ${key}`);
-    }
-    return {
-      agent,
-      version,
-      name: `@anthropic-ai/claude-agent-sdk-${key}${platform.musl ? '-musl' : ''}`,
-      npmVersion: version,
-      shownVersion,
-      binary: `claude${exe}`,
-      pathDirs: [],
-    };
-  }
-  const triple = CODEX_TRIPLES[key];
-  if (!triple) throw new Error(`Codex is not available for ${key}`);
-  return {
-    agent,
-    version,
-    name: '@openai/codex',
-    npmVersion: `${version}-${key}`,
-    shownVersion,
-    binary: `vendor/${triple}/bin/codex${exe}`,
-    pathDirs: [`vendor/${triple}/codex-path`],
-  };
+  const definition = agentDefinition(agent);
+  const pkg = definition.distribution(platform, pin ?? definition.pin);
+  return { ...pkg, agent: requireAgentId(pkg.agent) };
 }

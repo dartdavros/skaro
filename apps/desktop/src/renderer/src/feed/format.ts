@@ -42,9 +42,7 @@ export function hostOf(url: string): string {
   }
 }
 
-export function agentName(agent: string): string {
-  return agent === 'codex' ? 'Codex' : 'Claude Code';
-}
+export { agentName } from '@skaro/agents/catalog';
 
 /** Model id as people say it: claude-opus-5-1 → Opus 5.1. */
 export function prettyModel(id: string): string {

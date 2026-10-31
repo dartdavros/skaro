@@ -1,19 +1,12 @@
+import type { AgentMethods } from './agent-methods';
 // Typed IPC between the renderer and the main process (architecture.md 10): the renderer has no
 // Node access and can call only the methods listed here.
 
-import type {
-  AgentCommand,
-  AgentLimits,
-  AgentModel,
-  AgentUserConfig,
-  InteractionAnswer,
-  TimelineEvent,
-} from '@skaro/timeline';
+import type { InteractionAnswer, TimelineEvent } from '@skaro/timeline';
 import type { ShellEvents } from './app-shell';
 
 import type {
   Locale,
-  AgentId,
   AgentInfo,
   AgentSettings,
   TaskSummary,
@@ -58,6 +51,7 @@ export type { UpdateState } from './updates';
 /** Methods the renderer may call: name → signature. */
 export interface Methods
   extends
+    AgentMethods,
     HistoryMethods,
     DocumentCatalogMethods,
     ProjectCatalogMethods,
@@ -135,18 +129,6 @@ export interface Methods
   'import.openSource': (projectId: string, chatId: string, source: string) => void;
   'tabs.get': () => TabsState;
   'tabs.set': (state: TabsState) => void;
-  'agents.list': () => AgentInfo[];
-  'agents.refresh': () => AgentInfo[];
-  'agents.install': (agent: AgentId) => void;
-  'agents.login': (agent: AgentId) => void;
-  /** `projectId` '' lists models outside a project (Settings). */
-  'agents.models': (agent: AgentId, projectId: string) => AgentModel[];
-  'agents.commands': (agent: AgentId, projectId: string) => AgentCommand[];
-  /** Account quotas; no task/model is started. */
-  'agents.limits': (agent: AgentId) => AgentLimits;
-  /** "Ваши настройки агента": folder, MCP servers with their state, skills, hooks. */
-  'agents.config': (agent: AgentId) => AgentUserConfig;
-  'agents.openConfigDir': (agent: AgentId) => void;
   'tasks.list': (projectId: string) => TaskSummary[];
   'tasks.slots': () => RunSlots;
   /** Mass launch: blocked tasks are skipped, the rest start or wait for a slot. No agent — each task's own. */

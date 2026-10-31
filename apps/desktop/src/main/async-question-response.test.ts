@@ -20,7 +20,7 @@ it.skipIf(!profile || !chatId)(
       const events = replayRunLog(
         await readRunLog(join(profile!, String(chat['log_path'])), true),
         Number(chat['created_at']),
-        projectorFor(String(chat['agent'])),
+        await projectorFor(String(chat['agent'])),
         attachments.context().attachImage,
       );
       const opened = events.findIndex(
