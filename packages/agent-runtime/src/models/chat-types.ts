@@ -21,6 +21,7 @@ export interface ModelTool {
   parameters: Record<string, unknown>;
 }
 export interface ChatRequest {
+  context?: import('../context/request.ts').ContextSelection;
   route: RouteSnapshot;
   messages: readonly ChatMessage[];
   tools?: readonly ModelTool[];

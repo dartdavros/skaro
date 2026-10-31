@@ -2,6 +2,7 @@ import type { ModelResponseProvenance, RouteSnapshot } from '@skaro/timeline';
 import type { ModelTool } from './chat-types.ts';
 
 export interface NativeRequest {
+  context?: import('../context/request.ts').ContextSelection;
   route: RouteSnapshot;
   /** Provider-native items/messages, preserved as JSON rather than flattened display text. */
   input: readonly Record<string, unknown>[];

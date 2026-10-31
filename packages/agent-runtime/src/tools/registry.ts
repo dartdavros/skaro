@@ -2,36 +2,44 @@ import type { BuiltinToolScope } from '@skaro/timeline';
 import { requireRouteCapabilities } from '@skaro/timeline';
 import type { RuntimeJournal } from '../journal.ts';
 import { PathScope } from './path-scope.ts';
-import { schemas, isToolName, type ToolName } from './schemas.ts';
+import { schemas, isToolName } from './schemas.ts';
 import { findFiles, searchText, readText } from './file-search.ts';
 import { applyFilePatch } from './file-patch.ts';
 import { readScopedFile, fileHash } from './text-file.ts';
 import { ToolProcesses } from './processes.ts';
+import { RuntimeContext } from '../context/service.ts';
+import { contextHistoryPage } from '../context/history.ts';
+import { ExtensionRegistry, type RuntimeExtensionHost } from '../extensions/registry.ts';
+import { sessionFileScope } from './session-scope.ts';
 
 export class ToolRegistry {
   readonly scope: PathScope;
   readonly processes: ToolProcesses;
   private readonly config: BuiltinToolScope;
   private readonly journal: RuntimeJournal;
-  private constructor(scope: PathScope, config: BuiltinToolScope, journal: RuntimeJournal) {
+  readonly extensions: ExtensionRegistry;
+  private constructor(
+    scope: PathScope,
+    config: BuiltinToolScope,
+    journal: RuntimeJournal,
+    host?: RuntimeExtensionHost,
+  ) {
     this.scope = scope;
     this.config = config;
     this.journal = journal;
     this.processes = new ToolProcesses(config, journal);
+    this.extensions = new ExtensionRegistry(journal.state.config!.extensions ?? [], host);
   }
-  static async create(config: BuiltinToolScope, journal: RuntimeJournal): Promise<ToolRegistry> {
-    const primary = journal.state.config!.journalPath;
-    const scope = await PathScope.create(config.cwd, config.readDirs, [
-      config.artifactDir,
-      primary,
-      `${primary}.index.sqlite`,
-      `${primary}.index.sqlite-journal`,
-      `${primary}.index.sqlite-wal`,
-      `${primary}.index.sqlite-shm`,
-    ]);
-    return new ToolRegistry(scope, config, journal);
+  static async create(
+    config: BuiltinToolScope,
+    journal: RuntimeJournal,
+    host?: RuntimeExtensionHost,
+  ): Promise<ToolRegistry> {
+    const scope = await sessionFileScope(journal);
+    return new ToolRegistry(scope, config, journal, host);
   }
-  parse(name: string, args: unknown): { name: ToolName; args: Record<string, unknown> } {
+  parse(name: string, args: unknown): { name: string; args: Record<string, unknown> } {
+    if (this.extensions.has(name)) return { name, args: this.extensions.parse(name, args) };
     if (!isToolName(name)) throw new Error(`Unknown tool: ${name}`);
     const result = schemas[name].safeParse(args);
     if (!result.success) throw new Error(`Invalid arguments for ${name}`);
@@ -39,12 +47,21 @@ export class ToolRegistry {
   }
   async execute(
     id: string,
-    name: ToolName,
+    name: string,
     args: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<unknown> {
     signal.throwIfAborted();
+    if (this.extensions.has(name)) return this.extensions.invoke(id, name, args, signal);
     switch (name) {
+      case 'context_read': {
+        const context = await RuntimeContext.create(this.journal);
+        if (!context) throw new Error('Host context is not configured');
+        const input = schemas.context_read.parse(args);
+        return context.page(input.id, input.cursor, input.limit, signal);
+      }
+      case 'context_history':
+        return contextHistoryPage(this.journal, schemas.context_history.parse(args));
       case 'find_files':
         return findFiles(this.scope, schemas.find_files.parse(args), signal);
       case 'search_text':

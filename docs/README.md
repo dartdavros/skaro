@@ -28,6 +28,7 @@
 | [builtin-agent-tools.md](builtin-agent-tools.md)               | Инструменты BA-3, права, Windows Job Object и ограничения D-28 |
 | [builtin-agent-models.md](builtin-agent-models.md)             | Коннекторы BA-4, живая приёмка OpenRouter, прямые API без live-проверки |
 | [builtin-agent-credentials.md](builtin-agent-credentials.md)   | OS credential vault, bound leases, ротация и скрытый developer-import |
+| [builtin-agent-context.md](builtin-agent-context.md)           | BA-5: scoped context, локальный compact, публичная история, MCP и skills |
 | [builtin-agent-verification.md](builtin-agent-verification.md) | Фактические проверки этапов встроенного агента и незакрытые критерии |
 | [sidebar-layout.md](sidebar-layout.md)                         | Согласованное расположение, размеры и поведение панелей                                 |
 | [task-environments.md](task-environments.md)                   | Сохранение worktree, защита окружений и реальная browser-проверка                       |

@@ -80,6 +80,10 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
   if (!previous) await journal.append(turnId, [], {}, hash);
   const allowed = new Set(request.tools?.map((tool) => tool.name));
   for (let step = 0; step < input.maxSteps; step++) {
+    if (session.context) {
+      if (!request.context) throw new Error('Configured context selection is required');
+      await session.context.requireCurrent(request.context.revision, request.context.epoch, signal);
+    }
     requireRoute();
     const id = `native-${input.id}-${step}`;
     const response = await modelStep({

@@ -31,5 +31,14 @@ export async function executeModelTool(input: {
     action: { type: 'tool', name: call.name, args: call.arguments },
   });
   input.signal.throwIfAborted();
+  if (Buffer.byteLength(JSON.stringify(record.result)) > 16_384)
+    return {
+      value: {
+        kind: 'paged-tool-result',
+        reference: { sequence: record.sequence, hash: record.hash },
+        notice:
+          'Read the complete genuine result with context_history; this reference is not a success verdict.',
+      },
+    };
   return record.result;
 }

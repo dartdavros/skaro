@@ -123,6 +123,8 @@ export function commandFacts(
       };
     case 'compact':
       throw new Error('Compaction requires the context/connector modules (BA-4/BA-5)');
+    case 'refreshContext':
+      throw new Error('Host context scope is not configured');
     case 'stopBackground':
       throw new Error('Background process tools are not implemented (BA-3)');
     case 'interrupt':

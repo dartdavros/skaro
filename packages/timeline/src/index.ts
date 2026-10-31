@@ -16,6 +16,8 @@ export type * from './builtin-host.ts';
 export type * from './builtin-session.ts';
 export * from './builtin-tools.ts';
 export type * from './builtin-credentials.ts';
+export type * from './builtin-context.ts';
+export type * from './builtin-extensions.ts';
 export type * from './skaro-scope.ts';
 export * from './operation-timeout.ts';
 export * from './operation-lifetime.ts';

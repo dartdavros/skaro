@@ -19,6 +19,7 @@ export type RuntimeAction =
   | { type: 'setPermissionMode'; mode: PermissionMode }
   | { type: 'rewind'; toItemId: string }
   | { type: 'compact' | 'interrupt' | 'close' }
+  | { type: 'refreshContext' }
   | { type: 'stopBackground'; taskId: string };
 // Tool calls use their caller command ID as the durable effect identity.
 export type ToolAction = { type: 'tool'; name: string; args: unknown };

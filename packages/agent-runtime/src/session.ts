@@ -7,6 +7,8 @@ import packageManifest from '../package.json' with { type: 'json' };
 import type { JournalRecord, RuntimeCommand, RuntimeStart } from './model.ts';
 import { ToolCoordinator } from './tools/coordinator.ts';
 import { schemas } from './tools/schemas.ts';
+import { RuntimeContext } from './context/service.ts';
+import type { RuntimeExtensionHost } from './extensions/registry.ts';
 
 function validateRoute(route: RouteSnapshot): void {
   if (
@@ -37,12 +39,19 @@ export class RuntimeSession {
   private tools?: ToolCoordinator;
   private modelAbort = new AbortController();
   private modelWork?: Promise<unknown>;
+  context?: RuntimeContext;
   private constructor(journal: RuntimeJournal) {
     this.journal = journal;
   }
 
-  static async open(config: RuntimeStart, owner: RuntimeProcessIdentity): Promise<RuntimeSession> {
+  static async open(
+    config: RuntimeStart,
+    owner: RuntimeProcessIdentity,
+    extensions?: RuntimeExtensionHost,
+  ): Promise<RuntimeSession> {
     requireBuiltinCompatibility(config.versions);
+    if ((config.extensions?.length || extensions) && !config.tools)
+      throw new Error('Extensions require a host tool scope');
     validateRoute(config.route);
     for (const route of config.availableRoutes ?? []) validateRoute(route);
     if (!['ask', 'auto', 'full'].includes(config.permissionMode))
@@ -71,6 +80,10 @@ export class RuntimeSession {
         requireBuiltinCompatibility(journal.state.config.versions);
         if (JSON.stringify(journal.state.config.tools) !== JSON.stringify(config.tools))
           throw new Error('Resume tool scope differs from the persisted host scope');
+        if (JSON.stringify(journal.state.config.context) !== JSON.stringify(config.context))
+          throw new Error('Resume context scope differs from persisted host configuration');
+        if (JSON.stringify(journal.state.config.extensions) !== JSON.stringify(config.extensions))
+          throw new Error('Resume extensions differ from persisted host policy');
         if (JSON.stringify(journal.state.config.route) !== JSON.stringify(config.route))
           throw new Error(
             'Resume route differs from persisted route; explicit route change required',
@@ -84,7 +97,8 @@ export class RuntimeSession {
           ]);
       }
       const session = new RuntimeSession(journal);
-      session.tools = await ToolCoordinator.create(journal);
+      session.tools = await ToolCoordinator.create(journal, extensions);
+      session.context = await RuntimeContext.create(journal);
       return session;
     } catch (error) {
       await journal.close();
@@ -167,6 +181,26 @@ export class RuntimeSession {
         } else if (this.modelWork && action.type !== 'respond')
           throw new Error('An active model turn prevents this context change');
         if (action.type === 'setRoute') validateRoute(action.route);
+        if ((action.type === 'compact' || action.type === 'refreshContext') && this.context) {
+          const value = await this.context.project(
+            action.type === 'compact',
+            this.modelAbort.signal,
+          );
+          return await this.journal.append(
+            id,
+            action.type === 'compact'
+              ? [
+                  {
+                    type: 'continuation',
+                    route: this.journal.state.config!.route,
+                    value: { schema: 1, kind: 'context-boundary', epoch: value.epoch },
+                  },
+                ]
+              : [],
+            { value },
+            hash,
+          );
+        }
         const decision = commandFacts(this.journal.state, action);
         facts = decision.facts;
         result = decision.error ? { error: decision.error } : {};

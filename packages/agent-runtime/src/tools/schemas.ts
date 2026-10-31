@@ -80,6 +80,17 @@ export const schemas = {
       .max(100),
   }),
   view_image: z.strictObject({ path }),
+  context_read: z.strictObject({
+    id: z.string().min(1),
+    cursor: integer(2_000_000).default(0),
+    limit: z.number().int().min(1).max(16_384).default(8192),
+  }),
+  context_history: z.strictObject({
+    sequence: z.number().int().min(1),
+    hash: z.string().regex(/^[a-f0-9]{64}$/),
+    cursor: integer(100_000_000).default(0),
+    limit: z.number().int().min(1).max(16_384).default(8192),
+  }),
 } as const;
 export type ToolName = keyof typeof schemas;
 export type ToolArgs<N extends ToolName> = z.output<(typeof schemas)[N]>;

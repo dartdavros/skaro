@@ -5,7 +5,8 @@ import type { RuntimeJournal } from '../journal.ts';
 import type { JournalRecord, RuntimeCommand, RuntimeFact } from '../model.ts';
 import { ToolRegistry } from './registry.ts';
 import { ToolAccessQueue } from './rw-lock.ts';
-import { schemas, writeTools, type ToolName } from './schemas.ts';
+import { schemas, writeTools, isToolName } from './schemas.ts';
+import type { RuntimeExtensionHost } from '../extensions/registry.ts';
 import { UnknownToolOutcome } from './effect-error.ts';
 
 export class ToolCoordinator {
@@ -23,10 +24,13 @@ export class ToolCoordinator {
     this.registry = registry;
     this.journal = journal;
   }
-  static async create(journal: RuntimeJournal): Promise<ToolCoordinator | undefined> {
+  static async create(
+    journal: RuntimeJournal,
+    host?: RuntimeExtensionHost,
+  ): Promise<ToolCoordinator | undefined> {
     const config = journal.state.config!.tools;
     if (!config) return undefined;
-    const registry = await ToolRegistry.create(config, journal);
+    const registry = await ToolRegistry.create(config, journal, host);
     await registry.processes.recover();
     return new ToolCoordinator(registry, journal);
   }
@@ -54,7 +58,12 @@ export class ToolCoordinator {
   async close(): Promise<void> {
     this.cancel();
     try {
-      await this.registry.processes.close();
+      const closed = await Promise.allSettled([
+        this.registry.processes.close(),
+        this.registry.extensions.close(),
+      ]);
+      if (closed.some((result) => result.status === 'rejected'))
+        throw new Error('Tool process or extension shutdown was not confirmed');
     } catch (error) {
       this.halted =
         error instanceof Error ? error : new Error('Process shutdown was not confirmed');
@@ -88,23 +97,26 @@ export class ToolCoordinator {
   }
   private async authorize(
     id: string,
-    name: ToolName,
+    name: string,
     args: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<void> {
     const state = this.journal.state;
     const config = state.config!;
+    const extensionWrite =
+      this.registry.extensions.has(name) && !this.registry.extensions.readOnly(name);
     if (state.stopped || state.closed)
       throw new Error('Session is stopped; explicit input must resume it');
     if (
       config.tools!.readOnly &&
-      (name === 'apply_patch' ||
+      (extensionWrite ||
+        name === 'apply_patch' ||
         name === 'exec_command' ||
         (name === 'write_stdin' && (args.chars !== undefined || args.end === true)))
     )
       throw new Error('Read-only scope forbids this tool');
     if (
-      writeTools.has(name) &&
+      (extensionWrite || (isToolName(name) && writeTools.has(name))) &&
       name !== 'stop_process' &&
       name !== 'update_plan' &&
       Object.values(state.effects).some((effect) => effect.state === 'unknown')
@@ -115,17 +127,20 @@ export class ToolCoordinator {
       (name === 'write_stdin' && (args.chars !== undefined || args.end === true));
     const writes = name === 'apply_patch';
     const requires =
-      config.permissionMode !== 'full' && (command || (config.permissionMode === 'ask' && writes));
+      config.permissionMode !== 'full' &&
+      (command || extensionWrite || (config.permissionMode === 'ask' && writes));
     if (!requires) return;
     const interaction: Interaction = {
       kind: 'approval',
       id: `approval-${id}`,
       action: {
-        type: command ? 'command' : 'file_write',
+        type: command ? 'command' : extensionWrite ? 'mcp' : 'file_write',
         title: name,
         ...(name === 'exec_command' ? { command: String(args.command) } : {}),
         ...(name === 'apply_patch' ? { paths: [String(args.path)] } : {}),
-        reason: builtinSandboxStatus(config.permissionMode).detail,
+        reason:
+          builtinSandboxStatus(config.permissionMode).detail +
+          (extensionWrite ? `\n${JSON.stringify(args)}` : ''),
       },
       choices: ['allow_once', 'deny'],
     };
@@ -175,15 +190,29 @@ export class ToolCoordinator {
           signal,
         );
       } else
-        value = await this.access.run(writeTools.has(tool.name), signal, async () => {
-          signal.throwIfAborted();
-          await this.journal.append(`intent:${command.id}`, [
-            { type: 'effect-intent', id: command.id, name: tool.name },
-          ]);
-          admitted = true;
-          signal.throwIfAborted();
-          return this.registry.execute(command.id, tool.name, tool.args, signal);
-        });
+        value = await this.access.run(
+          this.registry.extensions.has(tool.name)
+            ? !this.registry.extensions.readOnly(tool.name)
+            : isToolName(tool.name) && writeTools.has(tool.name),
+          signal,
+          async () => {
+            signal.throwIfAborted();
+            await this.journal.append(`intent:${command.id}`, [
+              { type: 'effect-intent', id: command.id, name: tool.name },
+            ]);
+            admitted = true;
+            signal.throwIfAborted();
+            return this.registry.execute(command.id, tool.name, tool.args, signal);
+          },
+        );
+      if (
+        this.registry.extensions.has(tool.name) &&
+        value &&
+        typeof value === 'object' &&
+        (value as { isError?: boolean }).isError === true
+      ) {
+        error = String((value as { text?: string }).text ?? 'Extension reported a tool error');
+      }
     } catch (failure) {
       unknown = failure instanceof UnknownToolOutcome;
       error = signal.aborted

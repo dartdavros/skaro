@@ -71,6 +71,10 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
   if (!start) await journal.append(`model-turn:${input.id}`, [], {}, hash);
   const messages: ChatMessage[] = structuredClone(request.messages) as ChatMessage[];
   for (let step = 0; step < input.maxSteps; step++) {
+    if (session.context) {
+      if (!request.context) throw new Error('Configured context selection is required');
+      await session.context.requireCurrent(request.context.revision, request.context.epoch, signal);
+    }
     signal.throwIfAborted();
     if (journal.state.stopped || journal.state.closed)
       throw new Error('Model turn admission revoked');

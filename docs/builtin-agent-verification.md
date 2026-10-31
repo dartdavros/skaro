@@ -3,6 +3,55 @@
 История выполнения [плана](builtin-agent-plan.md). Результаты каждого этапа
 относятся к его объёму; они не означают готовность всего встроенного агента.
 
+## Продолжение BA-5, 31.10.2026
+
+BA-4 зафиксирован коммитом `fcd8685`. Реализованы scoped context и ревизии,
+локальный compact с сохранением primary journal/точных решений, paged documents
+и публичная история без закрытого native state. Добавлены host-selected skills,
+MCP SDK stdio/HTTP, ограниченный каталог/JSON schema validation и интеграция
+extension tools с существующим coordinator/approvals/effects. Внутренний
+Skaro operation port связывает прежние handlers, scope и admission checks;
+продуктовый task/chat host не подменялся.
+Полный объём и ограничения — в [BA-5](builtin-agent-context.md).
+
+Три context-сценария проверили реальные AGENTS.md/план/ADR, stale source revision,
+вопрос/ответ, compact/restart и dedup. Настоящий taskBrowserServer/Playwright MCP
+прошёл browser_tabs list, ограничение каталога, invalid args, allow_once,
+dedup и подтверждение выхода владельца PID/birth. Это не навигация по приложению.
+Настоящий SKILL.md openai-docs прочитан новым inspector: name/description/revision
+получены, содержимое профиля не копировалось в тестовые fixtures.
+
+Публичная проекция проверена на шести настоящих OpenRouter responses BA-4:
+raw native/reasoning/signatures в model-readable history отсутствуют.
+Модельные запросы для этой проверки не выполнялись; расход BA-4 не увеличен.
+Первый regression-прогон пяти файлов дал 17 успехов и один timeout5s в model
+admission/lifecycle тесте на фоне сборки. Изолированный повтор без изменений
+кода/ожиданий прошёл. Точная причина того timeout отдельно не доказана;
+проверка не ослаблялась и лимит теста не менялся.
+После финальной сборки ещё семь process/compiled-native сценариев в двух
+файлах прошли. Всего затронуты 25 сценариев в семи файлах; каждый имеет
+успешный результат с учётом указанного изолированного повтора.
+
+Сборка BA-5 прошла main, runtime/native/command/credential workers, preload и
+renderer. TypeScript runtime/timeline/MCP/desktop main и adapter-skaro,
+ESLint/Prettier изменённого кода прошли. Исходники меньше 300 строк;
+UI-компоненты не менялись. Предупреждения Zod/Claude SDK/web-tree-sitter
+остались сторонними. Полный suite и UI browser-приёмка не запускались.
+
+Незакрыты: живая длинная модельная сессия после compact, все native/route
+продолжения, HTTP MCP на настоящем продукте, browser/media workflow задачи,
+macOS/Linux stdio и host RPC. Владелец отдельно разрешил расширенный context
+payload: scoped AGENTS.md, точное решение о direct live и несекретные ссылки
+истории. Сценарий `verify-openrouter.mjs REFERENCE REVISION --context` прошёл
+настоящие два model requests до compact и после compact/restart. Сохранены
+решение владельца, epoch = 1 и все исходные records; старый selection отклонён,
+закрытый native state не передан. Стоимость двух receipts — $0.00033132.
+Повторный запуск получил сохранённый proof без новых model requests:
+общий счётчик остался 13, резерв — $0.65. Usage ключа обновился до наблюдаемого
+прироста $0.00144372 с начала BA-4/BA-5; предел владельца — $1.
+Режим `--prepare-context` ранее скомпилировал entry без запуска credentials/API.
+Проверка двух ходов не закрывает критерий длительной модельной сессии.
+
 ## Результат BA-4, 31.10.2026
 
 BA-1–BA-3 зафиксированы локальным коммитом `0ab4004`
