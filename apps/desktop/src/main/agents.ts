@@ -70,7 +70,7 @@ export class AgentManager {
       this.info.set(id, {
         id,
         installed: false,
-        sizeBytes: agentDefinition(id).downloadSize,
+        sizeBytes: agentDefinition(id).delivery.downloadSize,
         checking: true,
       });
     }
@@ -168,14 +168,14 @@ export class AgentManager {
         version: status.installed ? agentPackage(id).shownVersion : undefined,
         authenticated: status.authenticated,
         account: status.account,
-        sizeBytes: agentDefinition(id).downloadSize,
+        sizeBytes: agentDefinition(id).delivery.downloadSize,
         ...(previous.download ? { download: previous.download } : {}),
       };
     } catch (error) {
       next = {
         id,
         installed: (await this.installer.installed(id)) !== undefined,
-        sizeBytes: agentDefinition(id).downloadSize,
+        sizeBytes: agentDefinition(id).delivery.downloadSize,
         error: error instanceof Error ? error.message : String(error),
       };
     }

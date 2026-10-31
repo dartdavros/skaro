@@ -28,8 +28,24 @@ export const codexDefinition = {
   },
   package: packageManifest,
   adapterVersion: CODEX_ADAPTER_VERSION,
-  pin: { version: '0.159.2', shownVersion: '0.159.2' },
-  downloadSize: 90e6,
+  delivery: {
+    kind: 'managed-npm',
+    pin: { version: '0.159.2', shownVersion: '0.159.2' },
+    downloadSize: 90e6,
+    distribution(platform, pin) {
+      const key = `${platform.os}-${platform.arch}`;
+      const triple = TRIPLES[key];
+      if (!triple) throw new Error(`Codex is not available for ${key}`);
+      return {
+        agent: 'codex',
+        ...pin,
+        name: '@openai/codex',
+        npmVersion: `${pin.version}-${key}`,
+        binary: `vendor/${triple}/bin/codex${platform.os === 'win32' ? '.exe' : ''}`,
+        pathDirs: [`vendor/${triple}/codex-path`],
+      };
+    },
+  },
   capabilities: {
     resume: true,
     images: true,
@@ -44,19 +60,6 @@ export const codexDefinition = {
   releaseOrder: 0,
   probeAlias: 'codex' as const,
   diagnosticVersionKey: 'codex' as const,
-  distribution(platform, pin) {
-    const key = `${platform.os}-${platform.arch}`;
-    const triple = TRIPLES[key];
-    if (!triple) throw new Error(`Codex is not available for ${key}`);
-    return {
-      agent: 'codex',
-      ...pin,
-      name: '@openai/codex',
-      npmVersion: `${pin.version}-${key}`,
-      binary: `vendor/${triple}/bin/codex${platform.os === 'win32' ? '.exe' : ''}`,
-      pathDirs: [`vendor/${triple}/codex-path`],
-    };
-  },
   async loadProjector() {
     const { CodexProjector } = await import('./projector.ts');
     return (context, emit) => new CodexProjector(context, emit);

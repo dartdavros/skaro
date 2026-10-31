@@ -1,0 +1,21 @@
+{
+  "name": "@skaro/agent-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./process-identity": "./src/process-identity.ts",
+    "./worker": "./src/worker.ts",
+    "./shell": "./src/tools/shell.ts",
+    "./environment": "./src/tools/command-env.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "ignore": "7.0.5",
+    "zod": "4.6.5",
+    "@skaro/timeline": "workspace:*"
+  }
+}

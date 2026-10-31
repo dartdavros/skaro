@@ -24,9 +24,9 @@ export const probeBinary: AgentRuntime['probeBinary'] = (resolvePackage) => {
   const pkg = createRequire(launcher).resolve(
     `@openai/codex-${process.platform}-${process.arch}/package.json`,
   );
-  const distribution = codexDefinition.distribution(
+  const distribution = codexDefinition.delivery.distribution(
     { os: process.platform, arch: process.arch },
-    codexDefinition.pin,
+    codexDefinition.delivery.pin,
   );
   return {
     binary: join(dirname(pkg), distribution.binary),

@@ -1,0 +1,17 @@
+{
+  "name": "@skaro/adapter-skaro",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./definition": "./src/definition.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@skaro/timeline": "workspace:*",
+    "@skaro/agent-runtime": "workspace:*"
+  }
+}

@@ -1,14 +1,22 @@
 import type { AgentSession, SessionOptions, TimelineEvent } from '@skaro/timeline';
 import type { OwnedProcess } from '../process-identity';
 
-export type SessionMethod = Exclude<keyof AgentSession, 'events'>;
-export interface NativeConfig {
+export type SessionMethod = Exclude<keyof AgentSession, 'events'> | 'invokeTool';
+interface ManagedNativeConfig {
   agent: import('@skaro/agents').AgentId;
   binary: string;
   pathDirs: string[];
   attachmentsDir: string;
   authRevision: SharedArrayBuffer;
 }
+export type NativeConfig =
+  | ManagedNativeConfig
+  | {
+      agent: string;
+      bundled: import('@skaro/timeline').BuiltinSessionStart;
+      entry: string;
+      attachmentsDir: string;
+    };
 export type NativeOptions = Omit<
   SessionOptions,
   'raw' | 'rawSerialized' | 'secretValues' | 'context' | 'processStarted' | 'signal'
@@ -20,7 +28,7 @@ export interface Request {
   secrets: string[];
 }
 export type Reply =
-  | { type: 'reply'; id: number; error?: string }
+  | { type: 'reply'; id: number; error?: string; value?: unknown }
   | { type: 'raw'; bytes: ArrayBuffer }
   | { type: 'event'; event: TimelineEvent }
   | { type: 'spawn'; process: OwnedProcess; gate: SharedArrayBuffer }

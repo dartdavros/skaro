@@ -106,6 +106,9 @@ importers:
       '@skaro/adapter-codex':
         specifier: workspace:*
         version: link:../../packages/adapter-codex
+      '@skaro/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
       '@skaro/agents':
         specifier: workspace:*
         version: link:../../packages/agents
@@ -221,6 +224,27 @@ importers:
         specifier: workspace:*
         version: link:../timeline
 
+  packages/adapter-skaro:
+    dependencies:
+      '@skaro/agent-runtime':
+        specifier: workspace:*
+        version: link:../agent-runtime
+      '@skaro/timeline':
+        specifier: workspace:*
+        version: link:../timeline
+
+  packages/agent-runtime:
+    dependencies:
+      '@skaro/timeline':
+        specifier: workspace:*
+        version: link:../timeline
+      ignore:
+        specifier: 7.0.5
+        version: 7.0.5
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+
   packages/agents:
     dependencies:
       '@skaro/adapter-claude':
@@ -229,12 +253,18 @@ importers:
       '@skaro/adapter-codex':
         specifier: workspace:*
         version: link:../adapter-codex
+      '@skaro/adapter-skaro':
+        specifier: workspace:*
+        version: link:../adapter-skaro
       '@skaro/timeline':
         specifier: workspace:*
         version: link:../timeline
 
   packages/core:
     dependencies:
+      '@skaro/agent-runtime':
+        specifier: workspace:*
+        version: link:../agent-runtime
       '@skaro/agents':
         specifier: workspace:*
         version: link:../agents
@@ -253,6 +283,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.30.1
         version: 1.30.1(zod@4.6.5)
+      '@skaro/timeline':
+        specifier: workspace:*
+        version: link:../timeline
       zod:
         specifier: 4.6.5
         version: 4.6.5

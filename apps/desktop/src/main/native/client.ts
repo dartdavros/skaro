@@ -18,11 +18,16 @@ class NativeSession implements AgentSession {
   private readonly worker: Worker;
   private readonly options: SessionOptions;
   private readonly processes: OwnedProcess[] = [];
-  private readonly pending = new Map<number, { resolve(): void; reject(error: Error): void }>();
+  private readonly pending = new Map<
+    number,
+    { resolve(value?: unknown): void; reject(error: Error): void }
+  >();
   private serial = 0;
   private error?: Error;
   private stopping?: Promise<void>;
+  private readonly bundled: boolean;
   constructor(config: NativeConfig, options: SessionOptions) {
+    this.bundled = 'bundled' in config;
     this.options = options;
     this.worker = new Worker(join(app.getAppPath(), 'out', 'main', 'native-worker.js'), {
       workerData: config,
@@ -61,7 +66,7 @@ class NativeSession implements AgentSession {
       const pending = this.pending.get(reply.id);
       this.pending.delete(reply.id);
       if (reply.error) pending?.reject(new Error(reply.error));
-      else pending?.resolve();
+      else pending?.resolve(reply.value);
     }
   }
   private fail(error: Error): void {
@@ -72,16 +77,19 @@ class NativeSession implements AgentSession {
     if (!this.stopping)
       void this.close().catch((failure: unknown) => console.error('Native cleanup:', failure));
   }
-  call(method: SessionMethod | 'start', args: unknown[] = []): Promise<void> {
+  call<T = void>(method: SessionMethod | 'start', args: unknown[] = []): Promise<T> {
     if (this.error) return Promise.reject(this.error);
     const id = ++this.serial;
     const request: Request = { id, method, args, secrets: this.options.secretValues?.() ?? [] };
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { resolve: (value) => resolve(value as T), reject });
       this.worker.postMessage(request);
     });
   }
   send: AgentSession['send'] = (input) => this.call('send', [input]);
+  invokeTool(name: string, args: unknown, id?: string): Promise<unknown> {
+    return this.call<unknown>('invokeTool', [name, args, id]);
+  }
   steer: AgentSession['steer'] = (input) => this.call('steer', [input]);
   respond: AgentSession['respond'] = (id, answer) => this.call('respond', [id, answer]);
   setModel: AgentSession['setModel'] = (model, effort) => this.call('setModel', [model, effort]);
@@ -96,6 +104,15 @@ class NativeSession implements AgentSession {
     this.stopping = (async () => {
       let timer: NodeJS.Timeout | undefined;
       try {
+        if (this.bundled) {
+          await Promise.race([
+            this.call('close').catch(() => undefined),
+            new Promise<void>((resolve) => {
+              timer = setTimeout(resolve, 30_000);
+            }),
+          ]);
+          clearTimeout(timer);
+        }
         // Stop descendants while their parent still has its verified OS identity.
         // Killing only the parent first can orphan MCP servers and background commands.
         void this.call('interrupt').catch(() => undefined);

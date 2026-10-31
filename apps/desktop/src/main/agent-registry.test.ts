@@ -11,8 +11,13 @@ import {
   projectorFor,
   legacyBundlePins,
   matchesLegacyBundlePins,
+  REGISTERED_AGENT_IDS,
+  agentRegistration,
 } from '@skaro/agents';
-import { validateAgentDefinitions } from '../../../../packages/agents/src/validation.ts';
+import {
+  validateAgentDefinitions,
+  validateAgentRegistrations,
+} from '../../../../packages/agents/src/validation.ts';
 import {
   setAgentCatalog,
   agentCatalog as browserCatalog,
@@ -21,6 +26,39 @@ import {
 } from '@skaro/agents/catalog';
 
 describe('registered agents', () => {
+  it('registers the bundled lifecycle without npm installation, auth or product UI metadata', async () => {
+    expect(REGISTERED_AGENT_IDS).toEqual(['claude-code', 'codex', 'skaro']);
+    const registration = agentRegistration('skaro');
+    expect(registration).toMatchObject({
+      id: 'skaro',
+      stage: 'runtime-core',
+      unavailableReason: 'model-connectors-not-implemented',
+      delivery: { kind: 'bundled', versioning: 'with-skaro' },
+    });
+    expect('presentation' in registration).toBe(false);
+    expect('loadRuntime' in registration).toBe(false);
+    expect('pin' in registration.delivery).toBe(false);
+    expect('distribution' in registration.delivery).toBe(false);
+    expect('downloadSize' in registration.delivery).toBe(false);
+    expect(() => requireAgentId('skaro')).toThrow('model-connectors-not-implemented');
+    expect(await projectorFor('skaro')).toBeTypeOf('function');
+    expect(() => agentRegistration('missing')).toThrow('Unknown agent');
+    expect(() => validateAgentRegistrations([registration, registration])).toThrow('duplicate');
+    expect(() => validateAgentRegistrations([])).toThrow('At least one');
+    if (!('stage' in registration)) throw new Error('Expected bundled registration');
+    expect(() =>
+      validateAgentRegistrations([
+        {
+          ...registration,
+          delivery: {
+            ...registration.delivery,
+            contracts: { ...registration.delivery.contracts, host: 2 },
+          },
+        },
+      ]),
+    ).toThrow('Unsupported builtin host');
+  });
+
   it('preserves the existing catalog, versions and distribution on all six platforms', () => {
     expect(AGENT_IDS).toEqual(['claude-code', 'codex']);
     expect(DEFAULT_AGENT).toBe('claude-code');
@@ -35,8 +73,8 @@ describe('registered agents', () => {
           const definition = agentDefinition(id);
           const pkg = agentPackage(id, { os, arch });
           expect(pkg.agent).toBe(id);
-          expect(pkg.version).toBe(definition.pin.version);
-          expect(pkg.shownVersion).toBe(definition.pin.shownVersion);
+          expect(pkg.version).toBe(definition.delivery.pin.version);
+          expect(pkg.shownVersion).toBe(definition.delivery.pin.shownVersion);
           expect(pkg.binary.endsWith('.exe')).toBe(os === 'win32');
         }
     expect(agentPackage('claude-code', { os: 'linux', arch: 'arm64', musl: true }).name).toBe(
@@ -67,7 +105,7 @@ describe('registered agents', () => {
   });
 
   it('retains the manifest v1 SDK alias and rejects mismatched versions', () => {
-    const pins = Object.fromEntries(AGENT_IDS.map((id) => [id, agentDefinition(id).pin]));
+    const pins = Object.fromEntries(AGENT_IDS.map((id) => [id, agentDefinition(id).delivery.pin]));
     const aliases = legacyBundlePins(pins);
     expect(aliases).toEqual({ claudeSdk: '0.3.285' });
     expect(matchesLegacyBundlePins(aliases, pins)).toBe(true);

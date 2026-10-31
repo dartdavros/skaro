@@ -21,6 +21,12 @@
 | [project-graph-controls.md](project-graph-controls.md)         | Утверждённая компоновка фильтров, пути/влияния, проигрывателя и алертов                 |
 | [project-graph-verification.md](project-graph-verification.md) | Проведённые проверки графа, реальные данные, артефакты и непроверенные сценарии         |
 | [agent-output.md](agent-output.md)                             | Протоколы агентов, каноническая модель, отображение и результаты прототипа              |
+| [ADR-0047](adr/0047-builtin-agent.md)                          | Целевая архитектура основного встроенного агента, BYOK и самостоятельные проверки       |
+| [builtin-agent-plan.md](builtin-agent-plan.md)                 | План встроенного runtime, OpenAI/Anthropic/DeepSeek/OpenRouter, design gates и приёмка    |
+| [builtin-agent-contracts.md](builtin-agent-contracts.md)       | Фактические контракты BA-1, регистрация, поставка, маршруты, host-порты и версии |
+| [builtin-agent-runtime.md](builtin-agent-runtime.md)           | Ядро lifecycle BA-2: процесс, журнал, восстановление и незакрытая приёмка |
+| [builtin-agent-tools.md](builtin-agent-tools.md)               | Инструменты BA-3, права, Windows Job Object и ограничения D-28 |
+| [builtin-agent-verification.md](builtin-agent-verification.md) | Фактические проверки этапов встроенного агента и незакрытые критерии |
 | [sidebar-layout.md](sidebar-layout.md)                         | Согласованное расположение, размеры и поведение панелей                                 |
 | [task-environments.md](task-environments.md)                   | Сохранение worktree, защита окружений и реальная browser-проверка                       |
 | [task-replanning.md](task-replanning.md)                       | Перекомпоновка не начатых задач одним пакетом из общего чата                            |
