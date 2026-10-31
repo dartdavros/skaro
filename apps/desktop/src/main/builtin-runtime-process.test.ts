@@ -66,7 +66,9 @@ it('starts a genuine separate process after ownership admission, rejects model w
   const session = await SkaroSession.start(config);
   sessions.push(session);
   expect(session.processId).not.toBe(process.pid);
-  await expect(session.send({ text: 'Lifecycle check only' })).rejects.toThrow('not implemented');
+  await expect(session.send({ text: 'Lifecycle check only' })).rejects.toThrow(
+    'no model request was sent',
+  );
   await expect(session.compact()).rejects.toThrow('Compaction requires');
   await session.setPermissionMode('full');
   await session.interrupt();

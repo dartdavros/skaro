@@ -218,7 +218,9 @@ replaced_by: "0005"     # необязательно
 connection/model/route и доказательств проверок вынесены в
 [ADR-0047](adr/0047-builtin-agent.md). BA-1 реализован на уровне
 [контрактов](builtin-agent-contracts.md), BA-2 — [ядро lifecycle](builtin-agent-runtime.md)
-с частичной приёмкой; агентный loop ещё не реализован. Этапы и
+с частичной приёмкой. BA-4 добавляет внутренний model/tool loop,
+[коннекторы](builtin-agent-models.md) и [credential vault](builtin-agent-credentials.md);
+продуктовый host не подключён, прямые API не прошли live-проверку. Этапы и
 design gates — в [плане](builtin-agent-plan.md). Claude Code/Codex сохраняются альтернативами.
 BA-3 добавляет [инструменты и Windows command backend](builtin-agent-tools.md)
 с подтверждениями по D-28; проверенный filesystem/network sandbox отсутствует.

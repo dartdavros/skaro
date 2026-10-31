@@ -11,7 +11,9 @@
 OpenAI/Anthropic/DeepSeek/OpenRouter, самостоятельные проверки и исправления,
 совместимость альтернативных агентов и design gates. BA-1 реализован на уровне
 [контрактов](builtin-agent-contracts.md), BA-2 — [ядро lifecycle](builtin-agent-runtime.md)
-с частичной приёмкой. Агентный loop ещё не реализован. Это
+с частичной приёмкой. BA-4 добавляет [коннекторы](builtin-agent-models.md),
+внутренний model/tool loop и [credential vault](builtin-agent-credentials.md).
+Продуктовый model host ещё не подключён; прямые API не прошли live-проверку. Это
 дополнение не закрывает этапы текущего плана или проверки runtime/UI.
 BA-3: [слой инструментов](builtin-agent-tools.md) и команды Windows проверены;
 границы D-28 и незакрытая приёмка перечислены в [результатах](builtin-agent-verification.md).

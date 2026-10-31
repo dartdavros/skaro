@@ -27,7 +27,7 @@ function validateRoute(route: RouteSnapshot): void {
   validateModelEndpoint(route.endpoint);
 }
 
-/** BA-2 lifecycle core. It deliberately has no provider or tool execution implementation. */
+/** Journal lifecycle and admission shared by tools and separately configured model connectors. */
 export class RuntimeSession {
   readonly journal: RuntimeJournal;
   private queue: Promise<unknown> = Promise.resolve();
@@ -35,6 +35,8 @@ export class RuntimeSession {
   private disposing?: Promise<void>;
   private readonly inFlight = new Map<string, { hash: string; work: Promise<JournalRecord> }>();
   private tools?: ToolCoordinator;
+  private modelAbort = new AbortController();
+  private modelWork?: Promise<unknown>;
   private constructor(journal: RuntimeJournal) {
     this.journal = journal;
   }
@@ -103,14 +105,34 @@ export class RuntimeSession {
     this.inFlight.set(command.id, { hash, work });
     return work;
   }
+  runModel<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    if (this.ended || this.journal.state.stopped || this.journal.state.closed)
+      return Promise.reject(new Error('Model admission is closed'));
+    if (this.modelWork) return Promise.reject(new Error('A model turn is already active'));
+    if (
+      Object.keys(this.journal.state.interactions).length ||
+      Object.values(this.journal.state.effects).some((effect) => effect.state === 'pending')
+    )
+      return Promise.reject(new Error('An effect or interaction prevents model admission'));
+    const signal = this.modelAbort.signal;
+    const result = Promise.resolve()
+      .then(() => work(signal))
+      .finally(() => {
+        if (this.modelWork === result) this.modelWork = undefined;
+      });
+    this.modelWork = result;
+    return result;
+  }
   private dispatch(command: RuntimeCommand): Promise<JournalRecord> {
     if (command.action.type === 'stopBackground' && this.tools)
       return this.tools.execute({
         id: command.id,
         action: { type: 'tool', name: 'stop_process', args: { processId: command.action.taskId } },
       });
-    if (command.action.type === 'interrupt' || command.action.type === 'close')
+    if (command.action.type === 'interrupt' || command.action.type === 'close') {
+      this.modelAbort.abort();
       this.tools?.cancel();
+    }
     if (command.action.type === 'tool') {
       if (this.ended) return Promise.reject(new Error('Runtime closed'));
       if (!this.tools) return Promise.reject(new Error('Tool scope is not configured'));
@@ -139,7 +161,11 @@ export class RuntimeSession {
       let facts: import('./model.ts').RuntimeFact[];
       let result: import('./model.ts').CommandResult;
       try {
-        if (action.type === 'interrupt' || action.type === 'close') await this.tools?.close();
+        if (action.type === 'interrupt' || action.type === 'close') {
+          await this.tools?.close();
+          await Promise.allSettled([this.modelWork]);
+        } else if (this.modelWork && action.type !== 'respond')
+          throw new Error('An active model turn prevents this context change');
         if (action.type === 'setRoute') validateRoute(action.route);
         const decision = commandFacts(this.journal.state, action);
         facts = decision.facts;
@@ -152,8 +178,10 @@ export class RuntimeSession {
       const record = await this.journal.append(id, facts, result, hash);
       if (!result.error && action.type === 'respond')
         this.tools?.answered(action.interactionId, action.answer);
-      if ((action.type === 'send' || action.type === 'steer') && !this.journal.state.stopped)
+      if ((action.type === 'send' || action.type === 'steer') && !this.journal.state.stopped) {
         this.tools?.resume();
+        if (this.modelAbort.signal.aborted) this.modelAbort = new AbortController();
+      }
       return record;
     });
     this.queue = work.catch(() => undefined);
@@ -166,7 +194,9 @@ export class RuntimeSession {
   }
   private async disposeOnce(): Promise<void> {
     this.ended = true;
+    this.modelAbort.abort();
     await this.tools?.close();
+    await Promise.allSettled([this.modelWork]);
     await this.queue;
     await this.journal.close();
   }

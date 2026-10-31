@@ -100,7 +100,7 @@ for (const admit of [true, false]) {
       } else {
         await startup;
         await expect(call('send', [{ text: 'Native lifecycle verification' }])).rejects.toThrow(
-          'not implemented',
+          'no model request was sent',
         );
         const file = await call<Record<string, unknown>>('invokeTool', [
           'read_file',

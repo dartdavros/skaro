@@ -26,6 +26,7 @@ export default defineConfig({
           'background-worker': resolve('src/main/background/worker.ts'),
           'native-worker': resolve('src/main/native/worker.ts'),
           'agent-runtime-worker': resolve('../../packages/agent-runtime/src/worker.ts'),
+          'agent-credential-worker': resolve('src/main/credentials/worker.ts'),
           'agent-command-worker': resolve(
             '../../packages/agent-runtime/src/tools/command-worker.ts',
           ),

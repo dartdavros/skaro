@@ -19,6 +19,57 @@ afterEach(async () => {
     await rm(directory, { recursive: true, force: true });
 });
 
+it('revokes active model admission before interrupt returns and rejects concurrent context changes', async () => {
+  const { session } = await open();
+  let entered!: () => void;
+  const started = new Promise<void>((resolve) => (entered = resolve));
+  const work = session.runModel(async (signal) => {
+    entered();
+    await new Promise<void>((resolve) =>
+      signal.addEventListener('abort', () => resolve(), { once: true }),
+    );
+    signal.throwIfAborted();
+  });
+  const cancelled = expect(work).rejects.toThrow();
+  await started;
+  await expect(session.runModel(async () => undefined)).rejects.toThrow('already active');
+  const denied = await session.execute({
+    id: 'model-context-change',
+    action: { type: 'setPermissionMode', mode: 'full' },
+  });
+  expect(denied.result.error).toContain('active model turn');
+  await session.execute({ id: 'model-interrupt', action: { type: 'interrupt' } });
+  await cancelled;
+  expect(session.journal.state.stopped).toBe(true);
+  await expect(session.runModel(async () => undefined)).rejects.toThrow('admission is closed');
+  await session.execute({
+    id: 'model-resume',
+    action: { type: 'send', input: { text: 'Resume lifecycle admission only' } },
+  });
+  expect(await session.runModel(async (signal) => signal.aborted)).toBe(false);
+});
+
+it('waits for revoked model admission to settle before closing its genuine journal', async () => {
+  const { session } = await open();
+  let entered!: () => void;
+  let settled = false;
+  const started = new Promise<void>((resolve) => (entered = resolve));
+  const work = session.runModel(async (signal) => {
+    entered();
+    await new Promise<void>((resolve) =>
+      signal.addEventListener('abort', () => resolve(), { once: true }),
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    settled = true;
+    signal.throwIfAborted();
+  });
+  const cancelled = expect(work).rejects.toThrow();
+  await started;
+  await session.dispose();
+  await cancelled;
+  expect(settled).toBe(true);
+});
+
 // Real production journals, commands and OS ownership. No seeded histories or API substitutes.
 async function open(withSelection = false) {
   const directory = await mkdtemp(join(tmpdir(), 'skaro-runtime-journal-'));

@@ -32,7 +32,8 @@ export interface CredentialPort {
       reference: CredentialReference;
       signal: AbortSignal;
     },
-    consume: (secret: Uint8Array) => Promise<T>,
+    /** The lease signal also aborts on rotation/revocation; consumers must honor it. */
+    consume: (secret: Uint8Array, signal: AbortSignal) => Promise<T>,
   ): Promise<T>;
 }
 

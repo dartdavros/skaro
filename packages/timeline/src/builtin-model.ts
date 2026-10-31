@@ -12,7 +12,7 @@ export interface ApiProfileReference {
 export interface ApiProfile extends ApiProfileReference {
   connector: string;
   protocol: 'responses' | 'messages' | 'chat-completions';
-  /** BA-4 pins actual SDK dependencies and records real connector verification. */
+  /** Product admission requires actual profile verification, not merely a compiled transport. */
   implementation: 'pending' | 'verified';
 }
 

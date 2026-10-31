@@ -3,6 +3,57 @@
 История выполнения [плана](builtin-agent-plan.md). Результаты каждого этапа
 относятся к его объёму; они не означают готовность всего встроенного агента.
 
+## Результат BA-4, 31.10.2026
+
+BA-1–BA-3 зафиксированы локальным коммитом `0ab4004`
+`:sparkles: feat(agent): add bundled runtime and guarded tools`.
+Продолжение BA-4 добавляет [credential vault](builtin-agent-credentials.md),
+[коннекторы и внутренние model/tool loops](builtin-agent-models.md).
+OpenAI Responses, Anthropic Messages и DeepSeek Chat Completions написаны,
+но их живые проверки отложены прямым указанием владельца. Профили pending,
+продуктовый model host/task/chat не подключены, UI не менялся.
+
+OpenRouter проверен с настоящим BYOK из DPAPI на gpt-4.1-nano и
+claude-haiku-5.5: по три реальных инструмента, streaming, scope denial,
+продолжение, restart/replay без новых запросов. Дополнительно прошли
+interrupt реального streaming и отказ несовместимого top_p без fallback.
+После выделения общего model-step/executor и native loop повторно пройдены
+replay настоящих журналов и native deltas; генерации при replay отсутствуют.
+Согласованный payload ограничен exact whitelist первых строк двух файлов.
+
+Всего по BA-4 выполнены 11 model requests: шесть в двух успешных цепочках,
+три первоначальные неудачные попытки, одна отмена и один известный отказ API.
+Четыре неизвестных исхода сохранены, автоматического повтора не было.
+Расход двух успешных цепочек — $0.0008513; наблюдаемый прирост usage ключа —
+около $0.0011124. Reserved envelope всех попыток — $0.55, общий предел —
+$0.80 из разрешённого владельцем $1. Ограничения учёта — в документе моделей.
+
+Прошли 39 targeted-сценариев в девяти файлах: registry, route contracts,
+direct request contracts/approved payload, journal/model admission, runtime
+processes, file/command tools, DPAPI vault и compiled native worker.
+Последний исходный прогон семи файлов дал 34 успеха и один старый assert
+со строкой «not implemented»; после уточнения host gate этот assert обновлён
+на «no model request was sent», файл процессов прошёл все пять сценариев.
+Четыре direct-контракта повторно прошли после общего model-step; четыре
+compiled/DPAPI сценария прошли по финальной main-сборке.
+
+Первая попытка проверки DPAPI/importer выявила несовместимость advanced IPC
+serialization между разными V8. Закрытый канал переведён на JSON; ключ
+не переносится в argv/env/файлы проекта. Проверка project-path сначала
+отвергала всё внутри home из-за соседнего пользовательского `.skaro`;
+исправлена проверка именно вложенности каталога. Повторные реальные
+Electron/DPAPI проверки прошли. Заглушек для исправления окружения не было.
+
+TypeScript runtime/desktop main и изменённые shared/adapters, ESLint,
+Prettier, ссылки и `git diff --check` проверены. Изменённые исходники
+не превышают 300 строк; product UI-компоненты не добавлялись.
+Финальная `pnpm build` прошла для main, native/runtime/command/credential
+workers, preload и renderer. Сохранились предупреждения сторонних
+Zod/Claude SDK/web-tree-sitter; build errors нет.
+Полный suite и browser-проверка UI не выполнялись: UI не менялся.
+Результаты прямых API, signed reasoning, images, всех fallback-политик
+и macOS/Linux не заявляются. Незакрытая BA-4 приёмка сохранена в плане.
+
 ## Результат BA-1, 31.10.2026
 
 Фактические контракты и ограничения описаны в

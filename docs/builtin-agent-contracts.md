@@ -1,7 +1,7 @@
 # BA-1: контракты встроенного агента
 
 Дата: 31.10.2026. Область: контракты и регистрация. Дополнение BA-2:
-[ядро lifecycle](builtin-agent-runtime.md); рабочий агентный loop ещё отсутствует.
+[ядро lifecycle](builtin-agent-runtime.md); внутренний model loop добавлен в [BA-4](builtin-agent-models.md), продуктовый host ещё не подключён.
 Основание: [ADR-0047](adr/0047-builtin-agent.md) и [план](builtin-agent-plan.md).
 
 ## Регистрация и поставка
@@ -11,7 +11,7 @@
 `stage: runtime-core` и `delivery.kind: bundled`, с настоящими пакетами
 `@skaro/agent-runtime`/`@skaro/adapter-skaro` и внутренним lifecycle-запуском.
 UI-метаданных, npm pin или загрузки нет. Продуктовый запуск/выбор такого ID
-отклоняется с `model-connectors-not-implemented`; неизвестный ID — с `Unknown agent`.
+отклоняется с `model-host-not-connected`; неизвестный ID — с `Unknown agent`.
 
 `agentRegistration` возвращает декларацию поставки. `agentDefinition`,
 `AGENT_IDS` и каталог работают только с исполняемыми регистрациями.
@@ -59,8 +59,9 @@ TypeScript DTO сам по себе не является защитой от п
 Исходные профили: `openai.responses`, `anthropic.messages`,
 `deepseek.chat-completions`, `openrouter.chat-completions`, ревизия 1.
 Все имеют `implementation: pending`; `requireImplementedApiProfile` отклоняет
-их исполнение. Здесь нет сетевого коннектора, каталога доступных моделей или
-заявления об успешной проверке API. Расширение задаётся отдельным профилем
+их продуктовый допуск до закрытия приёмки. BA-4 добавляет сетевые коннекторы
+и каталоги; фактическая проверка OpenRouter и отсутствие direct live описаны
+в [моделях](builtin-agent-models.md). Расширение задаётся отдельным профилем
 с connector/revision; совпадение HTTP-схемы не доказывает совместимость.
 
 ## Host-порты и безопасность
@@ -91,7 +92,9 @@ ProcessAdmission — отзывной lease с sessionId/generation; он не �
 `builtin-credentials.ts` разделяет привилегированный CredentialVault и порт
 коннектора. Решение хранения: DPAPI на Windows, Keychain на macOS,
 Secret Service на Linux. Неподдержанное хранилище, включая `basic_text`,
-означает отказ без plaintext fallback. Конкретный backend ещё не реализован.
+означает отказ без plaintext fallback. Реализация и пределы защиты —
+[credential vault](builtin-agent-credentials.md); Windows DPAPI проверен,
+macOS/Linux ещё не прошли нативную приёмку.
 
 Ротация — атомарный replace с ожидаемой ссылкой/ревизией, отзыв старых lease
 до возврата новой ссылки. Смена connection/endpoint требует явной привязки.
@@ -110,9 +113,9 @@ Host, события и проектор имеют версии формата 
 
 После BA-2 runtime получает semver из настоящего package.json и сохраняет его
 в первичном журнале; поставляется только вместе с соответствующим выпуском Skaro.
-В BA-1 фиктивной версии runtime не вводилось. SDK для новых API не добавлены; их точные версии
-будут закреплены зависимостями коннекторов и lockfile в BA-4. Версия SDK
-не подменяет версию API-профиля или формат журнала.
+В BA-1 фиктивной версии runtime не вводилось. BA-4 использует native fetch
+закреплённого Node/Electron без новых SDK. Версии API-профилей и формата журнала
+сохраняются отдельно; текущая приёмка перечислена в [моделях](builtin-agent-models.md).
 
 Публичный release manifest остаётся `schema: 1`. Состав managed-npm компонентов,
 alias `claudeSdk`, SDK pins, integrity и шесть OS/arch не изменены.

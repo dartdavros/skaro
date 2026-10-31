@@ -32,7 +32,8 @@ export function commandFacts(
       const id = randomUUID();
       const turnId = randomUUID();
       const timestamp = Date.now();
-      const error = 'Model connectors are not implemented (BA-4); no model request was sent';
+      const error =
+        'Model execution is not connected to host admission (BA-4/BA-7); no model request was sent';
       return {
         error,
         facts: [

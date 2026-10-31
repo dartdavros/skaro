@@ -72,7 +72,7 @@ export async function startToolSession(mode: PermissionMode = 'full', readOnly =
         .catch((error: unknown) => {
           if (
             !(error instanceof Error) ||
-            !error.message.includes('Model connectors are not implemented')
+            !error.message.includes('Model execution is not connected to host admission')
           )
             throw error;
         });
