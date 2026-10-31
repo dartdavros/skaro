@@ -10,10 +10,11 @@ export async function verifyHttpExtensions(
   directory: string,
   owner: RuntimeProcessIdentity,
 ) {
-  const project = services.db.shell
+  const projects = services.db.shell
     .list()
-    .find((project) => project.path.toLowerCase() === process.cwd().toLowerCase());
-  assert(project, 'Current real project is not registered in Skaro');
+    .filter((project) => project.name.toLowerCase() === 'cat-pilot');
+  assert.equal(projects.length, 1, 'Exactly one real Cat-pilot project must be registered');
+  const project = projects[0]!;
   const scope: SkaroScope = { kind: 'project_chat', projectId: project.id };
   const controller = new AbortController();
   const signal = controller.signal;

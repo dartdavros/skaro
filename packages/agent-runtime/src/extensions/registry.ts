@@ -3,6 +3,7 @@ import type { JsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/t
 import type { BuiltinExtensionPolicy } from '@skaro/timeline';
 
 export interface RuntimeExtension extends BuiltinExtensionPolicy {
+  observation?: { kind: 'browser'; criteria: readonly string[] };
   description: string;
   inputSchema: Record<string, unknown>;
   invoke(id: string, args: Record<string, unknown>, signal: AbortSignal): Promise<unknown>;
@@ -38,7 +39,11 @@ export class ExtensionRegistry {
       )
         throw new Error('Invalid extension input schema');
       this.entries.set(entry.name, {
-        tool: { ...tool, inputSchema: structuredClone(tool.inputSchema) },
+        tool: {
+          ...tool,
+          inputSchema: structuredClone(tool.inputSchema),
+          observation: tool.observation && structuredClone(tool.observation),
+        },
         validate: validator.getValidator<Record<string, unknown>>(tool.inputSchema),
       });
     }
@@ -49,6 +54,12 @@ export class ExtensionRegistry {
   }
   readOnly(name: string): boolean {
     return this.entries.get(name)?.tool.readOnly === true;
+  }
+  observation(name: string) {
+    const tool = this.entries.get(name)?.tool;
+    return tool?.observation
+      ? { ...structuredClone(tool.observation), name: tool.name, revision: tool.revision }
+      : undefined;
   }
   parse(name: string, args: unknown): Record<string, unknown> {
     if (this.closed) throw new Error('Extension host closed; reopen the admitted host scope');

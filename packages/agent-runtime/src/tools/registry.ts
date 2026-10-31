@@ -13,6 +13,7 @@ import { ExtensionRegistry, type RuntimeExtensionHost } from '../extensions/regi
 import { sessionFileScope } from './session-scope.ts';
 import { runCheck, checkEvidence } from '../verification/checks.ts';
 import { recordCheckDiagnosis } from '../verification/repairs.ts';
+import { observeBrowser } from '../verification/browser.ts';
 
 export class ToolRegistry {
   readonly scope: PathScope;
@@ -54,7 +55,10 @@ export class ToolRegistry {
     signal: AbortSignal,
   ): Promise<unknown> {
     signal.throwIfAborted();
-    if (this.extensions.has(name)) return this.extensions.invoke(id, name, args, signal);
+    if (this.extensions.has(name))
+      return this.extensions.observation(name)
+        ? observeBrowser(id, name, args, this.scope, this.extensions, this.journal, signal)
+        : this.extensions.invoke(id, name, args, signal);
     switch (name) {
       case 'diagnose_check':
         return recordCheckDiagnosis(id, schemas.diagnose_check.parse(args), this.journal);

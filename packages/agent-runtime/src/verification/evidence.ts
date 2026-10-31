@@ -27,20 +27,38 @@ export interface CheckEvidence {
   output: { path: string; sha256: string; bytes: number };
   retryOf?: EvidenceReference;
 }
+export interface BrowserEvidence extends Omit<
+  CheckEvidence,
+  'kind' | 'command' | 'shell' | 'exitCode' | 'retryOf' | 'outcome'
+> {
+  kind: 'browser-observation';
+  source: { name: string; revision: string; argsHash: string };
+  outcome: 'observed' | 'tool-error' | 'inputs-changed' | 'environment-changed';
+  artifacts: { path: string; sha256: string; bytes: number }[];
+}
+export function requireEvidence(
+  journal: RuntimeJournal,
+  reference: EvidenceReference,
+): CheckEvidence | BrowserEvidence {
+  const record = journal.records[reference.sequence - 1];
+  if (!record || record.hash !== reference.hash || !record.id.endsWith(':result'))
+    throw new Error('Unknown verification evidence reference');
+  const value = record.result.value as CheckEvidence | BrowserEvidence;
+  if (
+    value?.schema !== 1 ||
+    !(
+      (record.id === `check:${value.id}:result` && value.kind === 'command-check') ||
+      (record.id === `observation:${value.id}:result` && value.kind === 'browser-observation')
+    )
+  )
+    throw new Error('Unsupported verification evidence');
+  return value;
+}
 export function requireCheckEvidence(
   journal: RuntimeJournal,
   reference: EvidenceReference,
 ): CheckEvidence {
-  const record = journal.records[reference.sequence - 1];
-  if (
-    !record ||
-    record.hash !== reference.hash ||
-    !record.id.startsWith('check:') ||
-    !record.id.endsWith(':result')
-  )
-    throw new Error('Unknown verification evidence reference');
-  const value = record.result.value as CheckEvidence;
-  if (value?.kind !== 'command-check' || value.schema !== 1)
-    throw new Error('Unsupported verification evidence');
+  const value = requireEvidence(journal, reference);
+  if (value.kind !== 'command-check') throw new Error('Diagnosis/retry requires command evidence');
   return value;
 }

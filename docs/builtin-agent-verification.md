@@ -5,6 +5,28 @@
 
 ## Начало BA-6, 31.10.2026
 
+Browser evidence добавлено в общую схему check_evidence: source/revision/args hash,
+inputs/environment до и после, приватный JSON output и PNG hashes. Missing image
+делает artifactsCurrent=false; последующий MCP-вызов — latestObservation=false.
+Observation остаётся данными, а не автоматическим verdict о критериях.
+
+По указанию владельца текущие живые проверки перенесены на Cat-pilot; правило
+добавлено в AGENTS.md. Browser driver принимает только путь зарегистрированного
+Cat-pilot и открывает настоящий index.html через file://. Proof:
+verification/extensions-2ab7ee93-940e-4dda-b069-93c6d4f2515a/proof.json (userData).
+PNG просмотрен, console 0 errors/0 warnings, сетевых ресурсов страницы 0.
+Штатный Cat-pilot scene-animation check прошёл: 10 анимаций, 18 отсчётов,
+CSS pause/reduced-motion. Ни HTTP-сервера, ни seed/fixtures, ни правок Cat-pilot.
+После всех probes повторный capture подтвердил неизменность 26 полных
+tracked/dirty/untracked входов Cat-pilot. HTTP/internal handlers также проверены
+на Cat-pilot, proof: verification/extensions-3482f4b9-bd1c-42c6-8763-a0cb59fc2872/proof.json.
+Штатная сборка, TypeScript desktop, ESLint/Prettier и четыре целевых regression
+в builtin-checks/MCP/native-worker прошли. Исходники меньше 300 строк,
+renderer/UI не менялись. Полная приёмка BA-6, внешние зависимости и
+completion/C4 gates остаются открытыми; model requests этого прогона — 0.
+Ранний прогон этого блока на Chatballs относится к истории до указания владельца,
+не заменяет приёмку Cat-pilot; новых прогонов Chatballs после указания нет.
+
 Продолжение после `70abc14`: измеряемое host окружение фиксируется до/после
 команды и повторно проверяется по OS/runtime/executable hash и очищенному env.
 Изменение LANG в изолированном процессе теста дало environmentCurrent=false

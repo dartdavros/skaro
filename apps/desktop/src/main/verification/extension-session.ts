@@ -13,11 +13,16 @@ export async function extensionSession(
   name: string,
   owner: RuntimeProcessIdentity,
   host?: RuntimeExtensionHost,
+  cwd?: string,
 ) {
   const config = longContextConfig(directory);
   config.sessionId = `extensions-${name}`;
   config.journalPath = join(directory, `${name}.jsonl`);
   config.tools!.readOnly = false;
+  if (cwd) {
+    config.tools!.cwd = cwd;
+    config.context = undefined;
+  }
   config.extensions = host?.tools.map(({ name, revision, readOnly }) => ({
     name,
     revision,

@@ -15,7 +15,11 @@ export async function connectMcpExtension(input: {
   cwd: string;
   signal: AbortSignal;
   processes?: McpProcessHost;
-  allowed: readonly { name: string; readOnly: boolean }[];
+  allowed: readonly {
+    name: string;
+    readOnly: boolean;
+    observation?: { kind: 'browser'; criteria: readonly string[] };
+  }[];
   images?: McpImageStore;
 }): Promise<RuntimeExtensionHost> {
   if (
@@ -63,6 +67,16 @@ export async function connectMcpExtension(input: {
       cursor = response.nextCursor;
     }
     const tools: RuntimeExtension[] = input.allowed.map((allowed) => {
+      if (
+        allowed.observation &&
+        (allowed.observation.kind !== 'browser' ||
+          !allowed.observation.criteria.length ||
+          allowed.observation.criteria.length > 100 ||
+          allowed.observation.criteria.some(
+            (id) => typeof id !== 'string' || !id.trim() || id.length > 200,
+          ))
+      )
+        throw new Error('Invalid host observation policy');
       const matches = catalogue.filter((tool) => tool.name === allowed.name);
       if (matches.length !== 1 || !/^[a-zA-Z0-9_-]+$/.test(allowed.name))
         throw new Error('Allowed MCP tool is unavailable or ambiguous');
@@ -75,6 +89,7 @@ export async function connectMcpExtension(input: {
             description: tool.description ?? '',
             schema: tool.inputSchema,
             readOnly: allowed.readOnly,
+            observation: allowed.observation,
           }),
         )
         .digest('hex');
@@ -82,6 +97,7 @@ export async function connectMcpExtension(input: {
         name: `mcp__${input.id}__${tool.name}`,
         revision,
         readOnly: allowed.readOnly,
+        observation: allowed.observation && structuredClone(allowed.observation),
         description: tool.description ?? tool.name,
         inputSchema: structuredClone(tool.inputSchema),
         invoke: async (_id, args, callSignal) => {

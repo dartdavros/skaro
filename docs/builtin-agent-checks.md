@@ -2,6 +2,9 @@
 
 Дата: 31.10.2026. Этап начат, полная приёмка BA-6 не закрыта.
 Добавлен внутренний command evidence слой; UI и task/chat host не подключались.
+Живой проект для текущего продолжения — **Cat-pilot**, по прямому указанию
+владельца от 31.10.2026. Новые проверки на Chatballs не выполняются; прежние
+его proof относятся только к историческому прогону.
 
 `run_check` использует существующие ToolCoordinator, подтверждение точных
 аргументов, RW-очередь, ToolProcesses и Windows Job Object. Второго executor,
@@ -44,6 +47,44 @@ implementation/command/infrastructure/flaky/unrelated/unknown, причина и
 ложная ссылка или текст «проверено» не являются доказательством. Изменение входов
 во время команды фиксируется как inputs-changed, даже при exit code 0.
 
+## Browser observations в общей схеме
+
+Host может явно пометить допущенный MCP tool как browser observation с
+criterion IDs. Серверные annotations и аргументы модели этого права не дают.
+Политика входит в revision инструмента. Для вызова сохраняются точные источник/
+revision и args hash, входы и окружение до/после, время и подтверждённый output.
+`browser-observation` имеет outcome `observed` или `tool-error`, не verdict «критерий выполнен».
+
+`check_evidence` проверяет command и browser записи одним механизмом. JSON output
+и прикреплённые images должны быть неизменёнными обычными файлами внутри private
+artifactDir. Для browser проверяются также завершённый исход исходного эффекта,
+host revision и отсутствие последующего MCP-вызова (`latestObservation`). Последний
+флаг отражает порядок инструментов, не доказывает неизменность живой страницы.
+Самопроизвольные изменения внешнего окружения по-прежнему требуют проверки.
+
+Живой прогон выполнен на **Cat-pilot**: реальный `index.html` через `file://`,
+без HTTP-сервера, fixtures, seed или правок проекта. Каталог берётся из настоящего
+реестра Skaro; другой путь/HTTP URL browser driver не принимает. В отдельном
+фиксированном driver включён официальный MCP file-access option; общая настройка
+taskBrowserServer и продуктовые права не расширялись. Inputs берутся из Cat-pilot,
+а не из checkout Skaro. Кадр штатных CSS-анимаций семплирован на 50% через browser
+debug API; это измерение существующей анимации. Реализация кнопки не входит в проверку.
+
+Proof: `verification/extensions-2ab7ee93-940e-4dda-b069-93c6d4f2515a/proof.json`
+в userData Skaro. Проверены JSON/PNG hashes, актуальность inputs/environment/source,
+отсутствие image и историчность screenshot после следующего вызова. Console:
+0 errors/0 warnings, ресурсы страницы — только file://. Дополнительно прошла
+существующая `checks/scene-animation.cjs`: 10 анимаций, 18 отсчётов, CSS pause и
+reduced-motion. Исходники Cat-pilot и его незавершённые задачи не менялись.
+HTTP/internal probes также используют зарегистрированный Cat-pilot; совпадение
+результатов, scope/schema, approval/dedup и отказ от replay после отзыва grant
+проверены на настоящих handlers. Proof:
+`verification/extensions-3482f4b9-bd1c-42c6-8763-a0cb59fc2872/proof.json`.
+
+```powershell
+node apps/desktop/scripts/verify-builtin-extensions.mjs --browser CAT_PILOT_PROJECT_ROOT
+```
+
 ## Честные ограничения
 
 Exit code 0 означает успешное исполнение записанной команды, не принятие задачи.
@@ -52,8 +93,8 @@ Ignored dependencies (например node_modules), фактическое р�
 `acceptance: requires-environment-and-criteria-review` возвращается всегда.
 Ссылки на критерии — заявленное сопоставление, не подтверждение их выполнения.
 
-Открыты: доверенная host-привязка окружения/зависимостей, browser evidence в общей
-схеме, проверенный полный цикл исправления значимого дефекта, разрешение criterion IDs и
+Открыты: доверенная host-привязка внешнего окружения/зависимостей,
+проверенный полный цикл исправления значимого дефекта, разрешение criterion IDs и
 интеграция ссылок с существующими completion/C4 gates. Внешний submit_result
 не менялся; совместимость должна быть проверена при этой интеграции. На других
 OS command backend остаётся явно недоступен. Полная приёмка BA-6 не заявлена.

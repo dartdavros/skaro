@@ -7,8 +7,9 @@ import type { ToolProcesses } from '../tools/processes.ts';
 import { schemas } from '../tools/schemas.ts';
 import { captureCheckInputs, fingerprint, hashFile } from './inputs.ts';
 import { captureCheckEnvironment } from './environment.ts';
-import { requireCheckEvidence, type CheckEvidence } from './evidence.ts';
+import { requireEvidence, type CheckEvidence } from './evidence.ts';
 import { requireCheckRetry } from './repairs.ts';
+import { verifyEvidenceArtifact } from './artifacts.ts';
 
 export async function runCheck(
   id: string,
@@ -82,20 +83,49 @@ export async function checkEvidence(
   signal: AbortSignal,
 ) {
   const input = schemas.check_evidence.parse(raw);
-  const value = requireCheckEvidence(journal, input);
+  const value = requireEvidence(journal, input);
   const current = await captureCheckInputs(scope, signal);
   const currentEnvironment = await captureCheckEnvironment(signal);
   let outputCurrent = false;
+  let artifactsCurrent = true;
   try {
-    outputCurrent = (await hashFile(value.output.path, signal)) === value.output.sha256;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    await verifyEvidenceArtifact(journal.state.config!.tools!.artifactDir, value.output, signal);
+    outputCurrent = true;
+  } catch {
+    signal.throwIfAborted();
   }
+  if (value.kind === 'browser-observation')
+    for (const artifact of value.artifacts) {
+      try {
+        await verifyEvidenceArtifact(journal.state.config!.tools!.artifactDir, artifact, signal);
+      } catch {
+        signal.throwIfAborted();
+        artifactsCurrent = false;
+      }
+    }
   return {
     inputsCurrent:
       fingerprint(value.inputs) === fingerprint(current) &&
       fingerprint(value.after) === fingerprint(current),
     outputCurrent,
+    ...(value.kind === 'browser-observation'
+      ? {
+          artifactsCurrent,
+          sourceCurrent:
+            journal.state.effects[value.id]?.state === 'completed' &&
+            journal.state.toolRequests[value.id]?.name === value.source.name &&
+            journal.state.config!.extensions?.some(
+              (tool) => tool.name === value.source.name && tool.revision === value.source.revision,
+            ) === true,
+          latestObservation: !journal.records
+            .slice(input.sequence)
+            .some((record) =>
+              record.facts.some(
+                (fact) => fact.type === 'tool-request' && fact.name.startsWith('mcp__'),
+              ),
+            ),
+        }
+      : {}),
     environmentCurrent:
       value.afterEnvironment !== undefined &&
       fingerprint(value.environment) === fingerprint(currentEnvironment) &&

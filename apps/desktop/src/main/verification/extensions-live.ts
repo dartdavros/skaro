@@ -10,6 +10,7 @@ import { verifyHttpExtensions } from './http-extensions';
 import { verifyContextRoutes } from './context-routes';
 import { verifyBrowserExtensions } from './browser-extensions';
 import { verifyOwnerContext } from './owner-context';
+import { catPilotTarget } from './browser-target';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -30,7 +31,13 @@ void app.whenReady().then(async () => {
     let proof: unknown;
     if (process.argv[2] === '--browser') {
       stage = 'task-browser';
-      proof = { browser: await verifyBrowserExtensions(directory, owner, process.argv[3]!) };
+      proof = {
+        browser: await verifyBrowserExtensions(
+          directory,
+          owner,
+          await catPilotTarget(data, process.argv[3]!),
+        ),
+      };
     } else {
       stage = 'real-services';
       state = new AppState(join(data, 'skaro.db'));

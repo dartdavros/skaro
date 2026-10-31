@@ -8,7 +8,7 @@ import { cleanCommandEnvironment } from '@skaro/agent-runtime/environment';
 
 const require = createRequire(import.meta.url);
 if (!(process.argv.length === 2 || (process.argv.length === 4 && process.argv[2] === '--browser')))
-  throw new Error('Usage: verify-builtin-extensions.mjs [--browser REAL_TASK_URL]');
+  throw new Error('Usage: verify-builtin-extensions.mjs [--browser CAT_PILOT_PROJECT_ROOT]');
 const output = resolve('apps/desktop/out/main/verify-extensions.cjs');
 try {
   await build({

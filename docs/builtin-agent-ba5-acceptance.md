@@ -1,6 +1,9 @@
 # BA-5: итоговая приёмка
 
 Дата: 31.10.2026. BA-5 принят в текущем поддерживаемом контуре Windows.
+Последующее указание владельца: новые живые проверки выполнять на Cat-pilot.
+Ниже сохранены исторические результаты BA-5 на Chatballs; актуальный Cat-pilot
+browser evidence описан в [продолжении BA-6](builtin-agent-checks.md).
 Объём — внутренний runtime на Windows, без включения продуктового агента.
 Основание критериев — [BA-5 плана](builtin-agent-plan.md#ba-5-контекст-compact-browsermcpskills).
 
@@ -63,12 +66,12 @@ HTTP/routes/owner proof: `verification/extensions-ccaa5871-310d-4758-8395-eae33e
 
 ```powershell
 node apps/desktop/scripts/verify-builtin-extensions.mjs
-node apps/desktop/scripts/verify-builtin-extensions.mjs --browser REAL_TASK_URL
+node apps/desktop/scripts/verify-builtin-extensions.mjs --browser CAT_PILOT_PROJECT_ROOT
 ```
 
 Первый режим запускает настоящие службы Skaro с его текущим userData, включая
 обычную startup/recovery и остановку idle environments. Второй запускает только
-runtime и официальный task browser против уже готового настоящего task backend.
+runtime и официальный task browser на настоящем file:// index.html Cat-pilot.
 Это независимые сценарии. Proof и журналы сохраняются в userData под
 `verification/extensions-UUID/`, не в Git. Секреты и model credentials в CLI
 не передаются. Нужен зарегистрированный текущий проект и настоящий long-session
