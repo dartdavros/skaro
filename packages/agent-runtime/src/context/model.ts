@@ -25,4 +25,5 @@ export interface ContextCheckpoint {
   history: { throughSequence: number; headHash: string };
   /** Source references, not model-authored decisions or rewritten native provider state. */
   historyRefs: { sequence: number; id: string; hash: string; category: string }[];
+  workingNotes?: import('./working-notes.ts').WorkingNote[];
 }

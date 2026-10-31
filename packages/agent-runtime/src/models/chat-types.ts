@@ -27,7 +27,7 @@ export interface ChatRequest {
   tools?: readonly ModelTool[];
   toolChoice?: 'auto' | 'required' | 'none';
   /** Explicit pricing ceiling in USD per million tokens, enforced by the gateway too. */
-  price: { prompt: number; completion: number };
+  price: { prompt: number; completion: number; request?: number };
 }
 export interface ChatResponse {
   message: ChatMessage;

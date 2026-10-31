@@ -1,6 +1,7 @@
 import type { RuntimeJournal } from '../journal.ts';
 import type { ContextCheckpoint, ContextSnapshot } from './model.ts';
 import { contextHash } from './sources.ts';
+import { workingNotes } from './working-notes.ts';
 
 const decisions = new Set(['compact', 'refreshContext'].map((type) => contextHash({ type })));
 
@@ -44,6 +45,7 @@ export function contextCheckpoint(
     epoch: (previous?.epoch ?? 0) + (compact ? 1 : 0),
     snapshot,
     history: { throughSequence: head.sequence, headHash: head.hash },
+    workingNotes: workingNotes(journal),
     // Compact retains a bounded index plus an exact journal head; older pages remain readable.
     historyRefs: journal.records
       .flatMap((record) => {

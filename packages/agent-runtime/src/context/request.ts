@@ -43,6 +43,8 @@ function frame(session: RuntimeSession): {
     epoch: context.epoch,
     sources: context.snapshot.sources.map(({ exactText: _text, ...reference }) => reference),
     notes: pins.filter((pin) => pin.kind === 'note'),
+    workingNotes: context.workingNotes ?? [],
+    workingNoteHead: context.workingNotes?.at(-1)?.source ?? null,
     history: context.history,
     historyRefs: context.historyRefs,
     notice:

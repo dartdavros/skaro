@@ -90,7 +90,11 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
       signal,
       admit: input.admitRequest,
       generate: (current, signal) => input.connector.complete(current, signal, input.onText),
-      continuation: (response) => ({ schema: 1, messages: [...messages, response.message] }),
+      continuation: (response) => ({
+        schema: 1,
+        context: request.context,
+        messages: [...messages, response.message],
+      }),
     });
     messages.push(response.message);
     if (response.finishReason === 'stop') return response;
@@ -116,7 +120,11 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
       );
       messages.push({ role: 'tool', tool_call_id: call.id, content });
       await journal.append(`${id}:tool:${call.id}`, [
-        { type: 'continuation', route: request.route, value: { schema: 1, messages } },
+        {
+          type: 'continuation',
+          route: request.route,
+          value: { schema: 1, context: request.context, messages },
+        },
       ]);
     }
   }

@@ -47,6 +47,11 @@ export function openRouterBody(input: ChatRequest): Record<string, unknown> {
   )
     throw new Error('Invalid model messages');
   const { reasoning_effort, ...options } = parsed.data;
+  if (
+    input.price.request !== undefined &&
+    (!Number.isFinite(input.price.request) || input.price.request < 0)
+  )
+    throw new Error('Invalid request fee ceiling');
   return {
     model: route.modelId,
     ...options,

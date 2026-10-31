@@ -6,6 +6,7 @@ import {
   RuntimeSession,
   latestContext,
   contextChatRequest,
+  continueContextChatRequest,
   type RuntimeStart,
 } from '@skaro/agent-runtime';
 import { BUILTIN_CONTRACT_VERSIONS, DEFAULT_UPSTREAM_POLICY } from '@skaro/timeline';
@@ -121,6 +122,17 @@ it('collects actual scoped instructions/documents and compacts without deleting 
     });
     expect(request.messages[0]!.content).toContain('живые проверки позже');
     expect(request.messages[0]!.content).toContain('Без явного указания владельца');
+    const continued = continueContextChatRequest(live.session, {
+      route: live.config.route,
+      price: { prompt: 0.5, completion: 2 },
+      messages: [{ role: 'user', content: 'Continue the authorized task.' }],
+    });
+    expect(continued).toEqual(request);
+    expect(
+      continued.messages.every(
+        (message) => message.role !== 'assistant' && message.role !== 'tool',
+      ),
+    ).toBe(true);
     const old = snapshot.snapshot.revision;
     await expect(
       live.session.context!.requireCurrent(old, 0, new AbortController().signal),

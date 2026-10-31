@@ -8,6 +8,7 @@ export { OpenRouterConnector, ModelHttpError, openRouterCatalog } from './models
 export { executeChatTurn } from './models/chat-turn.ts';
 export { executeNativeTurn } from './models/native-turn.ts';
 export { contextChatRequest, contextNativeRequest } from './context/request.ts';
+export { continueContextChatRequest } from './context/chat-continuation.ts';
 export { latestContext } from './context/checkpoint.ts';
 export { inspectSkill } from './context/skills.ts';
 export type * from './context/model.ts';

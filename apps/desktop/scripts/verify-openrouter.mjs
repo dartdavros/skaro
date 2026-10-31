@@ -11,7 +11,10 @@ const directory = await mkdtemp(join(tmpdir(), 'skaro-openrouter-build-'));
 try {
   if (
     process.argv.length !== 4 &&
-    !(process.argv.length === 5 && ['--context', '--prepare-context'].includes(process.argv[4]))
+    !(
+      process.argv.length === 5 &&
+      ['--context', '--long-context', '--prepare-context'].includes(process.argv[4])
+    )
   )
     throw new Error('Credential reference and revision required');
   await build({
@@ -41,23 +44,38 @@ try {
       'XDG_RUNTIME_DIR',
     ])
       if (process.env[key]) env[key] = process.env[key];
-    const child = spawn(
-      require('electron'),
-      [join(directory, 'live.cjs'), ...process.argv.slice(2)],
-      {
-        env,
-        windowsHide: true,
-        stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
-        serialization: 'json',
-      },
-    );
-    const timeout = setTimeout(() => child.kill(), 240_000);
-    child.on('message', (message) => console.log(JSON.stringify(message)));
-    process.exitCode = await new Promise((done) => {
-      child.once('exit', (code) => done(code ?? 1));
-      child.once('error', () => done(1));
-    });
-    clearTimeout(timeout);
+    const long = process.argv[4] === '--long-context';
+    let complete = !long;
+    for (let phase = 0; phase < (long ? 4 : 1); phase++) {
+      let needsRestart = false;
+      const child = spawn(
+        require('electron'),
+        [join(directory, 'live.cjs'), ...process.argv.slice(2)],
+        {
+          env,
+          windowsHide: true,
+          stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+          serialization: 'json',
+        },
+      );
+      const timeout = setTimeout(() => child.kill(), long ? 1_800_000 : 240_000);
+      child.on('message', (message) => {
+        console.log(JSON.stringify(message));
+        if (message?.type === 'long-context') {
+          complete = message.proof.complete === true;
+          needsRestart = message.proof.complete === false;
+        }
+      });
+      process.exitCode = await new Promise((done) => {
+        child.once('exit', (code) => done(code ?? 1));
+        child.once('error', () => done(1));
+      });
+      clearTimeout(timeout);
+      if (process.exitCode !== 0 || complete) break;
+      if (!needsRestart)
+        throw new Error('Long session stopped without a durable restart checkpoint');
+    }
+    if (!complete) process.exitCode = 1;
   }
 } catch {
   console.error(
