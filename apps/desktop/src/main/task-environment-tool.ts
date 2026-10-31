@@ -18,6 +18,7 @@ export async function startTaskEnvironment(
   }
   try {
     const info = await ctx.environments.start(checkoutKey(active));
+    ctx.continuation.execution(active).clearBlock();
     const urls = Object.entries(info.urls).map(([name, url]) => `- ${name}: ${url}`);
     return {
       text:
@@ -45,8 +46,11 @@ export async function startTaskEnvironment(
     return {
       text:
         `The environment did not start:\n${errorText(error)}\n\n` +
-        'If the output shows a defect in the task sources, fix it and call start_environment ' +
-        'again. Otherwise report the exact failure to the user as a blocker; do not start ' +
+        'If copying needs stopped main-checkout services, read the clone script and existing Docker labels, ' +
+        'declare source with configure_environment (source/expected_source), and call start_environment again. ' +
+        'Skaro starts only existing declared containers and waits for health; no source data or accounts are created or reset. ' +
+        'If the output shows a defect in the task sources, fix it and retry. Otherwise use report_task_blocker ' +
+        'with the exact failure, not a question asking the owner to do routine startup. Do not start ' +
         'substitute services or another copy.',
       isError: true,
     };

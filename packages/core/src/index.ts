@@ -15,6 +15,7 @@ export * from './agents/installer.ts';
 export * from './attachments.ts';
 export * from './docker/containers.ts';
 export * from './docker/environment.ts';
+export * from './docker/source.ts';
 export * from './docker/owner.ts';
 export * from './environment/variables.ts';
 export * from './environment/ports.ts';

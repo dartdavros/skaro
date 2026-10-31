@@ -1,7 +1,7 @@
 import type { Interaction, TimelineState } from '@skaro/timeline';
 import { taskSections, toggleCriterion } from './task-body';
 
-/** Skaro's own question when the agent stopped without asking through a card. */
+/** Skaro's own question about accepting unmet task criteria. */
 export const WAIT_CARD = 'skaro-wait-';
 export const ACCEPT_AS_IS = 'Принять как есть';
 const FINISH = 'Доделать';
@@ -9,11 +9,14 @@ const FINISH = 'Доделать';
 type Question = Extract<Interaction, { kind: 'question' }>;
 
 /**
- * The turn ended, the task is not accepted and no question card is open: the agent waits for the
- * owner, often with a question in plain text that no card shows. Skaro shows one itself. After a
- * refused submission it offers the unmet criteria; otherwise it asks for the reply the agent awaits.
+ * A refused submission needs an explicit decision about unmet criteria. Merely ending a turn
+ * does not ask a question: a pending architecture package already carries its own decision.
  */
-export function waitCard(runId: string, body: string, timeline: TimelineState): Question {
+export function waitCard(
+  runId: string,
+  body: string,
+  timeline: TimelineState,
+): Question | undefined {
   const lastTurn = timeline.turns.at(-1)?.id;
   const submitted = timeline.items.some(
     (item) => item.turnId === lastTurn && item.kind === 'tool' && item.name === 'submit_result',
@@ -44,21 +47,16 @@ export function waitCard(runId: string, body: string, timeline: TimelineState): 
         },
       ],
     };
-  return {
-    kind: 'question',
-    id,
-    delivery: 'async',
-    questions: [
-      {
-        id: 'reply',
-        header: 'Ответ',
-        text: 'Агент остановился и ждёт вашего ответа на сообщение выше.',
-        multi: false,
-        allowFreeText: true,
-        options: [],
-      },
-    ],
-  };
+}
+
+/** Older versions manufactured an empty reply question after every completed turn. */
+export function isLegacyWaitCard(interaction: Interaction): boolean {
+  return (
+    interaction.kind === 'question' &&
+    interaction.id.startsWith(WAIT_CARD) &&
+    interaction.questions.length === 1 &&
+    interaction.questions[0]?.id === 'reply'
+  );
 }
 
 /** "Принять как есть": every unmet criterion of the card is ticked as the owner's decision. */

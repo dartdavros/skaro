@@ -10,7 +10,8 @@ export function environmentConfig(
 ): EnvironmentConfig {
   const start = registry.find(key)?.start ?? config.start;
   const ports = [...new Set([...config.ports, ...(registry.find(key)?.extraPorts ?? [])])];
-  return { ...config, start, ports };
+  const source = registry.find(key)?.source ?? config.source;
+  return { ...config, start, ports, ...(source ? { source } : {}) };
 }
 
 /** Compare before saving: an agent must not overwrite a command changed since it read it. */
@@ -21,8 +22,12 @@ export function configureEnvironment(
   args: ConfigureEnvironmentArgs,
 ): EnvironmentConfig {
   const current = environmentConfig(registry, key, config);
-  if (args.ports === undefined && args.start === undefined) {
-    if (args.expectedStart !== undefined || args.expectedPorts !== undefined)
+  if (args.ports === undefined && args.start === undefined && args.source === undefined) {
+    if (
+      args.expectedStart !== undefined ||
+      args.expectedPorts !== undefined ||
+      args.expectedSource !== undefined
+    )
       throw new Error('Provide start/expected_start or ports/expected_ports together.');
     return current;
   }
@@ -31,6 +36,13 @@ export function configureEnvironment(
       'The launch command changed. Read configure_environment again before updating.',
     );
   const problems: { path: string; message: string }[] = [];
+  if (
+    args.source !== undefined &&
+    JSON.stringify(args.expectedSource) !== JSON.stringify(current.source ?? null)
+  )
+    throw new Error(
+      'The source services changed. Read configure_environment again before updating.',
+    );
   if (
     args.ports !== undefined &&
     JSON.stringify(args.expectedPorts) !== JSON.stringify(current.ports)
@@ -42,6 +54,7 @@ export function configureEnvironment(
     {
       ...current,
       start: args.start ?? current.start,
+      ...(args.source ? { source: args.source } : {}),
       ports: args.ports ? [...new Set([...current.ports, ...args.ports])] : current.ports,
     },
     problems,
@@ -50,6 +63,7 @@ export function configureEnvironment(
   if (
     !registry.update(key, {
       start: next.start,
+      ...(next.source ? { source: next.source } : {}),
       extraPorts: [
         ...new Set([
           ...(registry.find(key)?.extraPorts ?? []),

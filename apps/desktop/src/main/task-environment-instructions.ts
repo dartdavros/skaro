@@ -16,6 +16,12 @@ const MANAGED =
   'Preserve existing services, name, ports, data and readiness. Explicit owner restrictions ' +
   'still apply; an owner decision is authorization to perform the agreed action, not evidence ' +
   'that the owner has already performed it. Do not wait for them to do your configuration work.\n' +
+  '- If first-time copying requires stopped source services, inspect the project clone script ' +
+  'and existing Docker labels, read configure_environment, then declare source {project, services} ' +
+  'with expected_source (the current value or null). start_environment starts only these existing ' +
+  'main-checkout containers and waits for health before copying. This is routine preparation: ' +
+  'do not ask the owner to start the source database or choose between waiting and unverified code. ' +
+  'Never create, reset, seed or reconfigure the source, its accounts, volumes or mounts.\n' +
   '- Skaro admits every Compose port before starting services. Services without allocated host ' +
   'ports, including test/admin backends, stay accessible inside the Compose network and through ' +
   '`docker compose exec`; they need no host port for tests. If the authorized task needs documented ' +
@@ -62,7 +68,8 @@ export function taskEnvironmentInstructions(kind: TaskEnvironmentKind): string {
         "task's environment and that readiness includes the database and cache. A responding " +
         'localhost port, frontend HTTP 200 or backend liveness alone prove nothing.',
       '- Do not stop, restart, reconfigure or replace services of another task or of the main ' +
-        'working copy, and do not change shared services or accounts to make verification pass.',
+        'working copy. The only source-start path is Skaro starting declared existing main-checkout ' +
+        'containers for data copying; do not change shared services or accounts to make verification pass.',
       '- If the environment cannot be started or is not ready, report the exact failure as a ' +
         'blocker; ask through the structured question tool only when a concrete owner decision ' +
         'can resolve it. Do not turn every environment check into a permission request.',

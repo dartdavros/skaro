@@ -96,6 +96,8 @@ export interface ProjectCheck {
  * Commands run in the task checkout; values may use {name}, {root}, {worktree} and {PORT_VARIABLE}.
  */
 export interface EnvironmentConfig {
+  /** Existing services in the main checkout needed while copying its data. */
+  source?: { project: string; services: string[] };
   /** Variables that each receive a free host port. */
   ports: string[];
   /** Further variables for the commands and for the agent's shell. */

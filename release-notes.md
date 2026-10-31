@@ -1,12 +1,17 @@
-Skaro 2.2.4
+Skaro 2.2.12
 
-- Added the approved C4 gallery filters for diagram type and architecture state.
-- Added diagram type icons to C4 cards and list rows.
-- Moved diagram type and state to the right side of each card footer.
-- Removed the additional graph filter controls as requested.
-- Includes all corrections from 2.2.3: direct neighbor labels, graph restoration timeout,
-  fixed dot backgrounds, agent stopping, C4 task scope and feed loading.
-- Included the standalone TARDIS asset in the source tree; it is not connected to desktop UI.
+- Authorized tasks continue across model turns through verification and submission,
+  then merge automatically when automatic merging is enabled.
+- Execution intent survives restarts and respects explicit stops, real questions,
+  architecture decisions and concrete external blockers.
+- Removed invented reply questions after an agent turn and retired legacy cards.
+- Architecture package decisions resume existing tasks without another owner message.
+- Task environments can start declared existing source services and wait for readiness
+  before copying data, without recreating the source containers or replacing data.
+- Repeated turns without progress stop instead of looping indefinitely.
+
+Verified with real Codex execution through a Git merge and native Electron checks.
+See docs/release-2.2.12.md for verification details and limits.
 
 Installers are published for Windows, macOS and Linux, for x64 and arm64.
 The published GitHub release includes the verified table of six direct installer links.

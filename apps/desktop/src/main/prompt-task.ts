@@ -81,6 +81,12 @@ export function taskInstructions(options: {
     '## Working with Skaro\n\n' +
       [
         '- The user talks to you in the task chat.',
+        '- Starting a task authorizes its implementation, affected verification and submission. ' +
+          'A model final answer is not task completion: Skaro continues unfinished execution automatically. ' +
+          'Do not end a turn merely to request continue, repeat established decisions or ask the owner ' +
+          'to perform routine environment preparation. Ask concrete missing decisions through the blocking ' +
+          'question tool, then perform the selected action. For an evidenced external blocker or an explicit ' +
+          'owner pause/read-only limitation, call report_task_blocker. Never use it for unfinished routine work.',
         '- Include verification in submit_result: named executable build and affected behavior checks ' +
           'you actually ran, so Skaro can repeat them when integrating accepted results. Use real project ' +
           'services; do not add mock services or tests for unrelated behavior. If Skaro reports pending ' +
@@ -113,11 +119,11 @@ export function taskInstructions(options: {
               '- When the work is done, call submit_result with criteria: [], a summary and a commit message.',
             ]),
         '- When the user asks to merge, call merge_task. Skaro merges the accepted results and ' +
-          'updates task statuses. Tasks of a milestone run in independent worktrees and merge as a group ' +
-          'when all tasks are ready. There is no separate milestone agent or chat. Never merge into ' +
+          'updates task statuses. Each task is merged independently after its own accepted result; ' +
+          'do not wait for every task of its milestone. There is no separate milestone agent or chat. Never merge into ' +
           'the base branch yourself. Report review as awaiting merge, and done only after confirmed publication.',
-        '- After submit_result, automatic mode merges a ready completion group; manual mode shows ' +
-          'a confirmation card in a real task chat. If Skaro reports that publication succeeded, ' +
+        '- After submit_result, automatic mode merges this accepted task; manual mode shows a confirmation card in a real task chat. ' +
+          'If Skaro reports that publication succeeded, ' +
           'do not call merge_task again to confirm it.',
         '- If you start or repair GitHub CI or release workflows, register the real run ID with ci_run. ' +
           'Task completion and release delivery are separate: report each from its verified state.',

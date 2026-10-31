@@ -157,9 +157,13 @@ export class TaskRunScheduling {
     input: MessageInput,
   ): Promise<void> {
     // The task can have been replaced while agent setup was awaiting I/O.
-    findTask(await this.ctx.project(projectId).store.load(), taskId);
+    const task = findTask(await this.ctx.project(projectId).store.load(), taskId);
     const k = key(projectId, taskId);
     await this.ctx.stages.sync(projectId, taskId);
+    const active = this.ctx.active.get(k);
+    if (input.internal && input.commandId?.startsWith('continue-') && task.status !== 'in_progress')
+      return;
+    if (active && !this.ctx.continuation.canDeliver(active, input)) return;
     const accepted = { ...input, commandId: input.commandId ?? randomUUID() };
     this.ctx.startup.begin(projectId, taskId, [accepted]);
     this.ctx.queuedInputs.set(k, [...(this.ctx.queuedInputs.get(k) ?? []), accepted]);
@@ -220,6 +224,7 @@ export class TaskRunScheduling {
       this.ctx.startup.delivered(active.projectId, active.taskId);
     } catch (error) {
       if (error instanceof CommandCancelled) {
+        this.ctx.startup.delivered(active.projectId, active.taskId);
         active.release?.();
         active.release = undefined;
         this.ctx.setRuntime(active.projectId, active.taskId, 'idle', active.run.id);

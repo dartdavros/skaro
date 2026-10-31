@@ -25,6 +25,7 @@ import { TaskIntegrations } from './task-integrations';
 import { TaskStartup } from './task-startup';
 import { TaskEnvironmentReviews, isReviewQueueKey } from './task-environment-reviews';
 import { taskEnvironmentFinished } from './task-environment-finished';
+import { TaskRunContinuation } from './task-run-continuation';
 
 function taskKey(k: string): TaskKey {
   const [projectId, taskId] = k.split('\n') as [string, string];
@@ -33,6 +34,8 @@ function taskKey(k: string): TaskKey {
 
 /** Shared state and composition of the task-run services. */
 export class TaskRunEngine {
+  closing = false;
+  readonly continuation = new TaskRunContinuation(this);
   readonly deps: TaskRunDeps;
   readonly active = new Map<string, ActiveRun>();
   /** Messages that wait for a queue slot, in the order they were sent. */

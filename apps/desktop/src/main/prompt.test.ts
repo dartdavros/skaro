@@ -57,7 +57,9 @@ describe('task instructions', () => {
   });
 
   it('explains both merge modes and forbids reconfirming an already merged result', () => {
-    expect(text).toContain('automatic mode merges a ready completion group');
+    expect(text).toContain('automatic mode merges this accepted task');
+    expect(text).toContain('do not wait for every task of its milestone');
+    expect(text).not.toContain('merge as a group');
     expect(text).toContain('manual mode shows a confirmation card in a real task chat');
     expect(text).toContain('do not call merge_task again to confirm it');
     expect(text).not.toContain('merges after the user confirms');

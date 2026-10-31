@@ -48,7 +48,23 @@ export function readEnvironment(
   };
   const start = command('start');
   if (!start) return fail('start must be a command');
+  const source = section['source'];
+  if (
+    source !== undefined &&
+    (!source ||
+      typeof source !== 'object' ||
+      Array.isArray(source) ||
+      typeof (source as Record<string, unknown>)['project'] !== 'string' ||
+      !/^[a-z0-9][a-z0-9_-]*$/.test((source as { project: string }).project) ||
+      !Array.isArray((source as Record<string, unknown>)['services']) ||
+      !(source as { services: unknown[] }).services.length ||
+      (source as { services: unknown[] }).services.some(
+        (name) => typeof name !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name),
+      ))
+  )
+    return fail('source must name a Compose project and its existing services');
   const config: EnvironmentConfig = {
+    ...(source ? { source: source as NonNullable<EnvironmentConfig['source']> } : {}),
     ports: ports as string[],
     env,
     ...(command('create') ? { create: command('create')! } : {}),
@@ -73,6 +89,7 @@ export function readEnvironment(
 export function environmentYaml(config: EnvironmentConfig | undefined): unknown {
   if (!config) return undefined;
   return {
+    source: config.source,
     ports: config.ports.length ? config.ports : undefined,
     env: Object.keys(config.env).length ? config.env : undefined,
     create: config.create,

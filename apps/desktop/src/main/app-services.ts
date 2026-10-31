@@ -7,6 +7,7 @@ import {
   submitResultTool,
   startEnvironmentTool,
   configureEnvironmentTool,
+  taskBlockerTool,
   verifyIntegrationTool,
   taskHistoryTool,
   ciRunTool,
@@ -75,6 +76,7 @@ export async function createServices(
       // Tools are called only after the app is up, when `runs` exists.
       mergeTaskTool((args, scope): Promise<ToolResult> => runs.mergeTask(args, scope)),
       submitResultTool((args, scope): Promise<ToolResult> => runs.submitResult(args, scope)),
+      taskBlockerTool((reason, scope) => runs.reportBlocker(reason, scope)),
       startEnvironmentTool((scope): Promise<ToolResult> => runs.startEnvironment(scope)),
       configureEnvironmentTool((args, scope) => runs.configureEnvironment(args, scope)),
       verifyIntegrationTool((checks, scope) => runs.verifyIntegration(checks, scope)),

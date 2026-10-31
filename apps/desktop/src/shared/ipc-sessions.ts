@@ -73,6 +73,8 @@ export interface TaskView {
 }
 
 export interface MessageInput {
+  /** Main-process orchestration; retained for delivery recovery, hidden from the conversation. */
+  internal?: boolean;
   /** Main-process encrypted continuation of a restored secret question. Never plaintext in IPC. */
   privateText?: string;
   /** Stable owner command identity; retries must not deliver the same command twice. */

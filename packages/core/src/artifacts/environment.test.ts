@@ -7,6 +7,7 @@ import type { ArtifactProblem } from './model.ts';
 import { ArtifactStore } from './store.ts';
 
 const section = {
+  source: { project: 'main-project', services: ['postgres'] },
   ports: ['API_PORT', 'UI_PORT'],
   env: { DATA_IMAGE: 'app:{name}', COMPOSE_FILE: 'compose.yaml|{root}/compose.task.yaml' },
   create: 'pwsh -File {root}/scripts/clone.ps1 -Name {name}',
@@ -59,5 +60,19 @@ describe('environment description', () => {
       'environment: ports must be unique',
       'environment: env must not override a port allocated by Skaro',
     ]);
+  });
+
+  it('rejects malformed source service declarations before they can be persisted', () => {
+    for (const source of [
+      null,
+      {},
+      { project: '-invalid', services: ['postgres'] },
+      { project: 'main', services: [] },
+      { project: 'main', services: ['--privileged'] },
+    ]) {
+      const problems: ArtifactProblem[] = [];
+      expect(readEnvironment({ ...section, source }, problems)).toBeUndefined();
+      expect(problems[0]?.message).toContain('source must name');
+    }
   });
 });

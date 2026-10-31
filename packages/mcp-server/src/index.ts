@@ -2,6 +2,7 @@
 export * from './server.ts';
 export * from './tools.ts';
 export * from './environment-tool.ts';
+export * from './task-blocker-tool.ts';
 export * from './integration-tool.ts';
 export * from './history-tool.ts';
 export * from './ci-tool.ts';
