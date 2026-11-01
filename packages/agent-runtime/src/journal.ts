@@ -120,7 +120,10 @@ export class RuntimeJournal {
       result: structuredClone(result),
       ...(requestHash ? { requestHash } : {}),
     };
-    const record = { ...payload, hash: digest(payload) };
+    // Acknowledged records must have the same JSON shape as records restored from disk.
+    // In particular, advanced IPC retains undefined fields while JSON persistence omits them.
+    const snapshot = JSON.parse(JSON.stringify(payload)) as typeof payload;
+    const record = { ...snapshot, hash: digest(snapshot) };
     const next = reduceRuntimeRecord(this.state, record);
     try {
       await this.file.writeFile(JSON.stringify(record) + '\n');

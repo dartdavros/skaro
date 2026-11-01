@@ -16,6 +16,11 @@ import { c4ReviewKey } from '../c4-review';
 import { startBuiltinNativeSession } from '../native/bundled';
 import { longContextConfig } from '../credentials/long-context-config';
 import { catPilotVerificationTarget } from './task-verification';
+import {
+  inspectNativePlanJournal,
+  verifyNativePlan,
+  verifyNativePlanRestart,
+} from './native-verification-plan';
 
 async function invoke(session: AgentSession, id: string, name = 'inspect_acceptance', args = {}) {
   assert('invokeTool' in session && typeof session.invokeTool === 'function');
@@ -108,6 +113,7 @@ export async function verifyNativeVerification(
     assert.deepEqual(actual.criteria, expected.criteria);
     assert.deepEqual(actual.binding, expected.binding);
     assert.equal(actual.binding!.execution, 'blocked');
+    const plan = await verifyNativePlan(session!, actual);
     await assert.rejects(
       invoke(session!, 'native-widen', 'inspect_acceptance', { projectId: target.context.id }),
       /Invalid arguments/,
@@ -171,7 +177,9 @@ export async function verifyNativeVerification(
       /no model request was sent/,
     );
     assert.deepEqual((await invoke(session!, 'native-restarted')).criteria, expected.criteria);
+    await verifyNativePlanRestart(session!, plan);
     await close();
+    const planning = await inspectNativePlanJournal(config.journalPath, plan);
     for (const process of owners) assert.equal(await processBirth(process.pid), undefined);
     assert.equal(owners.length, 2);
     assert.equal(JSON.stringify(await target.context.store.readTask(target.task.id)), before);
@@ -191,6 +199,7 @@ export async function verifyNativeVerification(
       exitsConfirmed: true,
       taskAndC4Unchanged: true,
       modelRequests: 0,
+      planning,
       journal: config.journalPath,
     };
   } finally {

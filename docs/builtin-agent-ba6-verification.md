@@ -2,6 +2,29 @@
 
 История этапа из [общего отчёта](builtin-agent-verification.md).
 
+## Native plan/replay, 01.11.2026
+
+Расширен настоящий native driver: локальное предложение без команд и с девятью
+uncovered критериями Cat-pilot сохраняется через `plan_checks`; `assess_checks`
+получает отрицательные verdicts без evidence. После restart исходные call IDs
+возвращают прежние ответы, свежая оценка снова обращается к живому host.
+План не принимается как evidence, sequence/hash ссылка сохранена, plan record
+не дублируется. Это локальная transport-проверка, не новый model-generated plan.
+
+Первая попытка обнаружила реальный дефект Skaro: advanced IPC сохранял
+`context: undefined` в живом ответе, JSON journal удалял поле при сохранении.
+Replay имел другую форму. Журнал теперь нормализует запись к сохраняемой
+JSON-форме до reducer/checkpoint/events; schema/hash chain не менялись.
+Неуспешный journal оставлен в
+`verification/extensions-e61e8017-3f37-4b63-a917-4a7a95c407ea` в userData Skaro.
+
+Повтор принят: `verification/extensions-a13a9e10-c048-4358-9842-83d9200d3c23/proof.json`.
+Два настоящих native runtime завершены с проверкой выхода; task/C4 не изменены,
+check processes/model requests 0, readyToSubmit=false. Сборка, TypeScript
+runtime/desktop, lint/format, 6 journal и 2 compiled-native регрессии прошли.
+Дефект Skaro не подменяет незакрытую BA-6 приёмку автономного исправления
+продуктовой задачи: активный TaskRun, model lifecycle и сдача ещё не подключены.
+
 ## Native inspection bridge, 01.11.2026
 
 Реализован [read-only мост](builtin-agent-native-verification.md) main → native

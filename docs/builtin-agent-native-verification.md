@@ -45,9 +45,30 @@ resume, после отзыва lease инспекция запрещена. О�
 Ввод explicit resume в private verification journal не вызывает модель и не
 является новым решением владельца по продуктовой задаче.
 
-Proof: `verification/extensions-65cf398f-b057-4fbd-bcff-cc71bbf78f2b/proof.json`
+Driver также передаёт через настоящий runtime локальное предложение
+`plan_checks`: без команд, все критерии явно uncovered. Это не план, созданный
+моделью, и не проверка выполнения требований. `assess_checks` получает только
+отрицательные verdicts без evidence. После настоящего restart повторяются
+исходные call IDs, отдельно вызывается свежая оценка через новый host. Primary
+journal проверяется на сохранность sequence/hash ссылки и отсутствие повторных
+plan records; `check_evidence` не принимает ссылку плана как доказательство.
+
+Этот сценарий обнаружил различие live/replay: advanced IPC сохранял необязательный
+`context: undefined`, а JSON journal опускал поле. Теперь primary journal приводит
+подтверждаемую запись к её сохраняемой JSON-форме до reducer/checkpoint/events.
+Schema 2 и существующая проверка hash chain сохраняются; история не переписывается.
+
+Первоначальный proof: `verification/extensions-65cf398f-b057-4fbd-bcff-cc71bbf78f2b/proof.json`
 в userData Skaro. Primary journal: `native-verification.jsonl` в том же каталоге.
 Task и C4 setting остались неизменными; model requests 0, ключ не читается.
+
+Повтор с plan/assessment/replay после исправления журнала принят:
+`verification/extensions-a13a9e10-c048-4358-9842-83d9200d3c23/proof.json`.
+Все 9 критериев остаются uncovered, readyToSubmit=false. Исходная ссылка плана
+сохранилась после restart, один plan record, два настоящих runtime завершены,
+check processes/model requests 0, task/C4 не изменены. Неуспешная попытка до
+исправления сохранена в `extensions-e61e8017-3f37-4b63-a917-4a7a95c407ea`.
+Сборка, типы runtime/desktop, lint/format и 8 целевых journal/native тестов прошли.
 
 Открыто: положительное execution admission настоящей активной задачи, передача
 остальных host ports, model lifecycle/task-chat scheduler и применение evidence
