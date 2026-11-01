@@ -5,7 +5,14 @@ import {
   parseBuiltinModelConfiguration,
   type BuiltinModelConfigurationState,
 } from '@skaro/agent-runtime';
-import { snapshotRoute, type BuiltinModelConfiguration, type Model } from '@skaro/timeline';
+import {
+  snapshotRoute,
+  type BuiltinModelConfiguration,
+  type Model,
+  type RouteSnapshot,
+  type CredentialReference,
+} from '@skaro/timeline';
+import { BuiltinModelRouteLease } from './builtin-model-route-lease';
 
 const KEY = 'builtin.model-configuration';
 const empty = (): BuiltinModelConfigurationState => ({
@@ -27,6 +34,7 @@ const project = (state: BuiltinModelConfigurationState): BuiltinModelConfigurati
 /** Main-only nonsecret choices. This store neither imports keys nor grants model execution. */
 export class BuiltinModelConfigurationStore {
   private readonly db: AppDb;
+  private readonly leases = new Set<BuiltinModelRouteLease>();
   constructor(db: AppDb) {
     this.db = db;
   }
@@ -71,7 +79,19 @@ export class BuiltinModelConfigurationStore {
     });
     if (!this.db.settings.compareAndSet(KEY, raw, next))
       throw new Error('Builtin model configuration changed under another writer');
+    for (const lease of [...this.leases]) lease.refresh();
     return project(next);
+  }
+  admit(route: RouteSnapshot, credential: CredentialReference) {
+    if (this.leases.size >= 256) throw new Error('Builtin model configuration lease limit reached');
+    const lease = new BuiltinModelRouteLease(
+      () => this.read(),
+      route,
+      credential,
+      (lease) => this.leases.delete(lease),
+    );
+    this.leases.add(lease);
+    return lease;
   }
   /** Current catalog required. Disappearance fails explicitly; persisted choices remain intact. */
   snapshot(routeId: string, models: readonly Model[]) {

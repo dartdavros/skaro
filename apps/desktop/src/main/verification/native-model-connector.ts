@@ -38,7 +38,7 @@ export async function nativeVerificationConnector(
       },
       signal,
     );
-    return { vault, connector: new OpenRouterConnector(credentials, auth) };
+    return { vault, connector: new OpenRouterConnector(credentials, auth), reference };
   } catch (error) {
     await vault.close();
     throw error;

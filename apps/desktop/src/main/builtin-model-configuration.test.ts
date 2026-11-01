@@ -116,6 +116,31 @@ it('persists isolated connections atomically, rejects stale writers and requires
     }),
   ).toThrow('next configuration revision');
   expect(store.read()).toEqual(next);
+  const reference = next.connections.find((entry) => entry.id === 'second')!.credential;
+  expect(() => store.admit(snapshot, { id: randomUUID(), revision: 1 })).toThrow(
+    'no longer current',
+  );
+  const lease = store.admit(snapshot, reference);
+  store.update(2, { connections: next.connections, routes: next.routes });
+  expect(lease.signal.aborted).toBe(false);
+  other.update(3, {
+    connections: next.connections,
+    routes: [{ ...next.routes[0]!, revision: 3, parameters: { max_tokens: 1024 } }],
+  });
+  expect(() => lease.requireCurrent()).toThrow('no longer current');
+  expect(lease.signal.aborted).toBe(true);
+  const current = store.snapshot('selected', [metadata]);
+  const changedCredential = store.admit(current, reference);
+  const choicesNow = store.read();
+  store.update(4, {
+    connections: choicesNow.connections.map((entry) =>
+      entry.id === 'second'
+        ? { ...entry, revision: 2, credential: { ...entry.credential, revision: 2 } }
+        : entry,
+    ),
+    routes: choicesNow.routes,
+  });
+  expect(changedCredential.signal.aborted).toBe(true);
 });
 
 it('retains deleted identity revisions and refuses secrets, unsupported parameters and widened routing before writing', async () => {

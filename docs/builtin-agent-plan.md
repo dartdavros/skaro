@@ -34,6 +34,8 @@ send → durable input → прежний model loop, без повторной 
 одного хода на native Cat-pilot; provider-приёмка steering ещё открыта.
 Добавлено [backend-хранилище Connection/Route](builtin-agent-model-configuration.md):
 атомарные ревизии и общие connector validators, без включения UI или model admission.
+Добавлен [configured model host](builtin-agent-configured-model-host.md): точные
+route/credential reference, отзыв устаревшего lease; positive configured runtime открыт.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.
@@ -62,6 +64,12 @@ Claude Code/Codex остаются альтернативами.
 Design work для BA-8 можно подготовить раньше; код зависимого UI начинается
 после принятия дизайна. Последовательность этапов не разрешает субагентов
 или параллельную запись исполнителей в один checkout.
+
+Решение владельца от 01.11.2026 для BA-8: «Используй существующие UI елементы
+системы и визуальный язык». Согласовано переиспользование текущих settings
+surfaces/components/tokens и состояний. Отдельный новый визуальный язык не
+требуется; исходный baseline изучается до правок, штатная browser-проверка
+обязательна. Подготовка BA-8 начата; это не объявляет настройки реализованными.
 
 ## Исходные точки и структура
 

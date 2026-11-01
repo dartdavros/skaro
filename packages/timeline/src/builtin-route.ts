@@ -49,11 +49,10 @@ export function validateModelEndpoint(endpoint: string): void {
     throw new Error('Model endpoint must be HTTPS without credentials, query or fragment');
 }
 
-/** Exact lookups; disappearance never substitutes another model, connection or API profile. */
-export function snapshotRoute(
+/** Nonsecret configured identity only. This does not assert model availability or capabilities. */
+export function configuredRouteSnapshot(
   route: Route,
   connections: readonly Connection[],
-  models: readonly Model[],
   profiles: readonly ApiProfile[] = BUILTIN_API_PROFILES,
 ): RouteSnapshot {
   if (!route.id || !route.modelId || !route.connectionId) throw new Error('Missing route identity');
@@ -65,10 +64,6 @@ export function snapshotRoute(
   revision(connection.revision);
   revision(connection.credential.revision);
   if (!connection.credential.id) throw new Error('Missing credential reference');
-  const matchingModels = models.filter(
-    (entry) => entry.connectionId === connection.id && entry.id === route.modelId,
-  );
-  if (matchingModels.length !== 1) throw new Error(`Unknown or ambiguous model: ${route.modelId}`);
   const matchingProfiles = profiles.filter(
     (entry) =>
       entry.id === connection.apiProfile.id &&
@@ -91,6 +86,21 @@ export function snapshotRoute(
     parameters: route.parameters,
     upstream: route.upstream,
   });
+}
+
+/** Exact catalog lookup; disappearance never substitutes another model or connection. */
+export function snapshotRoute(
+  route: Route,
+  connections: readonly Connection[],
+  models: readonly Model[],
+  profiles: readonly ApiProfile[] = BUILTIN_API_PROFILES,
+): RouteSnapshot {
+  const snapshot = configuredRouteSnapshot(route, connections, profiles);
+  const matchingModels = models.filter(
+    (entry) => entry.connectionId === snapshot.connectionId && entry.id === snapshot.modelId,
+  );
+  if (matchingModels.length !== 1) throw new Error(`Unknown or ambiguous model: ${route.modelId}`);
+  return snapshot;
 }
 
 export type RequiredRouteCapability =

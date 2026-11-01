@@ -12,6 +12,7 @@ export { ModelClient } from './models/ipc-client.ts';
 export {
   modelBinding,
   requireModelBinding,
+  requireModelHostPolicy,
   requireModelBaseline,
   requireSameHostScope,
 } from './models/host-binding.ts';

@@ -15,6 +15,7 @@ import { nativePlanHost } from './native-model-host';
 import { nativeVerificationConnector } from './native-model-connector';
 import { nativeProbeOptions } from './native-probe-options';
 import { verifyModelTimeline } from './model-timeline-proof';
+import { bindConfiguredModelHost } from '../builtin-configured-model-host';
 
 /** Real queued input and host preparation. The actual request admission refuses every model POST. */
 export async function verifyNativeOwnerSteer(
@@ -24,7 +25,11 @@ export async function verifyNativeOwnerSteer(
   owner: RuntimeProcessIdentity,
 ) {
   const controller = new AbortController();
-  const { connector, vault } = await nativeVerificationConnector(data, owner, controller.signal);
+  const { connector, vault, reference } = await nativeVerificationConnector(
+    data,
+    owner,
+    controller.signal,
+  );
   const prepared = await nativePlanHost(
     services,
     directory,
@@ -35,6 +40,27 @@ export async function verifyNativeOwnerSteer(
   );
   const target = prepared.target;
   const configuration = services.modelConfiguration.read();
+  let configurationGate = 'unconfigured-refused';
+  if (!configuration.routes.some((route) => route.id === prepared.model.route.routeId)) {
+    assert.throws(
+      () => bindConfiguredModelHost(services.modelConfiguration, prepared.model, reference),
+      /unavailable/,
+    );
+  } else {
+    try {
+      const configured = bindConfiguredModelHost(
+        services.modelConfiguration,
+        prepared.model,
+        reference,
+      );
+      configured.close();
+      assert(configured.signal.aborted);
+      configurationGate = 'current-released';
+    } catch (error) {
+      assert(error instanceof Error && /unavailable/.test(error.message));
+      configurationGate = 'stale-refused';
+    }
+  }
   const before = JSON.stringify(target.task);
   const reviewKey = c4ReviewKey(target.context.id, target.task.id);
   const review = structuredClone(services.db.getSetting(reviewKey, null));
@@ -147,6 +173,7 @@ export async function verifyNativeOwnerSteer(
       exitsConfirmed: true,
       taskAndC4Unchanged: true,
       modelConfigurationUnchanged: true,
+      configurationGate,
       journal: prepared.config.journalPath,
       notice:
         'Real input/preparation boundary; provider response and terminal-response steering are not accepted',
