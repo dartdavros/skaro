@@ -55,6 +55,9 @@ owned process вышел. Это не положительная provider-при
 отказ конфликтующему input ID и automatic native close; новых POST нет.
 Configured session возобновлена во втором настоящем runtime/admission generation:
 старые send/steer IDs не повторили подготовку или intent, replay совпал.
+Предварительно проверен [локальный Windows x64 payload](builtin-agent-package-verification.md):
+настоящий EXE/ASAR, byte-for-byte worker entries и packaged settings/catalog.
+Это не релиз и не закрытие BA-9 остальных платформ/модельной задачи.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не
