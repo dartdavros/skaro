@@ -14,6 +14,7 @@ import type {
   RuntimeProcessIdentity,
   TimelineEvent,
 } from '@skaro/timeline';
+import { operationTimeout } from '@skaro/timeline';
 import { AppState } from '../state';
 import { createServices, type Services } from '../app-services';
 import { closeBackground } from '../background/client';
@@ -23,6 +24,7 @@ import { nativeProbeOptions } from './native-probe-options';
 import { nativePlanHost } from './native-model-host';
 import { planPayloadHash } from './model-plan-request';
 import { verifyModelTimeline } from './model-timeline-proof';
+import { nativePlanTurn } from './native-plan-turn';
 
 /** The previously reviewed Cat-pilot payload, now through genuine owned native/runtime processes. */
 export async function verifyNativeModelPlan(input: {
@@ -32,6 +34,7 @@ export async function verifyNativeModelPlan(input: {
   payloadPath: string;
   expectedHash: string;
   signal: AbortSignal;
+  ownerInput?: boolean;
 }) {
   assert(/^[a-f0-9]{64}$/.test(input.expectedHash));
   assert(app.requestSingleInstanceLock(), 'Skaro is already running');
@@ -59,6 +62,7 @@ export async function verifyNativeModelPlan(input: {
       input.owner,
       input.connector,
       input.expectedHash,
+      input.ownerInput,
     );
     const catalogue = (await openRouterCatalog(prepared.config.route.endpoint, input.signal)) as {
       id: string;
@@ -94,21 +98,37 @@ export async function verifyNativeModelPlan(input: {
     );
     const actual = session;
     const events: TimelineEvent[] = [];
+    const terminalWaiters = new Map<string, () => void>();
     drain = (async () => {
       for await (const event of actual.events) {
         events.push(event);
+        if (event.t === 'turn.completed') terminalWaiters.get(event.turnId)?.();
       }
     })();
     const prior = await readRuntimeJournal(prepared.config.journalPath, prepared.config.sessionId);
-    if (prior.state.closed || prior.state.stopped)
+    if (!input.ownerInput && (prior.state.closed || prior.state.stopped))
       await assert.rejects(
         session.send({ text: 'Resume the reviewed native plan verification only' }),
         /no model request was sent/,
       );
-    assert('runModelTurn' in session && typeof session.runModelTurn === 'function');
-    const id = `nativeplan-${input.expectedHash.slice(0, 16)}-v2`;
     const request = { kind: 'chat' as const, value: prepared.payload.request };
-    const response = (await session.runModelTurn(request, id, 6)) as ChatResponse;
+    const { id, response, duplicate } = await nativePlanTurn(
+      session,
+      prepared.config,
+      request,
+      input.expectedHash,
+      !!input.ownerInput,
+      (turnId) =>
+        operationTimeout(
+          new Promise<void>((resolve) => {
+            if (events.some((event) => event.t === 'turn.completed' && event.turnId === turnId))
+              resolve();
+            else terminalWaiters.set(turnId, resolve);
+          }),
+          540_000,
+          'Ordinary owner model turn did not finish',
+        ),
+    );
     assert.equal(response.finishReason, 'stop');
     const snapshot = await readRuntimeJournal(
       prepared.config.journalPath,
@@ -142,7 +162,7 @@ export async function verifyNativeModelPlan(input: {
       .join('');
     assert(text.length > 0);
     assert.equal(text, responses.map((result) => result.message.content ?? '').join(''));
-    assert.deepEqual(await session.runModelTurn(request, id, 6), response);
+    assert.deepEqual(await duplicate(), response);
     assert.equal(
       (await readRuntimeJournal(prepared.config.journalPath, prepared.config.sessionId)).records
         .length,
@@ -173,6 +193,13 @@ export async function verifyNativeModelPlan(input: {
       toolsAndProjectionsInHost: true,
       durableBudgetBeforePost: true,
       duplicateTurnNoPost: true,
+      ...(input.ownerInput
+        ? {
+            ordinarySend: true,
+            exactDurableOwnerInput: true,
+            preparations: prepared.preparationCount(),
+          }
+        : {}),
       readyToSubmit: false,
       taskAndC4Unchanged: true,
       checkProcesses: 0,

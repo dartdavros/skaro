@@ -55,3 +55,7 @@ export const modelInvocation = z.strictObject({
     z.strictObject({ kind: z.literal('native'), value: native }),
   ]),
 });
+export const preparedModelTurn = z.strictObject({
+  request: modelInvocation.shape.request,
+  maxSteps: z.number().int().min(1).max(100),
+});

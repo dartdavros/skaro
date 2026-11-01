@@ -44,6 +44,8 @@ export function requireModelHostPolicy(host: RuntimeModelHost) {
     rejectionMessage: tools.rejectionMessage,
   };
   if (
+    fingerprint(host.input ? { revision: host.input.revision } : null) !==
+      fingerprint(host.policy.input ?? null) ||
     fingerprint(actual ?? null) !== fingerprint(host.policy.tools ?? null) ||
     (host.policy.protocol === 'native' && !host.continue)
   )

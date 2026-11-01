@@ -7,12 +7,13 @@ import { executeChatTurn } from './chat-turn.ts';
 import { executeNativeTurn } from './native-turn.ts';
 import { ModelTextJournal } from './text-journal.ts';
 import { ModelTurnTimeline } from './turn-timeline.ts';
+import { RuntimeCommandRejected } from '../command-error.ts';
 
 export function busyHostModelTurn(session: RuntimeSession, id: string, action: ModelTurnAction) {
   const hash = fingerprint(action);
   const previous = session.journal.find(`cmd:${id}`);
   if (previous && previous.requestHash !== hash)
-    throw new Error('Model turn identity reused for different input');
+    throw new RuntimeCommandRejected('Model turn identity reused for different input');
   return previous
     ? Promise.resolve(previous)
     : session.journal.append(
@@ -31,17 +32,28 @@ export async function runHostModelTurn(
   action: ModelTurnAction,
 ) {
   const hash = fingerprint(action);
+  return runPreparedHostModelTurn(session, host, id, hash, async () => action);
+}
+
+/** Preparation never dispatches a model request; the same terminal/text lifecycle covers its failure. */
+export async function runPreparedHostModelTurn(
+  session: RuntimeSession,
+  host: RuntimeModelHost | undefined,
+  id: string,
+  hash: string,
+  prepare: () => Promise<ModelTurnAction>,
+  timeline = new ModelTurnTimeline(session.journal, id, hash),
+) {
   const previous = session.journal.find(`cmd:${id}`);
   if (previous) {
     if (previous.requestHash !== hash)
-      throw new Error('Model turn identity reused for different input');
+      throw new RuntimeCommandRejected('Model turn identity reused for different input');
     return previous;
   }
-  const timeline = new ModelTurnTimeline(session.journal, id, hash);
   const text = new ModelTextJournal(session.journal, id, timeline.turnId);
   await timeline.begin();
   try {
-    const response = await perform(session, host, id, structuredClone(action), text);
+    const response = await perform(session, host, id, structuredClone(await prepare()), text);
     return session.journal.append(
       `cmd:${id}`,
       timeline.terminal('done'),

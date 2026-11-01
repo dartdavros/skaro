@@ -15,7 +15,8 @@ import { readRuntimeJournal } from '../journal-reader.ts';
 import { modelBinding, requireModelHostPolicy } from './host-binding.ts';
 import { requireModelIntent } from './host-gate.ts';
 import { ModelHttpError } from './model-error.ts';
-import { modelInvocation, modelToolSchema } from './host-schemas.ts';
+import { modelInvocation, modelToolSchema, preparedModelTurn } from './host-schemas.ts';
+import { requireOwnerInput } from './owner-input-gate.ts';
 
 /** Only this privileged host calls the original connector. A peer never receives credential bytes. */
 export class ModelServer {
@@ -25,6 +26,7 @@ export class ModelServer {
     { hash: string; work: Promise<Record<string, unknown>> }
   >();
   private readonly dispatched = new Set<string>();
+  private readonly prepared = new Map<string, Promise<unknown>>();
   constructor(
     host: RuntimeModelHost,
     send: (reply: RuntimeModelRpcReply) => void,
@@ -44,6 +46,30 @@ export class ModelServer {
             : { ...reply, type: 'model-rpc-result' },
         ),
       dispatch: async (operation, raw, signal, onText) => {
+        if (operation === 'prepare-input') {
+          if (!host.input) throw new Error('Owner input preparation is not configured');
+          const id = z
+            .string()
+            .regex(/^[a-zA-Z0-9_-]{1,160}$/)
+            .parse(raw);
+          const input = await requireOwnerInput(binding, id);
+          signal.throwIfAborted();
+          const previous = this.prepared.get(id);
+          if (previous) return previous;
+          if (this.prepared.size >= 1024) throw new Error('Owner input preparation limit reached');
+          const work = Promise.resolve().then(async () => {
+            const value = await host.input!.prepare(input, signal);
+            preparedModelTurn.parse(value);
+            if (
+              value.request.kind !== binding.policy.protocol ||
+              fingerprint(value.request.value.route) !== fingerprint(binding.route)
+            )
+              throw new Error('Prepared owner request differs from its admitted route');
+            return structuredClone(value);
+          });
+          this.prepared.set(id, work);
+          return work;
+        }
         if (operation === 'select-tools') {
           if (!policy?.selectChatTools || !Array.isArray(raw))
             throw new Error('Unconfigured model selector');

@@ -76,10 +76,14 @@ void app.whenReady().then(async () => {
     stage = 'credential-limits';
     const before = await connector.limits(controller.signal);
     process.send?.({ type: 'limits', before });
-    if (process.argv[4] === '--plan' || process.argv[4] === '--native-plan') {
-      stage = process.argv[4] === '--native-plan' ? 'native-model-plan' : 'model-plan';
-      const verify =
-        process.argv[4] === '--native-plan' ? verifyNativeModelPlan : verifyPreparedModelPlan;
+    if (['--plan', '--native-plan', '--native-input-plan'].includes(process.argv[4]!)) {
+      stage =
+        process.argv[4] === '--native-input-plan'
+          ? 'native-owner-plan'
+          : process.argv[4] === '--native-plan'
+            ? 'native-model-plan'
+            : 'model-plan';
+      const verify = process.argv[4] !== '--plan' ? verifyNativeModelPlan : verifyPreparedModelPlan;
       const proof = await verify({
         connector,
         owner,
@@ -87,6 +91,7 @@ void app.whenReady().then(async () => {
         signal: controller.signal,
         payloadPath: process.argv[5]!,
         expectedHash: process.argv[6]!,
+        ownerInput: process.argv[4] === '--native-input-plan',
       });
       process.send?.({ type: stage, proof });
       await vault.close();

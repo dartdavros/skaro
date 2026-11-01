@@ -1,5 +1,6 @@
 import type { RuntimeVerificationBinding } from './builtin-host.ts';
 import type { RouteSnapshot } from './builtin-model.ts';
+import type { RuntimeModelInputPort } from './builtin-owner-input.ts';
 import type {
   ModelTool,
   NativeRequest,
@@ -27,6 +28,7 @@ export interface ModelToolAdmission {
 export interface RuntimeModelPolicy {
   scope: RuntimeVerificationBinding['scope'];
   protocol: RuntimeModelRequest['kind'];
+  input?: { revision: string };
   tools?: {
     revision: string;
     selectChatTools: boolean;
@@ -44,6 +46,7 @@ export interface RuntimeModelBinding extends RuntimeVerificationBinding {
 }
 export interface RuntimeModelHost extends RuntimeModelBinding {
   signal?: AbortSignal;
+  input?: RuntimeModelInputPort;
   toolAdmission?: ModelToolAdmission;
   /** Quotation only; runtime persists this reservation before complete is permitted. */
   reserve(

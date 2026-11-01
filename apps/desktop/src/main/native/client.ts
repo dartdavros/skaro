@@ -143,6 +143,9 @@ class NativeSession implements AgentSession {
     });
   }
   send: AgentSession['send'] = (input) => this.call('send', [input]);
+  deliverInput(input: import('@skaro/timeline').UserInput, id: string, mode = 'send') {
+    return this.call('deliverInput', [input, id, mode]);
+  }
   invokeTool(name: string, args: unknown, id?: string): Promise<unknown> {
     return this.call<unknown>('invokeTool', [name, args, id]);
   }

@@ -20,6 +20,7 @@ import { verifyNativeModelPreflight } from './native-model-preflight';
 import { verifyNativeAdmissions } from './native-admissions';
 import { verifyNativeAdmissionRecovery } from './native-admission-recovery';
 import { verifyTaskAdmission } from './task-admission';
+import { verifyNativeOwnerInput } from './native-owner-input';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -63,6 +64,9 @@ void app.whenReady().then(async () => {
       } else if (process.argv[2] === '--native-model-preflight') {
         stage = 'native-model-preflight';
         proof = { model: await verifyNativeModelPreflight(services, data, directory, owner) };
+      } else if (process.argv[2] === '--native-owner-input') {
+        stage = 'native-owner-input';
+        proof = { input: await verifyNativeOwnerInput(services, data, directory, owner) };
       } else if (process.argv[2] === '--native-admissions') {
         stage = 'native-admissions';
         proof = { admissions: await verifyNativeAdmissions(services, directory, owner) };

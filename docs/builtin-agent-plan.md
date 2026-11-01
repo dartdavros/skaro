@@ -28,6 +28,8 @@ identity/session/handoff gates; положительная приёмка акт
 настоящие streaming deltas, один terminal и совпадение live/replay на Cat-pilot.
 Принят [bootstrap каталога MCP](builtin-agent-operation-bootstrap.md) до spawn:
 метаданные из штатного реестра, выполнение только после durable process admission.
+Принят [обычный owner input](builtin-agent-owner-input.md) до host preparation:
+send → durable input → прежний model loop, без повторной доставки после restart.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.

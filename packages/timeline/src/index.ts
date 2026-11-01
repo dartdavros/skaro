@@ -11,6 +11,7 @@ export * from './agent-delivery.ts';
 export type * from './builtin-model.ts';
 export type * from './builtin-model-wire.ts';
 export type * from './builtin-model-host.ts';
+export type * from './builtin-owner-input.ts';
 export * from './builtin-profiles.ts';
 export * from './builtin-route.ts';
 export * from './builtin-version.ts';

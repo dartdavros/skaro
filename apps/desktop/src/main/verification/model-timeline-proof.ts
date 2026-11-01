@@ -8,14 +8,20 @@ export function verifyModelTimeline(
   records: JournalRecord[],
   events: TimelineEvent[],
   id: string,
-  outcome: 'done' | 'failed',
+  outcome: 'done' | 'failed' | 'interrupted',
   text?: string,
 ) {
   const replay = new Timeline();
   const projector = new SkaroProjector((event) => replay.apply(event));
   for (const record of records) projector.output(record);
   assert.deepEqual(presentationState(replay.state), Timeline.from(events).state);
-  const started = records.find((record) => record.id === `model-lifecycle:${id}:started`);
+  const started = records.find(
+    (record) =>
+      record.id === `model-lifecycle:${id}:started` ||
+      ((record.result.value as { kind?: string; modelTurnId?: string } | undefined)?.kind ===
+        'owner-input' &&
+        (record.result.value as { modelTurnId?: string }).modelTurnId === id),
+  );
   const begin = started?.facts.find(
     (fact) => fact.type === 'timeline' && fact.event.t === 'turn.started',
   );

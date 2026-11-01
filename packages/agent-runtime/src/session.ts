@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { requireBuiltinCompatibility, validateModelEndpoint } from '@skaro/timeline';
-import type { RouteSnapshot, RuntimeProcessIdentity } from '@skaro/timeline';
+import { requireBuiltinCompatibility } from '@skaro/timeline';
+import type { RuntimeProcessIdentity } from '@skaro/timeline';
 import { RuntimeJournal } from './journal.ts';
 import { commandFacts } from './commands.ts';
 import packageManifest from '../package.json' with { type: 'json' };
@@ -13,25 +13,11 @@ import type { RuntimeVerificationHost } from './verification/host.ts';
 import type { RuntimeModelHost } from '@skaro/timeline';
 import { runHostModelTurn, busyHostModelTurn } from './models/host-turn.ts';
 import { requireModelBinding, requireModelHostPolicy } from './models/host-binding.ts';
-
-function validateRoute(route: RouteSnapshot): void {
-  if (
-    route.schema !== 1 ||
-    !route.routeId ||
-    !route.modelId ||
-    !route.connectionId ||
-    !route.connector ||
-    !route.apiProfile?.id ||
-    !Number.isSafeInteger(route.routeRevision) ||
-    route.routeRevision < 1 ||
-    !Number.isSafeInteger(route.connectionRevision) ||
-    route.connectionRevision < 1 ||
-    !Number.isSafeInteger(route.apiProfile.revision) ||
-    route.apiProfile.revision < 1
-  )
-    throw new Error('Invalid route snapshot');
-  validateModelEndpoint(route.endpoint);
-}
+import { validateRoute } from './session-route.ts';
+import { OwnerModelTurns } from './models/owner-turn.ts';
+import { RuntimeFailures } from './session-failures.ts';
+import { recoverModelTurns } from './models/turn-recovery.ts';
+import { RuntimeCommandRejected } from './command-error.ts';
 
 /** Journal lifecycle and admission shared by tools and separately configured model connectors. */
 export class RuntimeSession {
@@ -45,6 +31,11 @@ export class RuntimeSession {
   private modelWork?: Promise<unknown>;
   private modelHost?: RuntimeModelHost;
   private hostModelWork?: Promise<JournalRecord>;
+  private ownerTurns?: OwnerModelTurns;
+  private readonly failures = new RuntimeFailures();
+  onBackgroundError(listener: (error: Error) => void) {
+    this.failures.subscribe(listener);
+  }
   get modelAdmissionRevoked(): boolean {
     return (
       this.ended ||
@@ -123,9 +114,21 @@ export class RuntimeSession {
           ]);
       }
       const session = new RuntimeSession(journal);
+      await recoverModelTurns(journal);
       session.modelHost = model;
       session.tools = await ToolCoordinator.create(journal, extensions, verification);
       session.context = await RuntimeContext.create(journal);
+      if (model?.input)
+        session.ownerTurns = new OwnerModelTurns(
+          session,
+          model,
+          () => {
+            session.tools?.resume();
+            if (session.modelAbort.signal.aborted) session.modelAbort = new AbortController();
+            return session.modelAbort.signal;
+          },
+          (error) => session.failures.publish(error),
+        );
       return session;
     } catch (error) {
       await journal.close();
@@ -134,14 +137,15 @@ export class RuntimeSession {
   }
 
   execute(command: RuntimeCommand): Promise<JournalRecord> {
+    this.failures.requireHealthy();
     if (!/^[a-zA-Z0-9_-]{1,160}$/.test(command.id))
-      return Promise.reject(new Error('Invalid command identity'));
+      return Promise.reject(new RuntimeCommandRejected('Invalid command identity'));
     const hash = createHash('sha256').update(JSON.stringify(command.action)).digest('hex');
     const previous = this.inFlight.get(command.id);
     if (previous)
       return previous.hash === hash
         ? previous.work
-        : Promise.reject(new Error('Command identity reused for different input'));
+        : Promise.reject(new RuntimeCommandRejected('Command identity reused for different input'));
     const work = this.dispatch(command).finally(() => this.inFlight.delete(command.id));
     this.inFlight.set(command.id, { hash, work });
     return work;
@@ -167,7 +171,8 @@ export class RuntimeSession {
   private dispatch(command: RuntimeCommand): Promise<JournalRecord> {
     if (command.action.type === 'modelTurn') {
       if (this.ended) return Promise.reject(new Error('Runtime closed'));
-      if (this.hostModelWork) return busyHostModelTurn(this, command.id, command.action);
+      if (this.hostModelWork || this.ownerTurns?.work)
+        return busyHostModelTurn(this, command.id, command.action);
       const work = runHostModelTurn(this, this.modelHost, command.id, command.action).finally(
         () => {
           if (this.hostModelWork === work) this.hostModelWork = undefined;
@@ -193,7 +198,8 @@ export class RuntimeSession {
     const action = command.action;
     const work = this.queue.then(async () => {
       if (this.ended) throw new Error('Runtime closed');
-      if (!/^[a-zA-Z0-9_-]{1,160}$/.test(command.id)) throw new Error('Invalid command identity');
+      if (!/^[a-zA-Z0-9_-]{1,160}$/.test(command.id))
+        throw new RuntimeCommandRejected('Invalid command identity');
       if (action.type === 'respond') {
         const interaction = this.journal.state.interactions[action.interactionId];
         if (
@@ -207,17 +213,27 @@ export class RuntimeSession {
       const previous = this.journal.find(id);
       if (previous) {
         if (previous.requestHash !== hash)
-          throw new Error('Command identity reused for different input');
+          throw new RuntimeCommandRejected('Command identity reused for different input');
         return previous;
       }
       let facts: import('./model.ts').RuntimeFact[];
       let result: import('./model.ts').CommandResult;
       try {
+        if ((action.type === 'send' || action.type === 'steer') && this.ownerTurns) {
+          if (this.hostModelWork) throw new Error('A native model turn is already active');
+          return await this.ownerTurns.accept(command);
+        }
         if (action.type === 'interrupt' || action.type === 'close') {
+          // An earlier queued input may have resumed after dispatch requested cancellation.
+          this.modelAbort.abort();
+          this.tools?.cancel();
           if (action.type === 'close') await this.tools?.close();
           else await this.tools?.interrupt();
-          await Promise.allSettled([this.modelWork, this.hostModelWork]);
-        } else if (this.modelWork && action.type !== 'respond')
+          await Promise.allSettled([this.modelWork, this.hostModelWork, this.ownerTurns?.work]);
+        } else if (
+          (this.modelWork || this.hostModelWork || this.ownerTurns?.work) &&
+          action.type !== 'respond'
+        )
           throw new Error('An active model turn prevents this context change');
         if (action.type === 'setRoute') validateRoute(action.route);
         if ((action.type === 'compact' || action.type === 'refreshContext') && this.context) {
@@ -269,7 +285,7 @@ export class RuntimeSession {
     this.ended = true;
     this.modelAbort.abort();
     await this.tools?.close();
-    await Promise.allSettled([this.modelWork, this.hostModelWork]);
+    await Promise.allSettled([this.modelWork, this.hostModelWork, this.ownerTurns?.work]);
     await this.queue;
     await this.journal.close();
   }

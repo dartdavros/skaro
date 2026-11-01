@@ -32,6 +32,13 @@ export class ModelClient {
     return {
       ...structuredClone(this.binding),
       signal: this.lifetime.signal,
+      input: this.binding.policy.input && {
+        revision: this.binding.policy.input.revision,
+        prepare: async (input, signal) =>
+          this.rpc.call('prepare-input', input.commandId, signal) as Promise<
+            import('@skaro/timeline').RuntimePreparedModelTurn
+          >,
+      },
       toolAdmission: tools && {
         ...tools,
         ...(tools.selectChatTools

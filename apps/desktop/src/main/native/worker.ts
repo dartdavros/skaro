@@ -152,7 +152,11 @@ port.on(
         if (!session) return;
       }
       if (!session) throw new Error('The native session is not ready');
-      if (request.method === 'invokeTool' || request.method === 'runModelTurn') {
+      if (
+        request.method === 'invokeTool' ||
+        request.method === 'runModelTurn' ||
+        request.method === 'deliverInput'
+      ) {
         const method = session[request.method as keyof typeof session];
         if (typeof method !== 'function')
           throw new Error('This session does not expose builtin tools');

@@ -15,6 +15,7 @@ if (!(
       '--native-operations',
       '--native-lifetime',
       '--native-model-preflight',
+      '--native-owner-input',
       '--native-admissions',
       '--native-admission-recovery',
       '--task-admission',

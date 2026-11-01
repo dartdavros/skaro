@@ -20,17 +20,24 @@ export async function nativePlanHost(
   owner: RuntimeProcessIdentity,
   connector: OpenRouterConnector,
   approvalHash?: string,
+  ownerInput = false,
 ) {
   const target = await catPilotVerificationTarget(
     services,
     owner,
-    'native-model-cat-pilot',
+    ownerInput ? 'native-owner-cat-pilot' : 'native-model-cat-pilot',
     'verification-model-plan-no-active-run',
   );
   const config = nativeProbeConfig(
     directory,
     target.context.root,
-    approvalHash ? 'session-nativeplan' : 'native-model-preflight',
+    ownerInput
+      ? approvalHash
+        ? 'session-nativeinput'
+        : 'native-input-preflight'
+      : approvalHash
+        ? 'session-nativeplan'
+        : 'native-model-preflight',
     true,
   );
   config.sessionId = target.verification.admission.sessionId;
@@ -47,6 +54,9 @@ export async function nativePlanHost(
   config.model = {
     scope: target.verification.scope,
     protocol: 'chat',
+    ...(ownerInput
+      ? { input: { revision: planPayloadHash({ input: 'reviewed-plan-v1', payload }) } }
+      : {}),
     tools: {
       revision: tools.revision,
       selectChatTools: true,
@@ -56,6 +66,7 @@ export async function nativePlanHost(
   };
   const previous = await readRuntimeJournal(config.journalPath, config.sessionId, true);
   let requests = 0;
+  let preparations = 0;
   const allowed = async (request: ChatRequest, signal: AbortSignal) => {
     assert(approvalHash, 'No reviewed payload admission was provided');
     assert.equal(planPayloadHash(request.route), planPayloadHash(payload.request.route));
@@ -97,6 +108,18 @@ export async function nativePlanHost(
     baseHash: previous.records.at(-1)?.hash ?? '',
     policy: config.model,
     toolAdmission: tools,
+    input: ownerInput
+      ? {
+          revision: config.model.input!.revision,
+          prepare: async (input, signal) => {
+            preparations++;
+            assert.deepEqual(input.input, { text: payload.request.messages[0]!.content });
+            await allowed(payload.request, signal);
+            signal.throwIfAborted();
+            return { request: { kind: 'chat', value: payload.request }, maxSteps: 5 };
+          },
+        }
+      : undefined,
     reserve: async (id, request, signal) => {
       assert.equal(request.kind, 'chat');
       if (request.kind !== 'chat') throw new Error('The reviewed plan uses the chat protocol');
@@ -113,5 +136,12 @@ export async function nativePlanHost(
       return { kind: 'chat', value: await connector.complete(request.value, signal, onText) };
     },
   };
-  return { target, config, model, payload, requestCount: () => requests };
+  return {
+    target,
+    config,
+    model,
+    payload,
+    requestCount: () => requests,
+    preparationCount: () => preparations,
+  };
 }

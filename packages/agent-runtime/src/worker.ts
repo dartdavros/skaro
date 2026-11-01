@@ -5,6 +5,7 @@ import { ExtensionClient } from './extensions/ipc-client.ts';
 import { requireExtensionBinding } from './extensions/ipc-binding.ts';
 import { ModelClient } from './models/ipc-client.ts';
 import { requireModelBinding } from './models/host-binding.ts';
+import { RuntimeCommandRejected } from './command-error.ts';
 
 let session: RuntimeSession | undefined;
 let startup: Promise<void> | undefined;
@@ -56,6 +57,7 @@ process.on('message', (message: ParentMessage) => {
         verification?.host(),
         model?.host(),
       );
+      session.onBackgroundError(fatal);
       post({ type: 'ready', records: session.journal.records });
       session.journal.subscribe((record) => post({ type: 'record', record }));
     })();
@@ -71,7 +73,11 @@ process.on('message', (message: ParentMessage) => {
       await session.dispose();
       if (process.connected) process.disconnect();
     }
-  })().catch(fatal);
+  })().catch((error: unknown) => {
+    if (error instanceof RuntimeCommandRejected)
+      post({ type: 'reply', id: message.command.id, result: { error: error.message } });
+    else fatal(error);
+  });
 });
 process.on('disconnect', () => {
   verification?.close();

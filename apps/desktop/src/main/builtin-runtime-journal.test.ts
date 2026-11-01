@@ -10,6 +10,7 @@ import {
   type RuntimeStart,
 } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
+import { ModelTurnTimeline } from '../../../../packages/agent-runtime/src/models/turn-timeline';
 
 const directories: string[] = [];
 const sessions: RuntimeSession[] = [];
@@ -18,6 +19,31 @@ afterEach(async () => {
   for (const directory of directories.splice(0))
     await rm(directory, { recursive: true, force: true });
 });
+
+it('recovers a committed unfinished model lifecycle once without preparing or dispatching a request', async () => {
+  const { session, config, owner } = await open();
+  const lifecycle = new ModelTurnTimeline(session.journal, 'unfinished', 'a'.repeat(64));
+  await lifecycle.begin();
+  const before = structuredClone(session.journal.records);
+  await session.dispose();
+  const resumed = await RuntimeSession.open(config, owner);
+  sessions.push(resumed);
+  expect(resumed.journal.records.slice(0, before.length)).toEqual(before);
+  const terminal = resumed.journal.find('cmd:unfinished');
+  expect(terminal?.result.error).toContain('explicit new input');
+  expect(terminal?.facts).toEqual([
+    {
+      type: 'timeline',
+      event: { t: 'turn.completed', turnId: lifecycle.turnId, outcome: 'interrupted' },
+    },
+  ]);
+  expect(resumed.journal.state.effects).toEqual({});
+  const recovered = structuredClone(resumed.journal.records);
+  await resumed.dispose();
+  const reopened = await RuntimeSession.open(config, owner);
+  sessions.push(reopened);
+  expect(reopened.journal.records).toEqual(recovered);
+}, 30_000);
 
 it('revokes active model admission before interrupt returns and rejects concurrent context changes', async () => {
   const { session } = await open();

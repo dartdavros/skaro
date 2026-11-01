@@ -10,7 +10,7 @@ import { liveProxyEnvironment } from '../src/main/credentials/live-proxy.ts';
 const require = createRequire(import.meta.url);
 const temporaryRoot = resolve(tmpdir());
 const directory = await mkdtemp(join(temporaryRoot, 'skaro-openrouter-build-'));
-const plan = ['--plan', '--native-plan'].includes(process.argv[4]);
+const plan = ['--plan', '--native-plan', '--native-input-plan'].includes(process.argv[4]);
 const buildDirectory = plan ? resolve('apps/desktop/out/main') : directory;
 const entry = plan ? 'verify-model-plan.cjs' : 'live.cjs';
 try {
@@ -69,7 +69,7 @@ try {
       );
       const timeout = setTimeout(
         () => child.kill(),
-        long ? 1_800_000 : process.argv[4] === '--native-plan' ? 600_000 : 240_000,
+        long ? 1_800_000 : process.argv[4]?.startsWith('--native-') ? 600_000 : 240_000,
       );
       child.on('message', (message) => {
         console.log(JSON.stringify(message));

@@ -12,7 +12,8 @@ import type {
 } from '@skaro/timeline';
 import type { OwnedProcess } from '../process-identity';
 
-export type SessionMethod = Exclude<keyof AgentSession, 'events'> | 'invokeTool' | 'runModelTurn';
+export type SessionMethod =
+  Exclude<keyof AgentSession, 'events'> | 'invokeTool' | 'runModelTurn' | 'deliverInput';
 interface ManagedNativeConfig {
   agent: import('@skaro/agents').AgentId;
   binary: string;
