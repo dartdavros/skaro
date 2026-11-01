@@ -39,6 +39,9 @@ addMessages('ru', {
   'models.catalogError': 'Каталог недоступен. ID модели можно указать вручную.',
   'models.modelMissing': 'Сохранённый ID отсутствует в текущем каталоге.',
   'models.parameters': 'Параметры запроса (JSON)',
+  'models.serviceDefault': 'По умолчанию сервиса',
+  'models.effortUnknown': 'Уровни не объявлены сервисом',
+  'models.effortMissing': 'Указанный уровень не объявлен для этой модели.',
   'models.parametersError': 'Укажите объект JSON с параметрами модели.',
   'models.removeConnection': 'Удалить подключение?',
   'models.removeConnectionText':
@@ -85,6 +88,9 @@ addMessages('en', {
   'models.catalogError': 'Catalog unavailable. You can enter the exact model ID manually.',
   'models.modelMissing': 'The saved ID is absent from the current catalog.',
   'models.parameters': 'Request parameters (JSON)',
+  'models.serviceDefault': 'Service default',
+  'models.effortUnknown': 'No advertised effort levels',
+  'models.effortMissing': 'The specified effort is not advertised for this model.',
   'models.parametersError': 'Enter a JSON object with model parameters.',
   'models.removeConnection': 'Delete connection?',
   'models.removeConnectionText':

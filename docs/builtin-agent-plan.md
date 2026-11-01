@@ -65,6 +65,9 @@ Configured host требует отдельную проверку актуал�
 Добавлена [подготовка owner input из primary context](builtin-agent-context-input.md):
 настоящий compact и свежий ввод во втором native-поколении сохраняют epoch,
 точные owner statements и history refs; reservation/POST остаются запрещены.
+Приняты [каталоговые уровни усилия](builtin-agent-model-effort.md) в прежней форме
+Route: точные metadata, JSON sync и явный отказ несовместимому уровню проверены
+на Cat-pilot; provider reasoning/расход и полная BA-8 ещё не приняты.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не

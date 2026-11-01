@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { validateModelEndpoint } from '@skaro/timeline';
 import type { ChatRequest } from './chat-types.ts';
+import { OPENROUTER_EFFORTS } from './openrouter-effort.ts';
 
 const parameters = z.strictObject({
   max_tokens: z.number().int().min(1).max(8192).default(1024),
   temperature: z.number().min(0).max(2).optional(),
   top_p: z.number().min(0).max(1).optional(),
-  reasoning_effort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).optional(),
+  reasoning_effort: z.enum(OPENROUTER_EFFORTS).optional(),
 });
 export function openRouterParameters(value: unknown) {
   const parsed = parameters.safeParse(value);

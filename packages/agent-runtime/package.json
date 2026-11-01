@@ -8,7 +8,8 @@
     "./process-identity": "./src/process-identity.ts",
     "./worker": "./src/worker.ts",
     "./shell": "./src/tools/shell.ts",
-    "./environment": "./src/tools/command-env.ts"
+    "./environment": "./src/tools/command-env.ts",
+    "./openrouter-effort": "./src/models/openrouter-effort.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."

@@ -2,17 +2,18 @@
   import { Button, Select, TextField, t } from '@skaro/ui';
   import type { Connection } from '@skaro/timeline';
   import LoadingIndicator from '../../LoadingIndicator.svelte';
-  import { createModelCatalogController } from './catalog-controller.svelte';
+  import type { createModelCatalogController } from './catalog-controller.svelte';
   let {
     connection,
     value = $bindable(''),
     disabled = false,
+    catalog,
   }: {
     connection: Connection | undefined;
     value: string;
     disabled?: boolean;
+    catalog: ReturnType<typeof createModelCatalogController>;
   } = $props();
-  const catalog = createModelCatalogController(() => connection);
   const models = $derived(catalog.snapshot?.models ?? []);
   const missing = $derived(
     !!value && !!catalog.snapshot && !models.some((entry) => entry.id === value),

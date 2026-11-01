@@ -24,6 +24,7 @@ const metadata: OpenRouterCatalogEntry = {
   family: null,
   supportedParameters: ['max_tokens', 'temperature', 'reasoning'],
   pricing: { prompt: null, completion: null, request: null },
+  reasoning: { supportedEfforts: ['low'] },
   capabilities: {
     tools: 'unknown',
     images: 'unknown',
@@ -62,6 +63,27 @@ it('checks formatter defaults, parameter mapping and token ceilings without sile
   ).not.toThrow();
   const reasoning = { ...route, parameters: { reasoning_effort: 'low' } };
   expect(() => requireOpenRouterCatalogRoute(reasoning, [metadata])).not.toThrow();
+  expect(() =>
+    requireOpenRouterCatalogRoute({ ...route, parameters: { reasoning_effort: 'max' } }, [
+      {
+        ...metadata,
+        reasoning: { supportedEfforts: null },
+      },
+    ]),
+  ).not.toThrow();
+  expect(() =>
+    requireOpenRouterCatalogRoute({ ...route, parameters: { reasoning_effort: 'high' } }, [
+      metadata,
+    ]),
+  ).toThrow('effort is not advertised');
+  expect(() =>
+    requireOpenRouterCatalogRoute({ ...route, parameters: { reasoning_effort: 'none' } }, [
+      {
+        ...metadata,
+        reasoning: { supportedEfforts: null, mandatory: true },
+      },
+    ]),
+  ).toThrow('effort is not advertised');
   for (const selected of [route, { ...route, parameters: { temperature: 0 } }, reasoning])
     expect(() =>
       requireOpenRouterCatalogRoute(selected, [{ ...metadata, supportedParameters: [] }]),

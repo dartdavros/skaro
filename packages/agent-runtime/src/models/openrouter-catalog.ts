@@ -17,6 +17,16 @@ const entry = z.object({
     .optional(),
   supported_parameters: z.array(text).max(256).optional(),
   pricing: z.record(z.string(), z.unknown()).nullable().optional(),
+  reasoning: z
+    .object({
+      supported_efforts: z.array(text).max(32).nullable().optional(),
+      default_effort: text.nullable().optional(),
+      default_enabled: z.boolean().nullable().optional(),
+      mandatory: z.boolean().nullable().optional(),
+      supports_max_tokens: z.boolean().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export interface OpenRouterCatalogEntry extends Model {
@@ -24,6 +34,14 @@ export interface OpenRouterCatalogEntry extends Model {
   supportedParameters: string[];
   /** Service-advertised USD per token/request; null is unknown, never a free price. */
   pricing: { prompt: string | null; completion: string | null; request: string | null };
+  reasoning?: {
+    /** Missing means no advertised effort selector; null means all gateway efforts. */
+    supportedEfforts?: string[] | null;
+    defaultEffort?: string | null;
+    defaultEnabled?: boolean | null;
+    mandatory?: boolean | null;
+    supportsMaxTokens?: boolean | null;
+  };
 }
 
 /** Only documented catalogue claims. No manufacturer inference or account/profile verification. */
@@ -63,12 +81,35 @@ export function parseOpenRouterCatalog(
         completion: price(item.pricing?.completion),
         request: price(item.pricing?.request),
       },
+      ...(item.reasoning
+        ? {
+            reasoning: {
+              ...(item.reasoning.supported_efforts !== undefined
+                ? { supportedEfforts: item.reasoning.supported_efforts }
+                : {}),
+              ...(item.reasoning.default_effort !== undefined
+                ? { defaultEffort: item.reasoning.default_effort }
+                : {}),
+              ...(item.reasoning.default_enabled !== undefined
+                ? { defaultEnabled: item.reasoning.default_enabled }
+                : {}),
+              ...(item.reasoning.mandatory !== undefined
+                ? { mandatory: item.reasoning.mandatory }
+                : {}),
+              ...(item.reasoning.supports_max_tokens !== undefined
+                ? { supportsMaxTokens: item.reasoning.supports_max_tokens }
+                : {}),
+            },
+          }
+        : {}),
       capabilities: {
         tools: supports('tools'),
         images: item.architecture?.input_modalities?.includes('image') ? 'supported' : 'unknown',
-        reasoning: parameters.some((name) => ['reasoning', 'reasoning_effort'].includes(name))
-          ? 'supported'
-          : 'unknown',
+        reasoning:
+          item.reasoning ||
+          parameters.some((name) => ['reasoning', 'reasoning_effort'].includes(name))
+            ? 'supported'
+            : 'unknown',
         parallelTools: supports('parallel_tool_calls'),
         cache: 'unknown',
         continuation: 'unknown',

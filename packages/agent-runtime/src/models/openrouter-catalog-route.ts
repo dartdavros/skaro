@@ -2,6 +2,7 @@ import type { RouteSnapshot, RuntimeModelRequest } from '@skaro/timeline';
 import { isDeepStrictEqual } from 'node:util';
 import type { OpenRouterCatalogEntry } from './openrouter-catalog.ts';
 import { openRouterParameters } from './openrouter-request.ts';
+import { openRouterEfforts } from './openrouter-effort.ts';
 
 /** Advertised metadata check only; never upgrades catalog evidence to verified readiness. */
 export function requireOpenRouterCatalogRoute(
@@ -31,10 +32,18 @@ export function requireOpenRouterCatalogRoute(
   };
   for (const name of Object.keys(parameters)) {
     const names = aliases[name] ?? [name];
-    if (!names.some((value) => model.supportedParameters.includes(value)))
+    if (
+      !names.some((value) => model.supportedParameters.includes(value)) &&
+      !(name === 'reasoning_effort' && model.reasoning)
+    )
       throw new Error(`Model parameter is not advertised in catalog: ${name}`);
   }
   const { outputTokens, contextTokens } = model.capabilities;
+  if (
+    parameters.reasoning_effort !== undefined &&
+    !openRouterEfforts(model).includes(parameters.reasoning_effort)
+  )
+    throw new Error('Model reasoning effort is not advertised in catalog');
   if (
     (outputTokens !== null && parameters.max_tokens > outputTokens) ||
     (contextTokens !== null && parameters.max_tokens > contextTokens)

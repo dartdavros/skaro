@@ -10,6 +10,7 @@ import { modelCatalogHandlers } from '../model-catalog-handlers';
 import { catPilotProjectId } from './cat-pilot-state';
 import { liveProxyEnvironment } from '../credentials/live-proxy';
 import { requireOpenRouterCatalogRoute } from '@skaro/agent-runtime';
+import { openRouterEfforts } from '@skaro/agent-runtime/openrouter-effort';
 
 // Genuine public metadata GET through the owner VPN. No vault/project services/model request.
 app.setName('SkaroCatalogVerification');
@@ -61,6 +62,9 @@ void app.whenReady().then(async () => {
     assert.equal(target.manufacturer, null);
     assert.equal(target.family, null);
     assert(first.models.every((entry) => entry.connectionId === connection.id));
+    const effortModels = first.models.filter((model) => openRouterEfforts(model).length > 0);
+    for (const model of effortModels)
+      if (model.reasoning?.mandatory === true) assert(!openRouterEfforts(model).includes('none'));
     assert.equal(new Set(first.models.map((entry) => entry.id)).size, first.models.length);
     assert.equal(requests, 1);
     const selected = before.routes.find(
@@ -123,6 +127,10 @@ void app.whenReady().then(async () => {
       proxy: 'http://127.0.0.1:10809',
       directFallback: false,
       catalogModels: first.models.length,
+      advertisedEffortModels: effortModels.length,
+      effortMetadataSample: effortModels
+        .slice(0, 3)
+        .map((model) => ({ id: model.id, levels: openRouterEfforts(model) })),
       dedupAndCache: true,
       exactConnectionScope: true,
       capabilityEvidence: 'catalog',
