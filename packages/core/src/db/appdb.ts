@@ -19,7 +19,7 @@ import type {
 import type { TaskRuntime } from '../status.ts';
 import { DbProjects } from './projects.ts';
 import { DbSettings } from './settings.ts';
-import { DbRuntime } from './runtime.ts';
+import { DbRuntime, type StaleTaskRuntime } from './runtime.ts';
 import { DbRuns } from './runs.ts';
 import { DbChats } from './chats.ts';
 import { DbMerges } from './merges.ts';
@@ -171,8 +171,8 @@ export class AppDb extends DbTable {
    * After a restart no agent process is alive: running and queued tasks become idle.
    * Waiting tasks keep their state — their open interactions are shown again (agent-output.md, 6).
    */
-  resetStaleRuntime(): { projectId: string; taskId: string; state: TaskRuntime }[] {
-    return this.runtime.resetStaleRuntime();
+  resetStaleRuntime(projectId?: string): StaleTaskRuntime[] {
+    return this.runtime.resetStaleRuntime(projectId);
   }
 
   // ── runs ─────────────────────────────────────────────────────────────────

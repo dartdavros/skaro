@@ -82,7 +82,10 @@ if (!locked) {
     trace('app ready');
     const dataDir = app.getPath('userData');
     trace('opening app state');
-    const appState = new AppState(join(dataDir, 'skaro.db'));
+    const appState = new AppState(
+      join(dataDir, 'skaro.db'),
+      process.env.SKARO_VERIFICATION_PROJECT,
+    );
     trace('app state ready');
     state = appState;
     registerProjectLogos(appState);

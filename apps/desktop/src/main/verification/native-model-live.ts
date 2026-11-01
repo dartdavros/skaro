@@ -15,7 +15,7 @@ import type {
   TimelineEvent,
 } from '@skaro/timeline';
 import { operationTimeout } from '@skaro/timeline';
-import { AppState } from '../state';
+import { catPilotState } from './cat-pilot-state';
 import { createServices, type Services } from '../app-services';
 import { closeBackground } from '../background/client';
 import { c4ReviewKey } from '../c4-review';
@@ -50,7 +50,7 @@ export async function verifyNativeModelPlan(input: {
     await realpath(input.directory),
     await realpath(join(data, 'verification/openrouter-ba4')),
   );
-  const state = new AppState(join(data, 'skaro.db'));
+  const state = catPilotState(data);
   let services: Services | undefined;
   let session: AgentSession | undefined;
   let drain: Promise<void> | undefined;

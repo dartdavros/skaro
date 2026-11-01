@@ -17,6 +17,7 @@ if (!(
       '--native-model-preflight',
       '--native-owner-input',
       '--native-owner-steer',
+      '--project-scope',
       '--native-admissions',
       '--native-admission-recovery',
       '--task-admission',

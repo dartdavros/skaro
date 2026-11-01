@@ -11,7 +11,7 @@ import {
   type OpenRouterConnector,
 } from '@skaro/agent-runtime';
 import type { RuntimeProcessIdentity } from '@skaro/timeline';
-import { AppState } from '../state';
+import { catPilotState } from './cat-pilot-state';
 import { createServices, type Services } from '../app-services';
 import { closeBackground } from '../background/client';
 import { longContextConfig } from '../credentials/long-context-config';
@@ -50,7 +50,7 @@ export async function verifyPreparedModelPlan(input: {
     await realpath(input.directory),
     await realpath(join(data, 'verification/openrouter-ba4')),
   );
-  const state = new AppState(join(data, 'skaro.db'));
+  const state = catPilotState(data);
   let services: Services | undefined;
   let session: RuntimeSession | undefined;
   try {

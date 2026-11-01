@@ -122,6 +122,7 @@ export class TaskRunEngine {
     });
     this.environments = new TaskEnvironments({
       db: deps.db,
+      projectScope: deps.db.shell.projectScope,
       dataDir: deps.dataDir,
       projects: deps.projects,
       busy: () => [

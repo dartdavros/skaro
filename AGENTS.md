@@ -34,6 +34,13 @@
   не приёмкой текущих изменений на Cat-pilot.
   Unit-тесты и сборка самого Skaro выполняются в его репозитории.
 
+- По уточнению владельца от 01.11.2026 проверочный запуск Skaro должен
+  исключать Chatballs также из восстановления вкладок, индексации, workflow
+  recovery и Docker cleanup. Live drivers используют `catPilotState` до
+  `createServices`; Electron UI проверяется с `SKARO_VERIFICATION_PROJECT`
+  зарегистрированного Cat-pilot. Обычный unscoped preview для приёмки запрещён.
+  См. [границы проверочного запуска](docs/builtin-agent-project-scope.md).
+
 - Использовать штатный контур проекта: настоящий backend, compose/dev-скрипты
   и сервисы из документации. Если инструмент недоступен, проверить Docker,
   когда в проекте предусмотрены его файлы.

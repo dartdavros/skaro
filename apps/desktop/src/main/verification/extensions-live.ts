@@ -2,7 +2,7 @@ import { app } from 'electron';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { AppState } from '../state';
+import type { AppState } from '../state';
 import { createServices, type Services } from '../app-services';
 import { closeBackground } from '../background/client';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
@@ -22,6 +22,8 @@ import { verifyNativeAdmissionRecovery } from './native-admission-recovery';
 import { verifyTaskAdmission } from './task-admission';
 import { verifyNativeOwnerInput } from './native-owner-input';
 import { verifyNativeOwnerSteer } from './native-owner-steer';
+import { catPilotState } from './cat-pilot-state';
+import { verifyProjectScope } from './project-scope-proof';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -29,6 +31,7 @@ void app.whenReady().then(async () => {
   let services: Services | undefined;
   let code = 1;
   let stage = 'single-instance';
+  const observedProjects = new Set<string>();
   try {
     if (!app.requestSingleInstanceLock()) throw new Error('Skaro is already running');
     const data = app.getPath('userData');
@@ -51,9 +54,24 @@ void app.whenReady().then(async () => {
       };
     } else {
       stage = 'real-services';
-      state = new AppState(join(data, 'skaro.db'));
-      services = await createServices(state, data, () => undefined);
-      if (process.argv[2] === '--native-verification') {
+      state = catPilotState(data);
+      services = await createServices(state, data, (_event, payload) => {
+        if (
+          payload &&
+          typeof payload === 'object' &&
+          'projectId' in payload &&
+          typeof payload.projectId === 'string'
+        )
+          observedProjects.add(payload.projectId);
+      });
+      const projectScope = verifyProjectScope(services);
+      if (process.argv[2] === '--project-scope') {
+        stage = 'project-scope';
+        await services.graph.status(projectScope.projectId);
+        if ([...observedProjects].some((id) => id !== projectScope.projectId))
+          throw new Error('Foreign project event during scoped verification');
+        proof = { projectScope, observedProjectIds: [...observedProjects] };
+      } else if (process.argv[2] === '--native-verification') {
         stage = 'native-verification';
         proof = { native: await verifyNativeVerification(services, directory, owner) };
       } else if (process.argv[2] === '--native-operations') {

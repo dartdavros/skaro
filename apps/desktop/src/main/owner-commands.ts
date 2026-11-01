@@ -70,6 +70,7 @@ export class OwnerCommands {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     current = this;
     for (const command of this.db.commands.pending()) {
+      if (this.db.shell.projectScope && command.args[0] !== this.db.shell.projectScope) continue;
       if (command.state === 'delivering') {
         void this.reconcile(command);
       } else this.schedule(command);

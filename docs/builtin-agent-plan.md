@@ -36,6 +36,8 @@ send → durable input → прежний model loop, без повторной 
 атомарные ревизии и общие connector validators, без включения UI или model admission.
 Добавлен [configured model host](builtin-agent-configured-model-host.md): точные
 route/credential reference, отзыв устаревшего lease; positive configured runtime открыт.
+Исправлена [граница проверочного запуска](builtin-agent-project-scope.md): Cat-pilot
+выбирается до startup/recovery/watchers и Docker cleanup, не только внутри сценария.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.
