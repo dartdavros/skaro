@@ -1,6 +1,11 @@
 export type * from './model.ts';
 export { RuntimeSession } from './session.ts';
 export { RuntimeJournal } from './journal.ts';
+export {
+  admissionState as nativeAdmissionState,
+  processIdentity as nativeProcessIdentity,
+} from './admissions/schema.ts';
+export type { AdmissionState as NativeAdmissionState } from './admissions/schema.ts';
 export { readRuntimeJournal } from './journal-reader.ts';
 export { RuntimeHostServer } from './host-ports.ts';
 export { ModelClient } from './models/ipc-client.ts';

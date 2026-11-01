@@ -17,6 +17,7 @@ import { verifyNativeVerification } from './native-verification';
 import { verifyNativeOperations } from './native-operations';
 import { verifyNativeLifetime } from './native-lifetime';
 import { verifyNativeModelPreflight } from './native-model-preflight';
+import { verifyNativeAdmissions } from './native-admissions';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -60,6 +61,9 @@ void app.whenReady().then(async () => {
       } else if (process.argv[2] === '--native-model-preflight') {
         stage = 'native-model-preflight';
         proof = { model: await verifyNativeModelPreflight(services, data, directory, owner) };
+      } else if (process.argv[2] === '--native-admissions') {
+        stage = 'native-admissions';
+        proof = { admissions: await verifyNativeAdmissions(services, directory, owner) };
       } else {
         stage = 'http-and-internal';
         const http = await verifyHttpExtensions(services, directory, owner);

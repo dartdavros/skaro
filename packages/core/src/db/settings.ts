@@ -22,4 +22,21 @@ export class DbSettings extends DbTable {
       )
       .run(key, JSON.stringify(value));
   }
+
+  /** One SQLite mutation; undefined expected means absent, including under another writer. */
+  compareAndSet(key: string, expected: unknown, value: unknown): boolean {
+    const next = JSON.stringify(value);
+    if (next === undefined) throw new Error('A setting must have a JSON value');
+    if (expected === undefined)
+      return (
+        this.db
+          .prepare('INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO NOTHING')
+          .run(key, next).changes === 1
+      );
+    return (
+      this.db
+        .prepare('UPDATE settings SET value=? WHERE key=? AND value=?')
+        .run(next, key, JSON.stringify(expected)).changes === 1
+    );
+  }
 }

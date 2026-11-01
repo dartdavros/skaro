@@ -15,6 +15,7 @@ if (!(
       '--native-operations',
       '--native-lifetime',
       '--native-model-preflight',
+      '--native-admissions',
     ].includes(process.argv[2])) ||
   (process.argv.length === 4 && process.argv[2] === '--browser')
 ))

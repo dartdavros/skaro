@@ -151,3 +151,4 @@ Unknown reservations не обнуляются; ledger после этого э�
 
 Для direct OpenAI/Anthropic/DeepSeek живые API по-прежнему отложены владельцем.
 BA-8 требует отдельного утверждённого дизайна; новые UI состояния не придуманы.
+Следующий host boundary — [durable process admissions](builtin-agent-native-admissions.md).

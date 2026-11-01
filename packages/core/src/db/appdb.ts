@@ -32,7 +32,7 @@ export class AppDb extends DbTable {
   readonly shell: DbProjectShell;
   readonly filePath: string;
   private readonly projects: DbProjects;
-  private readonly settings: DbSettings;
+  readonly settings: DbSettings;
   private readonly runtime: DbRuntime;
   private readonly runs: DbRuns;
   private readonly chats: DbChats;
