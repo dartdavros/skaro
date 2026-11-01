@@ -22,6 +22,7 @@ import { livePolicy } from './live-policy';
 import { verifyLiveContext } from './context-live';
 import { verifyLongContext } from './long-context-live';
 import { verifyPreparedModelPlan } from '../verification/model-plan-live';
+import { liveFailure } from './live-diagnostics';
 
 // Real-service acceptance entry; no HTTP server, fake API, renderer, or plaintext key input.
 app.setName('Skaro');
@@ -35,7 +36,9 @@ void app.whenReady().then(async () => {
     assert(reference.id && Number.isSafeInteger(reference.revision) && reference.revision > 0);
     const directory = join(app.getPath('userData'), 'verification/openrouter-ba4');
     await mkdir(directory, { recursive: true, mode: 0o700 });
+    stage = 'credential-store';
     vault = new ModelCredentialVault(join(app.getPath('userData'), 'credentials'));
+    stage = 'credential-owner';
     const birth = await processBirth(process.pid);
     assert(birth);
     const owner = { pid: process.pid, birth, platform: process.platform };
@@ -63,6 +66,7 @@ void app.whenReady().then(async () => {
       controller.signal,
     );
     const connector = new OpenRouterConnector(credentials, auth);
+    stage = 'credential-limits';
     const before = await connector.limits(controller.signal);
     process.send?.({ type: 'limits', before });
     if (process.argv[4] === '--plan') {
@@ -256,10 +260,10 @@ void app.whenReady().then(async () => {
     await vault.close();
     vault = undefined;
     process.send?.({ type: 'complete', directory, failures }, () => app.exit(failures ? 1 : 0));
-  } catch {
+  } catch (error) {
     controller.abort();
     await session?.dispose();
     await vault?.close();
-    process.send?.({ type: 'failed', stage }, () => app.exit(1));
+    process.send?.(liveFailure(stage, error), () => app.exit(1));
   }
 });

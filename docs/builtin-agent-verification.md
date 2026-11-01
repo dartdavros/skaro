@@ -5,7 +5,25 @@
 
 ## Продолжение BA-6, 01.11.2026
 
-Подготовлен ограниченный живой model-plan сценарий, но API не запускался.
+Владелец разрешил подготовленный Cat-pilot payload. Два настоящих запуска
+OpenRouter driver остановились до model POST: первый с прежним coarse stage
+credential, второй с уточнённым credential-limits. Vault binding metadata
+совпадает с сохранённым reference; ключ не выводился. Сам HTTP-статус /key
+не установлен: credential boundary скрывает исключение consumer. Независимый
+публичный GET https://openrouter.ai/api/v1/models без Authorization вернул
+HTTP 403, JSON `Access denied by security policy.` Поэтому доступ к штатному
+endpoint остаётся blocker; обходов, другого endpoint или fake API не было.
+Payload Cat-pilot не отправлен, новых model requests/расходов не добавлено.
+
+Driver получил точные credential-store/owner/limits этапы и безопасный failed
+envelope: только ограниченные name/code/status, без message/stack/cause.
+Два целевых unit-теста этого контракта прошли; они не подменяют API/окружение.
+Штатная сборка, TypeScript desktop main, ESLint/Prettier и повторная compile-only
+проверка полного live driver прошли. Исходники не превышают 300 строк. Ledger
+после отказов по-прежнему содержит 52 model requests и 284476060 nanoUSD
+с учётом reservations. Полный suite и новые model POST не запускались.
+
+Первоначальная подготовка ограниченного model-plan сценария выполнялась без API.
 Реальный локальный proof подготовки:
 `verification/extensions-990788b8-0105-4aba-9af8-9bbead070e8a/proof.json`.
 Payload: `model-plan-payload.json` в том же каталоге; semantic SHA256
@@ -13,8 +31,9 @@ Payload: `model-plan-payload.json` в том же каталоге; semantic SHA
 Локально проверены tool allowlist, отказ выполнению/положительным verdicts и
 точная проекция инспектора. Полный OpenRouter driver скомпилирован в prepare
 режиме без credential host/API; типы и lint прошли. Ранее согласованные payloads
-не включают эти критерии Cat-pilot, поэтому живая отправка ожидает решения
-владельца. Shared ledger прочитан без сети: 52 запроса, $0.28447606 включая
+не включали эти критерии Cat-pilot; на момент подготовки отправка ожидала решения
+владельца (последующее разрешение и сетевой blocker описаны выше). Shared ledger
+прочитан без сети: 52 запроса, $0.28447606 включая
 сохранённые reservations; лимит $1 не изменён. Новые model requests этого блока: 0.
 Финальная штатная сборка прошла; изменённые исходники не превышают 300 строк,
 Prettier и diff проверены. Живой OpenRouter --plan до разрешения не запускался;
