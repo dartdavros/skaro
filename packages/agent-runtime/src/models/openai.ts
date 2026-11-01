@@ -17,9 +17,12 @@ const parameters = z.strictObject({
   ...sampling,
   reasoning_effort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).optional(),
 });
+export function openAIParameters(value: unknown) {
+  return modelParameters(parameters, value);
+}
 export function openAIResponsesBody(request: NativeRequest): Record<string, unknown> {
   requireDirectProfile(request.route, 'openai', 'openai.responses');
-  const { reasoning_effort, ...options } = modelParameters(parameters, request.route.parameters);
+  const { reasoning_effort, ...options } = openAIParameters(request.route.parameters);
   if (!request.input.length) throw new Error('Native model input is empty');
   return {
     model: request.route.modelId,

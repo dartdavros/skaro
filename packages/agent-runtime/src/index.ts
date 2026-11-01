@@ -38,6 +38,11 @@ export { ExtensionServer } from './extensions/ipc-host.ts';
 export { extensionBinding, requireExtensionBinding } from './extensions/ipc-binding.ts';
 export { bindSkaroOperations, prepareSkaroOperations } from './extensions/skaro.ts';
 export { appendChatOwnerInput } from './models/owner-chat.ts';
+export {
+  parseBuiltinModelChoices,
+  parseBuiltinModelConfiguration,
+} from './models/configuration-schema.ts';
+export type { BuiltinModelConfigurationState } from './models/configuration-schema.ts';
 export type * from './models/chat-types.ts';
 export type * from './models/connector-auth.ts';
 export type * from './models/native-types.ts';

@@ -1,6 +1,6 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, basename, dirname, resolve } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { RuntimeSession, appendChatOwnerInput } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
@@ -20,6 +20,11 @@ afterEach(async () => {
 
 async function boundary() {
   const directory = await mkdtemp(join(tmpdir(), 'skaro-owner-boundary-'));
+  if (
+    dirname(resolve(directory)) !== resolve(tmpdir()) ||
+    !basename(directory).startsWith('skaro-owner-boundary-')
+  )
+    throw new Error('Unexpected verification directory');
   directories.push(directory);
   const config = { ...longContextConfig(directory), context: undefined, tools: undefined };
   const session = await RuntimeSession.open(config, {

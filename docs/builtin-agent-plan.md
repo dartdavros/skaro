@@ -32,6 +32,8 @@ identity/session/handoff gates; положительная приёмка акт
 send → durable input → прежний model loop, без повторной доставки после restart.
 Добавлен [active steering boundary](builtin-agent-owner-steering.md): два input
 одного хода на native Cat-pilot; provider-приёмка steering ещё открыта.
+Добавлено [backend-хранилище Connection/Route](builtin-agent-model-configuration.md):
+атомарные ревизии и общие connector validators, без включения UI или model admission.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.

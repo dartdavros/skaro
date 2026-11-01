@@ -8,6 +8,11 @@ const parameters = z.strictObject({
   top_p: z.number().min(0).max(1).optional(),
   reasoning_effort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).optional(),
 });
+export function openRouterParameters(value: unknown) {
+  const parsed = parameters.safeParse(value);
+  if (!parsed.success) throw new Error('Unsupported or invalid OpenRouter model parameters');
+  return parsed.data;
+}
 
 export function openRouterBody(input: ChatRequest): Record<string, unknown> {
   const route = input.route;
@@ -18,8 +23,7 @@ export function openRouterBody(input: ChatRequest): Record<string, unknown> {
     route.apiProfile.revision !== 1
   )
     throw new Error('Unsupported OpenRouter API profile');
-  const parsed = parameters.safeParse(route.parameters);
-  if (!parsed.success) throw new Error('Unsupported or invalid OpenRouter model parameters');
+  const optionsWithReasoning = openRouterParameters(route.parameters);
   const upstream = route.upstream;
   if (
     !['restricted', 'service-default'].includes(upstream.selection) ||
@@ -46,7 +50,7 @@ export function openRouterBody(input: ChatRequest): Record<string, unknown> {
     )
   )
     throw new Error('Invalid model messages');
-  const { reasoning_effort, ...options } = parsed.data;
+  const { reasoning_effort, ...options } = optionsWithReasoning;
   if (
     input.price.request !== undefined &&
     (!Number.isFinite(input.price.request) || input.price.request < 0)

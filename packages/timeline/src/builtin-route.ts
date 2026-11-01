@@ -9,7 +9,7 @@ import type {
 } from './builtin-model.ts';
 import { BUILTIN_API_PROFILES } from './builtin-profiles.ts';
 
-function policy(value: UpstreamPolicy): void {
+export function validateUpstreamPolicy(value: UpstreamPolicy): void {
   if (
     !['service-default', 'restricted'].includes(value.selection) ||
     !Array.isArray(value.allow) ||
@@ -21,6 +21,21 @@ function policy(value: UpstreamPolicy): void {
     !['deny', 'allow'].includes(value.dataCollection)
   )
     throw new Error('Invalid upstream policy');
+}
+
+/** Shared by configuration and request provenance; a route cannot widen its connection policy. */
+export function requireUpstreamWithinConnection(connection: UpstreamPolicy, route: UpstreamPolicy) {
+  validateUpstreamPolicy(connection);
+  validateUpstreamPolicy(route);
+  if (
+    (!connection.allowFallback && route.allowFallback) ||
+    (connection.requireParameters && !route.requireParameters) ||
+    (connection.dataCollection === 'deny' && route.dataCollection !== 'deny') ||
+    (connection.selection === 'restricted' &&
+      (route.selection !== 'restricted' ||
+        route.allow.some((id) => !connection.allow.includes(id))))
+  )
+    throw new Error('Route widens connection routing policy');
 }
 
 function revision(value: number): void {
@@ -62,17 +77,7 @@ export function snapshotRoute(
   );
   if (matchingProfiles.length !== 1) throw new Error('Unknown or incompatible API profile');
   validateModelEndpoint(connection.endpoint);
-  policy(connection.routing);
-  policy(route.upstream);
-  if (
-    (!connection.routing.allowFallback && route.upstream.allowFallback) ||
-    (connection.routing.requireParameters && !route.upstream.requireParameters) ||
-    (connection.routing.dataCollection === 'deny' && route.upstream.dataCollection !== 'deny') ||
-    (connection.routing.selection === 'restricted' &&
-      (route.upstream.selection !== 'restricted' ||
-        route.upstream.allow.some((id) => !connection.routing.allow.includes(id))))
-  )
-    throw new Error('Route widens connection routing policy');
+  requireUpstreamWithinConnection(connection.routing, route.upstream);
   return structuredClone({
     schema: 1,
     routeId: route.id,

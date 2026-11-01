@@ -34,6 +34,7 @@ export async function verifyNativeOwnerSteer(
     'steering',
   );
   const target = prepared.target;
+  const configuration = services.modelConfiguration.read();
   const before = JSON.stringify(target.task);
   const reviewKey = c4ReviewKey(target.context.id, target.task.id);
   const review = structuredClone(services.db.getSetting(reviewKey, null));
@@ -126,6 +127,7 @@ export async function verifyNativeOwnerSteer(
     for (const process of owners) assert.equal(await processBirth(process.pid), undefined);
     assert.equal(JSON.stringify(await target.context.store.readTask(target.task.id)), before);
     assert.deepEqual(services.db.getSetting(reviewKey, null), review);
+    assert.deepEqual(services.modelConfiguration.read(), configuration);
     return {
       project: 'Cat-pilot',
       sameTurnOwnerInputs: 2,
@@ -144,6 +146,7 @@ export async function verifyNativeOwnerSteer(
       nativeProcesses: owners.length,
       exitsConfirmed: true,
       taskAndC4Unchanged: true,
+      modelConfigurationUnchanged: true,
       journal: prepared.config.journalPath,
       notice:
         'Real input/preparation boundary; provider response and terminal-response steering are not accepted',

@@ -15,16 +15,9 @@ const parameters = z.strictObject({
   thinking: z.enum(['enabled', 'disabled']).optional(),
   reasoning_effort: z.enum(['none', 'low', 'high', 'max']).optional(),
 });
-export function deepSeekBody(request: DeepSeekRequest): Record<string, unknown> {
-  requireDirectProfile(request.route, 'deepseek', 'deepseek.chat-completions');
-  const { thinking, ...options } = modelParameters(parameters, request.route.parameters);
-  if (
-    !request.messages.length ||
-    request.messages.some(
-      (message) => message.reasoning !== undefined || message.reasoning_details !== undefined,
-    )
-  )
-    throw new Error('Gateway reasoning cannot enter a direct DeepSeek conversation');
+export function deepSeekParameters(value: unknown) {
+  const result = modelParameters(parameters, value);
+  const { thinking, ...options } = result;
   if (
     (options.temperature !== undefined || options.top_p !== undefined) &&
     thinking !== 'disabled' &&
@@ -37,6 +30,18 @@ export function deepSeekBody(request: DeepSeekRequest): Record<string, unknown> 
     (thinking === 'disabled') !== (options.reasoning_effort === 'none')
   )
     throw new Error('Conflicting DeepSeek thinking parameters');
+  return result;
+}
+export function deepSeekBody(request: DeepSeekRequest): Record<string, unknown> {
+  requireDirectProfile(request.route, 'deepseek', 'deepseek.chat-completions');
+  const { thinking, ...options } = deepSeekParameters(request.route.parameters);
+  if (
+    !request.messages.length ||
+    request.messages.some(
+      (message) => message.reasoning !== undefined || message.reasoning_details !== undefined,
+    )
+  )
+    throw new Error('Gateway reasoning cannot enter a direct DeepSeek conversation');
   return {
     model: request.route.modelId,
     messages: request.messages,

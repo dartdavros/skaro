@@ -4,13 +4,14 @@ import { type Row } from './rows.ts';
 export class DbSettings extends DbTable {
   // ── settings ─────────────────────────────────────────────────────────────
 
-  getSetting<T>(key: string, fallback: T): T {
+  getSetting<T>(key: string, fallback: T, options: { strict?: boolean } = {}): T {
     const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
       Row | undefined;
     if (!row) return fallback;
     try {
       return JSON.parse(String(row['value'])) as T;
     } catch {
+      if (options.strict) throw new Error('Stored setting contains invalid JSON');
       return fallback;
     }
   }

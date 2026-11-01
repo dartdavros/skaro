@@ -20,17 +20,9 @@ const parameters = z.strictObject({
   thinking_budget_tokens: z.number().int().min(1024).max(131_071).optional(),
   effort: z.enum(['low', 'medium', 'high', 'max']).optional(),
 });
-export function anthropicMessagesBody(request: NativeRequest): Record<string, unknown> {
-  requireDirectProfile(request.route, 'anthropic', 'anthropic.messages');
-  const { thinking, thinking_budget_tokens, effort, ...options } = modelParameters(
-    parameters,
-    request.route.parameters,
-  );
-  if (
-    !request.input.length ||
-    request.input.some((message) => !['user', 'assistant'].includes(String(message.role)))
-  )
-    throw new Error('Invalid native Anthropic messages');
+export function anthropicParameters(value: unknown) {
+  const result = modelParameters(parameters, value);
+  const { thinking, thinking_budget_tokens, ...options } = result;
   if (
     (thinking === 'enabled') !== (thinking_budget_tokens !== undefined) ||
     (thinking_budget_tokens !== undefined && thinking_budget_tokens >= options.max_tokens)
@@ -42,6 +34,18 @@ export function anthropicMessagesBody(request: NativeRequest): Record<string, un
     (options.temperature !== undefined || options.top_p !== undefined)
   )
     throw new Error('Sampling parameters are not admitted with Anthropic thinking');
+  return result;
+}
+export function anthropicMessagesBody(request: NativeRequest): Record<string, unknown> {
+  requireDirectProfile(request.route, 'anthropic', 'anthropic.messages');
+  const { thinking, thinking_budget_tokens, effort, ...options } = anthropicParameters(
+    request.route.parameters,
+  );
+  if (
+    !request.input.length ||
+    request.input.some((message) => !['user', 'assistant'].includes(String(message.role)))
+  )
+    throw new Error('Invalid native Anthropic messages');
   return {
     model: request.route.modelId,
     ...options,

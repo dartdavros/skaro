@@ -34,6 +34,7 @@ import { ProjectOverview } from './project-overview';
 import { GraphService } from './graph/service';
 import { backgroundWork } from './background-work';
 import { reportGraph } from './background-graph';
+import { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 
 export async function createServices(
   appState: AppState,
@@ -177,6 +178,7 @@ export async function createServices(
   graph.start();
   return {
     graph,
+    modelConfiguration: new BuiltinModelConfigurationStore(db),
     overview,
     c4,
     appState,
