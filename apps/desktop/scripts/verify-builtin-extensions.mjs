@@ -16,6 +16,7 @@ if (!(
       '--native-lifetime',
       '--native-model-preflight',
       '--native-admissions',
+      '--native-admission-recovery',
     ].includes(process.argv[2])) ||
   (process.argv.length === 4 && process.argv[2] === '--browser')
 ))
@@ -23,7 +24,23 @@ if (!(
     'Usage: verify-builtin-extensions.mjs [--native-verification | --native-operations | --native-lifetime | --native-model-preflight | --browser CAT_PILOT_PROJECT_ROOT]',
   );
 const output = resolve('apps/desktop/out/main/verify-extensions.cjs');
+const recoveryHost = resolve('apps/desktop/out/main/verify-admission-host.cjs');
 try {
+  if (process.argv[2] === '--native-admission-recovery')
+    await build({
+      configFile: false,
+      logLevel: 'error',
+      build: {
+        ssr: resolve('apps/desktop/src/main/verification/admission-recovery-host.ts'),
+        outDir: resolve('apps/desktop/out/main'),
+        emptyOutDir: false,
+        minify: false,
+        rollupOptions: {
+          external: ['electron'],
+          output: { entryFileNames: 'verify-admission-host.cjs', format: 'cjs' },
+        },
+      },
+    });
   await build({
     configFile: false,
     logLevel: 'error',
@@ -55,4 +72,5 @@ try {
   clearTimeout(timeout);
 } finally {
   await rm(output, { force: true });
+  if (process.argv[2] === '--native-admission-recovery') await rm(recoveryHost, { force: true });
 }

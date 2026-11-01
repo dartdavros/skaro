@@ -80,8 +80,21 @@ CAS contract test на двух SQLite connections и этот штатный na
 
 ## Незакрытые границы
 
-Положительная recovery после настоящего аварийного выхода host должна быть
-проверена отдельно. Текущая проверка live-host отказа её не заменяет.
+Положительная recovery принята отдельным настоящим host:
+`verification/extensions-8fc9019d-08f4-4d29-b739-299e107b2138/proof.json`.
+Host выполнил реальное чтение Cat-pilot через production adapter и compiled
+runtime, сохранил active admission, затем вышел с code 73 без cleanup.
+Primary metadata не редактировалась для проверки. Runtime сам вышел при
+разрыве IPC (`runtimeAliveBeforeRecovery=false`); это не приёмка принудительного
+убийства живого orphan. Recovery подтвердил OS exit, сохранил exited, повтор
+recovery был идемпотентным. Новый main host допущен с generation 2 и прочитал
+тот же index.html через настоящий native runtime. Оба runtime и прежний host
+завершены, task/C4 не изменены, model requests 0. Сборка/types/lint/format прошли.
+
+```powershell
+node apps/desktop/scripts/verify-builtin-extensions.mjs --native-admission-recovery
+```
+
 Привязка requireCurrent к активным task/chat/queue, environment, модели и
 completion ещё не включена. Процессный active не означает task execution
 allowed, C4-review current или readyToSubmit. Верификационный driver сохраняет
