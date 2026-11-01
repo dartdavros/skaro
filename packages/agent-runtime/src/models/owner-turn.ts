@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
-import type { RuntimeModelHost, RuntimeOwnerInput } from '@skaro/timeline';
+import type { RuntimeModelHost } from '@skaro/timeline';
 import type { RuntimeSession } from '../session.ts';
 import type { RuntimeCommand, JournalRecord } from '../model.ts';
 import { fingerprint } from '../verification/inputs.ts';
 import { ModelTurnTimeline } from './turn-timeline.ts';
 import { runPreparedHostModelTurn } from './host-turn.ts';
 import { preparedModelTurn } from './host-schemas.ts';
+import { ownerInputRecord } from './owner-input-record.ts';
+import { OwnerSteering } from './owner-steering.ts';
 
 /** Input admission uses RuntimeSession's queue; there is no new task scheduler or executor. */
 export class OwnerModelTurns {
@@ -14,6 +16,7 @@ export class OwnerModelTurns {
   private readonly host: RuntimeModelHost;
   private readonly resume: () => AbortSignal;
   private readonly onFailure: (error: Error) => void;
+  private steering?: OwnerSteering;
   constructor(
     session: RuntimeSession,
     host: RuntimeModelHost,
@@ -28,63 +31,31 @@ export class OwnerModelTurns {
 
   async accept(command: RuntimeCommand): Promise<JournalRecord> {
     const { action } = command;
+    this.host.signal?.throwIfAborted();
     if (action.type !== 'send' && action.type !== 'steer') throw new Error('Not an owner input');
-    if (this.work) throw new Error('Active owner turn requires a verified steering boundary');
+    if (this.work) {
+      if (action.type === 'send') throw new Error('An owner model turn is already active');
+      if (!this.steering?.sealed) return this.steering!.accept(command);
+      await this.work;
+    }
     const { state } = this.session.journal;
     if (
       Object.keys(state.interactions).length ||
       Object.values(state.effects).some((effect) => effect.state === 'pending')
     )
       throw new Error('An effect or interaction prevents owner input');
-    if (!action.input.text.trim() && !action.input.images?.length)
-      throw new Error('Input is empty');
-    if (action.input.images?.length)
-      throw new Error('Image input requires a verified model connector');
-    if (Buffer.byteLength(JSON.stringify(action.input)) > 262_144)
-      throw new Error('Owner input exceeds the admitted size');
     const hostSignal = this.host.signal;
     hostSignal?.throwIfAborted();
     // Capture this generation before the durable write: interrupt during fsync must not be undone.
-    const signal = AbortSignal.any([this.resume(), ...(hostSignal ? [hostSignal] : [])]);
     const hash = fingerprint(action);
     const id = `owner-${createHash('sha256').update(command.id).digest('hex')}`;
     const timeline = new ModelTurnTimeline(this.session.journal, id, hash, `cmd:${command.id}`);
-    const input: RuntimeOwnerInput = {
-      commandId: command.id,
-      id: `input-${command.id}`,
-      turnId: timeline.turnId,
-      mode: action.type,
-      input: structuredClone(action.input),
-      timestamp: Date.now(),
-    };
-    const acknowledged = await timeline.begin(
-      [
-        {
-          type: 'input',
-          id: input.id,
-          turnId: input.turnId,
-          input: input.input,
-          timestamp: input.timestamp,
-        },
-        {
-          type: 'timeline',
-          event: {
-            t: 'item.upsert',
-            item: {
-              id: input.id,
-              turnId: input.turnId,
-              startedAt: input.timestamp,
-              status: 'done',
-              kind: 'message',
-              role: 'user',
-              text: input.input.text,
-              native: { agent: 'skaro', type: 'input', ref: input.id },
-            },
-          },
-        },
-      ],
-      { value: { kind: 'owner-input', mode: input.mode, modelTurnId: id } },
-    );
+    const { input, facts } = ownerInputRecord(command, timeline.turnId);
+    const signal = AbortSignal.any([this.resume(), ...(hostSignal ? [hostSignal] : [])]);
+    const steering = new OwnerSteering(this.session.journal, this.host.input, id, timeline.turnId);
+    const acknowledged = await timeline.begin(facts, {
+      value: { kind: 'owner-input', mode: input.mode, modelTurnId: id },
+    });
     const work = runPreparedHostModelTurn(
       this.session,
       this.host,
@@ -110,10 +81,12 @@ export class OwnerModelTurns {
         return { type: 'modelTurn', ...value };
       },
       timeline,
+      steering.apply,
     ).finally(() => {
       if (this.work === work) this.work = undefined;
     });
     this.work = work;
+    this.steering = steering;
     void work.catch((error: unknown) =>
       this.onFailure(error instanceof Error ? error : new Error('Owner model journal failed')),
     );

@@ -16,6 +16,7 @@ if (!(
       '--native-lifetime',
       '--native-model-preflight',
       '--native-owner-input',
+      '--native-owner-steer',
       '--native-admissions',
       '--native-admission-recovery',
       '--task-admission',

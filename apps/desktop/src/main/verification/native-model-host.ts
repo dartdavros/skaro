@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { readRuntimeJournal, type OpenRouterConnector } from '@skaro/agent-runtime';
+import {
+  readRuntimeJournal,
+  appendChatOwnerInput,
+  type OpenRouterConnector,
+} from '@skaro/agent-runtime';
 import type { RuntimeModelHost, RuntimeProcessIdentity, ChatRequest } from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { quoteLiveRequest, requireLiveBudget } from '../credentials/live-budget';
@@ -20,24 +24,31 @@ export async function nativePlanHost(
   owner: RuntimeProcessIdentity,
   connector: OpenRouterConnector,
   approvalHash?: string,
-  ownerInput = false,
+  ownerInput: boolean | 'steering' = false,
 ) {
+  const steering = ownerInput === 'steering';
   const target = await catPilotVerificationTarget(
     services,
     owner,
-    ownerInput ? 'native-owner-cat-pilot' : 'native-model-cat-pilot',
+    steering
+      ? 'native-steer-cat-pilot'
+      : ownerInput
+        ? 'native-owner-cat-pilot'
+        : 'native-model-cat-pilot',
     'verification-model-plan-no-active-run',
   );
   const config = nativeProbeConfig(
     directory,
     target.context.root,
-    ownerInput
-      ? approvalHash
-        ? 'session-nativeinput'
-        : 'native-input-preflight'
-      : approvalHash
-        ? 'session-nativeplan'
-        : 'native-model-preflight',
+    steering
+      ? 'native-steer-preflight'
+      : ownerInput
+        ? approvalHash
+          ? 'session-nativeinput'
+          : 'native-input-preflight'
+        : approvalHash
+          ? 'session-nativeplan'
+          : 'native-model-preflight',
     true,
   );
   config.sessionId = target.verification.admission.sessionId;
@@ -55,7 +66,15 @@ export async function nativePlanHost(
     scope: target.verification.scope,
     protocol: 'chat',
     ...(ownerInput
-      ? { input: { revision: planPayloadHash({ input: 'reviewed-plan-v1', payload }) } }
+      ? {
+          input: {
+            revision: planPayloadHash({
+              input: steering ? 'reviewed-steer-v1' : 'reviewed-plan-v1',
+              payload,
+            }),
+            ...(steering ? { steer: true as const } : {}),
+          },
+        }
       : {}),
     tools: {
       revision: tools.revision,
@@ -67,8 +86,8 @@ export async function nativePlanHost(
   const previous = await readRuntimeJournal(config.journalPath, config.sessionId, true);
   let requests = 0;
   let preparations = 0;
-  const allowed = async (request: ChatRequest, signal: AbortSignal) => {
-    assert(approvalHash, 'No reviewed payload admission was provided');
+  let steerings = 0;
+  const envelope = (request: ChatRequest) => {
     assert.equal(planPayloadHash(request.route), planPayloadHash(payload.request.route));
     assert.deepEqual(request.price, payload.request.price);
     assert.deepEqual(
@@ -92,6 +111,10 @@ export async function nativePlanHost(
         );
       }
     }
+  };
+  const allowed = async (request: ChatRequest, signal: AbortSignal) => {
+    assert(approvalHash, 'No reviewed payload admission was provided');
+    envelope(request);
     const latest = await target.verification.acceptance.inspect(
       target.verification.admission,
       signal,
@@ -114,10 +137,27 @@ export async function nativePlanHost(
           prepare: async (input, signal) => {
             preparations++;
             assert.deepEqual(input.input, { text: payload.request.messages[0]!.content });
-            await allowed(payload.request, signal);
+            // Local steering preflight may prepare metadata; reserve/complete still deny all POSTs.
+            if (steering) envelope(payload.request);
+            else await allowed(payload.request, signal);
             signal.throwIfAborted();
             return { request: { kind: 'chat', value: payload.request }, maxSteps: 5 };
           },
+          ...(steering
+            ? {
+                steer: async (input, request, terminal, signal) => {
+                  steerings++;
+                  signal.throwIfAborted();
+                  assert.equal(request.kind, 'chat');
+                  assert.equal(terminal, undefined);
+                  assert.deepEqual(input.input, { text: payload.request.messages[0]!.content });
+                  if (request.kind !== 'chat')
+                    throw new Error('Plan steering requires chat protocol');
+                  envelope(request.value);
+                  return appendChatOwnerInput(input, request, terminal, signal);
+                },
+              }
+            : {}),
         }
       : undefined,
     reserve: async (id, request, signal) => {
@@ -143,5 +183,6 @@ export async function nativePlanHost(
     payload,
     requestCount: () => requests,
     preparationCount: () => preparations,
+    steeringCount: () => steerings,
   };
 }

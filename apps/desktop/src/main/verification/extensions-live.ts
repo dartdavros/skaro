@@ -21,6 +21,7 @@ import { verifyNativeAdmissions } from './native-admissions';
 import { verifyNativeAdmissionRecovery } from './native-admission-recovery';
 import { verifyTaskAdmission } from './task-admission';
 import { verifyNativeOwnerInput } from './native-owner-input';
+import { verifyNativeOwnerSteer } from './native-owner-steer';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -67,6 +68,9 @@ void app.whenReady().then(async () => {
       } else if (process.argv[2] === '--native-owner-input') {
         stage = 'native-owner-input';
         proof = { input: await verifyNativeOwnerInput(services, data, directory, owner) };
+      } else if (process.argv[2] === '--native-owner-steer') {
+        stage = 'native-owner-steer';
+        proof = { steering: await verifyNativeOwnerSteer(services, data, directory, owner) };
       } else if (process.argv[2] === '--native-admissions') {
         stage = 'native-admissions';
         proof = { admissions: await verifyNativeAdmissions(services, directory, owner) };

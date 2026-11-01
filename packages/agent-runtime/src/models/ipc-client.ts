@@ -38,6 +38,20 @@ export class ModelClient {
           this.rpc.call('prepare-input', input.commandId, signal) as Promise<
             import('@skaro/timeline').RuntimePreparedModelTurn
           >,
+        ...(this.binding.policy.input.steer
+          ? {
+              steer: async (input, request, response, signal) =>
+                this.rpc.call(
+                  'steer-input',
+                  {
+                    id: input.commandId,
+                    request,
+                    ...(response ? { responseId: response.requestId } : {}),
+                  },
+                  signal,
+                ) as Promise<typeof request>,
+            }
+          : {}),
       },
       toolAdmission: tools && {
         ...tools,

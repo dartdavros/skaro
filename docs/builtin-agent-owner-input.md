@@ -3,7 +3,9 @@
 Дата: 01.11.2026. Подготовка BA-7, без включения каталога или нового UI.
 Обычный `send` и `steer` в отсутствие активного хода используют host model port,
 если его input policy явно настроена. Без неё остаётся прежний наблюдаемый отказ.
-Добавление steer к уже активному ходу пока отвергается; этот критерий открыт.
+Добавление к активному ходу требует отдельного
+[steering capability и formatter](builtin-agent-owner-steering.md); полная
+provider-приёмка этого пути остаётся открытой.
 
 ## Сохранение и допуск
 
@@ -63,4 +65,4 @@ tools и streaming text; один terminal done, live/replay совпали. П�
 Pure lifecycle test
 создаёт настоящий begin через ModelTurnTimeline, закрывает журнал и проверяет
 однократное восстановление без provider response, fake API или model intent.
-Активный steer, task/chat startup и приёмка выполнения активной задачи открыты.
+Полная приёмка active steer, task/chat startup и выполнения активной задачи открыта.

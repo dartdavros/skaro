@@ -11,7 +11,8 @@ export async function requireOwnerInput(binding: RuntimeModelBinding, commandId:
     binding.admission.sessionId,
   );
   const record = records.find((record) => record.id === `cmd:${commandId}`);
-  const value = record?.result.value as { kind?: string; mode?: string } | undefined;
+  const value = record?.result.value as
+    { kind?: string; mode?: string; modelTurnId?: string } | undefined;
   const fact = record?.facts.find((fact) => fact.type === 'input');
   if (
     !record ||
@@ -22,6 +23,8 @@ export async function requireOwnerInput(binding: RuntimeModelBinding, commandId:
     fingerprint(state.config?.model) !== fingerprint(binding.policy) ||
     fingerprint(state.config?.route) !== fingerprint(binding.route) ||
     value?.kind !== 'owner-input' ||
+    !value.modelTurnId ||
+    records.some((record) => record.id === `cmd:${value.modelTurnId}`) ||
     !['send', 'steer'].includes(value.mode ?? '') ||
     fact?.type !== 'input' ||
     record.requestHash !== fingerprint({ type: value.mode, input: fact.input })

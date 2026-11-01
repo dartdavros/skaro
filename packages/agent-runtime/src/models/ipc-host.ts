@@ -17,6 +17,7 @@ import { requireModelIntent } from './host-gate.ts';
 import { ModelHttpError } from './model-error.ts';
 import { modelInvocation, modelToolSchema, preparedModelTurn } from './host-schemas.ts';
 import { requireOwnerInput } from './owner-input-gate.ts';
+import { requireOwnerSteering } from './owner-steer-host.ts';
 
 /** Only this privileged host calls the original connector. A peer never receives credential bytes. */
 export class ModelServer {
@@ -27,6 +28,7 @@ export class ModelServer {
   >();
   private readonly dispatched = new Set<string>();
   private readonly prepared = new Map<string, Promise<unknown>>();
+  private readonly steered = new Map<string, { hash: string; work: Promise<unknown> }>();
   constructor(
     host: RuntimeModelHost,
     send: (reply: RuntimeModelRpcReply) => void,
@@ -46,6 +48,31 @@ export class ModelServer {
             : { ...reply, type: 'model-rpc-result' },
         ),
       dispatch: async (operation, raw, signal, onText) => {
+        if (operation === 'steer-input') {
+          if (!host.input?.steer || !binding.policy.input?.steer)
+            throw new Error('Active owner steering is not configured');
+          const { input, request, terminal } = await requireOwnerSteering(binding, raw);
+          signal.throwIfAborted();
+          const hash = fingerprint({ request, terminal });
+          const previous = this.steered.get(input.commandId);
+          if (previous) {
+            if (previous.hash !== hash) throw new Error('Steering preparation identity conflict');
+            return previous.work;
+          }
+          if (this.steered.size >= 1024) throw new Error('Steering preparation limit reached');
+          const work = Promise.resolve().then(async () => {
+            const value = await host.input!.steer!(input, request, terminal, signal);
+            modelInvocation.shape.request.parse(value);
+            if (
+              value.kind !== binding.policy.protocol ||
+              fingerprint(value.value.route) !== fingerprint(binding.route)
+            )
+              throw new Error('Steering cannot change its model route');
+            return structuredClone(value);
+          });
+          this.steered.set(input.commandId, { hash, work });
+          return work;
+        }
         if (operation === 'prepare-input') {
           if (!host.input) throw new Error('Owner input preparation is not configured');
           const id = z

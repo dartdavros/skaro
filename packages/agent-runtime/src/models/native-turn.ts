@@ -26,7 +26,13 @@ interface NativeTurnInput {
   admitRequest(id: string, request: NativeRequest, signal?: AbortSignal): Promise<void>;
   toolAdmission?: ModelToolAdmission;
   onText?: (text: string, requestId: string) => void;
-  onStep?: (requestId: string, response: NativeResponse) => Promise<void>;
+  onStep?: (requestId: string, response: NativeResponse, final: boolean) => Promise<void>;
+  boundary?: (
+    request: NativeRequest,
+    final: boolean,
+    signal: AbortSignal,
+    source?: string,
+  ) => Promise<NativeRequest | undefined>;
 }
 const active = new WeakMap<
   RuntimeSession,
@@ -81,6 +87,8 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
   if (!previous) await journal.append(turnId, [], {}, hash);
   const allowed = new Set(request.tools?.map((tool) => tool.name));
   for (let step = 0; step < input.maxSteps; step++) {
+    const updated = await input.boundary?.(request, false, signal);
+    if (updated) request = structuredClone(updated);
     if (session.context) {
       if (!request.context) throw new Error('Configured context selection is required');
       await session.context.requireCurrent(request.context.revision, request.context.epoch, signal);
@@ -104,8 +112,14 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
         response,
       }),
     });
-    await input.onStep?.(id, response);
-    if (!response.calls.length) return response;
+    if (!response.calls.length) {
+      const next = await input.boundary?.(request, true, signal, id);
+      await input.onStep?.(id, response, !next);
+      if (!next) return response;
+      request = structuredClone(next);
+      continue;
+    }
+    await input.onStep?.(id, response, false);
     const results: NativeToolResult[] = [];
     for (const call of response.calls) {
       const result = await executeModelTool({

@@ -28,7 +28,7 @@ export interface ModelToolAdmission {
 export interface RuntimeModelPolicy {
   scope: RuntimeVerificationBinding['scope'];
   protocol: RuntimeModelRequest['kind'];
-  input?: { revision: string };
+  input?: { revision: string; steer?: true };
   tools?: {
     revision: string;
     selectChatTools: boolean;

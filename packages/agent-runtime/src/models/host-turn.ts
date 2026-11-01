@@ -8,6 +8,7 @@ import { executeNativeTurn } from './native-turn.ts';
 import { ModelTextJournal } from './text-journal.ts';
 import { ModelTurnTimeline } from './turn-timeline.ts';
 import { RuntimeCommandRejected } from '../command-error.ts';
+import type { ModelInputBoundary } from './owner-steering.ts';
 
 export function busyHostModelTurn(session: RuntimeSession, id: string, action: ModelTurnAction) {
   const hash = fingerprint(action);
@@ -43,6 +44,7 @@ export async function runPreparedHostModelTurn(
   hash: string,
   prepare: () => Promise<ModelTurnAction>,
   timeline = new ModelTurnTimeline(session.journal, id, hash),
+  boundary?: ModelInputBoundary,
 ) {
   const previous = session.journal.find(`cmd:${id}`);
   if (previous) {
@@ -53,7 +55,14 @@ export async function runPreparedHostModelTurn(
   const text = new ModelTextJournal(session.journal, id, timeline.turnId);
   await timeline.begin();
   try {
-    const response = await perform(session, host, id, structuredClone(await prepare()), text);
+    const response = await perform(
+      session,
+      host,
+      id,
+      structuredClone(await prepare()),
+      text,
+      boundary,
+    );
     return session.journal.append(
       `cmd:${id}`,
       timeline.terminal('done'),
@@ -78,6 +87,7 @@ async function perform(
   id: string,
   action: ModelTurnAction,
   text: ModelTextJournal,
+  boundary?: ModelInputBoundary,
 ) {
   if (!host) throw new Error('Native model host is unavailable');
   const binding = modelBinding(host);
@@ -120,12 +130,15 @@ async function perform(
         ? await executeChatTurn({
             ...common,
             request: request.value,
-            onStep: (requestId, response) =>
-              text.finishStep(
-                requestId,
-                response.message.content ?? '',
-                response.finishReason === 'stop',
-              ),
+            boundary:
+              boundary &&
+              (async (request, final, signal) => {
+                const next = await boundary({ kind: 'chat', value: request }, final, signal);
+                if (next && next.kind !== 'chat') throw new Error('Steering protocol changed');
+                return next?.value;
+              }),
+            onStep: (requestId, response, final) =>
+              text.finishStep(requestId, response.message.content ?? '', final),
             admitRequest: (id, value, active) =>
               admit(id, { kind: 'chat', value }, active ?? signal),
             connector: {
@@ -144,8 +157,19 @@ async function perform(
         : await executeNativeTurn({
             ...common,
             request: request.value,
-            onStep: (requestId, response) =>
-              text.finishStep(requestId, undefined, response.calls.length === 0),
+            boundary:
+              boundary &&
+              (async (request, final, signal, source) => {
+                const next = await boundary(
+                  { kind: 'native', value: request },
+                  final,
+                  signal,
+                  source,
+                );
+                if (next && next.kind !== 'native') throw new Error('Steering protocol changed');
+                return next?.value;
+              }),
+            onStep: (requestId, _response, final) => text.finishStep(requestId, undefined, final),
             admitRequest: (id, value, active) =>
               admit(id, { kind: 'native', value }, active ?? signal),
             connector: {

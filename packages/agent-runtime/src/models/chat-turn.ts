@@ -24,7 +24,12 @@ interface ChatTurnInput {
   admitRequest(id: string, request: ChatRequest, signal?: AbortSignal): Promise<void>;
   toolAdmission?: ModelToolAdmission;
   onText?: (text: string, requestId: string) => void;
-  onStep?: (requestId: string, response: ChatResponse) => Promise<void>;
+  onStep?: (requestId: string, response: ChatResponse, final: boolean) => Promise<void>;
+  boundary?: (
+    request: ChatRequest,
+    final: boolean,
+    signal: AbortSignal,
+  ) => Promise<ChatRequest | undefined>;
 }
 const active = new WeakMap<
   RuntimeSession,
@@ -62,7 +67,7 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
   const config = journal.state.config;
   if (!config || JSON.stringify(config.route) !== JSON.stringify(input.request.route))
     throw new Error('Model request route differs from the persisted session route');
-  const request = structuredClone(input.request);
+  let request = structuredClone(input.request);
   const hash = createHash('sha256')
     .update(JSON.stringify([request, input.toolAdmission?.revision]))
     .digest('hex');
@@ -70,8 +75,13 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
   if (start && start.requestHash !== hash)
     throw new Error('Model turn identity reused for different input');
   if (!start) await journal.append(`model-turn:${input.id}`, [], {}, hash);
-  const messages: ChatMessage[] = structuredClone(request.messages) as ChatMessage[];
+  let messages: ChatMessage[] = structuredClone(request.messages) as ChatMessage[];
   for (let step = 0; step < input.maxSteps; step++) {
+    const updated = await input.boundary?.({ ...request, messages }, false, signal);
+    if (updated) {
+      request = structuredClone(updated);
+      messages = structuredClone(request.messages) as ChatMessage[];
+    }
     if (session.context) {
       if (!request.context) throw new Error('Configured context selection is required');
       await session.context.requireCurrent(request.context.revision, request.context.epoch, signal);
@@ -101,9 +111,16 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
         messages: [...messages, response.message],
       }),
     });
-    await input.onStep?.(id, response);
     messages.push(response.message);
-    if (response.finishReason === 'stop') return response;
+    if (response.finishReason === 'stop') {
+      const next = await input.boundary?.({ ...request, messages }, true, signal);
+      await input.onStep?.(id, response, !next);
+      if (!next) return response;
+      request = structuredClone(next);
+      messages = structuredClone(request.messages) as ChatMessage[];
+      continue;
+    }
+    await input.onStep?.(id, response, false);
     const allowed = new Set(tools?.map((tool) => tool.name));
     for (const call of response.message.tool_calls ?? []) {
       signal.throwIfAborted();
