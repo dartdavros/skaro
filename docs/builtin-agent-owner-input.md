@@ -66,3 +66,8 @@ Pure lifecycle test
 создаёт настоящий begin через ModelTurnTimeline, закрывает журнал и проверяет
 однократное восстановление без provider response, fake API или model intent.
 Полная приёмка active steer, task/chat startup и выполнения активной задачи открыта.
+
+Следующий main formatter и настоящий configured context/restart proof описаны в
+[Owner input из контекста runtime](builtin-agent-context-input.md).
+Проверен также новый ввод после restart до запрещающего budget gate;
+положительная provider-приёмка этим нулевым POST не заявляется.

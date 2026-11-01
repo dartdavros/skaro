@@ -1,10 +1,9 @@
-import type { RuntimeSession } from '../session.ts';
 import type { ChatMessage, ChatRequest } from '../models/chat-types.ts';
-import { contextChatRequest, type ContextSelection } from './request.ts';
+import { contextChatRequest, type ContextSelection, type ContextJournalView } from './request.ts';
 
 /** Continue only the exact route/context epoch; compact starts a fresh native conversation. */
 export function continueContextChatRequest(
-  session: RuntimeSession,
+  session: ContextJournalView,
   request: ChatRequest,
 ): ChatRequest {
   const fresh = contextChatRequest(session, request);

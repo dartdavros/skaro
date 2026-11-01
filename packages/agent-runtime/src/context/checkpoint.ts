@@ -5,7 +5,9 @@ import { workingNotes } from './working-notes.ts';
 
 const decisions = new Set(['compact', 'refreshContext'].map((type) => contextHash({ type })));
 
-export function latestContext(journal: RuntimeJournal): ContextCheckpoint | undefined {
+export function latestContext(
+  journal: Pick<RuntimeJournal, 'records'>,
+): ContextCheckpoint | undefined {
   for (let index = journal.records.length - 1; index >= 0; index--) {
     const value = journal.records[index]!.result.value as Partial<ContextCheckpoint> | undefined;
     if (

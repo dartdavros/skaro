@@ -1,11 +1,15 @@
-import type { RuntimeSession } from '../session.ts';
+import type { RuntimeJournal } from '../journal.ts';
 import type { ChatRequest } from '../models/chat-types.ts';
 import type { NativeRequest } from '../models/native-types.ts';
 import { latestContext } from './checkpoint.ts';
 
 import type { ModelContextSelection as ContextSelection } from '@skaro/timeline';
 export type { ModelContextSelection as ContextSelection } from '@skaro/timeline';
-function frame(session: RuntimeSession): {
+/** The privileged host may project a validated read-only journal without opening another writer. */
+export interface ContextJournalView {
+  journal: Pick<RuntimeJournal, 'records' | 'state'>;
+}
+function frame(session: ContextJournalView): {
   selection: ContextSelection;
   protectedText: string;
   data: string;
@@ -60,7 +64,7 @@ function frame(session: RuntimeSession): {
 }
 
 /** Start a fresh native conversation at compact/route boundaries; never rewrite signed items. */
-export function contextChatRequest(session: RuntimeSession, request: ChatRequest): ChatRequest {
+export function contextChatRequest(session: ContextJournalView, request: ChatRequest): ChatRequest {
   if (
     request.messages.some(
       (message) => message.role !== 'user' || message.tool_calls || message.tool_call_id,
@@ -79,7 +83,7 @@ export function contextChatRequest(session: RuntimeSession, request: ChatRequest
   });
 }
 export function contextNativeRequest(
-  session: RuntimeSession,
+  session: ContextJournalView,
   request: NativeRequest,
 ): NativeRequest {
   if (request.system || request.input.some((message) => message.role !== 'user'))

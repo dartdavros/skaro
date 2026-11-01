@@ -11,12 +11,13 @@ import { c4ReviewKey } from '../c4-review';
 import { verifyModelTimeline } from './model-timeline-proof';
 import { configuredOwnerInputProbe } from './configured-owner-input';
 import { configuredNativeSession } from './configured-native-session';
+import { createContextChatInput } from '../builtin-context-chat-input';
 
 /** Actual configuration/catalog/vault/native RPC. Explicit policy denies every model POST. */
 export async function verifyConfiguredModelHost(
   services: Services,
   directory: string,
-  ownerInput = false,
+  ownerInput: boolean | 'context' = false,
 ) {
   const projectId = services.db.shell.projectScope;
   assert(projectId);
@@ -60,6 +61,7 @@ export async function verifyConfiguredModelHost(
   const { owners, options } = nativeProbeOptions(directory, context.root, true);
   const config = nativeProbeConfig(directory, context.root, lease.admission.sessionId, true);
   config.route = snapshot;
+  if (ownerInput === 'context') config.context = { scopePath: '.', documents: [], pins: [] };
   config.tools!.verificationScope = scope;
   config.model = { scope, protocol: 'chat' };
   const baseline = await readRuntimeJournal(config.journalPath, config.sessionId, true);
@@ -84,7 +86,20 @@ export async function verifyConfiguredModelHost(
     },
   };
   const inputProbe = ownerInput
-    ? configuredOwnerInputProbe(request, config.journalPath, config.sessionId)
+    ? configuredOwnerInputProbe(
+        request,
+        config.journalPath,
+        config.sessionId,
+        ownerInput === 'context'
+          ? createContextChatInput({
+              journalPath: config.journalPath,
+              sessionId: config.sessionId,
+              route: snapshot,
+              price: request.value.price,
+              maxSteps: 1,
+            })
+          : undefined,
+      )
     : undefined;
   if (inputProbe) config.model.input = { revision: inputProbe.port.revision, steer: true };
   let modelTurnId = 'configured-denied';
@@ -117,6 +132,10 @@ export async function verifyConfiguredModelHost(
     );
     assert.equal(reservations, 0);
     const session = await generation.start();
+    if (ownerInput === 'context') {
+      assert('compact' in session && typeof session.compact === 'function');
+      await session.compact();
+    }
     assert('runModelTurn' in session && typeof session.runModelTurn === 'function');
     const wrong: RuntimeModelRequest = {
       ...request,
@@ -151,15 +170,22 @@ export async function verifyConfiguredModelHost(
     assert.equal(await processBirth(owners[0]!.pid), undefined);
     let final = await readRuntimeJournal(config.journalPath, config.sessionId);
     let timeline = verifyModelTimeline(final.records, generation.events, modelTurnId, 'failed');
+    let resumedTurnId: string | undefined;
     if (inputProbe) {
       const previous = lease.admission;
       lease = await prepare();
       assert.equal(lease.admission.generation, previous.generation + 1);
       assert.notEqual(lease.admission.id, previous.id);
       generation = await createGeneration();
-      await inputProbe.redeliver(await generation.start());
+      const resumed = await generation.start();
+      await inputProbe.redeliver(resumed);
       assert.equal(reservations, 1);
       assert.equal(dispatches, 0);
+      if (ownerInput === 'context') {
+        resumedTurnId = await inputProbe.continueAfterRestart(resumed);
+        assert.equal(reservations, 2);
+        assert.equal(dispatches, 0);
+      }
       await generation.close();
       final = await readRuntimeJournal(config.journalPath, config.sessionId);
       timeline = verifyModelTimeline(final.records, generation.events, modelTurnId, 'failed');
@@ -172,7 +198,7 @@ export async function verifyConfiguredModelHost(
           record.id.endsWith(':intent') &&
           record.facts.some((fact) => fact.type === 'effect-intent' && fact.name === 'model:chat'),
       ).length,
-      1,
+      ownerInput === 'context' ? 2 : 1,
     );
     assert(
       !final.records.some(
@@ -204,6 +230,17 @@ export async function verifyConfiguredModelHost(
       configurationUnchanged: true,
       nativeProcesses: owners.length,
       ...(inputProbe ? { restartWithoutInputPreparation: true, admissionGenerations: 2 } : {}),
+      ...(resumedTurnId
+        ? {
+            freshInputAfterRestart: true,
+            resumedTimeline: verifyModelTimeline(
+              final.records,
+              generation.events,
+              resumedTurnId,
+              'failed',
+            ),
+          }
+        : {}),
       exitConfirmed: true,
       admissionStatus: new AdmissionStore(services.db, ownerKey).read()?.status,
       timeline,

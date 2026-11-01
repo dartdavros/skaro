@@ -62,6 +62,9 @@ Configured session возобновлена во втором настоящем
 Configured host требует отдельную проверку актуальных model metadata до
 подготовки и перед reservation/POST; [каталоговый guard](builtin-agent-model-catalog.md#проверка-маршрута-на-границе-host)
 не превращает advertised capabilities в verified readiness.
+Добавлена [подготовка owner input из primary context](builtin-agent-context-input.md):
+настоящий compact и свежий ввод во втором native-поколении сохраняют epoch,
+точные owner statements и history refs; reservation/POST остаются запрещены.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не
