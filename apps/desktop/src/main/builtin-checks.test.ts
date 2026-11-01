@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { it, expect } from 'vitest';
@@ -16,6 +16,9 @@ it.skipIf(process.platform !== 'win32')(
     config.context = undefined;
     config.tools!.readOnly = false;
     config.tools!.commandEntry = resolve('apps/desktop/out/main/agent-command-worker.js');
+    config.tools!.verificationDependencies = [
+      { id: 'runtime', path: await realpath(process.execPath) },
+    ];
     const owner = {
       pid: process.pid,
       birth: (await processBirth(process.pid))!,
@@ -56,6 +59,11 @@ it.skipIf(process.platform !== 'win32')(
         outcome: string;
       };
       expect(value.outcome).toBe('passed');
+      expect(session.journal.find('check:real-check:result')!.result.value).toMatchObject({
+        environment: {
+          dependencies: { coverage: 'declared-files-only', files: [{ id: 'runtime' }] },
+        },
+      });
       const valid = await session.execute({
         id: 'validate',
         action: { type: 'tool', name: 'check_evidence', args: value.evidence },

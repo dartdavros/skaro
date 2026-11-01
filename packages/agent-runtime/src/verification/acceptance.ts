@@ -4,7 +4,7 @@ import { sessionFileScope } from '../tools/session-scope.ts';
 import { checkEvidence } from './checks.ts';
 import { requireEvidence, type EvidenceReference } from './evidence.ts';
 import { captureCheckInputs, fingerprint } from './inputs.ts';
-import { captureCheckEnvironment } from './environment.ts';
+import { captureVerificationEnvironment } from './environment.ts';
 
 const inspecting = new WeakMap<RuntimeJournal, Set<string>>();
 
@@ -51,7 +51,7 @@ async function inspect(input: InspectionInput) {
   if (!before.binding || before.binding.checkout !== scope.root)
     reasons.push('Evidence checkout does not match the bound task');
   const inputs = await captureCheckInputs(scope, signal);
-  const environment = await captureCheckEnvironment(signal);
+  const environment = await captureVerificationEnvironment(journal, signal);
   if (before.criteriaRevision !== input.criteriaRevision)
     reasons.push('Criterion revision changed');
   if (before.continuation !== 'allowed') reasons.push(`Continuation is ${before.continuation}`);
@@ -101,7 +101,7 @@ async function inspect(input: InspectionInput) {
     reasons.push('Acceptance state changed during inspection');
   if (
     fingerprint(inputs) !== fingerprint(await captureCheckInputs(scope, signal)) ||
-    fingerprint(environment) !== fingerprint(await captureCheckEnvironment(signal))
+    fingerprint(environment) !== fingerprint(await captureVerificationEnvironment(journal, signal))
   )
     reasons.push('Evidence inputs or environment changed during inspection');
   const result = {

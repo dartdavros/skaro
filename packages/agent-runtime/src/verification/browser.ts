@@ -4,7 +4,7 @@ import type { RuntimeJournal } from '../journal.ts';
 import type { PathScope } from '../tools/path-scope.ts';
 import type { ExtensionRegistry } from '../extensions/registry.ts';
 import { captureCheckInputs, fingerprint, hashFile } from './inputs.ts';
-import { captureCheckEnvironment } from './environment.ts';
+import { captureVerificationEnvironment } from './environment.ts';
 import type { BrowserEvidence } from './evidence.ts';
 import { verifyEvidenceArtifact } from './artifacts.ts';
 import { UnknownToolOutcome } from '../tools/effect-error.ts';
@@ -21,7 +21,7 @@ export async function observeBrowser(
 ) {
   const policy = extensions.observation(name)!;
   const inputs = await captureCheckInputs(scope, signal);
-  const environment = await captureCheckEnvironment(signal);
+  const environment = await captureVerificationEnvironment(journal, signal);
   const startedAt = Date.now();
   const source = { name, revision: policy.revision, argsHash: fingerprint(args) };
   await journal.append(`observation:${id}:started`, [], {
@@ -45,7 +45,7 @@ export async function observeBrowser(
     const artifacts = value.artifacts ?? [];
     for (const artifact of artifacts) await verifyEvidenceArtifact(directory, artifact, signal);
     const after = await captureCheckInputs(scope, signal);
-    const afterEnvironment = await captureCheckEnvironment(signal);
+    const afterEnvironment = await captureVerificationEnvironment(journal, signal);
     const path = join(directory, `${id}.observation.json`);
     const bytes = Buffer.from(JSON.stringify(result));
     await writeFile(path, bytes, { flag: 'wx', mode: 0o600, signal });

@@ -1,6 +1,12 @@
 import type { PermissionMode } from './agent.ts';
 import type { RouteCapabilityAssessment } from './builtin-model.ts';
 
+/** Host-selected files only. Measuring this list does not attest dependency closure. */
+export interface BuiltinVerificationDependency {
+  id: string;
+  path: string;
+}
+
 export interface BuiltinToolScope {
   cwd: string;
   readDirs: readonly string[];
@@ -8,6 +14,7 @@ export interface BuiltinToolScope {
   artifactDir: string;
   /** Host/build supplies the bundled command supervisor entry. Never a model argument. */
   commandEntry?: string;
+  verificationDependencies?: readonly BuiltinVerificationDependency[];
   capabilities?: RouteCapabilityAssessment;
 }
 

@@ -5,6 +5,25 @@
 
 ## Продолжение BA-6, 01.11.2026
 
+Host dependency measurements добавлены в command/browser evidence и preflight.
+Список host-selected canonical files имеет revision и полные SHA256/размеры;
+проверяются descriptor/path identity, изменения при чтении, лимиты и отмена.
+Он входит в persisted tool scope; модель не может передать его аргументом.
+Полнота toolchain/ignored dependencies/services не объявляется доказанной:
+`coverage: declared-files-only`, исходные unresolved сохраняются.
+
+Живые proof Cat-pilot: browser
+`verification/extensions-d9dc2872-ea29-4a2e-8e5d-85d38d706f61/proof.json`, command/acceptance
+`verification/extensions-22c573a2-c636-4812-a6de-4ba219ceba59/proof.json`.
+В каждом подтверждены четыре реальных host файла, актуальность evidence;
+browser также проверил missing image, историчность, console 0/0 и file://.
+Три целевых теста checks/dependencies прошли без fixtures/seed/API. Первый
+прогон checks корректно вернул inputs-changed из-за параллельных рабочих правок;
+повтор выполнен после завершения правок, ожидания теста не ослаблялись.
+Штатная сборка и два compiled-native сценария прошли; типы runtime/desktop,
+lint, форматирование и размеры модулей проверены. PNG Cat-pilot просмотрен.
+Полный suite не запускался, внешние модельные запросы не выполнялись.
+
 Добавлена read-only проекция действующих criteria/completion/C4 из TaskRuns и
 предварительная оценка evidence в primary runtime journal. Criterion IDs имеют
 project/task/revision namespace, checkout и admission session проверяются.

@@ -6,7 +6,7 @@ import type { PathScope } from '../tools/path-scope.ts';
 import type { ToolProcesses } from '../tools/processes.ts';
 import { schemas } from '../tools/schemas.ts';
 import { captureCheckInputs, fingerprint, hashFile } from './inputs.ts';
-import { captureCheckEnvironment } from './environment.ts';
+import { captureVerificationEnvironment } from './environment.ts';
 import { requireEvidence, type CheckEvidence } from './evidence.ts';
 import { requireCheckRetry } from './repairs.ts';
 import { verifyEvidenceArtifact } from './artifacts.ts';
@@ -23,7 +23,7 @@ export async function runCheck(
   const cwd = await scope.path(input.cwd ?? '.', true);
   requireCheckRetry(input, cwd, journal);
   const inputs = await captureCheckInputs(scope, signal);
-  const environment = await captureCheckEnvironment(signal);
+  const environment = await captureVerificationEnvironment(journal, signal);
   const startedAt = Date.now();
   await journal.append(`check:${id}:started`, [], {
     value: { kind: 'check-start', input, cwd, inputs, environment, startedAt },
@@ -32,7 +32,7 @@ export async function runCheck(
   while (result.state === 'running' || result.state === 'stopping')
     result = await processes.stdin({ processId: id, end: false, offset: 0, yieldMs: 1000 }, signal);
   const after = await captureCheckInputs(scope, signal);
-  const afterEnvironment = await captureCheckEnvironment(signal);
+  const afterEnvironment = await captureVerificationEnvironment(journal, signal);
   const path = join(journal.state.config!.tools!.artifactDir, `${id}.output`);
   const output = { path, sha256: await hashFile(path, signal), bytes: (await lstat(path)).size };
   const value: CheckEvidence = {
@@ -85,7 +85,7 @@ export async function checkEvidence(
   const input = schemas.check_evidence.parse(raw);
   const value = requireEvidence(journal, input);
   const current = await captureCheckInputs(scope, signal);
-  const currentEnvironment = await captureCheckEnvironment(signal);
+  const currentEnvironment = await captureVerificationEnvironment(journal, signal);
   let outputCurrent = false;
   let artifactsCurrent = true;
   try {
@@ -132,6 +132,19 @@ export async function checkEvidence(
       fingerprint(value.afterEnvironment) === fingerprint(currentEnvironment),
     outcome: value.outcome,
     criteria: value.criteria,
+    ...(currentEnvironment.dependencies
+      ? {
+          dependencyMeasurement: {
+            policy: currentEnvironment.dependencies.policy,
+            coverage: currentEnvironment.dependencies.coverage,
+            files: currentEnvironment.dependencies.files.map(({ id, bytes, sha256 }) => ({
+              id,
+              bytes,
+              sha256,
+            })),
+          },
+        }
+      : {}),
     acceptance: 'requires-environment-and-criteria-review',
     unresolved: value.environment.unresolved,
   };

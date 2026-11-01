@@ -8,6 +8,7 @@ import type { RuntimeProcessIdentity } from '@skaro/timeline';
 import { taskBrowserServer } from '../task-browser';
 import { approvedTool, extensionSession } from './extension-session';
 import { CAT_PILOT_OBSERVATION } from './browser-target';
+import { browserDependencies } from './host-dependencies';
 
 export async function verifyBrowserExtensions(
   directory: string,
@@ -52,7 +53,14 @@ export async function verifyBrowserExtensions(
       },
     },
   });
-  const session = await extensionSession(directory, 'browser', owner, extension, target.root);
+  const session = await extensionSession(
+    directory,
+    'browser',
+    owner,
+    extension,
+    target.root,
+    await browserDependencies(),
+  );
   const invoke = (id: string, name: string, args: unknown) =>
     approvedTool(session, id, `mcp__browser__${name}`, args);
   try {
@@ -75,6 +83,16 @@ export async function verifyBrowserExtensions(
       id: 'validate-shot',
       action: { type: 'tool', name: 'check_evidence', args: reference },
     });
+    const measurement = (
+      validation.result.value as {
+        dependencyMeasurement: { coverage: string; files: { id: string; sha256: string }[] };
+      }
+    ).dependencyMeasurement;
+    assert.equal(measurement.coverage, 'declared-files-only');
+    assert.deepEqual(
+      measurement.files.map((file) => file.id),
+      ['browser-host', 'browser-mcp-manifest', 'browser-mcp-entry', 'chrome'],
+    );
     assert.deepEqual(
       validation.result.value &&
         Object.fromEntries(
@@ -149,6 +167,7 @@ export async function verifyBrowserExtensions(
       modelRequests: 0,
       evidence: reference,
       evidenceValidated: true,
+      measuredDependencies: measurement.files,
       olderObservationMarkedHistorical: true,
       missingImageRejected: true,
     };

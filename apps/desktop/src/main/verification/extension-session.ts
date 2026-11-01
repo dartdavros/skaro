@@ -5,7 +5,7 @@ import {
   type RuntimeExtensionHost,
   type JournalRecord,
 } from '@skaro/agent-runtime';
-import type { RuntimeProcessIdentity } from '@skaro/timeline';
+import type { RuntimeProcessIdentity, BuiltinVerificationDependency } from '@skaro/timeline';
 import { longContextConfig } from '../credentials/long-context-config';
 
 export async function extensionSession(
@@ -14,12 +14,14 @@ export async function extensionSession(
   owner: RuntimeProcessIdentity,
   host?: RuntimeExtensionHost,
   cwd?: string,
+  dependencies?: readonly BuiltinVerificationDependency[],
 ) {
   const config = longContextConfig(directory);
   config.sessionId = `extensions-${name}`;
   config.journalPath = join(directory, `${name}.jsonl`);
   config.tools!.readOnly = false;
   config.tools!.commandEntry = resolve('apps/desktop/out/main/agent-command-worker.js');
+  if (dependencies) config.tools!.verificationDependencies = dependencies;
   if (cwd) {
     config.tools!.cwd = cwd;
     config.context = undefined;

@@ -7,6 +7,7 @@ import type { RuntimeProcessIdentity, SkaroScope } from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { c4ReviewKey } from '../c4-review';
 import { extensionSession, approvedTool } from './extension-session';
+import { commandDependencies } from './host-dependencies';
 
 /** Real Cat-pilot records/handlers; no active task is fabricated or submitted. */
 export async function verifyAcceptanceInspection(
@@ -55,7 +56,14 @@ export async function verifyAcceptanceInspection(
   );
   assert.equal(state.continuation, 'blocked');
   assert.deepEqual(state.binding, { scope, checkout: await realpath(context.root) });
-  const session = await extensionSession(directory, 'acceptance', owner, undefined, context.root);
+  const session = await extensionSession(
+    directory,
+    'acceptance',
+    owner,
+    undefined,
+    context.root,
+    await commandDependencies(),
+  );
   try {
     const check = (await approvedTool(session, 'workspace-check', 'run_check', {
       name: 'Cat-pilot workspace integrity',
@@ -63,6 +71,19 @@ export async function verifyAcceptanceInspection(
       criteria: [state.criteria[0]!.id],
     })) as unknown as { outcome: string; evidence: { sequence: number; hash: string } };
     assert.equal(check.outcome, 'passed');
+    const validation = await session.execute({
+      id: 'validate-dependencies',
+      action: { type: 'tool', name: 'check_evidence', args: check.evidence },
+    });
+    const measured = validation.result.value as {
+      environmentCurrent: boolean;
+      dependencyMeasurement: { files: { id: string; sha256: string }[] };
+    };
+    assert.equal(measured.environmentCurrent, true);
+    assert.deepEqual(
+      measured.dependencyMeasurement.files.map((item) => item.id),
+      ['host-runtime', 'powershell', 'git-launcher', 'command-worker'],
+    );
     const verdicts = state.criteria.map((item) => ({
       id: item.id,
       met: false,
@@ -127,6 +148,7 @@ export async function verifyAcceptanceInspection(
       c4: state.c4,
       continuation: state.continuation,
       actualEvidenceBlocked: true,
+      measuredDependencies: measured.dependencyMeasurement.files,
       unknownCriteriaRejected: true,
       staleCriteriaRejected: true,
       forgedReferenceRejected: true,

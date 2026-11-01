@@ -48,6 +48,30 @@ implementation/command/infrastructure/flaky/unrelated/unknown, причина и
 ложная ссылка или текст «проверено» не являются доказательством. Изменение входов
 во время команды фиксируется как inputs-changed, даже при exit code 0.
 
+## Измеряемые host dependencies
+
+Host может задать `tools.verificationDependencies`: до 64 явно выбранных
+обычных файлов по абсолютным canonical paths. Это не аргумент инструмента;
+при resume изменение списка отвергается вместе с изменением tools scope.
+Для каждого файла сохраняются ID, path, размер и полный SHA256; список имеет
+собственную policy revision. Проверяются identity/размер/времена до/после чтения
+через открытый descriptor и повторно по пути. Symlink/path alias, каталог,
+исчезнувший или изменившийся файл не получают положительное измерение.
+Лимиты: 512 MiB на файл, 1 GiB на весь список; отмена прерывает чтение.
+
+Эти данные входят в окружение command/browser evidence до/после и повторно
+измеряются в `check_evidence` и acceptance preflight. Отсутствующая зависимость
+даёт ошибку вместо подставного значения. Изменение bytes или policy лишает
+прежнее evidence актуальности окружения. В отчёте `dependencyMeasurement`
+доступны IDs, размеры, hashes и `coverage: declared-files-only`.
+
+Живые drivers Cat-pilot выбирают настоящие runtime/PowerShell/Git launcher/
+command worker и runtime/Chrome/MCP manifest/entry. Измерение launcher или entry
+не доказывает всех загруженных DLL/модулей или фактическое разрешение каждой
+команды. Поэтому исходные unresolved для полного toolchain, ignored dependencies
+и внешних сервисов сохраняются. Сам список не выдаётся за полную аттестацию
+окружения и не разрешает автоматическую сдачу.
+
 ## Browser observations в общей схеме
 
 Host может явно пометить допущенный MCP tool как browser observation с
