@@ -8,6 +8,7 @@ import { ToolAccessQueue } from './rw-lock.ts';
 import { schemas, writeTools, isToolName } from './schemas.ts';
 import type { RuntimeExtensionHost } from '../extensions/registry.ts';
 import { UnknownToolOutcome } from './effect-error.ts';
+import type { RuntimeVerificationHost } from '../verification/host.ts';
 
 export class ToolCoordinator {
   readonly registry: ToolRegistry;
@@ -27,10 +28,11 @@ export class ToolCoordinator {
   static async create(
     journal: RuntimeJournal,
     host?: RuntimeExtensionHost,
+    verification?: RuntimeVerificationHost,
   ): Promise<ToolCoordinator | undefined> {
     const config = journal.state.config!.tools;
     if (!config) return undefined;
-    const registry = await ToolRegistry.create(config, journal, host);
+    const registry = await ToolRegistry.create(config, journal, host, verification);
     await registry.processes.recover();
     return new ToolCoordinator(registry, journal);
   }

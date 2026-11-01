@@ -1,12 +1,18 @@
 import { z } from 'zod';
+import {
+  evidenceReference,
+  commandCheck,
+  plannedCheck,
+  checkPlan,
+  checkAssessment,
+} from '../verification/schemas.ts';
 
 const path = z.string().min(1).max(4096);
 const integer = (max: number) => z.number().int().min(0).max(max);
-const evidenceReference = z.strictObject({
-  sequence: z.number().int().min(1),
-  hash: z.string().regex(/^[a-f0-9]{64}$/),
-});
 export const schemas = {
+  inspect_acceptance: z.strictObject({}),
+  plan_checks: checkPlan,
+  assess_checks: checkAssessment,
   diagnose_check: z.strictObject({
     evidence: evidenceReference,
     category: z.enum([
@@ -20,14 +26,9 @@ export const schemas = {
     reason: z.string().min(1).max(8192),
     correction: z.string().min(1).max(8192),
   }),
-  run_check: z.strictObject({
+  run_check: commandCheck.extend({
     retryOf: evidenceReference.optional(),
-    name: z.string().min(1).max(200),
-    criteria: z.array(z.string().min(1).max(200)).min(1).max(100),
-    command: z.string().min(1).max(100_000),
-    cwd: path.optional(),
-    shell: z.enum(['powershell', 'cmd', 'sh', 'bash']).optional(),
-    timeoutMs: z.number().int().min(100).max(3_600_000).default(120_000),
+    plan: plannedCheck.optional(),
   }),
   check_evidence: z.strictObject({
     sequence: z.number().int().min(1),

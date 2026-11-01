@@ -5,6 +5,28 @@
 
 ## Продолжение BA-6, 01.11.2026
 
+Добавлены внутренние tools inspect_acceptance/plan_checks/assess_checks и
+persisted verificationScope. Живой task host даёт criterion IDs/тексты,
+модель сохраняет checks/uncovered с точными параметрами и context revisions.
+План — предложение модели, не proof. Bound run_check требует совпадающий шаг
+плана, свежий context и execution admission; standalone API сохранён.
+Preflight также учитывает runtime effects/interactions и план command evidence.
+
+На реальной T-008 Cat-pilot проверены запись/восстановление плана, stale revision,
+неполное сопоставление критериев, duplicate step, подмена scope аргументами,
+команды/coverage/reference, отсутствие плана и inactive run. Ноль процессов
+в плановом probe, task/C4 не изменены; model requests 0. Proof:
+`verification/extensions-677f10e8-3c9d-406b-a8b4-f232bce48ddb/proof.json`.
+Тот же прогон подтвердил прежние HTTP/internal, route/owner и acceptance cases.
+Четыре целевых checks/context теста прошли. Это проверка реальных tools с
+явно неподтверждёнными предложениями, не вызовы модели или успешная сдача.
+Активная task с контекстом и положительное planned execution пока не проверены;
+product/native host bridge — следующий BA-7, не включён текущими изменениями.
+Штатная сборка main/workers/preload/renderer, два compiled-native сценария,
+типы runtime/desktop main, ESLint и форматирование прошли. Все изменённые
+исходники меньше 300 строк. Полный suite и новая browser-проверка UI не
+запускались; UI не менялся.
+
 Host dependency measurements добавлены в command/browser evidence и preflight.
 Список host-selected canonical files имеет revision и полные SHA256/размеры;
 проверяются descriptor/path identity, изменения при чтении, лимиты и отмена.

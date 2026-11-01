@@ -9,6 +9,7 @@ import { ToolCoordinator } from './tools/coordinator.ts';
 import { schemas } from './tools/schemas.ts';
 import { RuntimeContext } from './context/service.ts';
 import type { RuntimeExtensionHost } from './extensions/registry.ts';
+import type { RuntimeVerificationHost } from './verification/host.ts';
 
 function validateRoute(route: RouteSnapshot): void {
   if (
@@ -48,10 +49,12 @@ export class RuntimeSession {
     config: RuntimeStart,
     owner: RuntimeProcessIdentity,
     extensions?: RuntimeExtensionHost,
+    verification?: RuntimeVerificationHost,
   ): Promise<RuntimeSession> {
     requireBuiltinCompatibility(config.versions);
     if ((config.extensions?.length || extensions) && !config.tools)
       throw new Error('Extensions require a host tool scope');
+    if (verification && !config.tools) throw new Error('Verification requires a host tool scope');
     validateRoute(config.route);
     for (const route of config.availableRoutes ?? []) validateRoute(route);
     if (!['ask', 'auto', 'full'].includes(config.permissionMode))
@@ -97,7 +100,7 @@ export class RuntimeSession {
           ]);
       }
       const session = new RuntimeSession(journal);
-      session.tools = await ToolCoordinator.create(journal, extensions);
+      session.tools = await ToolCoordinator.create(journal, extensions, verification);
       session.context = await RuntimeContext.create(journal);
       return session;
     } catch (error) {

@@ -14,6 +14,13 @@ import { sessionFileScope } from './session-scope.ts';
 import { runCheck, checkEvidence } from '../verification/checks.ts';
 import { recordCheckDiagnosis } from '../verification/repairs.ts';
 import { observeBrowser } from '../verification/browser.ts';
+import {
+  inspectVerificationHost,
+  requireVerificationHost,
+  type RuntimeVerificationHost,
+} from '../verification/host.ts';
+import { recordCheckPlan } from '../verification/plans.ts';
+import { inspectVerificationAcceptance } from '../verification/acceptance.ts';
 
 export class ToolRegistry {
   readonly scope: PathScope;
@@ -21,25 +28,36 @@ export class ToolRegistry {
   private readonly config: BuiltinToolScope;
   private readonly journal: RuntimeJournal;
   readonly extensions: ExtensionRegistry;
+  private readonly verification?: RuntimeVerificationHost;
   private constructor(
     scope: PathScope,
     config: BuiltinToolScope,
     journal: RuntimeJournal,
     host?: RuntimeExtensionHost,
+    verification?: RuntimeVerificationHost,
   ) {
     this.scope = scope;
     this.config = config;
     this.journal = journal;
     this.processes = new ToolProcesses(config, journal);
     this.extensions = new ExtensionRegistry(journal.state.config!.extensions ?? [], host);
+    if (config.verificationScope || verification) {
+      const supplied = requireVerificationHost(journal, verification);
+      this.verification = {
+        ...supplied,
+        scope: structuredClone(supplied.scope),
+        admission: structuredClone(supplied.admission),
+      };
+    }
   }
   static async create(
     config: BuiltinToolScope,
     journal: RuntimeJournal,
     host?: RuntimeExtensionHost,
+    verification?: RuntimeVerificationHost,
   ): Promise<ToolRegistry> {
     const scope = await sessionFileScope(journal);
-    return new ToolRegistry(scope, config, journal, host);
+    return new ToolRegistry(scope, config, journal, host, verification);
   }
   parse(name: string, args: unknown): { name: string; args: Record<string, unknown> } {
     if (this.extensions.has(name)) return { name, args: this.extensions.parse(name, args) };
@@ -60,10 +78,33 @@ export class ToolRegistry {
         ? observeBrowser(id, name, args, this.scope, this.extensions, this.journal, signal)
         : this.extensions.invoke(id, name, args, signal);
     switch (name) {
+      case 'inspect_acceptance':
+        return inspectVerificationHost(this.journal, this.scope, this.verification, signal);
+      case 'plan_checks':
+        return recordCheckPlan(id, args, this.scope, this.journal, this.verification, signal);
+      case 'assess_checks': {
+        const host = requireVerificationHost(this.journal, this.verification);
+        return inspectVerificationAcceptance({
+          id,
+          journal: this.journal,
+          host: host.acceptance,
+          admission: host.admission,
+          ...schemas.assess_checks.parse(args),
+          signal,
+        });
+      }
       case 'diagnose_check':
         return recordCheckDiagnosis(id, schemas.diagnose_check.parse(args), this.journal);
       case 'run_check':
-        return runCheck(id, args, this.scope, this.processes, this.journal, signal);
+        return runCheck(
+          id,
+          args,
+          this.scope,
+          this.processes,
+          this.journal,
+          signal,
+          this.verification,
+        );
       case 'check_evidence':
         return checkEvidence(args, this.scope, this.journal, signal);
       case 'context_read': {

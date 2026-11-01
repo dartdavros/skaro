@@ -55,15 +55,14 @@ export async function verifyAcceptanceInspection(
     ),
   );
   assert.equal(state.continuation, 'blocked');
-  assert.deepEqual(state.binding, { scope, checkout: await realpath(context.root) });
-  const session = await extensionSession(
-    directory,
-    'acceptance',
-    owner,
-    undefined,
-    context.root,
-    await commandDependencies(),
-  );
+  assert.deepEqual(state.binding, {
+    scope,
+    checkout: await realpath(context.root),
+    execution: 'blocked',
+  });
+  const session = await extensionSession(directory, 'acceptance', owner, undefined, context.root, {
+    dependencies: await commandDependencies(),
+  });
   try {
     const check = (await approvedTool(session, 'workspace-check', 'run_check', {
       name: 'Cat-pilot workspace integrity',

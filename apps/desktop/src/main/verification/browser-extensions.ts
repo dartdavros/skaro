@@ -53,14 +53,9 @@ export async function verifyBrowserExtensions(
       },
     },
   });
-  const session = await extensionSession(
-    directory,
-    'browser',
-    owner,
-    extension,
-    target.root,
-    await browserDependencies(),
-  );
+  const session = await extensionSession(directory, 'browser', owner, extension, target.root, {
+    dependencies: await browserDependencies(),
+  });
   const invoke = (id: string, name: string, args: unknown) =>
     approvedTool(session, id, `mcp__browser__${name}`, args);
   try {

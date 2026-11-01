@@ -5,6 +5,8 @@ import { checkEvidence } from './checks.ts';
 import { requireEvidence, type EvidenceReference } from './evidence.ts';
 import { captureCheckInputs, fingerprint } from './inputs.ts';
 import { captureVerificationEnvironment } from './environment.ts';
+import { requirePlannedCheck } from './plans.ts';
+import { schemas } from '../tools/schemas.ts';
 
 const inspecting = new WeakMap<RuntimeJournal, Set<string>>();
 
@@ -46,6 +48,16 @@ async function inspect(input: InspectionInput) {
     throw new Error('Acceptance proposal exceeds its inspection limit');
   const before = await input.host.inspect(input.admission, signal);
   const reasons = [...before.reasons];
+  if (journal.state.stopped || journal.state.closed) reasons.push('Runtime session is stopped');
+  if (Object.keys(journal.state.interactions).length)
+    reasons.push('Runtime interactions remain open');
+  if (
+    Object.entries(journal.state.effects).some(
+      ([id, effect]) =>
+        effect.state === 'unknown' || (effect.state === 'pending' && id !== input.id),
+    )
+  )
+    reasons.push('Runtime effects remain unresolved');
   if (journal.state.config!.sessionId !== input.admission.sessionId)
     reasons.push('Admission does not match the journal session');
   if (!before.binding || before.binding.checkout !== scope.root)
@@ -71,6 +83,27 @@ async function inspect(input: InspectionInput) {
     for (const reference of verdict.evidence) {
       try {
         const evidence = requireEvidence(journal, reference);
+        const binding = journal.state.config!.tools?.verificationScope;
+        if (binding && evidence.kind === 'command-check') {
+          if (!evidence.plan) reasons.push('Bound task evidence has no verification plan');
+          else
+            await requirePlannedCheck(
+              schemas.run_check.parse({
+                name: evidence.name,
+                criteria: evidence.criteria,
+                command: evidence.command,
+                cwd: evidence.cwd,
+                shell: evidence.shell,
+                timeoutMs: evidence.timeoutMs,
+                plan: evidence.plan,
+              }),
+              evidence.cwd,
+              scope,
+              journal,
+              { scope: binding, acceptance: input.host, admission: input.admission },
+              signal,
+            );
+        }
         if (
           !evidence.criteria.includes(criterion) ||
           evidence.criteria.some((id) => !known.has(id))

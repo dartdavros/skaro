@@ -81,9 +81,14 @@ export interface RuntimeEnvironmentPort {
 export interface RuntimeAcceptanceState {
   revision: string;
   /** Older projections without this binding cannot support evidence preflight. */
-  binding?: { scope: Readonly<SkaroScope>; checkout: string };
+  binding?: {
+    scope: Readonly<SkaroScope>;
+    checkout: string;
+    /** Checking may run before C4 review; submission still uses all acceptance gates. */
+    execution: 'allowed' | 'blocked';
+  };
   criteriaRevision: string;
-  criteria: readonly { id: string; met: boolean; evidenceIds: readonly string[] }[];
+  criteria: readonly { id: string; text?: string; met: boolean; evidenceIds: readonly string[] }[];
   openDecisions: readonly string[];
   c4: 'not-required' | 'current' | 'missing' | 'stale';
   result: 'not-submitted' | 'accepted' | 'stale';

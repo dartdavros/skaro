@@ -94,10 +94,21 @@ export function builtinAcceptancePort(
         }
       }
       const state = {
-        binding: { scope: structuredClone(scope), checkout },
+        binding: {
+          scope: structuredClone(scope),
+          checkout,
+          execution:
+            current &&
+            runtime?.state === 'running' &&
+            !openDecisions.length &&
+            !['done', 'cancelled'].includes(task.status)
+              ? ('allowed' as const)
+              : ('blocked' as const),
+        },
         criteriaRevision: revision,
         criteria: taskSections(task.body).criteria.map((item, index) => ({
           id: `${scope.projectId}:${taskId}:${revision}:${index + 1}`,
+          text: item.text,
           met: item.done,
           evidenceIds: [] as string[],
         })),

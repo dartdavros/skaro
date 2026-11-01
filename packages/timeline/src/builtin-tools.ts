@@ -1,5 +1,6 @@
 import type { PermissionMode } from './agent.ts';
 import type { RouteCapabilityAssessment } from './builtin-model.ts';
+import type { SkaroScope } from './skaro-scope.ts';
 
 /** Host-selected files only. Measuring this list does not attest dependency closure. */
 export interface BuiltinVerificationDependency {
@@ -15,6 +16,8 @@ export interface BuiltinToolScope {
   /** Host/build supplies the bundled command supervisor entry. Never a model argument. */
   commandEntry?: string;
   verificationDependencies?: readonly BuiltinVerificationDependency[];
+  /** Persisted host binding for authoritative verification tools. */
+  verificationScope?: Readonly<SkaroScope>;
   capabilities?: RouteCapabilityAssessment;
 }
 

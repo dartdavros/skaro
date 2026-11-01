@@ -26,6 +26,7 @@ export interface CheckEvidence {
   exitCode: number | null;
   output: { path: string; sha256: string; bytes: number };
   retryOf?: EvidenceReference;
+  plan?: EvidenceReference & { stepId: string };
 }
 export interface BrowserEvidence extends Omit<
   CheckEvidence,

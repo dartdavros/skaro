@@ -112,6 +112,32 @@ node apps/desktop/scripts/verify-builtin-extensions.mjs --browser CAT_PILOT_PROJ
 
 ## Предварительная оценка приёмки
 
+Внутренние tools `inspect_acceptance`, `plan_checks` и `assess_checks` работают
+только с живым host port, admission session и сохранённым task scope. Модель
+не выбирает project/task/run через аргументы. Inspector возвращает реальные
+тексты criterion IDs. Без host port инструменты дают явный отказ; scope
+сохраняется в tools config, поэтому restart не позволяет подменить привязку.
+
+`plan_checks` сохраняет модельное предложение `verification-plan:ID:result`:
+точные command/cwd/shell/timeout/name/criterion IDs, полные текущие Git inputs,
+ревизию критериев и доступные context source revisions. Для каждого критерия
+нужен check или явно записанная причина `uncovered`; дубли и неизвестные IDs
+отвергаются. План с непокрытыми требованиями разрешает продолжение анализа,
+не доказывает достаточность покрытия и не становится evidence.
+
+В bound task scope `run_check` требует точную sequence/hash ссылку на шаг плана.
+Команда, имя, cwd, shell, timeout и criterion coverage должны совпасть. Критерии,
+host binding и context sources проверяются заново; context нужен для исполнения.
+Compact с теми же source revisions не обесценивает план только сменой epoch.
+Изменения implementation допускаются: новый результат всегда измеряет новые
+inputs, старый success не переносится. Runtime снова проверяет живой допуск
+после hashing/journal persistence непосредственно перед исполнением.
+
+`binding.execution` отделён от готовности сдачи: текущая работа может проверяться
+до C4-review, но не после остановки/завершения, handoff или при открытых owner
+decisions. Standalone verification без task host сохраняет прежний API run_check.
+Продуктовый native bridge этих ports относится к BA-7 и пока не подключён.
+
 `TaskRuns.builtinAcceptance` читает существующие task/completion/C4 данные,
 без второй таблицы состояния. Criterion IDs включают project/task ID, ревизию
 действующих критериев и порядковый номер. Checkout привязан host к текущему
@@ -130,7 +156,11 @@ node apps/desktop/scripts/verify-builtin-extensions.mjs --browser CAT_PILOT_PROJ
 Старые host projections без checkout binding не получают положительный preflight.
 
 Оценка сохраняется в primary journal как `verification-assessment:ID`;
-повторное и параллельное использование ID отвергается. Запись не является
+повторное и параллельное использование ID прямого inspection API отвергается.
+Model tools сохраняют общую дедупликацию call ID: повтор возвращает прошлую
+запись, не новую оценку. Pending/unknown runtime effects и открытые interactions
+блокируют готовность; собственный assessment intent не считается чужим pending.
+Для bound command evidence повторно проверяется план и его источники. Запись не является
 capability для последующей сдачи: файловая система изменяема, а проверка не
 атомарна с `submit_result`. Модельное сопоставление evidence с критерием остаётся
 предложением; наличие успешной команды не доказывает требование. Неизвестная
@@ -154,8 +184,10 @@ Ignored dependencies (например node_modules), фактическое р�
 проверенный полный цикл исправления значимого дефекта и атомарное применение
 evidence в существующих completion/C4 gates. Criterion IDs и read-only проекция
 реализованы; это не полная интеграция сдачи. Внешний submit_result не менялся;
-проверен отказ реальному неактивному scope без изменения задачи/C4, успешная
-сдача через built-in host пока не подключена. На других
+проверен отказ реальному неактивному scope без изменения задачи/C4. Сохранение
+плана, его отрицательные execution gates и restart проверены на Cat-pilot;
+успешное исполнение плана в активной задаче и сдача через built-in host пока
+не проверены/не подключены. На других
 OS command backend остаётся явно недоступен. Полная приёмка BA-6 не заявлена.
 
 ## Проверка реализации

@@ -4,6 +4,7 @@ import {
   RuntimeSession,
   type RuntimeExtensionHost,
   type JournalRecord,
+  type RuntimeVerificationHost,
 } from '@skaro/agent-runtime';
 import type { RuntimeProcessIdentity, BuiltinVerificationDependency } from '@skaro/timeline';
 import { longContextConfig } from '../credentials/long-context-config';
@@ -14,14 +15,19 @@ export async function extensionSession(
   owner: RuntimeProcessIdentity,
   host?: RuntimeExtensionHost,
   cwd?: string,
-  dependencies?: readonly BuiltinVerificationDependency[],
+  options?: {
+    dependencies?: readonly BuiltinVerificationDependency[];
+    verification?: RuntimeVerificationHost;
+  },
 ) {
   const config = longContextConfig(directory);
   config.sessionId = `extensions-${name}`;
   config.journalPath = join(directory, `${name}.jsonl`);
   config.tools!.readOnly = false;
   config.tools!.commandEntry = resolve('apps/desktop/out/main/agent-command-worker.js');
-  if (dependencies) config.tools!.verificationDependencies = dependencies;
+  if (options?.dependencies) config.tools!.verificationDependencies = options.dependencies;
+  if (options?.verification)
+    config.tools!.verificationScope = structuredClone(options.verification.scope);
   if (cwd) {
     config.tools!.cwd = cwd;
     config.context = undefined;
@@ -31,7 +37,7 @@ export async function extensionSession(
     revision,
     readOnly,
   }));
-  return RuntimeSession.open(config, owner, host);
+  return RuntimeSession.open(config, owner, host, options?.verification);
 }
 
 /** The acceptance driver approves only these explicitly selected local operations. */

@@ -10,6 +10,8 @@ import { captureVerificationEnvironment } from './environment.ts';
 import { requireEvidence, type CheckEvidence } from './evidence.ts';
 import { requireCheckRetry } from './repairs.ts';
 import { verifyEvidenceArtifact } from './artifacts.ts';
+import { requirePlannedCheck } from './plans.ts';
+import type { RuntimeVerificationHost } from './host.ts';
 
 export async function runCheck(
   id: string,
@@ -18,9 +20,13 @@ export async function runCheck(
   processes: ToolProcesses,
   journal: RuntimeJournal,
   signal: AbortSignal,
+  verification?: RuntimeVerificationHost,
 ) {
   const input = schemas.run_check.parse(raw);
   const cwd = await scope.path(input.cwd ?? '.', true);
+  await requirePlannedCheck(input, cwd, scope, journal, verification, signal);
+  if (verification && !input.plan)
+    throw new Error('Bound task checks require an authoritative verification plan');
   requireCheckRetry(input, cwd, journal);
   const inputs = await captureCheckInputs(scope, signal);
   const environment = await captureVerificationEnvironment(journal, signal);
@@ -28,6 +34,8 @@ export async function runCheck(
   await journal.append(`check:${id}:started`, [], {
     value: { kind: 'check-start', input, cwd, inputs, environment, startedAt },
   });
+  // Hashing and journal persistence may take time; recheck the live lease at execution.
+  await requirePlannedCheck(input, cwd, scope, journal, verification, signal);
   let result = await processes.exec(id, { ...input, yieldMs: 1000 }, cwd, signal);
   while (result.state === 'running' || result.state === 'stopping')
     result = await processes.stdin({ processId: id, end: false, offset: 0, yieldMs: 1000 }, signal);
@@ -50,6 +58,7 @@ export async function runCheck(
     environment,
     afterEnvironment,
     ...(input.retryOf ? { retryOf: input.retryOf } : {}),
+    ...(input.plan ? { plan: input.plan } : {}),
     startedAt,
     finishedAt: Date.now(),
     exitCode: result.exitCode,
