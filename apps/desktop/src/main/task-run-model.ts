@@ -8,6 +8,7 @@ import type { AgentManager } from './agents';
 import type { Projects } from './projects';
 import type { NotifyKind } from './notifier';
 import type { EnvironmentDocker } from './task-environment-docker';
+import type { NativeAdmissions } from './native/admissions';
 
 export interface TaskRunDeps {
   db: AppDb;
@@ -36,6 +37,8 @@ export class ActiveRun {
   run: RunRecord;
   readonly timeline: Timeline;
   session: AgentSession | undefined;
+  /** Present only for the builtin runtime; managed agents keep their existing lifecycle. */
+  builtinAdmission?: NativeAdmissions;
   grant: Grant | undefined;
   log: WriteStream | undefined;
   /** Events not yet sent to the renderer. */

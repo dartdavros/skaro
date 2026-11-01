@@ -17,6 +17,7 @@ if (!(
       '--native-model-preflight',
       '--native-admissions',
       '--native-admission-recovery',
+      '--task-admission',
     ].includes(process.argv[2])) ||
   (process.argv.length === 4 && process.argv[2] === '--browser')
 ))

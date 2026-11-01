@@ -12,6 +12,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { handoffRecord } from './task-handoff-record';
 import { taskRunDirectory } from './task-run-directory';
 import { closeSessionLog } from './close-session-log';
+import { revokeBuiltinTaskAdmission, confirmBuiltinTaskExit } from './builtin-task-admission';
 
 const ENVIRONMENT_TOOL_TIMEOUT_MS = 30 * 60_000;
 
@@ -145,6 +146,10 @@ export class TaskRunSessions {
     } catch (error) {
       active.grant.revoke();
       active.grant = undefined;
+      if (active.builtinAdmission) {
+        const lease = await revokeBuiltinTaskAdmission(active, 'Task session startup failed');
+        await confirmBuiltinTaskExit(active, lease);
+      }
       if (resume) this.ctx.history.notice(active, 'session_lost', 'error', errorText(error));
       throw error;
     }
@@ -168,6 +173,10 @@ export class TaskRunSessions {
       this.ctx.events.failTurn(active, error);
     }
     if (active.session === session && !active.switching) {
+      const lease = active.builtinAdmission
+        ? await revokeBuiltinTaskAdmission(active, 'Task runtime exited')
+        : undefined;
+      if (active.session !== session || active.switching) return;
       active.session = undefined;
       active.grant?.revoke();
       active.grant = undefined;
@@ -175,6 +184,7 @@ export class TaskRunSessions {
       const turn = active.timeline.state.turns.at(-1);
       if (turn && !turn.outcome)
         this.ctx.events.failTurn(active, new Error('The agent process exited'));
+      if (lease) await confirmBuiltinTaskExit(active, lease);
       this.ctx.changed(active.projectId, active.taskId);
     }
   }
@@ -182,12 +192,16 @@ export class TaskRunSessions {
   async detach(active: ActiveRun): Promise<void> {
     // An attachment already in flight must not publish a new process after cleanup has run.
     await active.attaching?.catch(() => undefined);
+    const lease = active.builtinAdmission
+      ? await revokeBuiltinTaskAdmission(active, 'Task session detached')
+      : undefined;
     const session = active.session;
     active.session = undefined;
     active.grant?.revoke();
     active.grant = undefined;
     await this.ctx.processes.stop(active.run.id);
     await session?.close().catch(() => undefined);
+    if (lease) await confirmBuiltinTaskExit(active, lease);
     this.ctx.history.flush(active);
     // A closed session ends no turn by itself: its slot must not stay taken.
     active.release?.();
@@ -196,18 +210,23 @@ export class TaskRunSessions {
 
   /** A handoff must prove shutdown; a timeout/error leaves the old run frozen for retry. */
   async stopForHandoff(active: ActiveRun): Promise<void> {
+    const lease = active.builtinAdmission
+      ? await revokeBuiltinTaskAdmission(active, 'Task agent handoff')
+      : undefined;
     active.grant?.revoke();
     active.grant = undefined;
     const session = active.session;
     if (session) {
-      for (const item of active.timeline.state.items)
-        if (item.kind === 'command' && item.background?.state === 'running')
-          await session.stopBackground(item.background.taskId);
+      if (!lease)
+        for (const item of active.timeline.state.items)
+          if (item.kind === 'command' && item.background?.state === 'running')
+            await session.stopBackground(item.background.taskId);
       await this.ctx.processes.stop(active.run.id);
       await session.close();
       await active.pumping;
       active.session = undefined;
     } else await this.ctx.processes.stop(active.run.id);
+    if (lease) await confirmBuiltinTaskExit(active, lease);
   }
 
   async close(): Promise<void> {

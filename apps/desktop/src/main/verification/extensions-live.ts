@@ -19,6 +19,7 @@ import { verifyNativeLifetime } from './native-lifetime';
 import { verifyNativeModelPreflight } from './native-model-preflight';
 import { verifyNativeAdmissions } from './native-admissions';
 import { verifyNativeAdmissionRecovery } from './native-admission-recovery';
+import { verifyTaskAdmission } from './task-admission';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -68,6 +69,9 @@ void app.whenReady().then(async () => {
       } else if (process.argv[2] === '--native-admission-recovery') {
         stage = 'native-admission-recovery';
         proof = { recovery: await verifyNativeAdmissionRecovery(services, data, directory) };
+      } else if (process.argv[2] === '--task-admission') {
+        stage = 'task-admission';
+        proof = { taskAdmission: await verifyTaskAdmission(services) };
       } else {
         stage = 'http-and-internal';
         const http = await verifyHttpExtensions(services, directory, owner);
