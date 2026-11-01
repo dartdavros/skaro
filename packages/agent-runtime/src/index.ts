@@ -36,7 +36,7 @@ export { VerificationServer } from './verification/ipc-host.ts';
 export { ExtensionClient } from './extensions/ipc-client.ts';
 export { ExtensionServer } from './extensions/ipc-host.ts';
 export { extensionBinding, requireExtensionBinding } from './extensions/ipc-binding.ts';
-export { bindSkaroOperations } from './extensions/skaro.ts';
+export { bindSkaroOperations, prepareSkaroOperations } from './extensions/skaro.ts';
 export type * from './models/chat-types.ts';
 export type * from './models/connector-auth.ts';
 export type * from './models/native-types.ts';

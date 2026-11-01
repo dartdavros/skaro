@@ -1,6 +1,7 @@
 import { AjvJsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/ajv';
 import type { ScopedOperationPort, ProcessAdmissionPort, SkaroScope } from '@skaro/timeline';
 import type { Tool } from './server.ts';
+import { operationCatalogue } from './catalogue.ts';
 
 /** Internal transport over the exact existing handlers/availability, never a second workflow. */
 export function scopedOperationPort<S extends SkaroScope>(input: {
@@ -21,12 +22,7 @@ export function scopedOperationPort<S extends SkaroScope>(input: {
       signal.throwIfAborted();
       await input.admissions.requireActive(admission, signal);
       signal.throwIfAborted();
-      return tools
-        .filter(({ tool }) => !tool.available || tool.available(scope))
-        .map(({ tool }) => ({
-          name: tool.name,
-          inputSchema: structuredClone(tool.inputSchema),
-        }));
+      return operationCatalogue(input.tools, scope);
     },
     execute: async (request) => {
       request.signal.throwIfAborted();

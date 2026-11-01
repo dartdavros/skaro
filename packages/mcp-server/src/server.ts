@@ -7,6 +7,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import type { ProcessAdmissionPort, ScopedOperationPort } from '@skaro/timeline';
 import { scopedOperationPort } from './scoped-port.ts';
+import { operationCatalogue } from './catalogue.ts';
 
 export interface ToolResult {
   text: string;
@@ -68,6 +69,11 @@ export class McpHttpServer<S> {
   get url(): string {
     if (!this.server) throw new Error('MCP server is not listening');
     return `http://127.0.0.1:${this.port}/mcp`;
+  }
+
+  /** Privileged host bootstrap metadata; not an HTTP grant or permission to execute tools. */
+  describe(scope: S) {
+    return operationCatalogue(this.tools, structuredClone(scope));
   }
 
   /** Bind the same live catalogue/handlers; internal callers receive no HTTP token. */
@@ -152,11 +158,7 @@ export class McpHttpServer<S> {
         return rpcResult(id, {});
       case 'tools/list':
         return rpcResult(id, {
-          tools: this.visible(scope).map((t) => ({
-            name: t.name,
-            description: t.description,
-            inputSchema: t.inputSchema,
-          })),
+          tools: this.describe(scope),
         });
       case 'tools/call': {
         const name = msg.params?.['name'];

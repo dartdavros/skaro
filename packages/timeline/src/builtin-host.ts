@@ -26,17 +26,19 @@ export interface ProcessAdmissionPort {
   confirmExit(admission: ProcessAdmission): Promise<void>;
 }
 
+/** Host-visible metadata only; possessing a schema never authorizes its handler. */
+export interface ScopedOperationDescriptor {
+  name: string;
+  description?: string;
+  inputSchema: Readonly<Record<string, unknown>>;
+}
+
 export interface ScopedOperationPort {
   /** Existing MCP tool schemas/availability and handlers, bound to host.scope. */
   catalog(
     admission: ProcessAdmission,
     signal: AbortSignal,
-  ): Promise<
-    readonly {
-      name: string;
-      inputSchema: Readonly<Record<string, unknown>>;
-    }[]
-  >;
+  ): Promise<readonly ScopedOperationDescriptor[]>;
   execute(request: {
     admission: ProcessAdmission;
     callId: string;

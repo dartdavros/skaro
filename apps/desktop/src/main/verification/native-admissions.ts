@@ -8,6 +8,7 @@ import { AdmissionStore } from '../native/admission-state';
 import { startBuiltinNativeSession } from '../native/bundled';
 import { nativeProbeConfig, nativeProbeOptions } from './native-probe-options';
 import { c4ReviewKey } from '../c4-review';
+import { nativeOperationBootstrap } from './native-operation-bootstrap';
 
 /** Persist real process admissions on the registered project; never create a TaskRun. */
 export async function verifyNativeAdmissions(
@@ -48,6 +49,7 @@ export async function verifyNativeAdmissions(
       },
     });
   let lease = await prepare();
+  let operations = await nativeOperationBootstrap(services, scope, lease);
   const firstAdmission = lease.admission;
   assert.equal(store.read()?.status, 'prepared');
   await assert.rejects(
@@ -61,6 +63,11 @@ export async function verifyNativeAdmissions(
   );
   const config = nativeProbeConfig(directory, context.root, sessionId, true);
   config.tools!.verificationScope = scope;
+  config.extensions = operations.bound.extensions.tools.map(({ name, revision, readOnly }) => ({
+    name,
+    revision,
+    readOnly,
+  }));
   const { owners, options } = nativeProbeOptions(directory, context.root, true);
   const recordOwner = options.processStarted!;
   options.processStarted = (pid, identity) => {
@@ -77,6 +84,7 @@ export async function verifyNativeAdmissions(
       options,
       {
         signal: lease.signal,
+        extensions: operations.bound,
         verification: {
           scope,
           admission: lease.admission,
@@ -100,6 +108,11 @@ export async function verifyNativeAdmissions(
     };
     assert.equal(state.criteria.length, 9);
     assert.equal(state.binding.execution, 'blocked');
+    await operations.requireActive();
+    const result = (await session.invokeTool(operations.name, {}, `${id}-context`)) as {
+      text: string;
+    };
+    assert(result.text.includes(projects[0]!.name));
   };
   const close = async () => {
     await session?.close();
@@ -121,6 +134,7 @@ export async function verifyNativeAdmissions(
     await inspect('initial');
     const old = lease;
     await lease.revoke(firstAdmission, 'Explicit native verification handoff');
+    await operations.requireRevoked();
     assert.equal(store.read()?.status, 'revoked');
     await assert.rejects(prepare(), /no confirmed exit/);
     await operationTimeout(drain!, 45_000, 'Revoked durable admission did not close its runtime');
@@ -130,6 +144,7 @@ export async function verifyNativeAdmissions(
     for (const process of owners) assert.equal(await processBirth(process.pid), undefined);
 
     lease = await prepare();
+    operations = await nativeOperationBootstrap(services, scope, lease);
     assert.equal(lease.admission.generation, firstAdmission.generation + 1);
     assert.notEqual(lease.admission.id, firstAdmission.id);
     await assert.rejects(old.revoke(firstAdmission, 'Must not revoke the successor'), /stale/);
@@ -143,6 +158,7 @@ export async function verifyNativeAdmissions(
     await inspect('successor');
     assert.equal(store.read()?.status, 'active');
     await lease.revoke(lease.admission, 'Native verification completed');
+    await operations.requireRevoked();
     await close();
     await lease.confirmExit(lease.admission);
     assert.equal(store.read()?.status, 'exited');
@@ -154,6 +170,11 @@ export async function verifyNativeAdmissions(
       project: 'Cat-pilot',
       taskId: task.id,
       durableOwnershipBeforeInspection: true,
+      actualCatalogueBeforeSpawn: true,
+      bootstrapCannotExecute: true,
+      catalogueMatchesActivePort: true,
+      handlerRequiresLiveLease: true,
+      metadataCannotMutateRegistry: true,
       preparedLeaseCannotAct: true,
       liveHostRecoveryRejected: true,
       previousExitRequired: true,

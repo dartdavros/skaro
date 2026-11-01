@@ -26,6 +26,8 @@ OS ownership, отзыв и подтверждённый выход; task/chat b
 identity/session/handoff gates; положительная приёмка активной builtin-задачи открыта.
 Приняты [канонический model turn и поток сообщений](builtin-agent-model-timeline.md):
 настоящие streaming deltas, один terminal и совпадение live/replay на Cat-pilot.
+Принят [bootstrap каталога MCP](builtin-agent-operation-bootstrap.md) до spawn:
+метаданные из штатного реестра, выполнение только после durable process admission.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.
