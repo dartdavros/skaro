@@ -7,6 +7,10 @@ import type {
   RuntimeProcessIdentity,
   TimelineEvent,
   UserInput,
+  RuntimeVerificationBinding,
+  VerificationInspectRequest,
+  VerificationCancelRequest,
+  VerificationInspectReply,
 } from '@skaro/timeline';
 
 export type RuntimeStart = BuiltinSessionStart;
@@ -98,10 +102,18 @@ export interface RuntimeState {
 }
 
 export type ParentMessage =
-  | { type: 'start'; config: RuntimeStart; owner: RuntimeProcessIdentity }
-  | { type: 'command'; command: RuntimeCommand };
+  | {
+      type: 'start';
+      config: RuntimeStart;
+      owner: RuntimeProcessIdentity;
+      verification?: RuntimeVerificationBinding;
+    }
+  | { type: 'command'; command: RuntimeCommand }
+  | VerificationInspectReply;
 export type RuntimeMessage =
   | { type: 'ready'; records: JournalRecord[] }
   | { type: 'record'; record: JournalRecord }
   | { type: 'reply'; id: string; result: CommandResult }
-  | { type: 'fatal'; error: string };
+  | { type: 'fatal'; error: string }
+  | VerificationInspectRequest
+  | VerificationCancelRequest;

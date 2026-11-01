@@ -1,17 +1,12 @@
-import type { RuntimeAcceptancePort, ProcessAdmission, SkaroScope } from '@skaro/timeline';
+import type { RuntimeVerificationHost } from '@skaro/timeline';
+export type { RuntimeVerificationHost } from '@skaro/timeline';
 import type { RuntimeJournal } from '../journal.ts';
 import type { PathScope } from '../tools/path-scope.ts';
 import { fingerprint } from './inputs.ts';
 
-/** Trusted live port; functions/leases never come from model arguments or repository data. */
-export interface RuntimeVerificationHost {
-  scope: Readonly<SkaroScope>;
-  acceptance: RuntimeAcceptancePort;
-  admission: ProcessAdmission;
-}
-
 export function requireVerificationHost(journal: RuntimeJournal, host?: RuntimeVerificationHost) {
   const config = journal.state.config!;
+  host?.signal?.throwIfAborted();
   if (
     !host ||
     host.scope.kind !== 'task' ||

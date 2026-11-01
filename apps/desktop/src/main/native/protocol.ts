@@ -1,4 +1,11 @@
-import type { AgentSession, SessionOptions, TimelineEvent } from '@skaro/timeline';
+import type {
+  AgentSession,
+  SessionOptions,
+  TimelineEvent,
+  RuntimeVerificationBinding,
+  VerificationInspectRequest,
+  VerificationCancelRequest,
+} from '@skaro/timeline';
 import type { OwnedProcess } from '../process-identity';
 
 export type SessionMethod = Exclude<keyof AgentSession, 'events'> | 'invokeTool';
@@ -16,6 +23,7 @@ export type NativeConfig =
       bundled: import('@skaro/timeline').BuiltinSessionStart;
       entry: string;
       attachmentsDir: string;
+      verification?: RuntimeVerificationBinding;
     };
 export type NativeOptions = Omit<
   SessionOptions,
@@ -32,4 +40,6 @@ export type Reply =
   | { type: 'raw'; bytes: ArrayBuffer }
   | { type: 'event'; event: TimelineEvent }
   | { type: 'spawn'; process: OwnedProcess; gate: SharedArrayBuffer }
-  | { type: 'ended'; error?: string };
+  | { type: 'ended'; error?: string }
+  | VerificationInspectRequest
+  | VerificationCancelRequest;

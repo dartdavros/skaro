@@ -13,9 +13,15 @@ import { processBirthSync } from '../process-identity';
 import { SecretValues } from '../secret-values';
 import { presentationEvent } from '../timeline-presentation';
 import type { NativeConfig, NativeOptions, Reply, Request } from './protocol';
+import { VerificationClient } from '@skaro/agent-runtime';
+import type { VerificationInspectReply } from '@skaro/timeline';
 
 const config = workerData as NativeConfig;
 const port = parentPort!;
+const verification =
+  'bundled' in config && config.verification
+    ? new VerificationClient(config.verification, (request) => port.postMessage(request))
+    : undefined;
 const secrets = new SecretValues();
 let session: AgentSession | undefined;
 let startup: Promise<void> | undefined;
@@ -71,6 +77,7 @@ async function start(options: NativeOptions): Promise<void> {
       processStarted: resolved.processStarted,
       raw: resolved.raw,
       signal: resolved.signal,
+      verification: verification?.host(),
     });
   } else {
     const adapter = await createAgentAdapter(config.agent, {
@@ -92,7 +99,11 @@ async function start(options: NativeOptions): Promise<void> {
   );
 }
 
-port.on('message', (request: Request) => {
+port.on('message', (request: Request | VerificationInspectReply) => {
+  if ('type' in request) {
+    verification?.receive(request);
+    return;
+  }
   secrets.remember(request.secrets);
   void (async () => {
     if (request.method === 'start') {
@@ -112,7 +123,11 @@ port.on('message', (request: Request) => {
       return session.invokeTool(...request.args);
     }
     const method = session[request.method] as (...args: unknown[]) => Promise<void>;
-    return method.apply(session, request.args);
+    try {
+      return await method.apply(session, request.args);
+    } finally {
+      if (request.method === 'close') verification?.close();
+    }
   })().then(
     (value) => post({ type: 'reply', id: request.id, value }),
     (error: unknown) =>

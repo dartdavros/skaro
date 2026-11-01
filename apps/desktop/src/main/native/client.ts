@@ -9,6 +9,8 @@ import {
 } from '@skaro/timeline';
 import { stopOwnedProcess, type OwnedProcess } from '../process-identity';
 import type { NativeConfig, NativeOptions, Reply, Request, SessionMethod } from './protocol';
+import { VerificationServer, type RuntimeVerificationHost } from '@skaro/agent-runtime';
+import { processBirth } from '@skaro/agent-runtime/process-identity';
 
 const workers = new Set<NativeSession>();
 let closing = false;
@@ -26,12 +28,53 @@ class NativeSession implements AgentSession {
   private error?: Error;
   private stopping?: Promise<void>;
   private readonly bundled: boolean;
-  constructor(config: NativeConfig, options: SessionOptions) {
+  private readonly verification?: VerificationServer;
+  constructor(
+    config: NativeConfig,
+    options: SessionOptions,
+    verification?: RuntimeVerificationHost,
+    workerEntry = join(app.getAppPath(), 'out', 'main', 'native-worker.js'),
+  ) {
+    verification?.signal?.throwIfAborted();
+    if (
+      verification ||
+      ('bundled' in config && (config.verification || config.bundled.tools?.verificationScope))
+    ) {
+      if (
+        !verification ||
+        !('bundled' in config) ||
+        JSON.stringify(config.verification) !==
+          JSON.stringify({ scope: verification.scope, admission: verification.admission }) ||
+        JSON.stringify(config.bundled.tools?.verificationScope) !==
+          JSON.stringify(verification.scope) ||
+        config.bundled.sessionId !== verification.admission.sessionId
+      )
+        throw new Error('Native verification binding differs from its host');
+    }
     this.bundled = 'bundled' in config;
     this.options = options;
-    this.worker = new Worker(join(app.getAppPath(), 'out', 'main', 'native-worker.js'), {
+    this.worker = new Worker(workerEntry, {
       workerData: config,
     });
+    if (verification) {
+      this.verification = new VerificationServer(
+        verification,
+        (reply) => this.worker.postMessage(reply),
+        async (signal) => {
+          signal.throwIfAborted();
+          const owner = this.processes[0];
+          if (
+            this.stopping ||
+            closing ||
+            this.error ||
+            !owner ||
+            (await processBirth(owner.pid)) !== owner.birth
+          )
+            throw new Error('Native verification owner is not active');
+          signal.throwIfAborted();
+        },
+      );
+    }
     workers.add(this);
     this.worker.on('message', (reply: Reply) => this.receive(reply));
     this.worker.on('error', (error) => this.fail(error));
@@ -41,7 +84,9 @@ class NativeSession implements AgentSession {
     });
   }
   private receive(reply: Reply): void {
-    if (reply.type === 'spawn') {
+    if (reply.type === 'verification-inspect' || reply.type === 'verification-cancel') {
+      this.verification?.receive(reply);
+    } else if (reply.type === 'spawn') {
       this.processes.push(reply.process);
       const gate = new Int32Array(reply.gate);
       try {
@@ -70,6 +115,7 @@ class NativeSession implements AgentSession {
     }
   }
   private fail(error: Error): void {
+    this.verification?.close();
     this.error ??= error;
     for (const pending of this.pending.values()) pending.reject(error);
     this.pending.clear();
@@ -101,6 +147,7 @@ class NativeSession implements AgentSession {
   stopBackground = (id: string) => this.call('stopBackground', [id]);
   close(): Promise<void> {
     if (this.stopping) return this.stopping;
+    this.verification?.close();
     this.stopping = (async () => {
       let timer: NodeJS.Timeout | undefined;
       try {
@@ -137,6 +184,8 @@ class NativeSession implements AgentSession {
 export async function startNativeSession(
   config: NativeConfig,
   options: SessionOptions,
+  verification?: RuntimeVerificationHost,
+  workerEntry?: string,
 ): Promise<AgentSession> {
   if (closing) throw new Error('The application is closing');
   options.signal?.throwIfAborted();
@@ -149,7 +198,7 @@ export async function startNativeSession(
     signal,
     ...plain
   } = options;
-  const session = new NativeSession(config, options);
+  const session = new NativeSession(config, options, verification, workerEntry);
   const abort = () => {
     void session.close().catch(() => undefined);
   };

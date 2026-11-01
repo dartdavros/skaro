@@ -100,6 +100,30 @@ export interface RuntimeAcceptancePort {
   inspect(admission: ProcessAdmission, signal: AbortSignal): Promise<RuntimeAcceptanceState>;
 }
 
+/** Serializable binding; the privileged inspection implementation stays in its host. */
+export interface RuntimeVerificationBinding {
+  scope: Readonly<SkaroScope>;
+  admission: ProcessAdmission;
+}
+export interface RuntimeVerificationHost extends RuntimeVerificationBinding {
+  acceptance: RuntimeAcceptancePort;
+  signal?: AbortSignal;
+}
+export interface VerificationInspectRequest {
+  type: 'verification-inspect';
+  id: string;
+}
+export interface VerificationCancelRequest {
+  type: 'verification-cancel';
+  id: string;
+}
+export interface VerificationInspectReply {
+  type: 'verification-result';
+  id: string;
+  state?: RuntimeAcceptanceState;
+  error?: string;
+}
+
 /** Constructed by the adapter, bound by Skaro; no Electron/UI imports or global service access. */
 export interface BuiltinAgentHost {
   versions: BuiltinContractVersions;

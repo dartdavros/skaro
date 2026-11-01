@@ -4,6 +4,7 @@ import type { RouteSnapshot } from './builtin-model.ts';
 import type { BuiltinToolScope } from './builtin-tools.ts';
 import type { BuiltinContextConfig } from './builtin-context.ts';
 import type { BuiltinExtensionPolicy } from './builtin-extensions.ts';
+import type { RuntimeVerificationHost } from './builtin-host.ts';
 
 export interface BuiltinSessionStart {
   sessionId: string;
@@ -24,6 +25,8 @@ export interface BuiltinSessionOptions extends Pick<
 > {
   config: BuiltinSessionStart;
   entry?: string;
+  /** In-process host port. Transports serialize only its scope/admission binding. */
+  verification?: RuntimeVerificationHost;
 }
 
 export interface BundledSessionRuntime {

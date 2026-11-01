@@ -15,6 +15,8 @@ import {
   type RuntimeCommand,
   type RuntimeMessage,
   type RuntimeStart,
+  VerificationServer,
+  type RuntimeVerificationHost,
 } from '@skaro/agent-runtime';
 import {
   processBirth,
@@ -30,6 +32,7 @@ export interface SkaroSessionOptions extends Pick<
   config: RuntimeStart;
   /** Compiled entry supplied by the native worker in production. */
   entry?: string;
+  verification?: RuntimeVerificationHost;
 }
 
 /** Real child process transport. It offers lifecycle, never fabricated model output. */
@@ -50,6 +53,7 @@ export class SkaroSession implements AgentSession {
   private owner?: OwnedProcess;
   private stopping?: Promise<void>;
   private failed?: Error;
+  private readonly verification?: VerificationServer;
 
   private constructor(options: SkaroSessionOptions) {
     this.options = options;
@@ -73,6 +77,23 @@ export class SkaroSession implements AgentSession {
       },
     );
     this.processId = this.child.pid ?? 0;
+    if (options.verification) {
+      this.verification = new VerificationServer(
+        options.verification,
+        (reply) => this.post(reply),
+        async (signal) => {
+          signal.throwIfAborted();
+          if (
+            this.stopping ||
+            this.failed ||
+            !this.owner ||
+            (await processBirth(this.owner.pid)) !== this.owner.birth
+          )
+            throw new Error('Runtime verification owner is not active');
+          signal.throwIfAborted();
+        },
+      );
+    }
     this.exited = new Promise((resolve) =>
       this.child.once('close', () => {
         this.fail(new Error('Skaro runtime exited'));
@@ -108,7 +129,15 @@ export class SkaroSession implements AgentSession {
       options.processStarted(session.processId, session.owner);
       options.signal?.throwIfAborted();
       if (session.stopping) throw new Error('Runtime startup was cancelled');
-      session.post({ type: 'start', config: options.config, owner: session.owner });
+      session.post({
+        type: 'start',
+        config: options.config,
+        owner: session.owner,
+        verification: options.verification && {
+          scope: structuredClone(options.verification.scope),
+          admission: structuredClone(options.verification.admission),
+        },
+      });
       await operationTimeout(session.ready, 15_000, 'Skaro runtime startup timed out');
       options.signal?.throwIfAborted();
       return session;
@@ -126,7 +155,11 @@ export class SkaroSession implements AgentSession {
   }
 
   private receive(message: RuntimeMessage): void {
-    if (message.type === 'ready') {
+    if (message.type === 'verification-inspect' || message.type === 'verification-cancel') {
+      if (!this.verification)
+        throw new Error('Runtime requested an unconfigured verification host');
+      this.verification.receive(message);
+    } else if (message.type === 'ready') {
       for (const record of message.records) this.record(record);
       this.resolveReady();
     } else if (message.type === 'record') this.record(message.record);
@@ -142,6 +175,7 @@ export class SkaroSession implements AgentSession {
   }
 
   private fail(error: Error): void {
+    this.verification?.close();
     this.failed ??= error;
     this.rejectReady(error);
     for (const pending of this.pending.values()) pending.reject(error);
@@ -201,6 +235,7 @@ export class SkaroSession implements AgentSession {
     return this.stopping;
   }
   private async shutdown(): Promise<void> {
+    this.verification?.close();
     try {
       if (this.owner && !this.failed && this.child.connected) {
         await operationTimeout(this.ready, 1000, 'Startup still pending');

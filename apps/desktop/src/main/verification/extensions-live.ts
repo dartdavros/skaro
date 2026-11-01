@@ -13,6 +13,7 @@ import { verifyOwnerContext } from './owner-context';
 import { catPilotTarget } from './browser-target';
 import { verifyAcceptanceInspection } from './acceptance-live';
 import { verifyCheckPlans } from './check-plans-live';
+import { verifyNativeVerification } from './native-verification';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -44,22 +45,27 @@ void app.whenReady().then(async () => {
       stage = 'real-services';
       state = new AppState(join(data, 'skaro.db'));
       services = await createServices(state, data, () => undefined);
-      stage = 'http-and-internal';
-      const http = await verifyHttpExtensions(services, directory, owner);
-      stage = 'context-routes';
-      const routes = await verifyContextRoutes(directory, owner);
-      stage = 'acceptance-inspection';
-      const acceptance = await verifyAcceptanceInspection(services, directory, owner);
-      stage = 'check-plans';
-      const plans = await verifyCheckPlans(services, directory, owner);
-      stage = 'owner-context';
-      proof = {
-        http,
-        routes,
-        acceptance,
-        plans,
-        owner: await verifyOwnerContext(join(data, 'verification/openrouter-ba4'), owner),
-      };
+      if (process.argv[2] === '--native-verification') {
+        stage = 'native-verification';
+        proof = { native: await verifyNativeVerification(services, directory, owner) };
+      } else {
+        stage = 'http-and-internal';
+        const http = await verifyHttpExtensions(services, directory, owner);
+        stage = 'context-routes';
+        const routes = await verifyContextRoutes(directory, owner);
+        stage = 'acceptance-inspection';
+        const acceptance = await verifyAcceptanceInspection(services, directory, owner);
+        stage = 'check-plans';
+        const plans = await verifyCheckPlans(services, directory, owner);
+        stage = 'owner-context';
+        proof = {
+          http,
+          routes,
+          acceptance,
+          plans,
+          owner: await verifyOwnerContext(join(data, 'verification/openrouter-ba4'), owner),
+        };
+      }
     }
     await writeFile(join(directory, 'proof.json'), JSON.stringify({ owner, proof }, null, 2));
     process.send?.({ type: 'proof', stage, directory, proof });

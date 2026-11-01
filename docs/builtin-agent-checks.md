@@ -136,7 +136,9 @@ inputs, старый success не переносится. Runtime снова п�
 `binding.execution` отделён от готовности сдачи: текущая работа может проверяться
 до C4-review, но не после остановки/завершения, handoff или при открытых owner
 decisions. Standalone verification без task host сохраняет прежний API run_check.
-Продуктовый native bridge этих ports относится к BA-7 и пока не подключён.
+Read-only acceptance port передан в настоящий дочерний runtime через
+[native inspection bridge](builtin-agent-native-verification.md). Продуктовый
+task/chat host, прочие ports и запуск модели через этот bridge ещё не подключены.
 
 `TaskRuns.builtinAcceptance` читает существующие task/completion/C4 данные,
 без второй таблицы состояния. Criterion IDs включают project/task ID, ревизию
