@@ -31,6 +31,10 @@ class NativeSession implements AgentSession {
   private readonly bundled: boolean;
   private readonly verification?: VerificationServer;
   private readonly extensions?: ExtensionServer;
+  private readonly hostSignal?: AbortSignal;
+  private readonly revoke = () => {
+    void this.close().catch((error: unknown) => console.error('Native admission cleanup:', error));
+  };
   constructor(
     config: NativeConfig,
     options: SessionOptions,
@@ -39,6 +43,7 @@ class NativeSession implements AgentSession {
   ) {
     requireNativeSessionHost(config, host);
     const { verification, extensions } = host;
+    this.hostSignal = host.signal;
     this.bundled = 'bundled' in config;
     this.options = options;
     if (verification) {
@@ -62,9 +67,12 @@ class NativeSession implements AgentSession {
       this.fail(new Error(`Native session worker exited (${code})`));
       workers.delete(this);
     });
+    this.hostSignal?.addEventListener('abort', this.revoke, { once: true });
+    if (this.hostSignal?.aborted) this.revoke();
   }
   private async requireOwner(signal: AbortSignal): Promise<void> {
     signal.throwIfAborted();
+    this.hostSignal?.throwIfAborted();
     const owner = this.processes[0];
     if (
       this.stopping ||
@@ -75,6 +83,7 @@ class NativeSession implements AgentSession {
     )
       throw new Error('Native host owner is not active');
     signal.throwIfAborted();
+    this.hostSignal?.throwIfAborted();
   }
   private receive(reply: Reply): void {
     if (reply.type === 'runtime-rpc-call' || reply.type === 'runtime-rpc-cancel') {
@@ -89,8 +98,11 @@ class NativeSession implements AgentSession {
       this.processes.push(reply.process);
       const gate = new Int32Array(reply.gate);
       try {
-        if (this.stopping || closing) throw new Error('The application is closing');
+        if (this.stopping || closing || this.hostSignal?.aborted)
+          throw new Error('Native host admission is closed');
         this.options.processStarted?.(reply.process.pid, reply.process);
+        if (this.stopping || closing || this.hostSignal?.aborted)
+          throw new Error('Native host admission was revoked while recording ownership');
         Atomics.store(gate, 0, 1);
       } catch (error) {
         Atomics.store(gate, 0, 2);
@@ -124,6 +136,8 @@ class NativeSession implements AgentSession {
       void this.close().catch((failure: unknown) => console.error('Native cleanup:', failure));
   }
   call<T = void>(method: SessionMethod | 'start', args: unknown[] = []): Promise<T> {
+    if (method !== 'close' && method !== 'interrupt' && (this.stopping || this.hostSignal?.aborted))
+      return Promise.reject(new Error('Native host admission is closed'));
     if (this.error) return Promise.reject(this.error);
     const id = ++this.serial;
     const request: Request = { id, method, args, secrets: this.options.secretValues?.() ?? [] };
@@ -173,6 +187,7 @@ class NativeSession implements AgentSession {
           }),
         ]);
       } finally {
+        this.hostSignal?.removeEventListener('abort', this.revoke);
         clearTimeout(timer);
         await this.worker.terminate();
         this.events.close();

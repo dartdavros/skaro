@@ -11,9 +11,8 @@ import type { RuntimeVerificationHost } from '@skaro/agent-runtime';
 import type { Services } from '../app-services';
 import { c4ReviewKey } from '../c4-review';
 import { startBuiltinNativeSession } from '../native/bundled';
-import { longContextConfig } from '../credentials/long-context-config';
 import { catPilotVerificationTarget } from './task-verification';
-import { nativeProbeOptions } from './native-probe-options';
+import { nativeProbeConfig, nativeProbeOptions } from './native-probe-options';
 import {
   inspectNativePlanJournal,
   verifyNativePlan,
@@ -40,17 +39,9 @@ export async function verifyNativeVerification(
   const before = JSON.stringify(await target.context.store.readTask(target.task.id));
   const reviewKey = c4ReviewKey(target.context.id, target.task.id);
   const review = structuredClone(services.db.getSetting(reviewKey, null));
-  const config = longContextConfig(directory);
+  const config = nativeProbeConfig(directory, target.context.root, 'native-verification', true);
   config.sessionId = target.verification.admission.sessionId;
-  config.journalPath = join(directory, 'native-verification.jsonl');
-  config.context = undefined;
-  config.tools = {
-    cwd: target.context.root,
-    readDirs: [],
-    readOnly: true,
-    artifactDir: join(directory, 'native-artifacts'),
-    verificationScope: target.verification.scope,
-  };
+  config.tools!.verificationScope = target.verification.scope;
   const entries = resolve('apps/desktop/out/main');
   const { owners, options } = nativeProbeOptions(directory, target.context.root, true);
   let lease = new AbortController();

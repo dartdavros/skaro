@@ -10,9 +10,8 @@ import {
 } from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { c4ReviewKey } from '../c4-review';
-import { longContextConfig } from '../credentials/long-context-config';
 import { startBuiltinNativeSession } from '../native/bundled';
-import { nativeProbeOptions } from './native-probe-options';
+import { nativeProbeConfig, nativeProbeOptions } from './native-probe-options';
 
 /** Actual Cat-pilot handlers through main → native thread → owned runtime. No model or TaskRun. */
 export async function verifyNativeOperations(
@@ -67,16 +66,8 @@ export async function verifyNativeOperations(
     };
   };
   let bound = await host();
-  const config = longContextConfig(directory);
+  const config = nativeProbeConfig(directory, context.root, 'native-operations', false);
   config.sessionId = admission.sessionId;
-  config.journalPath = join(directory, 'native-operations.jsonl');
-  config.context = undefined;
-  config.tools = {
-    cwd: context.root,
-    readDirs: [],
-    readOnly: false,
-    artifactDir: join(directory, 'operation-artifacts'),
-  };
   config.extensions = bound.extensions.tools.map(({ name, revision, readOnly }) => ({
     name,
     revision,

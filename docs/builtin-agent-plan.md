@@ -15,7 +15,8 @@ BA-6 начат: [run_check и привязка доказательств к в
 полный цикл исправления и сдача активной задачи ещё не подтверждены.
 Полная приёмка открыта. Подготовлен [native inspection bridge](builtin-agent-native-verification.md)
 и [native host operations](builtin-agent-native-operations.md) для BA-7;
-продуктовые задачи/чаты и scheduler не подключены. BA-8–BA-9 не начаты.
+проверен [общий отзыв native-сессии](builtin-agent-native-lifetime.md).
+Продуктовые задачи/чаты и scheduler не подключены. BA-8–BA-9 не начаты.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.

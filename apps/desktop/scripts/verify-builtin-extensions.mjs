@@ -10,11 +10,13 @@ const require = createRequire(import.meta.url);
 if (!(
   process.argv.length === 2 ||
   (process.argv.length === 3 &&
-    ['--native-verification', '--native-operations'].includes(process.argv[2])) ||
+    ['--native-verification', '--native-operations', '--native-lifetime'].includes(
+      process.argv[2],
+    )) ||
   (process.argv.length === 4 && process.argv[2] === '--browser')
 ))
   throw new Error(
-    'Usage: verify-builtin-extensions.mjs [--native-verification | --native-operations | --browser CAT_PILOT_PROJECT_ROOT]',
+    'Usage: verify-builtin-extensions.mjs [--native-verification | --native-operations | --native-lifetime | --browser CAT_PILOT_PROJECT_ROOT]',
   );
 const output = resolve('apps/desktop/out/main/verify-extensions.cjs');
 try {

@@ -2,6 +2,28 @@
 
 История этапа из [общего отчёта](builtin-agent-verification.md).
 
+## Native session lifetime, 01.11.2026
+
+Принят [общий host lease](builtin-agent-native-lifetime.md): отзыв после startup
+запрещает новые рабочие команды и автоматически закрывает native runtime.
+Spawn gate и host callbacks проверяют lease; старый instance не возобновляется
+после допуска нового host. Scope/admission сигнала не сериализуются.
+Proof: `verification/extensions-d2926f2c-9da9-4638-af0c-884c64429748/proof.json`
+в userData Skaro. Настоящая in-flight инспекция отменена с durable результатом,
+выход двух runtime подтверждён OS identity, отозванный lease не запускает
+процесс, свежий восстанавливает тот же journal. Task/C4 не изменены,
+check processes/model requests 0. Сборка, desktop types/lint/format и две
+compiled-native регрессии прошли. Это ещё не task/chat queue integration,
+durable generation authority или успешное execution admission активной задачи.
+
+Дополнительно закрыта гонка отмены внутри callback OS ownership: gate повторно
+проверяет lease после callback. `extensions-52566e8f-46e7-4feb-85d6-2886df158e79/proof.json`
+подтверждает отсутствие позднего startup journal, выход всех трёх настоящих
+runtime, in-flight revoke/restart и неизменность task/C4; model/check processes 0.
+Итоговая сборка и две compiled-native регрессии прошли. Прежние native scenarios
+повторены: inspection `extensions-7d2af741-ce29-4835-8c3f-d27819fc3514/proof.json`,
+operations `extensions-8f007699-d52b-427d-8b4f-ea5792b92629/proof.json`.
+
 ## Native host operations, 01.11.2026
 
 Принят [порт существующих операций Skaro](builtin-agent-native-operations.md):
