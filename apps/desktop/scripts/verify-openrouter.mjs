@@ -5,6 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { cleanCommandEnvironment } from '@skaro/agent-runtime/environment';
+import { liveProxyEnvironment } from '../src/main/credentials/live-proxy.ts';
 
 const require = createRequire(import.meta.url);
 const directory = await mkdtemp(join(tmpdir(), 'skaro-openrouter-build-'));
@@ -38,7 +39,10 @@ try {
   if (process.argv[4] === '--prepare-context') {
     console.log('Context acceptance entry compiled; no credential host or API request started.');
   } else {
-    const env = cleanCommandEnvironment();
+    const env = {
+      ...cleanCommandEnvironment(),
+      ...liveProxyEnvironment(process.env.SKARO_VERIFY_PROXY),
+    };
     for (const key of [
       'HOME',
       'USERPROFILE',

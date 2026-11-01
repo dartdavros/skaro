@@ -11,6 +11,8 @@ task browser/media. [Итоговая таблица](builtin-agent-ba5-acceptan
 BA-6 начат: [run_check и привязка доказательств к входам](builtin-agent-checks.md);
 добавлены read-only criteria/completion/C4 projection и evidence preflight
 (01.11.2026), host dependency measurements и task-bound command plans.
+Живой read-only model-plan на Cat-pilot через включённый VPN принят;
+полный цикл исправления и сдача активной задачи ещё не подтверждены.
 Полная приёмка открыта. BA-7–BA-9 не начаты.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.

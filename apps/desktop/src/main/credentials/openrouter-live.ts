@@ -23,6 +23,7 @@ import { verifyLiveContext } from './context-live';
 import { verifyLongContext } from './long-context-live';
 import { verifyPreparedModelPlan } from '../verification/model-plan-live';
 import { liveFailure } from './live-diagnostics';
+import { liveProxyEnvironment } from './live-proxy';
 
 // Real-service acceptance entry; no HTTP server, fake API, renderer, or plaintext key input.
 app.setName('Skaro');
@@ -32,6 +33,11 @@ void app.whenReady().then(async () => {
   let stage = 'credential';
   const controller = new AbortController();
   try {
+    stage = 'proxy';
+    const proxy = liveProxyEnvironment(process.env.SKARO_VERIFY_PROXY);
+    for (const [name, value] of Object.entries(proxy)) assert.equal(process.env[name], value);
+    const publicModels = await openRouterCatalog('https://openrouter.ai/api/v1', controller.signal);
+    process.send?.({ type: 'proxy', configured: true, models: publicModels.length });
     const reference = { id: process.argv[2]!, revision: Number(process.argv[3]) };
     assert(reference.id && Number.isSafeInteger(reference.revision) && reference.revision > 0);
     const directory = join(app.getPath('userData'), 'verification/openrouter-ba4');

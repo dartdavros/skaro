@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { RuntimeSession } from '../session.ts';
 import { modelStep } from './model-step.ts';
-import { executeModelTool, type ModelToolAdmission } from './model-tools.ts';
+import { admittedChatTools, executeModelTool, type ModelToolAdmission } from './model-tools.ts';
 import type { ChatMessage, ChatRequest, ChatResponse } from './chat-types.ts';
 
 interface ChatConnector {
@@ -81,11 +81,14 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
     if (JSON.stringify(journal.state.config!.route) !== JSON.stringify(request.route))
       throw new Error('Model route changed during turn');
     const id = `model-${input.id}-${step}`;
+    const tools = admittedChatTools(request.tools, input.toolAdmission);
+    const toolChoice =
+      input.toolAdmission?.chatToolsRequired && tools?.length ? 'required' : request.toolChoice;
     const response = await modelStep({
       id,
       name: 'model:chat',
       journal,
-      request: { ...request, messages },
+      request: { ...request, tools, toolChoice, messages },
       route: request.route,
       signal,
       admit: input.admitRequest,
@@ -98,7 +101,7 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
     });
     messages.push(response.message);
     if (response.finishReason === 'stop') return response;
-    const allowed = new Set(request.tools?.map((tool) => tool.name));
+    const allowed = new Set(tools?.map((tool) => tool.name));
     for (const call of response.message.tool_calls ?? []) {
       signal.throwIfAborted();
       let args: unknown;

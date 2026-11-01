@@ -23,6 +23,7 @@ import {
   modelPlanPayload,
   modelPlanToolAdmission,
   planPayloadHash,
+  MODEL_PLAN_REJECTION,
 } from './model-plan-request';
 
 /** Requires separately approved exact payload hash; never called by local preparation probes. */
@@ -92,6 +93,7 @@ export async function verifyPreparedModelPlan(input: {
         (model) =>
           model.id === config.route.modelId &&
           model.supported_parameters.includes('tools') &&
+          model.supported_parameters.includes('tool_choice') &&
           Number(model.pricing.prompt) >= 0 &&
           Number(model.pricing.prompt) <= 0.0000005 &&
           Number(model.pricing.completion) >= 0 &&
@@ -103,7 +105,7 @@ export async function verifyPreparedModelPlan(input: {
     const reviewKey = c4ReviewKey(target.context.id, target.task.id);
     const c4 = structuredClone(services.db.getSetting(reviewKey, null));
     session = await RuntimeSession.open(config, input.owner, undefined, target.verification);
-    const id = `catpilot-plan-${input.expectedHash.slice(0, 16)}`;
+    const id = `catpilot-plan-${input.expectedHash.slice(0, 16)}-sequential-v3`;
     const response = await executeChatTurn({
       id,
       session,
@@ -113,15 +115,21 @@ export async function verifyPreparedModelPlan(input: {
       maxSteps: 6,
       toolAdmission: modelPlanToolAdmission(payload.inspection),
       admitRequest: async (requestId, request) => {
-        // Rejected calls bypass projectResult in the shared loop. Never transmit their
-        // arbitrary diagnostic text outside this explicitly reviewed successful protocol.
+        // Rejected calls bypass projectResult. Only these static policy hints may
+        // be transmitted; arbitrary provider/OS/tool diagnostics still stop the POST.
         for (const message of request.messages) {
           if (message.role === 'tool') {
             assert(typeof message.content === 'string', 'Tool result must be text');
-            assert(
-              !JSON.parse(message.content).error,
-              'Rejected tool diagnostics are outside the approved payload',
-            );
+            const value = JSON.parse(message.content);
+            if (value.error) {
+              assert.deepEqual(Object.keys(value), ['error']);
+              assert(
+                [MODEL_PLAN_REJECTION, 'Tool is not in the admitted model catalogue'].includes(
+                  value.error,
+                ),
+                'Rejected tool diagnostics are outside the approved payload',
+              );
+            }
           }
         }
         const latest = await target.verification.acceptance.inspect(

@@ -180,17 +180,30 @@ worker; Job Object и общий executor сохранены. Проверочн
 files, абсолютные paths, environment, Git inputs и credential в неё не входят.
 Подготовка не читает ключ и не вызывает модель. Это новый payload относительно
 ранее согласованных живых передач данных Skaro. Владелец явно разрешил этот
-payload 01.11.2026. Две попытки остановились до model POST на credential/limits;
-публичный /models независимо вернул HTTP 403 `Access denied by security policy.`
-Живая модельная приёмка ожидает штатного доступа к OpenRouter; разрешение на
-payload сохраняется. Endpoint, сеть и проверки защиты не подменялись.
+payload 01.11.2026. Живой probe прошёл через включённый владельцем Xray:
+5 model requests, 4 tool calls, включая одну корректировку неполного вызова.
+Task/C4 не изменились, команды и сдача не выполнялись.
+
+По указанию владельца live launcher требует `SKARO_VERIFY_PROXY` — адрес
+реального включённого loopback HTTP proxy без userinfo/path/query. Он передаёт
+NODE_USE_ENV_PROXY=1 и HTTP_PROXY/HTTPS_PROXY только acceptance host; NO_PROXY
+разрешает обход лишь для localhost. До чтения credential проверяются настройки
+и настоящий публичный каталог через этот transport. Прямого fallback нет,
+TLS не ослабляется. Command workers сохраняют прежний allowlist окружения.
+Проверенный адрес Xray — http://127.0.0.1:10809. Ранний HTTP 403 относился к
+прямым Node/curl-запросам, игнорировавшим системный proxy Windows; это не отказ
+доступа через включённый VPN. Другой endpoint или fake API не использовались.
 
 После согласования точного payload отдельный `verify-openrouter.mjs` режим
 `--plan PAYLOAD_PATH SHA256` может выполнить проверку с существующим vault.
 Он сверяет hash и текущую проекцию перед отправкой, допускает только
 inspect_acceptance/plan_checks/assess_checks, требует checks:[] и все verdicts
-met:false/evidence:[]. Повторные POST запрещаются при изменении проекции или
-непредусмотренных tool errors. Проекции настоящих успешных tool results не
+met:false/evidence:[]. Каталог сужается по реальным успешным результатам:
+inspector → plan → assessment → без tools. Требуемый tool_choice исключает
+ранний finish; изменение схем/добавление инструментов в фазе отвергается.
+Неполные аргументы получают только статическую подсказку policy, чтобы модель
+могла их исправить. Остальные tool errors и изменение проекции останавливают
+POST. Проекции настоящих успешных tool results не
 содержат остальных полей journal. Итог проверяет реальные durable results,
 а не только названия tools в ответе модели.
 

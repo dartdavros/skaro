@@ -7,6 +7,10 @@ import type { RuntimeAcceptanceState, RouteSnapshot } from '@skaro/timeline';
 import type { ModelToolAdmission } from '../../../../../packages/agent-runtime/src/models/model-tools';
 
 const names = ['inspect_acceptance', 'plan_checks', 'assess_checks'];
+export const MODEL_PLAN_REJECTION =
+  'Use the exact criteriaRevision from inspect_acceptance. ' +
+  'plan_checks requires checks:[] AND uncovered with EVERY criterion id and a short reason. ' +
+  'assess_checks requires EVERY criterion id with met:false and evidence:[].';
 export const planPayloadHash = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
@@ -80,10 +84,16 @@ export function modelPlanToolAdmission(
   inspection: ReturnType<typeof modelPlanInspection>,
 ): ModelToolAdmission {
   const ids = inspection.criteria.map((item) => item.id);
+  let phase = 0;
   return {
-    revision: planPayloadHash(inspection),
+    revision: planPayloadHash({ inspection, sequence: 'inspect-plan-assess-feedback-v3' }),
+    chatToolsRequired: true,
+    rejectionMessage: MODEL_PLAN_REJECTION,
+    selectChatTools(catalogue) {
+      return catalogue.filter((tool) => tool.name === names[phase]);
+    },
     requireAllowed(name, raw) {
-      assert(names.includes(name));
+      assert.equal(name, names[phase], 'Tool is outside the current verification phase');
       const args = raw as {
         checks?: unknown[];
         uncovered?: { id: string; reason: string }[];
@@ -109,20 +119,28 @@ export function modelPlanToolAdmission(
     projectResult(result) {
       if (result.error) return { error: 'Verification tool rejected the request' };
       const value = result.value as Record<string, unknown>;
-      if (value.kind === 'verification-plan')
+      if (value.kind === 'verification-plan') {
+        assert.equal(phase, 1);
+        phase = 2;
         return { plan: value.plan, uncovered: value.uncovered, limitations: value.limitations };
-      if (value.kind === 'verification-assessment')
+      }
+      if (value.kind === 'verification-assessment') {
+        assert.equal(phase, 2);
+        phase = 3;
         return {
           readyToSubmit: value.readyToSubmit,
           criteriaRevision: value.criteriaRevision,
           reasons: value.reasons,
         };
+      }
+      assert.equal(phase, 0);
       const projected = modelPlanInspection(value as unknown as RuntimeAcceptanceState);
       assert.equal(
         planPayloadHash(projected),
         planPayloadHash(inspection),
         'Approved task view changed',
       );
+      phase = 1;
       return projected;
     },
   };

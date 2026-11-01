@@ -5,6 +5,39 @@
 
 ## Продолжение BA-6, 01.11.2026
 
+После уточнения владельца установлен настоящий transport: Xray слушает
+127.0.0.1:10809 и включён как системный proxy Windows, но Node/curl его не
+подхватывали. Прямой GET давал 403, тот же официальный endpoint через Xray —
+200. Ранний вывод о недоступности OpenRouter через VPN был неверен: проверки
+обходили proxy. Launcher теперь требует явный loopback VPN proxy, передаёт его
+только acceptance host и проверяет каталог до credential; прямого fallback нет.
+
+Живой model-plan Cat-pilot прошёл через Xray, model openai/gpt-4.1-nano:
+`verification/openrouter-ba4/session-plans.jsonl`, record
+`proof:catpilot-plan-7b3a42fd6305e343-sequential-v3`.
+Пять настоящих model requests, четыре tool calls, одна исправленная ошибка
+аргументов; успешные inspect_acceptance/plan_checks/assess_checks подтверждены
+durable records, финальный readyToSubmit=false. Task/C4 не изменены, tool
+processes 0. Reported cost успешного v3 — $0.0014827. Shared ledger после всех
+попыток: 65 request intents, $0.38699476 включая retained reservations, лимит
+$1 не менялся. Ранние реальные ответы/отказы и резервации не удалялись.
+
+Первая модель вызвала три инструмента параллельно, затем при суженном каталоге
+завершилась до assessment. В следующем required-call прогоне она пропустила
+uncovered. Guards сохраняли отказы. Добавлены host-политика сужения реального
+каталога по фазам, required tool_choice и только статическая policy-подсказка
+при неверных аргументах. Это позволило настоящей модели исправить вызов без
+ослабления criterion/scope gates и без отправки произвольных ошибок или файлов.
+Без политики прежнее поведение ChatTurn сохраняется; добавление/изменение
+схем в выбранном каталоге запрещено. Полная BA-6 по-прежнему открыта.
+Финальная штатная сборка, TypeScript runtime/desktop main, ESLint, Prettier и
+diff прошли. Одиннадцать целевых тестов selection/proxy/diagnostics/context/
+compiled-native прошли; исходники не превышают 300 строк. Локальные Cat-pilot
+HTTP/routes/owner/acceptance/plan guards прошли без model calls, proof:
+`verification/extensions-95a190dc-4ab3-462f-b124-86f9217843ec/proof.json`.
+Повторно подготовленный payload имеет тот же согласованный hash. Полный suite
+не запускался, UI не менялся, новая browser-проверка не требовалась.
+
 Владелец разрешил подготовленный Cat-pilot payload. Два настоящих запуска
 OpenRouter driver остановились до model POST: первый с прежним coarse stage
 credential, второй с уточнённым credential-limits. Vault binding metadata
@@ -12,7 +45,8 @@ credential, второй с уточнённым credential-limits. Vault bindin
 не установлен: credential boundary скрывает исключение consumer. Независимый
 публичный GET https://openrouter.ai/api/v1/models без Authorization вернул
 HTTP 403, JSON `Access denied by security policy.` Поэтому доступ к штатному
-endpoint остаётся blocker; обходов, другого endpoint или fake API не было.
+endpoint тогда считался blocker; последующая проверка через требуемый VPN
+устранила его (описано выше). Другого endpoint или fake API не было.
 Payload Cat-pilot не отправлен, новых model requests/расходов не добавлено.
 
 Driver получил точные credential-store/owner/limits этапы и безопасный failed

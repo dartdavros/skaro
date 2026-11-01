@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { RuntimeSession } from '@skaro/agent-runtime';
+import { RuntimeSession, toolCatalog } from '@skaro/agent-runtime';
 import type { RuntimeProcessIdentity, RuntimeAcceptanceState } from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { c4ReviewKey } from '../c4-review';
@@ -137,15 +137,42 @@ export async function verifyCheckPlans(
     assert.deepEqual(services.db.getSetting(c4ReviewKey(context.id, task.id), null), c4);
     const payload = await prepareModelPlan(directory, state, session.journal.state.config!.route);
     const policy = modelPlanToolAdmission(modelPlanInspection(state));
+    const catalogue = toolCatalog().map(({ name, inputSchema }) => ({
+      name,
+      description: name,
+      parameters: inputSchema,
+    }));
+    assert.deepEqual(
+      policy.selectChatTools!(catalogue).map((item) => item.name),
+      ['inspect_acceptance'],
+    );
     assert.throws(() => policy.requireAllowed('run_check', command));
+    assert.deepEqual(policy.projectResult({ value: state }), modelPlanInspection(state));
     assert.throws(() => policy.requireAllowed('plan_checks', input));
+    const uncovered = {
+      criteriaRevision: state.criteriaRevision,
+      checks: [],
+      uncovered: state.criteria.map(({ id }) => ({
+        id,
+        reason: 'No execution authorized in this probe',
+      })),
+    };
+    policy.requireAllowed('plan_checks', uncovered);
+    const actualPlan = await tool('model-empty-plan', 'plan_checks', uncovered);
+    assert(!actualPlan.error, actualPlan.error);
+    policy.projectResult(actualPlan);
+    assert.deepEqual(
+      policy.selectChatTools!(catalogue).map((item) => item.name),
+      ['assess_checks'],
+    );
     assert.throws(() =>
       policy.requireAllowed('assess_checks', {
         criteriaRevision: state.criteriaRevision,
         verdicts: state.criteria.map(({ id }) => ({ id, met: true, evidence: [] })),
       }),
     );
-    assert.deepEqual(policy.projectResult({ value: state }), modelPlanInspection(state));
+    policy.projectResult(assessed);
+    assert.deepEqual(policy.selectChatTools!(catalogue), []);
     return {
       project: 'Cat-pilot',
       taskId: task.id,
