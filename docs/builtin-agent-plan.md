@@ -17,6 +17,9 @@ BA-6 начат: [run_check и привязка доказательств к в
 и [native host operations](builtin-agent-native-operations.md) для BA-7;
 проверен [общий отзыв native-сессии](builtin-agent-native-lifetime.md).
 Продуктовые задачи/чаты и scheduler не подключены. BA-8–BA-9 не начаты.
+Добавлен [native model host](builtin-agent-native-model.md): concurrent negative
+preflight и живой native model-plan Cat-pilot приняты; пять запросов через Xray,
+реальные tools/streaming/budget/dedup. Это не выполнение или сдача активной задачи.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.

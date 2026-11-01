@@ -2,6 +2,13 @@
 
 История этапа из [общего отчёта](builtin-agent-verification.md).
 
+Текущее продолжение — [native model host](builtin-agent-native-model.md).
+Приняты concurrent negative preflight (`extensions-e2d7924e-9cd2-4abc-a6df-9f36b7a4c4bb`)
+и живой native-план Cat-pilot: `openrouter-ba4/session-nativeplan.jsonl`, пять
+запросов через Xray, реальные tools, streaming journal и dedup, task/C4 неизменны.
+Цена $0.0016499, общий ledger $0.38864466 с reservations, лимит $1 сохраняется.
+Полная приёмка BA-6/BA-7 не закрыта: execution и сдача активной задачи впереди.
+
 ## Native session lifetime, 01.11.2026
 
 Принят [общий host lease](builtin-agent-native-lifetime.md): отзыв после startup

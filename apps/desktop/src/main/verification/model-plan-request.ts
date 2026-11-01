@@ -80,9 +80,7 @@ export async function prepareModelPlan(
 }
 
 /** Explicit projection of genuine tools, never substitute results or authority from model text. */
-export function modelPlanToolAdmission(
-  inspection: ReturnType<typeof modelPlanInspection>,
-): ModelToolAdmission {
+export function modelPlanToolAdmission(inspection: ReturnType<typeof modelPlanInspection>) {
   const ids = inspection.criteria.map((item) => item.id);
   let phase = 0;
   return {
@@ -143,5 +141,5 @@ export function modelPlanToolAdmission(
       phase = 1;
       return projected;
     },
-  };
+  } satisfies ModelToolAdmission;
 }

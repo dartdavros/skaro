@@ -51,6 +51,18 @@ export class ModelCredentialVault implements CredentialVault {
   async availability() {
     return protection();
   }
+  /** Nonsecret configuration reference only; never decrypt or return the envelope. */
+  reference(binding: CredentialBinding): Promise<CredentialReference | undefined> {
+    const target = structuredClone(binding);
+    return this.serialize(() => {
+      this.requireOpen();
+      validateBinding(target);
+      const row = this.store.get(target.connectionId);
+      if (!row) return undefined;
+      if (!sameBinding(row, target)) throw new Error('Credential binding mismatch');
+      return { id: row.id, revision: row.version };
+    });
+  }
 
   private serialize<T>(work: () => Promise<T> | T): Promise<T> {
     const result = this.queue.then(work);

@@ -22,6 +22,7 @@ import { livePolicy } from './live-policy';
 import { verifyLiveContext } from './context-live';
 import { verifyLongContext } from './long-context-live';
 import { verifyPreparedModelPlan } from '../verification/model-plan-live';
+import { verifyNativeModelPlan } from '../verification/native-model-live';
 import { liveFailure } from './live-diagnostics';
 import { liveProxyEnvironment } from './live-proxy';
 
@@ -75,9 +76,11 @@ void app.whenReady().then(async () => {
     stage = 'credential-limits';
     const before = await connector.limits(controller.signal);
     process.send?.({ type: 'limits', before });
-    if (process.argv[4] === '--plan') {
-      stage = 'model-plan';
-      const proof = await verifyPreparedModelPlan({
+    if (process.argv[4] === '--plan' || process.argv[4] === '--native-plan') {
+      stage = process.argv[4] === '--native-plan' ? 'native-model-plan' : 'model-plan';
+      const verify =
+        process.argv[4] === '--native-plan' ? verifyNativeModelPlan : verifyPreparedModelPlan;
+      const proof = await verify({
         connector,
         owner,
         directory,
@@ -85,7 +88,7 @@ void app.whenReady().then(async () => {
         payloadPath: process.argv[5]!,
         expectedHash: process.argv[6]!,
       });
-      process.send?.({ type: 'model-plan', proof });
+      process.send?.({ type: stage, proof });
       await vault.close();
       vault = undefined;
       process.send?.({ type: 'complete', directory }, () => app.exit(0));

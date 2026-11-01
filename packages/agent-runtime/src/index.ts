@@ -1,6 +1,15 @@
 export type * from './model.ts';
 export { RuntimeSession } from './session.ts';
 export { RuntimeJournal } from './journal.ts';
+export { readRuntimeJournal } from './journal-reader.ts';
+export { RuntimeHostServer } from './host-ports.ts';
+export { ModelClient } from './models/ipc-client.ts';
+export {
+  modelBinding,
+  requireModelBinding,
+  requireModelBaseline,
+  requireSameHostScope,
+} from './models/host-binding.ts';
 export { restoreRuntime, reduceRuntimeRecord, emptyRuntimeState } from './state.ts';
 export { SkaroProjector } from './projector.ts';
 export { toolCatalog } from './tools/schemas.ts';

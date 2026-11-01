@@ -3,13 +3,14 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { cleanCommandEnvironment } from '@skaro/agent-runtime/environment';
 import { liveProxyEnvironment } from '../src/main/credentials/live-proxy.ts';
 
 const require = createRequire(import.meta.url);
-const directory = await mkdtemp(join(tmpdir(), 'skaro-openrouter-build-'));
-const plan = process.argv[4] === '--plan';
+const temporaryRoot = resolve(tmpdir());
+const directory = await mkdtemp(join(temporaryRoot, 'skaro-openrouter-build-'));
+const plan = ['--plan', '--native-plan'].includes(process.argv[4]);
 const buildDirectory = plan ? resolve('apps/desktop/out/main') : directory;
 const entry = plan ? 'verify-model-plan.cjs' : 'live.cjs';
 try {
@@ -66,7 +67,10 @@ try {
           serialization: 'json',
         },
       );
-      const timeout = setTimeout(() => child.kill(), long ? 1_800_000 : 240_000);
+      const timeout = setTimeout(
+        () => child.kill(),
+        long ? 1_800_000 : process.argv[4] === '--native-plan' ? 600_000 : 240_000,
+      );
       child.on('message', (message) => {
         console.log(JSON.stringify(message));
         if (message?.type === 'long-context') {
@@ -92,5 +96,13 @@ try {
   process.exitCode = 1;
 } finally {
   if (plan) await rm(join(buildDirectory, entry), { force: true });
-  await rm(directory, { recursive: true, force: true });
+  if (
+    dirname(resolve(directory)) === temporaryRoot &&
+    basename(directory).startsWith('skaro-openrouter-build-')
+  )
+    await rm(directory, { recursive: true, force: true });
+  else {
+    console.error('Unexpected acceptance build cleanup target; directory was retained.');
+    process.exitCode = 1;
+  }
 }

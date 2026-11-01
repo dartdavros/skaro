@@ -14,6 +14,10 @@ import type {
   RuntimeExtensionBinding,
   RuntimeRpcRequest,
   RuntimeRpcReply,
+  RuntimeModelBinding,
+  RuntimeModelRequest,
+  RuntimeModelRpcRequest,
+  RuntimeModelRpcReply,
 } from '@skaro/timeline';
 
 export type RuntimeStart = BuiltinSessionStart;
@@ -30,10 +34,11 @@ export type RuntimeAction =
   | { type: 'stopBackground'; taskId: string };
 // Tool calls use their caller command ID as the durable effect identity.
 export type ToolAction = { type: 'tool'; name: string; args: unknown };
+export type ModelTurnAction = { type: 'modelTurn'; request: RuntimeModelRequest; maxSteps: number };
 
 export interface RuntimeCommand {
   id: string;
-  action: RuntimeAction | ToolAction;
+  action: RuntimeAction | ToolAction | ModelTurnAction;
 }
 export interface CommandResult {
   error?: string;
@@ -111,10 +116,12 @@ export type ParentMessage =
       owner: RuntimeProcessIdentity;
       verification?: RuntimeVerificationBinding;
       extensions?: RuntimeExtensionBinding;
+      model?: RuntimeModelBinding;
     }
   | { type: 'command'; command: RuntimeCommand }
   | VerificationInspectReply
-  | RuntimeRpcReply;
+  | RuntimeRpcReply
+  | RuntimeModelRpcReply;
 export type RuntimeMessage =
   | { type: 'ready'; records: JournalRecord[] }
   | { type: 'record'; record: JournalRecord }
@@ -122,4 +129,5 @@ export type RuntimeMessage =
   | { type: 'fatal'; error: string }
   | VerificationInspectRequest
   | VerificationCancelRequest
-  | RuntimeRpcRequest;
+  | RuntimeRpcRequest
+  | RuntimeModelRpcRequest;

@@ -3,26 +3,20 @@ import type { RuntimeSession } from '../session.ts';
 import type { CommandResult } from '../model.ts';
 import type { NativeCall } from './native-types.ts';
 import type { ModelTool } from './chat-types.ts';
+import type { ModelToolAdmission } from '@skaro/timeline';
+export type { ModelToolAdmission } from '@skaro/timeline';
 
-export interface ModelToolAdmission {
-  revision: string;
-  requireAllowed(name: string, args: unknown): void;
-  projectResult(result: CommandResult): unknown;
-  /** Chat-only narrowing of the reviewed catalogue at a genuine tool-result boundary. */
-  selectChatTools?(catalogue: readonly ModelTool[]): readonly ModelTool[];
-  /** A configured chat protocol may require its current selected tool before finishing. */
-  chatToolsRequired?: boolean;
-  /** Trusted static policy hint, never text taken from a caught error or repository. */
-  rejectionMessage?: string;
-}
-
-export function admittedChatTools(
+export async function admittedChatTools(
   catalogue: readonly ModelTool[] | undefined,
   admission?: Pick<ModelToolAdmission, 'selectChatTools'>,
+  signal?: AbortSignal,
 ) {
   if (!admission?.selectChatTools) return catalogue;
   const original = catalogue ?? [];
-  const selected = structuredClone(admission.selectChatTools(structuredClone(original)));
+  const selected = structuredClone(
+    await admission.selectChatTools(structuredClone(original), signal),
+  );
+  signal?.throwIfAborted();
   if (
     !Array.isArray(selected) ||
     new Set(selected.map((tool) => tool.name)).size !== selected.length ||
@@ -46,8 +40,9 @@ export async function executeModelTool(input: {
   if (!input.allowed.has(call.name))
     return { error: 'Tool is not in the admitted model catalogue' };
   try {
-    input.admission?.requireAllowed(call.name, call.arguments);
+    await input.admission?.requireAllowed(call.name, call.arguments, input.signal);
   } catch {
+    input.signal.throwIfAborted();
     const hint = input.admission?.rejectionMessage;
     return {
       error: hint && hint.length <= 512 ? hint : 'Tool request is outside the admitted scope',

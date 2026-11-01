@@ -8,3 +8,8 @@ export interface RuntimeRpcReply {
   value?: unknown;
   error?: true;
 }
+export interface RuntimeRpcProgress {
+  type: 'runtime-rpc-progress';
+  id: string;
+  text: string;
+}

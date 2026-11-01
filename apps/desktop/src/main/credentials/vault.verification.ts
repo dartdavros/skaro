@@ -24,7 +24,13 @@ void app.whenReady().then(async () => {
       connectionRevision: 1,
       endpoint: 'https://api.openai.com/v1',
     };
+    assert.equal(await vault.reference(binding), undefined);
     const reference = await vault.replace({ binding, expected: null, secret: input });
+    assert.deepEqual(await vault.reference(binding), reference);
+    await assert.rejects(
+      vault.reference({ ...binding, connectionRevision: 2 }),
+      /binding mismatch/,
+    );
     assert.equal(input.toString(), text); // Caller keeps ownership of its input.
     assert(!readFileSync(join(directory, 'model-credentials.sqlite')).includes(input));
     assert(
@@ -102,6 +108,7 @@ void app.whenReady().then(async () => {
     assert(borrowed?.every((byte) => byte === 0));
     assert.equal(next.id, reference.id);
     assert.equal(next.revision, reference.revision + 1);
+    assert.deepEqual(await vault.reference(binding), next);
     await assert.rejects(
       port.withCredential(request, async () => 0),
       /revision conflict/,
@@ -110,6 +117,7 @@ void app.whenReady().then(async () => {
     vault = new ModelCredentialVault(directory);
     const resumed = { ...request, reference: next };
     stage = 'reopen';
+    assert.deepEqual(await vault.reference(binding), next);
     await vault
       .port(resumed, admissions, admissionSignal)
       .withCredential(resumed, async (secret) => {
@@ -120,6 +128,7 @@ void app.whenReady().then(async () => {
       /binding or revision conflict/,
     );
     await vault.revoke(binding, next);
+    assert.equal(await vault.reference(binding), undefined);
     await assert.rejects(
       vault.port(resumed, admissions, admissionSignal).withCredential(resumed, async () => 0),
       /revision conflict/,

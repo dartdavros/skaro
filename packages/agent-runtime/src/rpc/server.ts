@@ -1,28 +1,43 @@
-import { operationTimeout, type RuntimeRpcRequest, type RuntimeRpcReply } from '@skaro/timeline';
+import {
+  operationTimeout,
+  type RuntimeRpcRequest,
+  type RuntimeRpcReply,
+  type RuntimeRpcProgress,
+} from '@skaro/timeline';
+import { DEFAULT_RPC_LIMITS, type RuntimeRpcLimits } from './limits.ts';
 
 /** The bound owner is checked before dispatch and before accepting its result. */
 export class RuntimeRpcServer {
-  private readonly send: (reply: RuntimeRpcReply) => void;
+  private readonly send: (reply: RuntimeRpcReply | RuntimeRpcProgress) => void;
+  private readonly limits: RuntimeRpcLimits;
   private readonly requireOwner: (signal: AbortSignal) => Promise<void>;
   private readonly dispatch: (
     operation: string,
     args: unknown,
     signal: AbortSignal,
+    onText: (text: string) => void,
   ) => Promise<unknown>;
   private readonly hostSignal?: AbortSignal;
   private readonly lifetime = new AbortController();
   private readonly pending = new Map<string, AbortController>();
   private readonly active = new Set<{ operation: string; work: Promise<void> }>();
   constructor(options: {
-    send(reply: RuntimeRpcReply): void;
+    send(reply: RuntimeRpcReply | RuntimeRpcProgress): void;
     requireOwner(signal: AbortSignal): Promise<void>;
-    dispatch(operation: string, args: unknown, signal: AbortSignal): Promise<unknown>;
+    dispatch(
+      operation: string,
+      args: unknown,
+      signal: AbortSignal,
+      onText: (text: string) => void,
+    ): Promise<unknown>;
     signal?: AbortSignal;
+    limits?: RuntimeRpcLimits;
   }) {
     this.send = options.send;
     this.requireOwner = options.requireOwner;
     this.dispatch = options.dispatch;
     this.hostSignal = options.signal;
+    this.limits = { ...(options.limits ?? DEFAULT_RPC_LIMITS) };
   }
   receive(request: RuntimeRpcRequest): void {
     if (request.type === 'runtime-rpc-cancel') {
@@ -41,7 +56,7 @@ export class RuntimeRpcServer {
         typeof request.operation === 'string' &&
         request.operation.length <= 200 &&
         Object.keys(request).every((key) => ['type', 'id', 'operation', 'args'].includes(key)) &&
-        Buffer.byteLength(JSON.stringify(request)) <= 65_536;
+        Buffer.byteLength(JSON.stringify(request)) <= this.limits.requestBytes;
     } catch {
       /* Malformed/cyclic input never reaches the bound handler. */
     }
@@ -65,12 +80,25 @@ export class RuntimeRpcServer {
       signal.throwIfAborted();
       await this.requireOwner(signal);
       signal.throwIfAborted();
-      const value = await this.dispatch(request.operation, structuredClone(request.args), signal);
+      let textBytes = 0;
+      const value = await this.dispatch(
+        request.operation,
+        structuredClone(request.args),
+        signal,
+        (text) => {
+          signal.throwIfAborted();
+          const size = Buffer.byteLength(text);
+          textBytes += size;
+          if (size > 16_384 || textBytes > this.limits.textBytes)
+            throw new Error('Scoped RPC progress limit');
+          this.send({ type: 'runtime-rpc-progress', id: request.id, text });
+        },
+      );
       signal.throwIfAborted();
       await this.requireOwner(signal);
       signal.throwIfAborted();
       const reply: RuntimeRpcReply = { type: 'runtime-rpc-result', id: request.id, value };
-      if (Buffer.byteLength(JSON.stringify(reply)) > 262_144)
+      if (Buffer.byteLength(JSON.stringify(reply)) > this.limits.replyBytes)
         throw new Error('Scoped RPC reply exceeds the limit');
       this.send(reply);
     } catch {

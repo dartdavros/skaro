@@ -7,10 +7,12 @@ import type {
   VerificationCancelRequest,
   RuntimeExtensionBinding,
   RuntimeRpcRequest,
+  RuntimeModelBinding,
+  RuntimeModelRpcRequest,
 } from '@skaro/timeline';
 import type { OwnedProcess } from '../process-identity';
 
-export type SessionMethod = Exclude<keyof AgentSession, 'events'> | 'invokeTool';
+export type SessionMethod = Exclude<keyof AgentSession, 'events'> | 'invokeTool' | 'runModelTurn';
 interface ManagedNativeConfig {
   agent: import('@skaro/agents').AgentId;
   binary: string;
@@ -27,6 +29,7 @@ export type NativeConfig =
       attachmentsDir: string;
       verification?: RuntimeVerificationBinding;
       extensions?: RuntimeExtensionBinding;
+      model?: RuntimeModelBinding;
     };
 export type NativeOptions = Omit<
   SessionOptions,
@@ -46,4 +49,5 @@ export type Reply =
   | { type: 'ended'; error?: string }
   | VerificationInspectRequest
   | VerificationCancelRequest
-  | RuntimeRpcRequest;
+  | RuntimeRpcRequest
+  | RuntimeModelRpcRequest;

@@ -9,6 +9,8 @@ export * from './agent.ts';
 export type * from './agent-definition.ts';
 export * from './agent-delivery.ts';
 export type * from './builtin-model.ts';
+export type * from './builtin-model-wire.ts';
+export type * from './builtin-model-host.ts';
 export * from './builtin-profiles.ts';
 export * from './builtin-route.ts';
 export * from './builtin-version.ts';

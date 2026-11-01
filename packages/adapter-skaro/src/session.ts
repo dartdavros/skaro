@@ -15,10 +15,13 @@ import {
   type RuntimeCommand,
   type RuntimeMessage,
   type RuntimeStart,
-  VerificationServer,
-  ExtensionServer,
+  RuntimeHostServer,
   extensionBinding,
   requireExtensionBinding,
+  modelBinding,
+  requireModelBinding,
+  requireModelBaseline,
+  requireSameHostScope,
 } from '@skaro/agent-runtime';
 import {
   processBirth,
@@ -47,8 +50,7 @@ export class SkaroSession implements AgentSession {
   private owner?: OwnedProcess;
   private stopping?: Promise<void>;
   private failed?: Error;
-  private readonly verification?: VerificationServer;
-  private readonly extensions?: ExtensionServer;
+  private readonly hosts: RuntimeHostServer;
 
   private constructor(options: SkaroSessionOptions) {
     this.options = options;
@@ -59,19 +61,11 @@ export class SkaroSession implements AgentSession {
     });
     // Startup can be cancelled before the admission probe finishes.
     void this.ready.catch(() => undefined);
-    if (options.verification) {
-      this.verification = new VerificationServer(
-        options.verification,
-        (reply) => this.post(reply),
-        (signal) => this.requireOwner(signal),
-      );
-    }
-    if (options.extensions)
-      this.extensions = new ExtensionServer(
-        options.extensions,
-        (reply) => this.post(reply),
-        (signal) => this.requireOwner(signal),
-      );
+    this.hosts = new RuntimeHostServer(
+      options,
+      (reply) => this.post(reply),
+      (signal) => this.requireOwner(signal),
+    );
     this.child = fork(
       options.entry ?? fileURLToPath(new URL('../../agent-runtime/src/worker.ts', import.meta.url)),
       [],
@@ -110,6 +104,10 @@ export class SkaroSession implements AgentSession {
       options.config,
       options.extensions && extensionBinding(options.extensions),
     );
+    requireSameHostScope(options);
+    requireModelBinding(options.config, options.model);
+    await requireModelBaseline(options.model);
+    options.signal?.throwIfAborted();
     if (!options.processStarted) throw new Error('Durable process ownership callback is required');
     const session = new SkaroSession(options);
     const abort = () => {
@@ -130,6 +128,7 @@ export class SkaroSession implements AgentSession {
         config: options.config,
         owner: session.owner,
         extensions: options.extensions && extensionBinding(options.extensions),
+        model: options.model && modelBinding(options.model),
         verification: options.verification && {
           scope: structuredClone(options.verification.scope),
           admission: structuredClone(options.verification.admission),
@@ -163,13 +162,15 @@ export class SkaroSession implements AgentSession {
   }
 
   private receive(message: RuntimeMessage): void {
-    if (message.type === 'runtime-rpc-call' || message.type === 'runtime-rpc-cancel') {
-      if (!this.extensions) throw new Error('Runtime requested an unconfigured extension host');
-      this.extensions.receive(message);
-    } else if (message.type === 'verification-inspect' || message.type === 'verification-cancel') {
-      if (!this.verification)
-        throw new Error('Runtime requested an unconfigured verification host');
-      this.verification.receive(message);
+    if (
+      message.type === 'runtime-rpc-call' ||
+      message.type === 'runtime-rpc-cancel' ||
+      message.type === 'verification-inspect' ||
+      message.type === 'verification-cancel' ||
+      message.type === 'model-rpc-call' ||
+      message.type === 'model-rpc-cancel'
+    ) {
+      this.hosts.receive(message);
     } else if (message.type === 'ready') {
       for (const record of message.records) this.record(record);
       this.resolveReady();
@@ -186,8 +187,7 @@ export class SkaroSession implements AgentSession {
   }
 
   private fail(error: Error): void {
-    this.verification?.close();
-    void this.extensions?.close().catch(() => undefined);
+    void this.hosts.close().catch(() => undefined);
     this.failed ??= error;
     this.rejectReady(error);
     for (const pending of this.pending.values()) pending.reject(error);
@@ -228,6 +228,13 @@ export class SkaroSession implements AgentSession {
   invokeTool(name: string, args: unknown, id: string = randomUUID()): Promise<unknown> {
     return this.request({ id, action: { type: 'tool', name, args } }, 0);
   }
+  runModelTurn(
+    request: import('@skaro/timeline').RuntimeModelRequest,
+    id: string = randomUUID(),
+    maxSteps = 20,
+  ) {
+    return this.request({ id, action: { type: 'modelTurn', request, maxSteps } }, 0);
+  }
   send: AgentSession['send'] = (input) => this.call({ type: 'send', input });
   steer: AgentSession['steer'] = (input) => this.call({ type: 'steer', input });
   respond: AgentSession['respond'] = (interactionId, answer) =>
@@ -247,8 +254,7 @@ export class SkaroSession implements AgentSession {
     return this.stopping;
   }
   private async shutdown(): Promise<void> {
-    this.verification?.close();
-    const extensionsClosed = this.extensions?.close();
+    const extensionsClosed = this.hosts.close();
     void extensionsClosed?.catch(() => undefined);
     try {
       if (this.owner && !this.failed && this.child.connected) {

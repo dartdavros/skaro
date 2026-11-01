@@ -35,7 +35,9 @@ export class ExtensionServer {
       },
     );
     this.rpc = new RuntimeRpcServer({
-      send,
+      send: (reply) => {
+        if (reply.type !== 'runtime-rpc-progress') send(reply);
+      },
       requireOwner,
       signal: host.signal,
       dispatch: async (name, raw, signal) => {

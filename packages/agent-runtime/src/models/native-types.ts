@@ -1,30 +1,5 @@
-import type { ModelResponseProvenance, RouteSnapshot } from '@skaro/timeline';
-import type { ModelTool } from './chat-types.ts';
-
-export interface NativeRequest {
-  context?: import('../context/request.ts').ContextSelection;
-  route: RouteSnapshot;
-  /** Provider-native items/messages, preserved as JSON rather than flattened display text. */
-  input: readonly Record<string, unknown>[];
-  tools?: readonly ModelTool[];
-  system?: string;
-}
-export interface NativeCall {
-  id: string;
-  name: string;
-  arguments: unknown;
-}
-export interface NativeToolResult {
-  id: string;
-  text: string;
-  isError?: boolean;
-}
-export interface NativeResponse {
-  output: Record<string, unknown>[];
-  events: Record<string, unknown>[];
-  calls: NativeCall[];
-  provenance: ModelResponseProvenance;
-}
+import type { NativeCall, NativeToolResult, NativeRequest, NativeResponse } from '@skaro/timeline';
+export type { NativeCall, NativeToolResult, NativeRequest, NativeResponse } from '@skaro/timeline';
 
 export function requireToolResults(
   calls: readonly NativeCall[],

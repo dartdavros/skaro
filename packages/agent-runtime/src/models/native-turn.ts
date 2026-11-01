@@ -14,7 +14,7 @@ interface NativeConnector {
     request: NativeRequest,
     response: NativeResponse,
     results: readonly NativeToolResult[],
-  ): NativeRequest;
+  ): NativeRequest | Promise<NativeRequest>;
 }
 interface NativeTurnInput {
   id: string;
@@ -23,7 +23,7 @@ interface NativeTurnInput {
   request: NativeRequest;
   signal: AbortSignal;
   maxSteps: number;
-  admitRequest(id: string, request: NativeRequest): Promise<void>;
+  admitRequest(id: string, request: NativeRequest, signal?: AbortSignal): Promise<void>;
   toolAdmission?: ModelToolAdmission;
   onText?: (text: string) => void;
 }
@@ -116,7 +116,9 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
       results.push({
         id: call.id,
         text: JSON.stringify(
-          input.toolAdmission && !result.error ? input.toolAdmission.projectResult(result) : result,
+          input.toolAdmission && !result.error
+            ? await input.toolAdmission.projectResult(result, signal)
+            : result,
         ),
         ...(result.error ? { isError: true } : {}),
       });
@@ -134,7 +136,7 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
         },
       ]);
     }
-    request = input.connector.continue(request, response, results);
+    request = await input.connector.continue(request, response, results);
   }
   throw new Error('Native model turn step limit reached');
 }

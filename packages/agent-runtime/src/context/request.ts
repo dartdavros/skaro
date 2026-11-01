@@ -3,10 +3,8 @@ import type { ChatRequest } from '../models/chat-types.ts';
 import type { NativeRequest } from '../models/native-types.ts';
 import { latestContext } from './checkpoint.ts';
 
-export interface ContextSelection {
-  revision: string;
-  epoch: number;
-}
+import type { ModelContextSelection as ContextSelection } from '@skaro/timeline';
+export type { ModelContextSelection as ContextSelection } from '@skaro/timeline';
 function frame(session: RuntimeSession): {
   selection: ContextSelection;
   protectedText: string;

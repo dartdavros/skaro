@@ -10,7 +10,7 @@ export async function modelStep<Q, R extends { provenance: ModelResponseProvenan
   request: Q;
   route: RouteSnapshot;
   signal: AbortSignal;
-  admit(id: string, request: Q): Promise<void>;
+  admit(id: string, request: Q, signal: AbortSignal): Promise<void>;
   generate(request: Q, signal: AbortSignal): Promise<R>;
   continuation(response: R): unknown;
 }): Promise<R> {
@@ -26,7 +26,7 @@ export async function modelStep<Q, R extends { provenance: ModelResponseProvenan
   await journal.append(`${id}:intent`, [{ type: 'effect-intent', id, name: input.name }]);
   let admitted = false;
   try {
-    await input.admit(id, structuredClone(input.request));
+    await input.admit(id, structuredClone(input.request), signal);
     signal.throwIfAborted();
     admitted = true;
     const response = await input.generate(input.request, signal);

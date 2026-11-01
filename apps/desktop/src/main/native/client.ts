@@ -9,7 +9,7 @@ import {
 } from '@skaro/timeline';
 import { stopOwnedProcess, type OwnedProcess } from '../process-identity';
 import type { NativeConfig, NativeOptions, Reply, Request, SessionMethod } from './protocol';
-import { VerificationServer, ExtensionServer } from '@skaro/agent-runtime';
+import { RuntimeHostServer, requireModelBaseline } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
 import { requireNativeSessionHost, type NativeSessionHost } from './host-binding';
 
@@ -29,8 +29,7 @@ class NativeSession implements AgentSession {
   private error?: Error;
   private stopping?: Promise<void>;
   private readonly bundled: boolean;
-  private readonly verification?: VerificationServer;
-  private readonly extensions?: ExtensionServer;
+  private readonly hosts: RuntimeHostServer;
   private readonly hostSignal?: AbortSignal;
   private readonly revoke = () => {
     void this.close().catch((error: unknown) => console.error('Native admission cleanup:', error));
@@ -42,26 +41,23 @@ class NativeSession implements AgentSession {
     workerEntry = join(app.getAppPath(), 'out', 'main', 'native-worker.js'),
   ) {
     requireNativeSessionHost(config, host);
-    const { verification, extensions } = host;
     this.hostSignal = host.signal;
     this.bundled = 'bundled' in config;
     this.options = options;
-    if (verification) {
-      this.verification = new VerificationServer(
-        verification,
-        (reply) => this.worker.postMessage(reply),
-        (signal) => this.requireOwner(signal),
-      );
-    }
-    if (extensions)
-      this.extensions = new ExtensionServer(
-        extensions,
-        (reply) => this.worker.postMessage(reply),
-        (signal) => this.requireOwner(signal),
-      );
+    this.hosts = new RuntimeHostServer(
+      host,
+      (reply) => this.worker.postMessage(reply),
+      (signal) => this.requireOwner(signal),
+    );
     this.worker = new Worker(workerEntry, { workerData: config });
     workers.add(this);
-    this.worker.on('message', (reply: Reply) => this.receive(reply));
+    this.worker.on('message', (reply: Reply) => {
+      try {
+        this.receive(reply);
+      } catch {
+        this.fail(new Error('Invalid native host request'));
+      }
+    });
     this.worker.on('error', (error) => this.fail(error));
     this.worker.on('exit', (code) => {
       this.fail(new Error(`Native session worker exited (${code})`));
@@ -86,14 +82,15 @@ class NativeSession implements AgentSession {
     this.hostSignal?.throwIfAborted();
   }
   private receive(reply: Reply): void {
-    if (reply.type === 'runtime-rpc-call' || reply.type === 'runtime-rpc-cancel') {
-      if (!this.extensions) {
-        this.fail(new Error('Native runtime requested an unconfigured extension host'));
-        return;
-      }
-      this.extensions.receive(reply);
-    } else if (reply.type === 'verification-inspect' || reply.type === 'verification-cancel') {
-      this.verification?.receive(reply);
+    if (
+      reply.type === 'runtime-rpc-call' ||
+      reply.type === 'runtime-rpc-cancel' ||
+      reply.type === 'verification-inspect' ||
+      reply.type === 'verification-cancel' ||
+      reply.type === 'model-rpc-call' ||
+      reply.type === 'model-rpc-cancel'
+    ) {
+      this.hosts.receive(reply);
     } else if (reply.type === 'spawn') {
       this.processes.push(reply.process);
       const gate = new Int32Array(reply.gate);
@@ -126,8 +123,7 @@ class NativeSession implements AgentSession {
     }
   }
   private fail(error: Error): void {
-    this.verification?.close();
-    void this.extensions?.close().catch(() => undefined);
+    void this.hosts.close().catch(() => undefined);
     this.error ??= error;
     for (const pending of this.pending.values()) pending.reject(error);
     this.pending.clear();
@@ -150,6 +146,9 @@ class NativeSession implements AgentSession {
   invokeTool(name: string, args: unknown, id?: string): Promise<unknown> {
     return this.call<unknown>('invokeTool', [name, args, id]);
   }
+  runModelTurn(request: import('@skaro/timeline').RuntimeModelRequest, id: string, maxSteps = 20) {
+    return this.call<unknown>('runModelTurn', [request, id, maxSteps]);
+  }
   steer: AgentSession['steer'] = (input) => this.call('steer', [input]);
   respond: AgentSession['respond'] = (id, answer) => this.call('respond', [id, answer]);
   setModel: AgentSession['setModel'] = (model, effort) => this.call('setModel', [model, effort]);
@@ -161,8 +160,7 @@ class NativeSession implements AgentSession {
   stopBackground = (id: string) => this.call('stopBackground', [id]);
   close(): Promise<void> {
     if (this.stopping) return this.stopping;
-    this.verification?.close();
-    const extensionsClosed = this.extensions?.close();
+    const extensionsClosed = this.hosts.close();
     void extensionsClosed?.catch(() => undefined);
     this.stopping = (async () => {
       let timer: NodeJS.Timeout | undefined;
@@ -206,6 +204,8 @@ export async function startNativeSession(
   workerEntry?: string,
 ): Promise<AgentSession> {
   if (closing) throw new Error('The application is closing');
+  options.signal?.throwIfAborted();
+  await requireModelBaseline(host?.model);
   options.signal?.throwIfAborted();
   const {
     raw: _raw,

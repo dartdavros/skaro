@@ -2,7 +2,7 @@ import { app } from 'electron';
 import { isAbsolute, join } from 'node:path';
 import type { BuiltinSessionStart, SessionOptions } from '@skaro/timeline';
 import { startNativeSession } from './client';
-import { extensionBinding } from '@skaro/agent-runtime';
+import { extensionBinding, modelBinding } from '@skaro/agent-runtime';
 import type { NativeSessionHost } from './host-binding';
 
 /** Internal lifecycle entry; product task/chat selection is deferred to BA-7. */
@@ -13,9 +13,11 @@ export function startBuiltinNativeSession(
   host: NativeSessionHost = {},
   entries = join(app.getAppPath(), 'out', 'main'),
 ) {
-  const { verification, extensions } = host;
+  const { verification, extensions, model } = host;
   if (!options.processStarted)
     throw new Error('Builtin native sessions require a durable process ownership callback');
+  if (model && config.model && JSON.stringify(config.model) !== JSON.stringify(model.policy))
+    throw new Error('Builtin model requires its exact persisted policy');
   if (!isAbsolute(entries)) throw new Error('Builtin entries require an absolute build directory');
   if (
     extensions &&
@@ -35,6 +37,7 @@ export function startBuiltinNativeSession(
       agent: 'skaro',
       bundled: {
         ...config,
+        ...(model ? { model: structuredClone(model.policy) } : {}),
         ...(extensions ? { extensionsScope: structuredClone(extensions.scope) } : {}),
         ...(config.tools
           ? {
@@ -53,6 +56,7 @@ export function startBuiltinNativeSession(
         admission: structuredClone(verification.admission),
       },
       extensions: extensions && extensionBinding(extensions),
+      model: model && modelBinding(model),
     },
     options,
     host,

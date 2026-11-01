@@ -21,7 +21,7 @@ interface ChatTurnInput {
   signal: AbortSignal;
   maxSteps: number;
   /** Durable budget admission, invoked after intent and before sending bytes. */
-  admitRequest(id: string, request: ChatRequest): Promise<void>;
+  admitRequest(id: string, request: ChatRequest, signal?: AbortSignal): Promise<void>;
   toolAdmission?: ModelToolAdmission;
   onText?: (text: string) => void;
 }
@@ -81,7 +81,7 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
     if (JSON.stringify(journal.state.config!.route) !== JSON.stringify(request.route))
       throw new Error('Model route changed during turn');
     const id = `model-${input.id}-${step}`;
-    const tools = admittedChatTools(request.tools, input.toolAdmission);
+    const tools = await admittedChatTools(request.tools, input.toolAdmission, signal);
     const toolChoice =
       input.toolAdmission?.chatToolsRequired && tools?.length ? 'required' : request.toolChoice;
     const response = await modelStep({
@@ -119,7 +119,9 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
         admission: input.toolAdmission,
       });
       const content = JSON.stringify(
-        input.toolAdmission && !result.error ? input.toolAdmission.projectResult(result) : result,
+        input.toolAdmission && !result.error
+          ? await input.toolAdmission.projectResult(result, signal)
+          : result,
       );
       messages.push({ role: 'tool', tool_call_id: call.id, content });
       await journal.append(`${id}:tool:${call.id}`, [

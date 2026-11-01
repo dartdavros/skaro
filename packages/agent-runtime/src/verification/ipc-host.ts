@@ -23,14 +23,16 @@ export class VerificationServer {
       requireOwner,
       signal: host.signal,
       dispatch: async (_operation, _args, signal) => inspect(admission, signal),
-      send: (reply) =>
+      send: (reply) => {
+        if (reply.type === 'runtime-rpc-progress') return;
         send({
           type: 'verification-result',
           id: reply.id,
           ...(reply.error
             ? { error: 'Verification host inspection rejected' }
             : { state: reply.value as RuntimeAcceptanceState }),
-        }),
+        });
+      },
     });
   }
   receive(request: VerificationInspectRequest | VerificationCancelRequest): void {

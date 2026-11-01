@@ -13,8 +13,18 @@ import { processBirthSync } from '../process-identity';
 import { SecretValues } from '../secret-values';
 import { presentationEvent } from '../timeline-presentation';
 import type { NativeConfig, NativeOptions, Reply, Request } from './protocol';
-import { VerificationClient, ExtensionClient, requireExtensionBinding } from '@skaro/agent-runtime';
-import type { VerificationInspectReply, RuntimeRpcReply } from '@skaro/timeline';
+import {
+  VerificationClient,
+  ExtensionClient,
+  ModelClient,
+  requireExtensionBinding,
+  requireModelBinding,
+} from '@skaro/agent-runtime';
+import type {
+  VerificationInspectReply,
+  RuntimeRpcReply,
+  RuntimeModelRpcReply,
+} from '@skaro/timeline';
 
 const config = workerData as NativeConfig;
 const port = parentPort!;
@@ -25,6 +35,10 @@ const verification =
 const extensions =
   'bundled' in config && config.extensions
     ? new ExtensionClient(config.extensions, (request) => port.postMessage(request))
+    : undefined;
+const model =
+  'bundled' in config && config.model
+    ? new ModelClient(config.model, (request) => port.postMessage(request))
     : undefined;
 const secrets = new SecretValues();
 let session: AgentSession | undefined;
@@ -76,6 +90,7 @@ async function start(options: NativeOptions): Promise<void> {
   resolved.signal = startupAbort.signal;
   if ('bundled' in config) {
     requireExtensionBinding(config.bundled, config.extensions);
+    requireModelBinding(config.bundled, config.model);
     session = await startBundledSession(config.agent, {
       config: config.bundled,
       entry: config.entry,
@@ -84,6 +99,7 @@ async function start(options: NativeOptions): Promise<void> {
       signal: resolved.signal,
       verification: verification?.host(),
       extensions: extensions?.host(),
+      model: model?.host(),
     });
   } else {
     const adapter = await createAgentAdapter(config.agent, {
@@ -105,49 +121,61 @@ async function start(options: NativeOptions): Promise<void> {
   );
 }
 
-port.on('message', (request: Request | VerificationInspectReply | RuntimeRpcReply) => {
-  if ('type' in request && request.type === 'runtime-rpc-result') {
-    extensions?.receive(request);
-    return;
-  }
-  if ('type' in request) {
-    verification?.receive(request);
-    return;
-  }
-  secrets.remember(request.secrets);
-  void (async () => {
-    if (request.method === 'start') {
-      if (startup) throw new Error('The native session is already starting');
-      startup = start(request.args[0] as NativeOptions);
-      return startup;
+port.on(
+  'message',
+  (request: Request | VerificationInspectReply | RuntimeRpcReply | RuntimeModelRpcReply) => {
+    if (
+      'type' in request &&
+      (request.type === 'model-rpc-result' || request.type === 'model-rpc-text')
+    ) {
+      model?.receive(request);
+      return;
     }
-    if (!session && (request.method === 'close' || request.method === 'interrupt')) {
-      startupAbort.abort();
-      await startup?.catch(() => undefined);
-      if (!session) return;
+    if ('type' in request && request.type === 'runtime-rpc-result') {
+      extensions?.receive(request);
+      return;
     }
-    if (!session) throw new Error('The native session is not ready');
-    if (request.method === 'invokeTool') {
-      if (!('invokeTool' in session) || typeof session.invokeTool !== 'function')
-        throw new Error('This session does not expose builtin tools');
-      return session.invokeTool(...request.args);
+    if ('type' in request) {
+      verification?.receive(request);
+      return;
     }
-    const method = session[request.method] as (...args: unknown[]) => Promise<void>;
-    try {
-      return await method.apply(session, request.args);
-    } finally {
-      if (request.method === 'close') {
-        verification?.close();
-        extensions?.close();
+    secrets.remember(request.secrets);
+    void (async () => {
+      if (request.method === 'start') {
+        if (startup) throw new Error('The native session is already starting');
+        startup = start(request.args[0] as NativeOptions);
+        return startup;
       }
-    }
-  })().then(
-    (value) => post({ type: 'reply', id: request.id, value }),
-    (error: unknown) =>
-      post({
-        type: 'reply',
-        id: request.id,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-  );
-});
+      if (!session && (request.method === 'close' || request.method === 'interrupt')) {
+        startupAbort.abort();
+        await startup?.catch(() => undefined);
+        if (!session) return;
+      }
+      if (!session) throw new Error('The native session is not ready');
+      if (request.method === 'invokeTool' || request.method === 'runModelTurn') {
+        const method = session[request.method as keyof typeof session];
+        if (typeof method !== 'function')
+          throw new Error('This session does not expose builtin tools');
+        return (method as (...args: unknown[]) => Promise<unknown>).apply(session, request.args);
+      }
+      const method = session[request.method] as (...args: unknown[]) => Promise<void>;
+      try {
+        return await method.apply(session, request.args);
+      } finally {
+        if (request.method === 'close') {
+          verification?.close();
+          extensions?.close();
+          model?.close();
+        }
+      }
+    })().then(
+      (value) => post({ type: 'reply', id: request.id, value }),
+      (error: unknown) =>
+        post({
+          type: 'reply',
+          id: request.id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+    );
+  },
+);

@@ -10,6 +10,9 @@ import { schemas } from './tools/schemas.ts';
 import { RuntimeContext } from './context/service.ts';
 import type { RuntimeExtensionHost } from './extensions/registry.ts';
 import type { RuntimeVerificationHost } from './verification/host.ts';
+import type { RuntimeModelHost } from '@skaro/timeline';
+import { runHostModelTurn, busyHostModelTurn } from './models/host-turn.ts';
+import { requireModelBinding, requireModelHostPolicy } from './models/host-binding.ts';
 
 function validateRoute(route: RouteSnapshot): void {
   if (
@@ -40,6 +43,8 @@ export class RuntimeSession {
   private tools?: ToolCoordinator;
   private modelAbort = new AbortController();
   private modelWork?: Promise<unknown>;
+  private modelHost?: RuntimeModelHost;
+  private hostModelWork?: Promise<JournalRecord>;
   context?: RuntimeContext;
   private constructor(journal: RuntimeJournal) {
     this.journal = journal;
@@ -50,8 +55,11 @@ export class RuntimeSession {
     owner: RuntimeProcessIdentity,
     extensions?: RuntimeExtensionHost,
     verification?: RuntimeVerificationHost,
+    model?: RuntimeModelHost,
   ): Promise<RuntimeSession> {
     requireBuiltinCompatibility(config.versions);
+    requireModelBinding(config, model);
+    if (model) requireModelHostPolicy(model);
     if ((config.extensions?.length || extensions) && !config.tools)
       throw new Error('Extensions require a host tool scope');
     if (verification && !config.tools) throw new Error('Verification requires a host tool scope');
@@ -92,6 +100,8 @@ export class RuntimeSession {
           JSON.stringify(config.extensionsScope)
         )
           throw new Error('Resume extension scope differs from persisted host policy');
+        if (JSON.stringify(journal.state.config.model) !== JSON.stringify(config.model))
+          throw new Error('Resume model policy differs from persisted host scope');
         if (JSON.stringify(journal.state.config.route) !== JSON.stringify(config.route))
           throw new Error(
             'Resume route differs from persisted route; explicit route change required',
@@ -105,6 +115,7 @@ export class RuntimeSession {
           ]);
       }
       const session = new RuntimeSession(journal);
+      session.modelHost = model;
       session.tools = await ToolCoordinator.create(journal, extensions, verification);
       session.context = await RuntimeContext.create(journal);
       return session;
@@ -146,6 +157,17 @@ export class RuntimeSession {
     return result;
   }
   private dispatch(command: RuntimeCommand): Promise<JournalRecord> {
+    if (command.action.type === 'modelTurn') {
+      if (this.ended) return Promise.reject(new Error('Runtime closed'));
+      if (this.hostModelWork) return busyHostModelTurn(this, command.id, command.action);
+      const work = runHostModelTurn(this, this.modelHost, command.id, command.action).finally(
+        () => {
+          if (this.hostModelWork === work) this.hostModelWork = undefined;
+        },
+      );
+      this.hostModelWork = work;
+      return work;
+    }
     if (command.action.type === 'stopBackground' && this.tools)
       return this.tools.execute({
         id: command.id,
@@ -186,7 +208,7 @@ export class RuntimeSession {
         if (action.type === 'interrupt' || action.type === 'close') {
           if (action.type === 'close') await this.tools?.close();
           else await this.tools?.interrupt();
-          await Promise.allSettled([this.modelWork]);
+          await Promise.allSettled([this.modelWork, this.hostModelWork]);
         } else if (this.modelWork && action.type !== 'respond')
           throw new Error('An active model turn prevents this context change');
         if (action.type === 'setRoute') validateRoute(action.route);
@@ -239,7 +261,7 @@ export class RuntimeSession {
     this.ended = true;
     this.modelAbort.abort();
     await this.tools?.close();
-    await Promise.allSettled([this.modelWork]);
+    await Promise.allSettled([this.modelWork, this.hostModelWork]);
     await this.queue;
     await this.journal.close();
   }
