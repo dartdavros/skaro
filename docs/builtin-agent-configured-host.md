@@ -90,5 +90,26 @@ task/C4/configuration не менялись. Ранний proof без отде�
 Пять целевых owner-steering/configuration tests, desktop typecheck, lint,
 обычная сборка и отдельная сборка финального verification entry прошли.
 UI не менялся, полный suite не запускался. Сценарий ещё не подтверждает
-steering после настоящего provider response, успешное выполнение задачи или
-возобновление configured session после выхода прежнего процесса.
+steering после настоящего provider response или успешное выполнение задачи.
+
+## Восстановление configured session
+
+Тот же режим расширен настоящим вторым runtime после подтверждённого выхода
+первого. Lifecycle отдельного поколения вынесен в `configured-native-session`:
+новый host получает свежие sequence/hash primary journal и новый admission,
+сохраняя точные route/policy и прежний журнал. Это не fake resume или копия истории.
+
+Принят proof `verification/extensions-98dba986-3262-4cfb-859b-200caa4616f8/proof.json`
+в userData. Поколение увеличилось с 1 до 2, оба OS owner завершены. При повторной
+доставке прежних send/steer IDs второй runtime вернул старые acknowledgements:
+новых journal records, preparations и model intents нет. Один прежний model
+intent остался с отказом, 0 budget reservations/POST/чтений ключа. Live/replay
+и единственный terminal подтверждены также для восстановленного runtime.
+TaskRun не создавался, task/C4/configuration не менялись.
+
+Прогон включает сборку настоящего verification entry; typecheck и lint прошли.
+Затронутый обычный configured-turn также повторно принят после выделения
+lifecycle: `verification/extensions-aa6754f5-964f-4633-89e1-0074d2f4b314/proof.json`.
+NO GOD: scenario 217, generation 117, owner-input helper 139 строк. Это проверка
+перезапуска runtime в настоящем main host; холодный перезапуск всего Electron
+и успешное продолжение provider-запроса этими нулевыми POST не заявляются.

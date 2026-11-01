@@ -53,8 +53,18 @@ export function configuredOwnerInputProbe(
       return appendChatOwnerInput(input, request, terminal, signal);
     },
   };
+  const redeliver = async (session: AgentSession) => {
+    assert('deliverInput' in session && typeof session.deliverInput === 'function');
+    const before = await snapshot();
+    await session.deliverInput(initial, 'configured-initial', 'send');
+    await session.deliverInput(steering, 'configured-steering', 'steer');
+    assert.equal((await snapshot()).records.length, before.records.length);
+    assert.equal(preparations, 1);
+    assert.equal(steerings, 1);
+  };
   return {
     port,
+    redeliver,
     observe(event: TimelineEvent) {
       if (event.t === 'turn.completed') completed?.();
     },
@@ -106,11 +116,7 @@ export function configuredOwnerInputProbe(
         applied.sequence <
           current.records.find((record) => record.id.endsWith(':intent'))!.sequence,
       );
-      await send(initial, 'configured-initial', 'send');
-      await send(steering, 'configured-steering', 'steer');
-      assert.equal((await snapshot()).records.length, current.records.length);
-      assert.equal(preparations, 1);
-      assert.equal(steerings, 1);
+      await redeliver(session);
       await assert.rejects(
         send({ text: `${initial.text} Changed` }, 'configured-initial', 'send'),
         /identity reused/,

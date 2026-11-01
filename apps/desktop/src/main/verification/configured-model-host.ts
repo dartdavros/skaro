@@ -1,23 +1,16 @@
 import assert from 'node:assert/strict';
-import { basename, join, resolve } from 'node:path';
+import { basename } from 'node:path';
 import { readRuntimeJournal } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
-import {
-  operationTimeout,
-  type AgentSession,
-  type RuntimeModelRequest,
-  type TimelineEvent,
-} from '@skaro/timeline';
+import type { RuntimeModelRequest } from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { NativeAdmissions } from '../native/admissions';
 import { AdmissionStore } from '../native/admission-state';
-import { startBuiltinNativeSession } from '../native/bundled';
-import { prepareConfiguredModelHost } from '../builtin-configured-host';
-import { modelNetworkTransport } from '../model-network-transport';
 import { nativeProbeConfig, nativeProbeOptions } from './native-probe-options';
 import { c4ReviewKey } from '../c4-review';
 import { verifyModelTimeline } from './model-timeline-proof';
 import { configuredOwnerInputProbe } from './configured-owner-input';
+import { configuredNativeSession } from './configured-native-session';
 
 /** Actual configuration/catalog/vault/native RPC. Explicit policy denies every model POST. */
 export async function verifyConfiguredModelHost(
@@ -50,25 +43,21 @@ export async function verifyConfiguredModelHost(
     runId: 'configured-model-no-active-run',
   };
   const ownerKey = `verification:${basename(directory)}`;
-  const lease = await NativeAdmissions.prepare({
-    db: services.db,
-    ownerKey,
-    scope,
-    sessionId: 'configured-model-preflight',
-    signal: new AbortController().signal,
-    async requireCurrent(signal) {
-      signal.throwIfAborted();
-      assert.equal(JSON.stringify(await context.store.readTask(task.id)), before);
-      signal.throwIfAborted();
-    },
-  });
+  const prepare = () =>
+    NativeAdmissions.prepare({
+      db: services.db,
+      ownerKey,
+      scope,
+      sessionId: 'configured-model-preflight',
+      signal: new AbortController().signal,
+      async requireCurrent(signal) {
+        signal.throwIfAborted();
+        assert.equal(JSON.stringify(await context.store.readTask(task.id)), before);
+        signal.throwIfAborted();
+      },
+    });
+  let lease = await prepare();
   const { owners, options } = nativeProbeOptions(directory, context.root, true);
-  const recordOwner = options.processStarted!;
-  options.processStarted = (pid, identity) => {
-    assert(identity);
-    recordOwner(pid, identity);
-    lease.recordOwnership({ pid, ...identity });
-  };
   const config = nativeProbeConfig(directory, context.root, lease.admission.sessionId, true);
   config.route = snapshot;
   config.tools!.verificationScope = scope;
@@ -77,10 +66,7 @@ export async function verifyConfiguredModelHost(
   assert.equal(baseline.records.length, 0);
   let reservations = 0,
     dispatches = 0;
-  let configured: Awaited<ReturnType<typeof prepareConfiguredModelHost>> | undefined;
-  let session: AgentSession | undefined;
-  let drain: Promise<void> | undefined;
-  const events: TimelineEvent[] = [];
+  let generation: Awaited<ReturnType<typeof configuredNativeSession>> | undefined;
   const request: RuntimeModelRequest = {
     kind: 'chat',
     value: {
@@ -103,23 +89,15 @@ export async function verifyConfiguredModelHost(
   if (inputProbe) config.model.input = { revision: inputProbe.port.revision, steer: true };
   let modelTurnId = 'configured-denied';
   let ownerProof: unknown;
-  try {
-    configured = await prepareConfiguredModelHost({
-      store: services.modelConfiguration,
-      settings: services.modelSettings,
-      binding: {
-        scope,
-        admission: lease.admission,
-        route: snapshot,
-        journalPath: config.journalPath,
-        baseSequence: 0,
-        baseHash: '',
-        policy: config.model,
-      },
-      admissions: lease,
+  const createGeneration = () =>
+    configuredNativeSession({
+      services,
+      config,
+      lease,
+      options,
+      directory,
       ownerInput: inputProbe?.port,
-      signal: lease.signal,
-      transport: await modelNetworkTransport(process.env['SKARO_VERIFY_PROXY']),
+      observe: (event) => inputProbe?.observe(event),
       requests: {
         async reserve() {
           reservations++;
@@ -131,34 +109,14 @@ export async function verifyConfiguredModelHost(
         },
       },
     });
+  try {
+    generation = await createGeneration();
     await assert.rejects(
-      configured.model.reserve('before-spawn', request, lease.signal),
+      generation.model.reserve('before-spawn', request, lease.signal),
       /not active/,
     );
     assert.equal(reservations, 0);
-    session = await startBuiltinNativeSession(
-      config,
-      join(directory, 'native-attachments'),
-      options,
-      {
-        signal: configured.signal,
-        model: configured.model,
-        verification: {
-          scope,
-          admission: lease.admission,
-          acceptance: services.runs.builtinAcceptance(scope, lease),
-        },
-      },
-      resolve('apps/desktop/out/main'),
-    );
-    const active = session;
-    drain = (async () => {
-      for await (const event of active.events) {
-        events.push(event);
-        inputProbe?.observe(event);
-      }
-    })();
-    await lease.requireActive(lease.admission, lease.signal);
+    const session = await generation.start();
     assert('runModelTurn' in session && typeof session.runModelTurn === 'function');
     const wrong: RuntimeModelRequest = {
       ...request,
@@ -188,21 +146,26 @@ export async function verifyConfiguredModelHost(
     );
     assert.equal(reservations, 1);
     assert.equal(dispatches, 0);
-    configured.close();
-    await assert.rejects(session.send({ text: 'Rejected after configured close' }), /closed/);
-    await operationTimeout(
-      drain!,
-      45_000,
-      'Configured authority did not close its native event stream',
-    );
-    await session.close();
-    await drain;
-    session = undefined;
-    await lease.revoke(lease.admission, 'Configured preflight completed');
-    await lease.confirmExit(lease.admission);
+    await generation.close();
     assert.equal(owners.length, 1);
     assert.equal(await processBirth(owners[0]!.pid), undefined);
-    const final = await readRuntimeJournal(config.journalPath, config.sessionId);
+    let final = await readRuntimeJournal(config.journalPath, config.sessionId);
+    let timeline = verifyModelTimeline(final.records, generation.events, modelTurnId, 'failed');
+    if (inputProbe) {
+      const previous = lease.admission;
+      lease = await prepare();
+      assert.equal(lease.admission.generation, previous.generation + 1);
+      assert.notEqual(lease.admission.id, previous.id);
+      generation = await createGeneration();
+      await inputProbe.redeliver(await generation.start());
+      assert.equal(reservations, 1);
+      assert.equal(dispatches, 0);
+      await generation.close();
+      final = await readRuntimeJournal(config.journalPath, config.sessionId);
+      timeline = verifyModelTimeline(final.records, generation.events, modelTurnId, 'failed');
+    }
+    assert.equal(owners.length, inputProbe ? 2 : 1);
+    for (const owner of owners) assert.equal(await processBirth(owner.pid), undefined);
     assert.equal(
       final.records.filter(
         (record) =>
@@ -216,7 +179,6 @@ export async function verifyConfiguredModelHost(
         (record) => record.id.startsWith('budget:') || record.id.endsWith(':dispatch'),
       ),
     );
-    const timeline = verifyModelTimeline(final.records, events, modelTurnId, 'failed');
     assert.equal(JSON.stringify(await context.store.readTask(task.id)), before);
     assert.deepEqual(services.db.getSetting(reviewKey, null), review);
     assert.deepEqual(services.db.listRuns(projectId, task.id), runs);
@@ -240,17 +202,16 @@ export async function verifyConfiguredModelHost(
       noTaskRunCreated: true,
       taskAndC4Unchanged: true,
       configurationUnchanged: true,
-      nativeProcesses: 1,
+      nativeProcesses: owners.length,
+      ...(inputProbe ? { restartWithoutInputPreparation: true, admissionGenerations: 2 } : {}),
       exitConfirmed: true,
       admissionStatus: new AdmissionStore(services.db, ownerKey).read()?.status,
       timeline,
       journal: config.journalPath,
     };
   } finally {
-    configured?.close();
+    await generation?.close();
     await lease.revoke(lease.admission, 'Configured preflight cleanup');
-    await session?.close();
-    await drain;
     await lease.confirmExit(lease.admission);
   }
 }
