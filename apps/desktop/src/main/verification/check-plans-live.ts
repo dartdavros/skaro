@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
-import { RuntimeSession, type RuntimeVerificationHost } from '@skaro/agent-runtime';
-import { processBirth } from '@skaro/agent-runtime/process-identity';
+import { RuntimeSession } from '@skaro/agent-runtime';
 import type { RuntimeProcessIdentity, RuntimeAcceptanceState } from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { c4ReviewKey } from '../c4-review';
 import { extensionSession, approvedTool } from './extension-session';
+import { catPilotVerificationTarget } from './task-verification';
+import {
+  modelPlanInspection,
+  modelPlanToolAdmission,
+  prepareModelPlan,
+} from './model-plan-request';
 
 /** Read actual criteria; deliberately invalid run scope cannot launch a project command. */
 export async function verifyCheckPlans(
@@ -12,32 +17,14 @@ export async function verifyCheckPlans(
   directory: string,
   owner: RuntimeProcessIdentity,
 ) {
-  const project = services.db.shell
-    .list()
-    .filter((item) => item.name.toLowerCase() === 'cat-pilot');
-  assert.equal(project.length, 1);
-  const context = services.projects.get(project[0]!.id);
-  const task = await context.store.readTask('T-008');
+  const { context, task, verification } = await catPilotVerificationTarget(
+    services,
+    owner,
+    'extensions-plans',
+    'verification-plan-no-active-run',
+  );
   const before = JSON.stringify(task);
   const c4 = structuredClone(services.db.getSetting(c4ReviewKey(context.id, task.id), null));
-  const scope = {
-    kind: 'task' as const,
-    projectId: context.id,
-    taskId: task.id,
-    runId: 'verification-plan-no-active-run',
-  };
-  const admission = { id: `plans-${owner.pid}`, sessionId: 'extensions-plans', generation: 1 };
-  const verification: RuntimeVerificationHost = {
-    scope,
-    admission,
-    acceptance: services.runs.builtinAcceptance(scope, {
-      async requireActive(value, signal) {
-        signal.throwIfAborted();
-        assert.deepEqual(value, admission);
-        assert.equal(await processBirth(owner.pid), owner.birth);
-      },
-    }),
-  };
   let session = await extensionSession(directory, 'plans', owner, undefined, context.root, {
     verification,
   });
@@ -148,6 +135,17 @@ export async function verifyCheckPlans(
     assert(!(await tool('after-restart', 'inspect_acceptance', {})).error);
     assert.equal(JSON.stringify(await context.store.readTask(task.id)), before);
     assert.deepEqual(services.db.getSetting(c4ReviewKey(context.id, task.id), null), c4);
+    const payload = await prepareModelPlan(directory, state, session.journal.state.config!.route);
+    const policy = modelPlanToolAdmission(modelPlanInspection(state));
+    assert.throws(() => policy.requireAllowed('run_check', command));
+    assert.throws(() => policy.requireAllowed('plan_checks', input));
+    assert.throws(() =>
+      policy.requireAllowed('assess_checks', {
+        criteriaRevision: state.criteriaRevision,
+        verdicts: state.criteria.map(({ id }) => ({ id, met: true, evidence: [] })),
+      }),
+    );
+    assert.deepEqual(policy.projectResult({ value: state }), modelPlanInspection(state));
     return {
       project: 'Cat-pilot',
       taskId: task.id,
@@ -168,6 +166,7 @@ export async function verifyCheckPlans(
       planRetainedAfterRestart: true,
       taskAndC4Unchanged: true,
       modelRequests: 0,
+      modelPayload: payload,
     };
   } finally {
     await session.dispose();

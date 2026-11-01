@@ -8,9 +8,13 @@ import { cleanCommandEnvironment } from '@skaro/agent-runtime/environment';
 
 const require = createRequire(import.meta.url);
 const directory = await mkdtemp(join(tmpdir(), 'skaro-openrouter-build-'));
+const plan = process.argv[4] === '--plan';
+const buildDirectory = plan ? resolve('apps/desktop/out/main') : directory;
+const entry = plan ? 'verify-model-plan.cjs' : 'live.cjs';
 try {
   if (
     process.argv.length !== 4 &&
+    !(plan && process.argv.length === 7) &&
     !(
       process.argv.length === 5 &&
       ['--context', '--long-context', '--prepare-context'].includes(process.argv[4])
@@ -22,12 +26,12 @@ try {
     logLevel: 'silent',
     build: {
       ssr: resolve('apps/desktop/src/main/credentials/openrouter-live.ts'),
-      outDir: directory,
+      outDir: buildDirectory,
       emptyOutDir: false,
       minify: false,
       rollupOptions: {
         external: ['electron'],
-        output: { entryFileNames: 'live.cjs', format: 'cjs' },
+        output: { entryFileNames: entry, format: 'cjs' },
       },
     },
   });
@@ -50,7 +54,7 @@ try {
       let needsRestart = false;
       const child = spawn(
         require('electron'),
-        [join(directory, 'live.cjs'), ...process.argv.slice(2)],
+        [join(buildDirectory, entry), ...process.argv.slice(2)],
         {
           env,
           windowsHide: true,
@@ -83,5 +87,6 @@ try {
   );
   process.exitCode = 1;
 } finally {
+  if (plan) await rm(join(buildDirectory, entry), { force: true });
   await rm(directory, { recursive: true, force: true });
 }

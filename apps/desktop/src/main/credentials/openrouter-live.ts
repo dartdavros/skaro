@@ -21,6 +21,7 @@ import { liveCancel } from './live-cancel';
 import { livePolicy } from './live-policy';
 import { verifyLiveContext } from './context-live';
 import { verifyLongContext } from './long-context-live';
+import { verifyPreparedModelPlan } from '../verification/model-plan-live';
 
 // Real-service acceptance entry; no HTTP server, fake API, renderer, or plaintext key input.
 app.setName('Skaro');
@@ -64,6 +65,22 @@ void app.whenReady().then(async () => {
     const connector = new OpenRouterConnector(credentials, auth);
     const before = await connector.limits(controller.signal);
     process.send?.({ type: 'limits', before });
+    if (process.argv[4] === '--plan') {
+      stage = 'model-plan';
+      const proof = await verifyPreparedModelPlan({
+        connector,
+        owner,
+        directory,
+        signal: controller.signal,
+        payloadPath: process.argv[5]!,
+        expectedHash: process.argv[6]!,
+      });
+      process.send?.({ type: 'model-plan', proof });
+      await vault.close();
+      vault = undefined;
+      process.send?.({ type: 'complete', directory }, () => app.exit(0));
+      return;
+    }
     if (process.argv[4] === '--long-context') {
       stage = 'long-context';
       const proof = await verifyLongContext({

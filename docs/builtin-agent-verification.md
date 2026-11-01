@@ -5,6 +5,21 @@
 
 ## Продолжение BA-6, 01.11.2026
 
+Подготовлен ограниченный живой model-plan сценарий, но API не запускался.
+Реальный локальный proof подготовки:
+`verification/extensions-990788b8-0105-4aba-9af8-9bbead070e8a/proof.json`.
+Payload: `model-plan-payload.json` в том же каталоге; semantic SHA256
+`7b3a42fd6305e343ad6d13cc9d95489d5cdf767150cb6aaa87e1cae54774c598`.
+Локально проверены tool allowlist, отказ выполнению/положительным verdicts и
+точная проекция инспектора. Полный OpenRouter driver скомпилирован в prepare
+режиме без credential host/API; типы и lint прошли. Ранее согласованные payloads
+не включают эти критерии Cat-pilot, поэтому живая отправка ожидает решения
+владельца. Shared ledger прочитан без сети: 52 запроса, $0.28447606 включая
+сохранённые reservations; лимит $1 не изменён. Новые model requests этого блока: 0.
+Финальная штатная сборка прошла; изменённые исходники не превышают 300 строк,
+Prettier и diff проверены. Живой OpenRouter --plan до разрешения не запускался;
+его положительный сетевой результат не заявляется. Полный suite не запускался.
+
 Добавлены внутренние tools inspect_acceptance/plan_checks/assess_checks и
 persisted verificationScope. Живой task host даёт criterion IDs/тексты,
 модель сохраняет checks/uncovered с точными параметрами и context revisions.
