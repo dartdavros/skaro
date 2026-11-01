@@ -5,6 +5,8 @@ import type { BuiltinToolScope } from './builtin-tools.ts';
 import type { BuiltinContextConfig } from './builtin-context.ts';
 import type { BuiltinExtensionPolicy } from './builtin-extensions.ts';
 import type { RuntimeVerificationHost } from './builtin-host.ts';
+import type { RuntimeScopedExtensionHost } from './builtin-extensions.ts';
+import type { SkaroScope } from './skaro-scope.ts';
 
 export interface BuiltinSessionStart {
   sessionId: string;
@@ -17,6 +19,8 @@ export interface BuiltinSessionStart {
   tools?: BuiltinToolScope;
   context?: BuiltinContextConfig;
   extensions?: readonly BuiltinExtensionPolicy[];
+  /** Persisted authority for native host operations; cannot change on resume. */
+  extensionsScope?: Readonly<SkaroScope>;
 }
 
 export interface BuiltinSessionOptions extends Pick<
@@ -27,6 +31,7 @@ export interface BuiltinSessionOptions extends Pick<
   entry?: string;
   /** In-process host port. Transports serialize only its scope/admission binding. */
   verification?: RuntimeVerificationHost;
+  extensions?: RuntimeScopedExtensionHost;
 }
 
 export interface BundledSessionRuntime {

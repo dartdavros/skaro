@@ -5,6 +5,8 @@ import type {
   RuntimeVerificationBinding,
   VerificationInspectRequest,
   VerificationCancelRequest,
+  RuntimeExtensionBinding,
+  RuntimeRpcRequest,
 } from '@skaro/timeline';
 import type { OwnedProcess } from '../process-identity';
 
@@ -24,6 +26,7 @@ export type NativeConfig =
       entry: string;
       attachmentsDir: string;
       verification?: RuntimeVerificationBinding;
+      extensions?: RuntimeExtensionBinding;
     };
 export type NativeOptions = Omit<
   SessionOptions,
@@ -42,4 +45,5 @@ export type Reply =
   | { type: 'spawn'; process: OwnedProcess; gate: SharedArrayBuffer }
   | { type: 'ended'; error?: string }
   | VerificationInspectRequest
-  | VerificationCancelRequest;
+  | VerificationCancelRequest
+  | RuntimeRpcRequest;

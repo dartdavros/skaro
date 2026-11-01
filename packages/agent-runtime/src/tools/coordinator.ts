@@ -57,12 +57,18 @@ export class ToolCoordinator {
     if (this.halted) throw this.halted;
     if (this.abort.signal.aborted) this.abort = new AbortController();
   }
+  async interrupt(): Promise<void> {
+    return this.shutdown(false);
+  }
   async close(): Promise<void> {
+    return this.shutdown(true);
+  }
+  private async shutdown(final: boolean): Promise<void> {
     this.cancel();
     try {
       const closed = await Promise.allSettled([
         this.registry.processes.close(),
-        this.registry.extensions.close(),
+        final ? this.registry.extensions.close() : this.registry.extensions.interrupt(),
       ]);
       if (closed.some((result) => result.status === 'rejected'))
         throw new Error('Tool process or extension shutdown was not confirmed');

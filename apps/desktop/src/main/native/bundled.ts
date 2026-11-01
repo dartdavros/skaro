@@ -2,17 +2,27 @@ import { app } from 'electron';
 import { isAbsolute, join } from 'node:path';
 import type { BuiltinSessionStart, SessionOptions } from '@skaro/timeline';
 import { startNativeSession } from './client';
-import type { RuntimeVerificationHost } from '@skaro/agent-runtime';
+import { extensionBinding } from '@skaro/agent-runtime';
+import type { NativeSessionHost } from './host-binding';
 
 /** Internal lifecycle entry; product task/chat selection is deferred to BA-7. */
 export function startBuiltinNativeSession(
   config: BuiltinSessionStart,
   attachmentsDir: string,
   options: SessionOptions,
-  verification?: RuntimeVerificationHost,
+  host: NativeSessionHost = {},
   entries = join(app.getAppPath(), 'out', 'main'),
 ) {
+  const { verification, extensions } = host;
+  if (!options.processStarted)
+    throw new Error('Builtin native sessions require a durable process ownership callback');
   if (!isAbsolute(entries)) throw new Error('Builtin entries require an absolute build directory');
+  if (
+    extensions &&
+    config.extensionsScope &&
+    JSON.stringify(config.extensionsScope) !== JSON.stringify(extensions.scope)
+  )
+    throw new Error('Builtin extensions require their exact host scope');
   if (
     verification &&
     (!config.tools ||
@@ -25,6 +35,7 @@ export function startBuiltinNativeSession(
       agent: 'skaro',
       bundled: {
         ...config,
+        ...(extensions ? { extensionsScope: structuredClone(extensions.scope) } : {}),
         ...(config.tools
           ? {
               tools: {
@@ -41,9 +52,10 @@ export function startBuiltinNativeSession(
         scope: structuredClone(verification.scope),
         admission: structuredClone(verification.admission),
       },
+      extensions: extensions && extensionBinding(extensions),
     },
     options,
-    verification,
+    host,
     join(entries, 'native-worker.js'),
   );
 }

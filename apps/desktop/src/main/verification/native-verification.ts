@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
-import { appendFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { AttachmentStore } from '@skaro/core';
 import {
   operationTimeout,
   type AgentSession,
   type RuntimeAcceptanceState,
   type RuntimeProcessIdentity,
-  type SessionOptions,
 } from '@skaro/timeline';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
 import type { RuntimeVerificationHost } from '@skaro/agent-runtime';
@@ -16,6 +13,7 @@ import { c4ReviewKey } from '../c4-review';
 import { startBuiltinNativeSession } from '../native/bundled';
 import { longContextConfig } from '../credentials/long-context-config';
 import { catPilotVerificationTarget } from './task-verification';
+import { nativeProbeOptions } from './native-probe-options';
 import {
   inspectNativePlanJournal,
   verifyNativePlan,
@@ -54,20 +52,7 @@ export async function verifyNativeVerification(
     verificationScope: target.verification.scope,
   };
   const entries = resolve('apps/desktop/out/main');
-  const owners: RuntimeProcessIdentity[] = [];
-  const options: SessionOptions = {
-    cwd: target.context.root,
-    permissionMode: 'ask',
-    readOnly: true,
-    context: new AttachmentStore(join(directory, 'native-attachments')).context(),
-    raw: () => undefined,
-    processStarted(pid, identity) {
-      assert(identity);
-      const process = { pid, ...identity };
-      appendFileSync(join(directory, 'native-owners.jsonl'), JSON.stringify(process) + '\n');
-      owners.push(process);
-    },
-  };
+  const { owners, options } = nativeProbeOptions(directory, target.context.root, true);
   let lease = new AbortController();
   let inspectionStarted: (() => void) | undefined;
   const host = (): RuntimeVerificationHost => ({
@@ -89,7 +74,7 @@ export async function verifyNativeVerification(
       config,
       join(directory, 'native-attachments'),
       options,
-      host(),
+      { verification: host() },
       entries,
     );
     drain = (async () => {
@@ -146,7 +131,7 @@ export async function verifyNativeVerification(
         config,
         join(directory, 'native-attachments'),
         options,
-        undefined,
+        {},
         entries,
       ),
       /verification binding/,
@@ -163,7 +148,7 @@ export async function verifyNativeVerification(
           },
           join(directory, 'native-attachments'),
           options,
-          host(),
+          { verification: host() },
           entries,
         ),
       /exact host tool scope/,

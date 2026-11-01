@@ -15,6 +15,7 @@ export async function bindSkaroOperations(
     throw new Error('Invalid Skaro operation allowlist');
   const bound = structuredClone(admission);
   return {
+    interrupt: async () => undefined,
     close: async () => undefined,
     tools: allowed.map((policy) => {
       const matches = catalogue.filter((entry) => entry.name === policy.name);

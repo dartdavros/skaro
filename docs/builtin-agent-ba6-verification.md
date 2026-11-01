@@ -2,6 +2,23 @@
 
 История этапа из [общего отчёта](builtin-agent-verification.md).
 
+## Native host operations, 01.11.2026
+
+Принят [порт существующих операций Skaro](builtin-agent-native-operations.md):
+реальные Cat-pilot handlers проходят main → native worker → owned runtime.
+Проверены approval до intent, schema/scope/policy gates, запрет смены scope
+при resume, dedup/restart и in-flight отзыв с durable unknown без повтора.
+Proof: `verification/extensions-48fa0f43-4068-47d7-a45b-2e6b58529d80/proof.json`
+в userData Skaro. Три настоящих runtime завершены с проверкой OS identity;
+task/C4 не менялись, check processes/model requests 0. Ни чат, ни TaskRun
+не создавались. Каталог агента, UI, model/task scheduler и сдача не включены.
+
+Inspection/extensions используют общий bounded RPC. Сохранён обязательный
+MCP shutdown при interrupt; resumable внутренний host использует отдельный
+lifecycle control. Host ждёт settlement вызовов, неподтверждённая остановка
+не разрешает продолжение. Сборка, типы, lint/format и 14 целевых regressions
+прошли. Полная BA-6 остаётся открытой.
+
 ## Native plan/replay, 01.11.2026
 
 Расширен настоящий native driver: локальное предложение без команд и с девятью

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type {
   RuntimeAcceptanceState,
   RuntimeVerificationBinding,
@@ -8,25 +7,24 @@ import type {
   VerificationInspectReply,
 } from '@skaro/timeline';
 import { fingerprint } from './inputs.ts';
+import { RuntimeRpcClient } from '../rpc/client.ts';
 
-/** Bounded read-only RPC; cancellation propagates to the existing upstream host. */
+/** Read-only adapter over the common bounded native RPC. */
 export class VerificationClient {
   private readonly binding: RuntimeVerificationBinding;
-  private readonly send: (request: VerificationInspectRequest | VerificationCancelRequest) => void;
-  private closed = false;
-  private readonly pending = new Map<
-    string,
-    {
-      resolve(state: RuntimeAcceptanceState): void;
-      reject(error: Error): void;
-    }
-  >();
+  private readonly rpc: RuntimeRpcClient;
   constructor(
     binding: RuntimeVerificationBinding,
     send: (request: VerificationInspectRequest | VerificationCancelRequest) => void,
   ) {
     this.binding = structuredClone(binding);
-    this.send = send;
+    this.rpc = new RuntimeRpcClient((request) =>
+      send({
+        type:
+          request.type === 'runtime-rpc-cancel' ? 'verification-cancel' : 'verification-inspect',
+        id: request.id,
+      }),
+    );
   }
   host(): RuntimeVerificationHost {
     return {
@@ -35,64 +33,26 @@ export class VerificationClient {
         inspect: async (admission, signal) => {
           if (fingerprint(admission) !== fingerprint(this.binding.admission))
             throw new Error('Verification RPC admission differs from its binding');
-          return this.inspect(signal);
+          try {
+            const state = await this.rpc.call('inspect', null, signal);
+            if (!state) throw new Error('Empty verification reply');
+            return state as RuntimeAcceptanceState;
+          } catch {
+            throw new Error('Verification host inspection rejected');
+          }
         },
       },
     };
   }
-  private async inspect(signal: AbortSignal): Promise<RuntimeAcceptanceState> {
-    signal.throwIfAborted();
-    if (this.closed || this.pending.size >= 8) throw new Error('Verification RPC is unavailable');
-    const id = randomUUID();
-    let reject!: (error: Error) => void;
-    const answer = new Promise<RuntimeAcceptanceState>((resolve, failure) => {
-      reject = failure;
-      this.pending.set(id, { resolve, reject });
-    });
-    void answer.catch(() => undefined);
-    const cancel = () => {
-      try {
-        this.send({ type: 'verification-cancel', id });
-      } catch {
-        /* Peer may have exited. */
-      }
-      reject(new Error('Verification inspection cancelled'));
-    };
-    const timer = setTimeout(cancel, 20_000);
-    signal.addEventListener('abort', cancel, { once: true });
-    try {
-      this.send({ type: 'verification-inspect', id });
-      const state = await answer;
-      signal.throwIfAborted();
-      if (this.closed) throw new Error('Verification RPC closed');
-      return state;
-    } finally {
-      clearTimeout(timer);
-      signal.removeEventListener('abort', cancel);
-      this.pending.delete(id);
-    }
-  }
   receive(reply: VerificationInspectReply): void {
-    const pending = this.pending.get(reply.id);
-    if (!pending) return; // A cancelled/expired request never accepts a late reply.
-    try {
-      if (reply.error || !reply.state || Buffer.byteLength(JSON.stringify(reply.state)) > 262_144)
-        throw new Error('Invalid verification reply');
-      pending.resolve(structuredClone(reply.state));
-    } catch {
-      pending.reject(new Error('Verification host inspection rejected'));
-    }
+    this.rpc.receive({
+      type: 'runtime-rpc-result',
+      id: reply.id,
+      value: reply.state,
+      ...(reply.error ? { error: true } : {}),
+    });
   }
   close(): void {
-    this.closed = true;
-    for (const [id, pending] of this.pending) {
-      try {
-        this.send({ type: 'verification-cancel', id });
-      } catch {
-        /* Peer may have exited. */
-      }
-      pending.reject(new Error('Verification RPC closed'));
-    }
-    this.pending.clear();
+    this.rpc.close();
   }
 }

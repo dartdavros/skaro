@@ -3,8 +3,8 @@
 Дата: 01.11.2026. Это read-only host boundary для проверок BA-6 и будущего BA-7.
 Task/chat запуск встроенного агента, модельный цикл и сдача не включены.
 
-`startBuiltinNativeSession` принимает необязательный privileged verification
-host. Существующий native transport передаёт worker только `scope/admission`;
+`startBuiltinNativeSession` принимает набор privileged host ports; inspection
+использует его `verification`. Native transport передаёт worker только `scope/admission`;
 функции, DB handles, AbortSignal и credentials не сериализуются. Worker создаёт
 proxy port, адаптер передаёт его binding в owned runtime, а фактическое чтение
 выполняет прежний TaskRuns acceptance service в main. Второго backend нет.
@@ -70,8 +70,9 @@ check processes/model requests 0, task/C4 не изменены. Неуспеш�
 исправления сохранена в `extensions-e61e8017-3f37-4b63-a917-4a7a95c407ea`.
 Сборка, типы runtime/desktop, lint/format и 8 целевых journal/native тестов прошли.
 
+Также добавлен [native порт операций](builtin-agent-native-operations.md).
 Открыто: положительное execution admission настоящей активной задачи, передача
-остальных host ports, model lifecycle/task-chat scheduler и применение evidence
+credentials/environment/model ports, task-chat scheduler и применение evidence
 в completion/capture. RPC read-only inspection не является OS sandbox или
 атомарной гарантией последующей сдачи. Существующий внешний submit_result не
 менялся. Общая [приёмка BA-6](builtin-agent-ba6-verification.md) остаётся открытой.

@@ -1,86 +1,55 @@
 import type {
+  RuntimeAcceptanceState,
   RuntimeVerificationHost,
   VerificationInspectRequest,
   VerificationCancelRequest,
   VerificationInspectReply,
 } from '@skaro/timeline';
+import { RuntimeRpcServer } from '../rpc/server.ts';
 
-/** No caller-selected task/scope/admission; every inspection uses the bound host lease. */
+/** No caller-selected task/scope/admission; inspections use the immutable host binding. */
 export class VerificationServer {
-  private readonly host: RuntimeVerificationHost;
+  private readonly rpc: RuntimeRpcServer;
   private readonly send: (reply: VerificationInspectReply) => void;
-  private readonly requireOwner: (signal: AbortSignal) => Promise<void>;
-  private readonly lifetime = new AbortController();
-  private readonly pending = new Map<string, AbortController>();
   constructor(
     host: RuntimeVerificationHost,
     send: (reply: VerificationInspectReply) => void,
     requireOwner: (signal: AbortSignal) => Promise<void>,
   ) {
     this.send = send;
-    this.requireOwner = requireOwner;
-    this.host = {
-      scope: structuredClone(host.scope),
-      admission: structuredClone(host.admission),
+    const admission = structuredClone(host.admission);
+    const inspect = host.acceptance.inspect.bind(host.acceptance);
+    this.rpc = new RuntimeRpcServer({
+      requireOwner,
       signal: host.signal,
-      acceptance: { inspect: host.acceptance.inspect.bind(host.acceptance) },
-    };
+      dispatch: async (_operation, _args, signal) => inspect(admission, signal),
+      send: (reply) =>
+        send({
+          type: 'verification-result',
+          id: reply.id,
+          ...(reply.error
+            ? { error: 'Verification host inspection rejected' }
+            : { state: reply.value as RuntimeAcceptanceState }),
+        }),
+    });
   }
-
   receive(request: VerificationInspectRequest | VerificationCancelRequest): void {
-    if (request.type === 'verification-cancel') {
-      this.pending.get(request.id)?.abort();
-      return;
-    }
-    void this.inspect(request).catch(() => undefined); // An exited peer cannot accept a reply.
-  }
-  private async inspect(request: VerificationInspectRequest) {
-    const valid =
-      /^[a-f0-9-]{36}$/.test(request.id) &&
-      Object.keys(request).every((key) => key === 'id' || key === 'type');
-    if (
-      !valid ||
-      this.lifetime.signal.aborted ||
-      this.pending.size >= 8 ||
-      this.pending.has(request.id)
-    ) {
+    const valid = Object.keys(request).every((key) => key === 'type' || key === 'id');
+    if (!valid) {
       this.send({
         type: 'verification-result',
         id: request.id,
-        error: 'Verification host unavailable',
+        error: 'Verification host inspection rejected',
       });
       return;
     }
-    const controller = new AbortController();
-    this.pending.set(request.id, controller);
-    const signal = AbortSignal.any([
-      this.lifetime.signal,
-      controller.signal,
-      ...(this.host.signal ? [this.host.signal] : []),
-    ]);
-    try {
-      signal.throwIfAborted();
-      await this.requireOwner(signal);
-      const state = await this.host.acceptance.inspect(this.host.admission, signal);
-      signal.throwIfAborted();
-      await this.requireOwner(signal);
-      signal.throwIfAborted();
-      if (Buffer.byteLength(JSON.stringify(state)) > 262_144)
-        throw new Error('Inspection exceeds the RPC limit');
-      this.send({ type: 'verification-result', id: request.id, state });
-    } catch {
-      if (!this.lifetime.signal.aborted)
-        this.send({
-          type: 'verification-result',
-          id: request.id,
-          error: 'Verification host inspection rejected',
-        });
-    } finally {
-      this.pending.delete(request.id);
-    }
+    this.rpc.receive(
+      request.type === 'verification-cancel'
+        ? { type: 'runtime-rpc-cancel', id: request.id }
+        : { type: 'runtime-rpc-call', id: request.id, operation: 'inspect', args: null },
+    );
   }
   close(): void {
-    this.lifetime.abort();
-    for (const controller of this.pending.values()) controller.abort();
+    this.rpc.close();
   }
 }

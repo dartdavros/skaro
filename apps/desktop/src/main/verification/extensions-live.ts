@@ -14,6 +14,7 @@ import { catPilotTarget } from './browser-target';
 import { verifyAcceptanceInspection } from './acceptance-live';
 import { verifyCheckPlans } from './check-plans-live';
 import { verifyNativeVerification } from './native-verification';
+import { verifyNativeOperations } from './native-operations';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -48,6 +49,9 @@ void app.whenReady().then(async () => {
       if (process.argv[2] === '--native-verification') {
         stage = 'native-verification';
         proof = { native: await verifyNativeVerification(services, directory, owner) };
+      } else if (process.argv[2] === '--native-operations') {
+        stage = 'native-operations';
+        proof = { operations: await verifyNativeOperations(services, directory, owner) };
       } else {
         stage = 'http-and-internal';
         const http = await verifyHttpExtensions(services, directory, owner);

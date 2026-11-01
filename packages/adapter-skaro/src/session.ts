@@ -5,7 +5,7 @@ import {
   EventChannel,
   operationTimeout,
   type AgentSession,
-  type SessionOptions,
+  type BuiltinSessionOptions,
   type TimelineEvent,
 } from '@skaro/timeline';
 import {
@@ -16,7 +16,9 @@ import {
   type RuntimeMessage,
   type RuntimeStart,
   VerificationServer,
-  type RuntimeVerificationHost,
+  ExtensionServer,
+  extensionBinding,
+  requireExtensionBinding,
 } from '@skaro/agent-runtime';
 import {
   processBirth,
@@ -25,15 +27,7 @@ import {
 } from '@skaro/agent-runtime/process-identity';
 import { runtimeEnvironment } from './process-env.ts';
 
-export interface SkaroSessionOptions extends Pick<
-  SessionOptions,
-  'signal' | 'processStarted' | 'raw'
-> {
-  config: RuntimeStart;
-  /** Compiled entry supplied by the native worker in production. */
-  entry?: string;
-  verification?: RuntimeVerificationHost;
-}
+export type SkaroSessionOptions = BuiltinSessionOptions;
 
 /** Real child process transport. It offers lifecycle, never fabricated model output. */
 export class SkaroSession implements AgentSession {
@@ -54,6 +48,7 @@ export class SkaroSession implements AgentSession {
   private stopping?: Promise<void>;
   private failed?: Error;
   private readonly verification?: VerificationServer;
+  private readonly extensions?: ExtensionServer;
 
   private constructor(options: SkaroSessionOptions) {
     this.options = options;
@@ -64,6 +59,19 @@ export class SkaroSession implements AgentSession {
     });
     // Startup can be cancelled before the admission probe finishes.
     void this.ready.catch(() => undefined);
+    if (options.verification) {
+      this.verification = new VerificationServer(
+        options.verification,
+        (reply) => this.post(reply),
+        (signal) => this.requireOwner(signal),
+      );
+    }
+    if (options.extensions)
+      this.extensions = new ExtensionServer(
+        options.extensions,
+        (reply) => this.post(reply),
+        (signal) => this.requireOwner(signal),
+      );
     this.child = fork(
       options.entry ?? fileURLToPath(new URL('../../agent-runtime/src/worker.ts', import.meta.url)),
       [],
@@ -77,23 +85,6 @@ export class SkaroSession implements AgentSession {
       },
     );
     this.processId = this.child.pid ?? 0;
-    if (options.verification) {
-      this.verification = new VerificationServer(
-        options.verification,
-        (reply) => this.post(reply),
-        async (signal) => {
-          signal.throwIfAborted();
-          if (
-            this.stopping ||
-            this.failed ||
-            !this.owner ||
-            (await processBirth(this.owner.pid)) !== this.owner.birth
-          )
-            throw new Error('Runtime verification owner is not active');
-          signal.throwIfAborted();
-        },
-      );
-    }
     this.exited = new Promise((resolve) =>
       this.child.once('close', () => {
         this.fail(new Error('Skaro runtime exited'));
@@ -114,6 +105,11 @@ export class SkaroSession implements AgentSession {
 
   static async start(options: SkaroSessionOptions): Promise<SkaroSession> {
     options.signal?.throwIfAborted();
+    options.extensions?.signal?.throwIfAborted();
+    requireExtensionBinding(
+      options.config,
+      options.extensions && extensionBinding(options.extensions),
+    );
     if (!options.processStarted) throw new Error('Durable process ownership callback is required');
     const session = new SkaroSession(options);
     const abort = () => {
@@ -133,6 +129,7 @@ export class SkaroSession implements AgentSession {
         type: 'start',
         config: options.config,
         owner: session.owner,
+        extensions: options.extensions && extensionBinding(options.extensions),
         verification: options.verification && {
           scope: structuredClone(options.verification.scope),
           admission: structuredClone(options.verification.admission),
@@ -153,9 +150,23 @@ export class SkaroSession implements AgentSession {
     this.options.raw({ ts: record.timestamp, dir: 'out', line: record });
     this.projector.output(record);
   }
+  private async requireOwner(signal: AbortSignal): Promise<void> {
+    signal.throwIfAborted();
+    if (
+      this.stopping ||
+      this.failed ||
+      !this.owner ||
+      (await processBirth(this.owner.pid)) !== this.owner.birth
+    )
+      throw new Error('Runtime host owner is not active');
+    signal.throwIfAborted();
+  }
 
   private receive(message: RuntimeMessage): void {
-    if (message.type === 'verification-inspect' || message.type === 'verification-cancel') {
+    if (message.type === 'runtime-rpc-call' || message.type === 'runtime-rpc-cancel') {
+      if (!this.extensions) throw new Error('Runtime requested an unconfigured extension host');
+      this.extensions.receive(message);
+    } else if (message.type === 'verification-inspect' || message.type === 'verification-cancel') {
       if (!this.verification)
         throw new Error('Runtime requested an unconfigured verification host');
       this.verification.receive(message);
@@ -176,6 +187,7 @@ export class SkaroSession implements AgentSession {
 
   private fail(error: Error): void {
     this.verification?.close();
+    void this.extensions?.close().catch(() => undefined);
     this.failed ??= error;
     this.rejectReady(error);
     for (const pending of this.pending.values()) pending.reject(error);
@@ -236,6 +248,8 @@ export class SkaroSession implements AgentSession {
   }
   private async shutdown(): Promise<void> {
     this.verification?.close();
+    const extensionsClosed = this.extensions?.close();
+    void extensionsClosed?.catch(() => undefined);
     try {
       if (this.owner && !this.failed && this.child.connected) {
         await operationTimeout(this.ready, 1000, 'Startup still pending');
@@ -253,6 +267,7 @@ export class SkaroSession implements AgentSession {
       else this.child.kill(); // Never admitted; no descendants or effects were allowed.
       await operationTimeout(this.exited, 5000, 'Runtime exit not confirmed');
       this.events.close();
+      await extensionsClosed;
     }
   }
 }

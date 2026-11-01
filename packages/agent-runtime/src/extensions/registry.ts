@@ -1,17 +1,11 @@
 import { AjvJsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/ajv';
 import type { JsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/types.js';
-import type { BuiltinExtensionPolicy } from '@skaro/timeline';
-
-export interface RuntimeExtension extends BuiltinExtensionPolicy {
-  observation?: { kind: 'browser'; criteria: readonly string[] };
-  description: string;
-  inputSchema: Record<string, unknown>;
-  invoke(id: string, args: Record<string, unknown>, signal: AbortSignal): Promise<unknown>;
-}
-export interface RuntimeExtensionHost {
-  tools: readonly RuntimeExtension[];
-  close(): Promise<void>;
-}
+import type {
+  BuiltinExtensionPolicy,
+  RuntimeExtension,
+  RuntimeExtensionHost,
+} from '@skaro/timeline';
+export type { RuntimeExtension, RuntimeExtensionHost } from '@skaro/timeline';
 export class ExtensionRegistry {
   private readonly entries = new Map<
     string,
@@ -88,6 +82,10 @@ export class ExtensionRegistry {
       description: tool.description,
       inputSchema: structuredClone(tool.inputSchema),
     }));
+  }
+  async interrupt(): Promise<void> {
+    if (this.host?.interrupt) await this.host.interrupt();
+    else await this.close();
   }
   async close(): Promise<void> {
     this.closed = true;

@@ -1,15 +1,19 @@
 import { RuntimeSession } from './session.ts';
 import type { ParentMessage, RuntimeMessage } from './model.ts';
 import { VerificationClient } from './verification/ipc-client.ts';
+import { ExtensionClient } from './extensions/ipc-client.ts';
+import { requireExtensionBinding } from './extensions/ipc-binding.ts';
 
 let session: RuntimeSession | undefined;
 let startup: Promise<void> | undefined;
 let verification: VerificationClient | undefined;
+let extensions: ExtensionClient | undefined;
 const post = (message: RuntimeMessage) => {
   if (process.connected) process.send?.(message);
 };
 const fatal = (error: unknown) => {
   verification?.close();
+  extensions?.close();
   post({ type: 'fatal', error: error instanceof Error ? error.message : 'Runtime failed' });
   process.exitCode = 1;
   void session?.dispose().finally(() => {
@@ -18,6 +22,10 @@ const fatal = (error: unknown) => {
   if (!session && process.connected) process.disconnect();
 };
 process.on('message', (message: ParentMessage) => {
+  if (message.type === 'runtime-rpc-result') {
+    extensions?.receive(message);
+    return;
+  }
   if (message.type === 'verification-result') {
     verification?.receive(message);
     return;
@@ -29,10 +37,12 @@ process.on('message', (message: ParentMessage) => {
     }
     startup = (async () => {
       if (message.verification) verification = new VerificationClient(message.verification, post);
+      requireExtensionBinding(message.config, message.extensions);
+      if (message.extensions) extensions = new ExtensionClient(message.extensions, post);
       session = await RuntimeSession.open(
         message.config,
         message.owner,
-        undefined,
+        extensions?.host().extensions,
         verification?.host(),
       );
       post({ type: 'ready', records: session.journal.records });
@@ -54,6 +64,7 @@ process.on('message', (message: ParentMessage) => {
 });
 process.on('disconnect', () => {
   verification?.close();
+  extensions?.close();
   void (async () => {
     await startup;
     await session?.dispose();

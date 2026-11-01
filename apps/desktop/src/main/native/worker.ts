@@ -13,14 +13,18 @@ import { processBirthSync } from '../process-identity';
 import { SecretValues } from '../secret-values';
 import { presentationEvent } from '../timeline-presentation';
 import type { NativeConfig, NativeOptions, Reply, Request } from './protocol';
-import { VerificationClient } from '@skaro/agent-runtime';
-import type { VerificationInspectReply } from '@skaro/timeline';
+import { VerificationClient, ExtensionClient, requireExtensionBinding } from '@skaro/agent-runtime';
+import type { VerificationInspectReply, RuntimeRpcReply } from '@skaro/timeline';
 
 const config = workerData as NativeConfig;
 const port = parentPort!;
 const verification =
   'bundled' in config && config.verification
     ? new VerificationClient(config.verification, (request) => port.postMessage(request))
+    : undefined;
+const extensions =
+  'bundled' in config && config.extensions
+    ? new ExtensionClient(config.extensions, (request) => port.postMessage(request))
     : undefined;
 const secrets = new SecretValues();
 let session: AgentSession | undefined;
@@ -71,6 +75,7 @@ async function start(options: NativeOptions): Promise<void> {
   const resolved = optionsOf(options);
   resolved.signal = startupAbort.signal;
   if ('bundled' in config) {
+    requireExtensionBinding(config.bundled, config.extensions);
     session = await startBundledSession(config.agent, {
       config: config.bundled,
       entry: config.entry,
@@ -78,6 +83,7 @@ async function start(options: NativeOptions): Promise<void> {
       raw: resolved.raw,
       signal: resolved.signal,
       verification: verification?.host(),
+      extensions: extensions?.host(),
     });
   } else {
     const adapter = await createAgentAdapter(config.agent, {
@@ -99,7 +105,11 @@ async function start(options: NativeOptions): Promise<void> {
   );
 }
 
-port.on('message', (request: Request | VerificationInspectReply) => {
+port.on('message', (request: Request | VerificationInspectReply | RuntimeRpcReply) => {
+  if ('type' in request && request.type === 'runtime-rpc-result') {
+    extensions?.receive(request);
+    return;
+  }
   if ('type' in request) {
     verification?.receive(request);
     return;
@@ -126,7 +136,10 @@ port.on('message', (request: Request | VerificationInspectReply) => {
     try {
       return await method.apply(session, request.args);
     } finally {
-      if (request.method === 'close') verification?.close();
+      if (request.method === 'close') {
+        verification?.close();
+        extensions?.close();
+      }
     }
   })().then(
     (value) => post({ type: 'reply', id: request.id, value }),

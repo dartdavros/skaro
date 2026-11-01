@@ -9,11 +9,12 @@ import { cleanCommandEnvironment } from '@skaro/agent-runtime/environment';
 const require = createRequire(import.meta.url);
 if (!(
   process.argv.length === 2 ||
-  (process.argv.length === 3 && process.argv[2] === '--native-verification') ||
+  (process.argv.length === 3 &&
+    ['--native-verification', '--native-operations'].includes(process.argv[2])) ||
   (process.argv.length === 4 && process.argv[2] === '--browser')
 ))
   throw new Error(
-    'Usage: verify-builtin-extensions.mjs [--native-verification | --browser CAT_PILOT_PROJECT_ROOT]',
+    'Usage: verify-builtin-extensions.mjs [--native-verification | --native-operations | --browser CAT_PILOT_PROJECT_ROOT]',
   );
 const output = resolve('apps/desktop/out/main/verify-extensions.cjs');
 try {

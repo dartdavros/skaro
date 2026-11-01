@@ -11,6 +11,9 @@ import type {
   VerificationInspectRequest,
   VerificationCancelRequest,
   VerificationInspectReply,
+  RuntimeExtensionBinding,
+  RuntimeRpcRequest,
+  RuntimeRpcReply,
 } from '@skaro/timeline';
 
 export type RuntimeStart = BuiltinSessionStart;
@@ -107,13 +110,16 @@ export type ParentMessage =
       config: RuntimeStart;
       owner: RuntimeProcessIdentity;
       verification?: RuntimeVerificationBinding;
+      extensions?: RuntimeExtensionBinding;
     }
   | { type: 'command'; command: RuntimeCommand }
-  | VerificationInspectReply;
+  | VerificationInspectReply
+  | RuntimeRpcReply;
 export type RuntimeMessage =
   | { type: 'ready'; records: JournalRecord[] }
   | { type: 'record'; record: JournalRecord }
   | { type: 'reply'; id: string; result: CommandResult }
   | { type: 'fatal'; error: string }
   | VerificationInspectRequest
-  | VerificationCancelRequest;
+  | VerificationCancelRequest
+  | RuntimeRpcRequest;

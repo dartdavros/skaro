@@ -138,7 +138,9 @@ inputs, старый success не переносится. Runtime снова п�
 decisions. Standalone verification без task host сохраняет прежний API run_check.
 Read-only acceptance port передан в настоящий дочерний runtime через
 [native inspection bridge](builtin-agent-native-verification.md). Продуктовый
-task/chat host, прочие ports и запуск модели через этот bridge ещё не подключены.
+task/chat host и запуск модели через этот bridge ещё не подключены.
+[Внутренние операции Skaro](builtin-agent-native-operations.md) переданы отдельным
+native host port; это не активация задач или сдачи встроенным агентом.
 
 `TaskRuns.builtinAcceptance` читает существующие task/completion/C4 данные,
 без второй таблицы состояния. Criterion IDs включают project/task ID, ревизию

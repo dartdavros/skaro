@@ -87,6 +87,11 @@ export class RuntimeSession {
           throw new Error('Resume context scope differs from persisted host configuration');
         if (JSON.stringify(journal.state.config.extensions) !== JSON.stringify(config.extensions))
           throw new Error('Resume extensions differ from persisted host policy');
+        if (
+          JSON.stringify(journal.state.config.extensionsScope) !==
+          JSON.stringify(config.extensionsScope)
+        )
+          throw new Error('Resume extension scope differs from persisted host policy');
         if (JSON.stringify(journal.state.config.route) !== JSON.stringify(config.route))
           throw new Error(
             'Resume route differs from persisted route; explicit route change required',
@@ -179,7 +184,8 @@ export class RuntimeSession {
       let result: import('./model.ts').CommandResult;
       try {
         if (action.type === 'interrupt' || action.type === 'close') {
-          await this.tools?.close();
+          if (action.type === 'close') await this.tools?.close();
+          else await this.tools?.interrupt();
           await Promise.allSettled([this.modelWork]);
         } else if (this.modelWork && action.type !== 'respond')
           throw new Error('An active model turn prevents this context change');
