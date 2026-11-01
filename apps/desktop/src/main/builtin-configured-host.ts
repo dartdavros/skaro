@@ -6,6 +6,7 @@ import type {
   RuntimeModelHost,
   RuntimeModelInputPort,
   RuntimeModelRequest,
+  RouteSnapshot,
 } from '@skaro/timeline';
 import type { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import type { BuiltinModelSettingsService } from './builtin-model-settings-service';
@@ -20,6 +21,13 @@ export async function prepareConfiguredModelHost(input: {
   admissions: Pick<ProcessAdmissionPort, 'requireActive'>;
   signal: AbortSignal;
   transport: ModelFetch;
+  metadata: {
+    requireCurrent(
+      route: RouteSnapshot,
+      request: RuntimeModelRequest | undefined,
+      signal: AbortSignal,
+    ): Promise<void>;
+  };
   ownerInput?: RuntimeModelInputPort;
   toolAdmission?: ModelToolAdmission;
   requests: {
@@ -28,6 +36,9 @@ export async function prepareConfiguredModelHost(input: {
   };
 }) {
   const binding = structuredClone(input.binding);
+  input.signal.throwIfAborted();
+  await input.metadata.requireCurrent(binding.route, undefined, input.signal);
+  input.signal.throwIfAborted();
   const credentials = await input.settings.credentialsFor(
     binding.route,
     binding.admission,
@@ -87,19 +98,30 @@ export async function prepareConfiguredModelHost(input: {
           : {}),
       },
       reserve: (id, request, signal) =>
-        active(signal, (signal) => input.requests.reserve(id, request, signal)),
+        active(signal, async (signal) => {
+          await input.metadata.requireCurrent(binding.route, request, signal);
+          signal.throwIfAborted();
+          return input.requests.reserve(id, request, signal);
+        }),
       complete: (id, request, signal, onText) =>
         active(signal, async (signal) => {
           await input.requests.requireDispatch(id, request, signal);
+          await input.metadata.requireCurrent(binding.route, request, signal);
           signal.throwIfAborted();
           return connector.complete(request, signal, onText);
         }),
       ...(connector.continue
         ? {
             continue: (request, response, results, signal) =>
-              active(signal, async (signal) =>
-                connector.continue!(request, response, results, signal),
-              ),
+              active(signal, async (signal) => {
+                await input.metadata.requireCurrent(
+                  binding.route,
+                  { kind: 'native', value: request },
+                  signal,
+                );
+                signal.throwIfAborted();
+                return connector.continue!(request, response, results, signal);
+              }),
           }
         : {}),
     };

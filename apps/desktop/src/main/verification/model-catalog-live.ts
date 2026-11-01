@@ -9,6 +9,7 @@ import { BuiltinModelCatalog } from '../builtin-model-catalog';
 import { modelCatalogHandlers } from '../model-catalog-handlers';
 import { catPilotProjectId } from './cat-pilot-state';
 import { liveProxyEnvironment } from '../credentials/live-proxy';
+import { requireOpenRouterCatalogRoute } from '@skaro/agent-runtime';
 
 // Genuine public metadata GET through the owner VPN. No vault/project services/model request.
 app.setName('SkaroCatalogVerification');
@@ -62,6 +63,35 @@ void app.whenReady().then(async () => {
     assert(first.models.every((entry) => entry.connectionId === connection.id));
     assert.equal(new Set(first.models.map((entry) => entry.id)).size, first.models.length);
     assert.equal(requests, 1);
+    const selected = before.routes.find(
+      (route) => route.connectionId === connection.id && route.modelId === target.id,
+    );
+    assert(selected);
+    const route = store.snapshot(selected.id, first.models);
+    await service.requireCurrent(route, undefined, new AbortController().signal);
+    await assert.rejects(
+      service.requireCurrent(
+        { ...route, routeRevision: route.routeRevision + 1 },
+        undefined,
+        new AbortController().signal,
+      ),
+      /no longer current/,
+    );
+    assert.throws(
+      () =>
+        requireOpenRouterCatalogRoute({ ...route, modelId: 'absent-catalog-model' }, first.models),
+      /absent/,
+    );
+    if (target.capabilities.reasoning === 'unknown')
+      assert.throws(
+        () =>
+          requireOpenRouterCatalogRoute(
+            { ...route, parameters: { ...route.parameters, reasoning_effort: 'low' } },
+            first.models,
+          ),
+        /not advertised/,
+      );
+    assert.equal(requests, 1);
     const cached = await api['models.catalog'](connection.id, connection.revision);
     assert.deepEqual(cached, first);
     assert.equal(requests, 1);
@@ -97,6 +127,10 @@ void app.whenReady().then(async () => {
       exactConnectionScope: true,
       capabilityEvidence: 'catalog',
       configuredModelPresent: true,
+      configuredRouteMetadataChecked: true,
+      staleRouteRefused: true,
+      missingModelRefused: true,
+      unadvertisedReasoningRefused: target.capabilities.reasoning === 'unknown',
       staleRevisionRefusedBeforeNetwork: true,
       closedServiceRefused: true,
     };
@@ -110,6 +144,7 @@ void app.whenReady().then(async () => {
       type: 'failed',
       stage: 'model-catalog',
       name: error instanceof Error ? error.name : 'Error',
+      message: error instanceof Error ? error.message.slice(0, 240) : 'Unknown catalog failure',
     });
   } finally {
     await service.close();

@@ -10,8 +10,11 @@ native spawn. Секреты не входят в binding, runtime config или
 Factory требует точный RuntimeModelBinding, существующий process admission,
 явный сетевой transport и две обязательные request policy функции: quotation
 reservation и разрешение dispatch. Нет разрешающего default или встроенного
-автоматического повторения запроса. Внешний caller обязан отдельно проверить
-текущий каталог, readiness/capabilities, контекст и разрешённый бюджет.
+автоматического повторения запроса. Отдельный обязательный metadata port
+проверяет текущий маршрут до подготовки credential host, перед reservation/POST
+и native continuation. Внешний caller по-прежнему отдельно проверяет
+readiness/capabilities, контекст и разрешённый бюджет. Catalog evidence
+не становится verified от прохождения этого guard.
 
 Коннектор выбирается в одном модуле по connector/API profile/revision;
 manufacturer, короткое имя и модель другого подключения не используются.

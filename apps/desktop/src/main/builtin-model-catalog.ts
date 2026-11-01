@@ -1,6 +1,11 @@
 import { isDeepStrictEqual } from 'node:util';
-import { openRouterCatalog, parseOpenRouterCatalog, type ModelFetch } from '@skaro/agent-runtime';
-import type { Connection } from '@skaro/timeline';
+import {
+  openRouterCatalog,
+  parseOpenRouterCatalog,
+  requireOpenRouterCatalogRoute,
+  type ModelFetch,
+} from '@skaro/agent-runtime';
+import type { Connection, RouteSnapshot, RuntimeModelRequest } from '@skaro/timeline';
 import type { ModelCatalogSnapshot } from '../shared/model-catalog';
 import type { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import { modelNetworkTransport } from './model-network-transport';
@@ -80,6 +85,20 @@ export class BuiltinModelCatalog {
     this.cache.set(connection.id, { connection, value });
     if (this.cache.size > 64) this.cache.delete(this.cache.keys().next().value!);
     return value;
+  }
+  /** Current advertised facts only. Readiness, payload permission and budget remain separate. */
+  async requireCurrent(
+    route: RouteSnapshot,
+    request: RuntimeModelRequest | undefined,
+    signal: AbortSignal,
+  ): Promise<void> {
+    signal.throwIfAborted();
+    const catalog = await this.read(route.connectionId, route.connectionRevision);
+    signal.throwIfAborted();
+    const current = this.store.snapshot(route.routeId, catalog.models);
+    if (!isDeepStrictEqual(current, route)) throw new Error('Catalog route is no longer current');
+    requireOpenRouterCatalogRoute(route, catalog.models, request);
+    signal.throwIfAborted();
   }
   async close() {
     this.closed = true;

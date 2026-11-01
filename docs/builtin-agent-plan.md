@@ -16,7 +16,8 @@ BA-6 начат: [run_check и привязка доказательств к в
 Полная приёмка открыта. Подготовлен [native inspection bridge](builtin-agent-native-verification.md)
 и [native host operations](builtin-agent-native-operations.md) для BA-7;
 проверен [общий отзыв native-сессии](builtin-agent-native-lifetime.md).
-Продуктовые задачи/чаты и scheduler не подключены. BA-8 начат, BA-9 не начат.
+Продуктовые задачи/чаты и scheduler не подключены. BA-8 начат; в BA-9
+предварительно проверен локальный Windows x64 payload, полная приёмка открыта.
 Добавлен [native model host](builtin-agent-native-model.md): concurrent negative
 preflight и живой native model-plan Cat-pilot приняты; пять запросов через Xray,
 реальные tools/streaming/budget/dedup. Это не выполнение или сдача активной задачи.
@@ -58,6 +59,9 @@ Configured session возобновлена во втором настоящем
 Предварительно проверен [локальный Windows x64 payload](builtin-agent-package-verification.md):
 настоящий EXE/ASAR, byte-for-byte worker entries и packaged settings/catalog.
 Это не релиз и не закрытие BA-9 остальных платформ/модельной задачи.
+Configured host требует отдельную проверку актуальных model metadata до
+подготовки и перед reservation/POST; [каталоговый guard](builtin-agent-model-catalog.md#проверка-маршрута-на-границе-host)
+не превращает advertised capabilities в verified readiness.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не

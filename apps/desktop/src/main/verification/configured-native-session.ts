@@ -45,6 +45,7 @@ export async function configuredNativeSession(input: {
     ownerInput: input.ownerInput,
     signal: lease.signal,
     transport: await modelNetworkTransport(process.env['SKARO_VERIFY_PROXY']),
+    metadata: services.modelCatalog,
     requests: input.requests,
   });
   const events: TimelineEvent[] = [];

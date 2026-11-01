@@ -76,3 +76,41 @@ scoped Electron на Cat-pilot проверены загрузка, ready, от�
 Все изменённые source files меньше 300 строк, новые UI-компоненты меньше 180;
 полный suite не запускался.
 Полная BA-8 приёмка effort/routing/feed/расхода и модельной задачи остаётся открытой.
+
+## Проверка маршрута на границе host
+
+Configured factory теперь требует metadata port без разрешающего default.
+Он вызывается до подготовки credential authority, перед budget reservation,
+перед POST и перед native continuation. Реализация OpenRouter в существующем
+catalog service сверяет текущий сохранённый snapshot, точную пару Connection/
+model ID и formatter parameters, включая default max_tokens. Известные output/
+context limits не допускают больший output ceiling; это не подсчёт размера
+входного контекста. Неизвестный лимит остаётся неизвестным.
+
+Для Chat tools проверяются advertised tools/tool_choice. Reasoning проверяется
+как параметр, без вывода о конкретных effort levels или provider readiness.
+Каталоговый guard не заменяет verified capabilities, payload approval,
+process admission или бюджет и не отправляет запрос проверки модели.
+Прямым API нужен собственный metadata port; OpenRouter catalog им не подставляется.
+
+Семантика max_tokens/max_completion_tokens и reasoning сверена с
+[официальными параметрами OpenRouter](https://openrouter.ai/docs/api_reference/parameters).
+Первый настоящий прогон выявил документированное другое имя токенного лимита
+у выбранной модели; исправлено сопоставление API aliases, требования не сняты.
+
+Принят GET proof `verification/model-catalog-a1c3acfa-83af-441a-9947-359cd419d6bd/proof.json`
+в userData: 452 настоящие модели, configured route принят, stale route и
+missing model отвергнуты. Необъявленный reasoning у выбранной модели отвергнут.
+Сохранённые настройки неизменны, vault не открыт, два GET через VPN,
+0 model POST. Три pure DTO contract tests проверяют identity, aliases/defaults,
+output ceilings и tools; ответы API или сервер не подставляются.
+
+Через тот же guard принят настоящий configured owner-input/restart:
+`verification/extensions-495576a4-1d33-440c-94ee-1c63b26608b3/proof.json`.
+Два runtime/admission поколения, точные send/steer без повторной подготовки,
+live/replay и подтверждённый выход сохранены. Model POST/reservations и чтения
+ключа — 0; задача T-008, C4, TaskRuns и конфигурация неизменны.
+Финальная штатная сборка, desktop/runtime types и lint прошли; 13 целевых
+route/configuration/catalog tests прошли, три изменённых catalog cases
+повторены после уточнения aliases/tool_choice. UI не менялся, full suite
+не запускался. Все изменённые source files меньше 300 строк.

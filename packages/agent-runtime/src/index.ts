@@ -25,6 +25,7 @@ export {
   type OpenRouterCatalogEntry,
 } from './models/openrouter-catalog.ts';
 export type { ModelFetch } from './models/model-get.ts';
+export { requireOpenRouterCatalogRoute } from './models/openrouter-catalog-route.ts';
 export { executeChatTurn } from './models/chat-turn.ts';
 export { executeNativeTurn } from './models/native-turn.ts';
 export { contextChatRequest, contextNativeRequest } from './context/request.ts';
