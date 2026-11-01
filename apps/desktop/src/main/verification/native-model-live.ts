@@ -8,7 +8,12 @@ import {
   type OpenRouterConnector,
 } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
-import type { AgentSession, ChatResponse, RuntimeProcessIdentity } from '@skaro/timeline';
+import type {
+  AgentSession,
+  ChatResponse,
+  RuntimeProcessIdentity,
+  TimelineEvent,
+} from '@skaro/timeline';
 import { AppState } from '../state';
 import { createServices, type Services } from '../app-services';
 import { closeBackground } from '../background/client';
@@ -17,6 +22,7 @@ import { startBuiltinNativeSession } from '../native/bundled';
 import { nativeProbeOptions } from './native-probe-options';
 import { nativePlanHost } from './native-model-host';
 import { planPayloadHash } from './model-plan-request';
+import { verifyModelTimeline } from './model-timeline-proof';
 
 /** The previously reviewed Cat-pilot payload, now through genuine owned native/runtime processes. */
 export async function verifyNativeModelPlan(input: {
@@ -87,9 +93,10 @@ export async function verifyNativeModelPlan(input: {
       resolve('apps/desktop/out/main'),
     );
     const actual = session;
+    const events: TimelineEvent[] = [];
     drain = (async () => {
-      for await (const _event of actual.events) {
-        /* Genuine native events. */
+      for await (const event of actual.events) {
+        events.push(event);
       }
     })();
     const prior = await readRuntimeJournal(prepared.config.journalPath, prepared.config.sessionId);
@@ -99,7 +106,7 @@ export async function verifyNativeModelPlan(input: {
         /no model request was sent/,
       );
     assert('runModelTurn' in session && typeof session.runModelTurn === 'function');
-    const id = `nativeplan-${input.expectedHash.slice(0, 16)}-v1`;
+    const id = `nativeplan-${input.expectedHash.slice(0, 16)}-v2`;
     const request = { kind: 'chat' as const, value: prepared.payload.request };
     const response = (await session.runModelTurn(request, id, 6)) as ChatResponse;
     assert.equal(response.finishReason, 'stop');
@@ -152,6 +159,8 @@ export async function verifyNativeModelPlan(input: {
     await drain;
     session = undefined;
     for (const owner of owners) assert.equal(await processBirth(owner.pid), undefined);
+    const final = await readRuntimeJournal(prepared.config.journalPath, prepared.config.sessionId);
+    const timeline = verifyModelTimeline(final.records, events, id, 'done', text);
     return {
       project: 'Cat-pilot',
       taskId: prepared.target.task.id,
@@ -160,6 +169,7 @@ export async function verifyNativeModelPlan(input: {
       exitsConfirmed: true,
       requests: responses.length,
       streamingTextPersisted: true,
+      timeline,
       toolsAndProjectionsInHost: true,
       durableBudgetBeforePost: true,
       duplicateTurnNoPost: true,

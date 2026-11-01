@@ -6,6 +6,7 @@ import { modelBinding, requireModelBinding, requireModelHostPolicy } from './hos
 import { executeChatTurn } from './chat-turn.ts';
 import { executeNativeTurn } from './native-turn.ts';
 import { ModelTextJournal } from './text-journal.ts';
+import { ModelTurnTimeline } from './turn-timeline.ts';
 
 export function busyHostModelTurn(session: RuntimeSession, id: string, action: ModelTurnAction) {
   const hash = fingerprint(action);
@@ -36,14 +37,25 @@ export async function runHostModelTurn(
       throw new Error('Model turn identity reused for different input');
     return previous;
   }
+  const timeline = new ModelTurnTimeline(session.journal, id, hash);
+  const text = new ModelTextJournal(session.journal, id, timeline.turnId);
+  await timeline.begin();
   try {
-    const response = await perform(session, host, id, structuredClone(action));
-    return session.journal.append(`cmd:${id}`, [], { value: response }, hash);
-  } catch {
+    const response = await perform(session, host, id, structuredClone(action), text);
     return session.journal.append(
       `cmd:${id}`,
-      [],
-      { error: 'Native model turn did not complete; automatic replay forbidden' },
+      timeline.terminal('done'),
+      { value: response },
+      hash,
+    );
+  } catch {
+    const interrupted = !!host?.signal?.aborted || session.modelAdmissionRevoked;
+    await text.fail(interrupted);
+    const error = 'Native model turn did not complete; automatic replay forbidden';
+    return session.journal.append(
+      `cmd:${id}`,
+      timeline.terminal(interrupted ? 'interrupted' : 'failed', error),
+      { error },
       hash,
     );
   }
@@ -53,6 +65,7 @@ async function perform(
   host: RuntimeModelHost | undefined,
   id: string,
   action: ModelTurnAction,
+  text: ModelTextJournal,
 ) {
   if (!host) throw new Error('Native model host is unavailable');
   const binding = modelBinding(host);
@@ -66,7 +79,6 @@ async function perform(
     throw new Error('Native model turn differs from its admitted route');
   const signal = host.signal ?? new AbortController().signal;
   let requestId = '';
-  const text = new ModelTextJournal(session.journal, id);
   const admit = async (id: string, request: RuntimeModelRequest, signal: AbortSignal) => {
     const value = await host.reserve(id, request, signal);
     signal.throwIfAborted();
@@ -89,13 +101,19 @@ async function perform(
       signal,
       maxSteps,
       toolAdmission: host.toolAdmission,
-      onText: (delta: string) => text.write(delta),
+      onText: (delta: string, requestId: string) => text.write(requestId, delta),
     };
     const response =
       request.kind === 'chat'
         ? await executeChatTurn({
             ...common,
             request: request.value,
+            onStep: (requestId, response) =>
+              text.finishStep(
+                requestId,
+                response.message.content ?? '',
+                response.finishReason === 'stop',
+              ),
             admitRequest: (id, value, active) =>
               admit(id, { kind: 'chat', value }, active ?? signal),
             connector: {
@@ -114,6 +132,8 @@ async function perform(
         : await executeNativeTurn({
             ...common,
             request: request.value,
+            onStep: (requestId, response) =>
+              text.finishStep(requestId, undefined, response.calls.length === 0),
             admitRequest: (id, value, active) =>
               admit(id, { kind: 'native', value }, active ?? signal),
             connector: {

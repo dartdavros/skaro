@@ -45,6 +45,14 @@ export class RuntimeSession {
   private modelWork?: Promise<unknown>;
   private modelHost?: RuntimeModelHost;
   private hostModelWork?: Promise<JournalRecord>;
+  get modelAdmissionRevoked(): boolean {
+    return (
+      this.ended ||
+      this.modelAbort.signal.aborted ||
+      this.journal.state.stopped ||
+      this.journal.state.closed
+    );
+  }
   context?: RuntimeContext;
   private constructor(journal: RuntimeJournal) {
     this.journal = journal;

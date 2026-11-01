@@ -41,12 +41,14 @@ it('revokes active model admission before interrupt returns and rejects concurre
   await session.execute({ id: 'model-interrupt', action: { type: 'interrupt' } });
   await cancelled;
   expect(session.journal.state.stopped).toBe(true);
+  expect(session.modelAdmissionRevoked).toBe(true);
   await expect(session.runModel(async () => undefined)).rejects.toThrow('admission is closed');
   await session.execute({
     id: 'model-resume',
     action: { type: 'send', input: { text: 'Resume lifecycle admission only' } },
   });
   expect(await session.runModel(async (signal) => signal.aborted)).toBe(false);
+  expect(session.modelAdmissionRevoked).toBe(false);
 });
 
 it('waits for revoked model admission to settle before closing its genuine journal', async () => {

@@ -25,7 +25,8 @@ interface NativeTurnInput {
   maxSteps: number;
   admitRequest(id: string, request: NativeRequest, signal?: AbortSignal): Promise<void>;
   toolAdmission?: ModelToolAdmission;
-  onText?: (text: string) => void;
+  onText?: (text: string, requestId: string) => void;
+  onStep?: (requestId: string, response: NativeResponse) => Promise<void>;
 }
 const active = new WeakMap<
   RuntimeSession,
@@ -94,7 +95,8 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
       route: request.route,
       signal,
       admit: input.admitRequest,
-      generate: (request, signal) => input.connector.complete(request, signal, input.onText),
+      generate: (request, signal) =>
+        input.connector.complete(request, signal, (text) => input.onText?.(text, id)),
       continuation: (response) => ({
         schema: 1,
         protocol: request.route.apiProfile,
@@ -102,6 +104,7 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
         response,
       }),
     });
+    await input.onStep?.(id, response);
     if (!response.calls.length) return response;
     const results: NativeToolResult[] = [];
     for (const call of response.calls) {

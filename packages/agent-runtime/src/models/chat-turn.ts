@@ -23,7 +23,8 @@ interface ChatTurnInput {
   /** Durable budget admission, invoked after intent and before sending bytes. */
   admitRequest(id: string, request: ChatRequest, signal?: AbortSignal): Promise<void>;
   toolAdmission?: ModelToolAdmission;
-  onText?: (text: string) => void;
+  onText?: (text: string, requestId: string) => void;
+  onStep?: (requestId: string, response: ChatResponse) => Promise<void>;
 }
 const active = new WeakMap<
   RuntimeSession,
@@ -92,13 +93,15 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
       route: request.route,
       signal,
       admit: input.admitRequest,
-      generate: (current, signal) => input.connector.complete(current, signal, input.onText),
+      generate: (current, signal) =>
+        input.connector.complete(current, signal, (text) => input.onText?.(text, id)),
       continuation: (response) => ({
         schema: 1,
         context: request.context,
         messages: [...messages, response.message],
       }),
     });
+    await input.onStep?.(id, response);
     messages.push(response.message);
     if (response.finishReason === 'stop') return response;
     const allowed = new Set(tools?.map((tool) => tool.name));

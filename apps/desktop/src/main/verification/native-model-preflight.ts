@@ -2,13 +2,19 @@ import assert from 'node:assert/strict';
 import { join, resolve } from 'node:path';
 import { readRuntimeJournal } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
-import type { AgentSession, RuntimeModelRequest, RuntimeProcessIdentity } from '@skaro/timeline';
+import type {
+  AgentSession,
+  RuntimeModelRequest,
+  RuntimeProcessIdentity,
+  TimelineEvent,
+} from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { c4ReviewKey } from '../c4-review';
 import { startBuiltinNativeSession } from '../native/bundled';
 import { nativeProbeOptions } from './native-probe-options';
 import { nativePlanHost } from './native-model-host';
 import { nativeVerificationConnector } from './native-model-connector';
+import { verifyModelTimeline } from './model-timeline-proof';
 
 async function turn(session: AgentSession, request: RuntimeModelRequest, id: string, maxSteps = 1) {
   assert('runModelTurn' in session && typeof session.runModelTurn === 'function');
@@ -31,6 +37,7 @@ export async function verifyNativeModelPreflight(
   const entries = resolve('apps/desktop/out/main');
   let session: AgentSession | undefined;
   let drain: Promise<void> | undefined;
+  let events: TimelineEvent[] = [];
   const start = async () => {
     session = await startBuiltinNativeSession(
       prepared.config,
@@ -44,9 +51,10 @@ export async function verifyNativeModelPreflight(
       entries,
     );
     const actual = session;
+    events = [];
     drain = (async () => {
-      for await (const _event of actual.events) {
-        /* Genuine events. */
+      for await (const event of actual.events) {
+        events.push(event);
       }
     })();
   };
@@ -132,6 +140,7 @@ export async function verifyNativeModelPreflight(
     for (const process of owners) assert.equal(await processBirth(process.pid), undefined);
     assert.equal(owners.length, 2);
     const final = await snapshot();
+    const timeline = verifyModelTimeline(final.records, events, 'after-restart', 'failed');
     assert.equal(
       final.records
         .flatMap((record) => record.facts)
@@ -159,6 +168,7 @@ export async function verifyNativeModelPreflight(
       exitsConfirmed: true,
       modelRequests: 0,
       reservations: 0,
+      timeline,
       journal: prepared.config.journalPath,
     };
   } finally {
