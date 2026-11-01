@@ -21,6 +21,7 @@ if (!(
       '--native-admissions',
       '--configured-credentials',
       '--configured-model-preflight',
+      '--configured-owner-input',
       '--native-admission-recovery',
       '--task-admission',
     ].includes(process.argv[2])) ||
@@ -62,7 +63,7 @@ try {
     },
   });
   const env = cleanCommandEnvironment();
-  if (process.argv[2] === '--configured-model-preflight') {
+  if (['--configured-model-preflight', '--configured-owner-input'].includes(process.argv[2])) {
     if (process.env.SKARO_VERIFY_PROXY !== 'http://127.0.0.1:10809')
       throw new Error('Configured model preflight requires the explicit owner VPN proxy');
     env.SKARO_VERIFY_PROXY = process.env.SKARO_VERIFY_PROXY;

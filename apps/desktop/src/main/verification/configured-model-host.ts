@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { basename, join, resolve } from 'node:path';
 import { readRuntimeJournal } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
-import type { AgentSession, RuntimeModelRequest, TimelineEvent } from '@skaro/timeline';
+import {
+  operationTimeout,
+  type AgentSession,
+  type RuntimeModelRequest,
+  type TimelineEvent,
+} from '@skaro/timeline';
 import type { Services } from '../app-services';
 import { NativeAdmissions } from '../native/admissions';
 import { AdmissionStore } from '../native/admission-state';
@@ -12,9 +17,14 @@ import { modelNetworkTransport } from '../model-network-transport';
 import { nativeProbeConfig, nativeProbeOptions } from './native-probe-options';
 import { c4ReviewKey } from '../c4-review';
 import { verifyModelTimeline } from './model-timeline-proof';
+import { configuredOwnerInputProbe } from './configured-owner-input';
 
 /** Actual configuration/catalog/vault/native RPC. Explicit policy denies every model POST. */
-export async function verifyConfiguredModelHost(services: Services, directory: string) {
+export async function verifyConfiguredModelHost(
+  services: Services,
+  directory: string,
+  ownerInput = false,
+) {
   const projectId = services.db.shell.projectScope;
   assert(projectId);
   const context = services.projects.get(projectId);
@@ -87,6 +97,12 @@ export async function verifyConfiguredModelHost(services: Services, directory: s
       },
     },
   };
+  const inputProbe = ownerInput
+    ? configuredOwnerInputProbe(request, config.journalPath, config.sessionId)
+    : undefined;
+  if (inputProbe) config.model.input = { revision: inputProbe.port.revision, steer: true };
+  let modelTurnId = 'configured-denied';
+  let ownerProof: unknown;
   try {
     configured = await prepareConfiguredModelHost({
       store: services.modelConfiguration,
@@ -101,6 +117,7 @@ export async function verifyConfiguredModelHost(services: Services, directory: s
         policy: config.model,
       },
       admissions: lease,
+      ownerInput: inputProbe?.port,
       signal: lease.signal,
       transport: await modelNetworkTransport(process.env['SKARO_VERIFY_PROXY']),
       requests: {
@@ -136,7 +153,10 @@ export async function verifyConfiguredModelHost(services: Services, directory: s
     );
     const active = session;
     drain = (async () => {
-      for await (const event of active.events) events.push(event);
+      for await (const event of active.events) {
+        events.push(event);
+        inputProbe?.observe(event);
+      }
     })();
     await lease.requireActive(lease.admission, lease.signal);
     assert('runModelTurn' in session && typeof session.runModelTurn === 'function');
@@ -146,10 +166,22 @@ export async function verifyConfiguredModelHost(services: Services, directory: s
     };
     await assert.rejects(session.runModelTurn(wrong, 'wrong-route', 1), /did not complete/);
     assert.equal(reservations, 0);
-    await assert.rejects(session.runModelTurn(request, 'configured-denied', 1), /did not complete/);
+    if (inputProbe) {
+      const result = await inputProbe.run(session);
+      modelTurnId = result.id;
+      ownerProof = result.proof;
+    } else
+      await assert.rejects(
+        session.runModelTurn(request, 'configured-denied', 1),
+        /did not complete/,
+      );
     assert.equal(reservations, 1);
     const first = await readRuntimeJournal(config.journalPath, config.sessionId);
-    await assert.rejects(session.runModelTurn(request, 'configured-denied', 1), /did not complete/);
+    if (!inputProbe)
+      await assert.rejects(
+        session.runModelTurn(request, 'configured-denied', 1),
+        /did not complete/,
+      );
     assert.equal(
       (await readRuntimeJournal(config.journalPath, config.sessionId)).records.length,
       first.records.length,
@@ -157,6 +189,12 @@ export async function verifyConfiguredModelHost(services: Services, directory: s
     assert.equal(reservations, 1);
     assert.equal(dispatches, 0);
     configured.close();
+    await assert.rejects(session.send({ text: 'Rejected after configured close' }), /closed/);
+    await operationTimeout(
+      drain!,
+      45_000,
+      'Configured authority did not close its native event stream',
+    );
     await session.close();
     await drain;
     session = undefined;
@@ -178,7 +216,7 @@ export async function verifyConfiguredModelHost(services: Services, directory: s
         (record) => record.id.startsWith('budget:') || record.id.endsWith(':dispatch'),
       ),
     );
-    const timeline = verifyModelTimeline(final.records, events, 'configured-denied', 'failed');
+    const timeline = verifyModelTimeline(final.records, events, modelTurnId, 'failed');
     assert.equal(JSON.stringify(await context.store.readTask(task.id)), before);
     assert.deepEqual(services.db.getSetting(reviewKey, null), review);
     assert.deepEqual(services.db.listRuns(projectId, task.id), runs);
@@ -187,6 +225,7 @@ export async function verifyConfiguredModelHost(services: Services, directory: s
       project: 'Cat-pilot',
       taskId: task.id,
       actualCatalog: true,
+      ...(ownerProof ? { ownerInput: ownerProof } : {}),
       actualConfiguredConnector: true,
       sharedVaultOwner: true,
       hostPreparedBeforeSpawn: true,

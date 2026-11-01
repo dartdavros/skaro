@@ -61,6 +61,34 @@ reservations/POST и чтений ключа. Повтор не добавил �
 terminal failed ровно один, live/replay совпали, running items после close 0,
 admission exited. TaskRun не создан, task/C4/configuration не менялись.
 
-NO GOD: factory 127 строк, connector selector 97, live driver 217; изменённые
+NO GOD: factory 119 строк, connector selector 87, live driver 217; изменённые
 файлы меньше 300. UI в этом изменении не менялся; полный suite не запускался.
 Продуктовый task/chat picker не включён, живой provider POST здесь не принимался.
+
+## Обычный owner input через configured factory
+
+Дополнительный режим `--configured-owner-input` использует ту же настоящую
+сборку host, сохранённый маршрут и active process admission. Начальный send
+сохраняется до подготовки, затем steer добавляет второй точный input того же
+хода через production `appendChatOwnerInput`. Оба сообщения — локальные
+verification instructions, сетевой отправки нет. Никаких ответов модели,
+TaskRun, fake API или заменённого окружения не создаётся.
+
+Принят proof `verification/extensions-b828a798-e048-4698-8835-ef1e2f791771/proof.json`
+в userData: initial/steering preparations по одному, оба inputs совпали,
+steering request сохранён до model intent. Повтор обоих input IDs не вызвал
+подготовку или journal append; изменённый текст под прежним ID отвергнут.
+Request reservation отказала до POST/чтения ключа; budget reservations 0.
+Live/replay совпали, terminal failed ровно один, running items после выхода 0.
+
+После отзыва configured host следующий send отвергнут немедленно; настоящий
+native event stream завершился до explicit ожидания `session.close`. Выход
+OS owner подтверждён, process admission exited. TaskRun не создан,
+task/C4/configuration не менялись. Ранний proof без отдельного ожидания stream
+сохранён как `extensions-cbbf7793-78e4-40e7-879f-9a9198d23a63`.
+
+Пять целевых owner-steering/configuration tests, desktop typecheck, lint,
+обычная сборка и отдельная сборка финального verification entry прошли.
+UI не менялся, полный suite не запускался. Сценарий ещё не подтверждает
+steering после настоящего provider response, успешное выполнение задачи или
+возобновление configured session после выхода прежнего процесса.

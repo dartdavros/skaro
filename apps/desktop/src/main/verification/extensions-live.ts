@@ -72,9 +72,17 @@ void app.whenReady().then(async () => {
         if ([...observedProjects].some((id) => id !== projectScope.projectId))
           throw new Error('Foreign project event during scoped verification');
         proof = { projectScope, observedProjectIds: [...observedProjects] };
-      } else if (process.argv[2] === '--configured-model-preflight') {
+      } else if (
+        ['--configured-model-preflight', '--configured-owner-input'].includes(process.argv[2]!)
+      ) {
         stage = 'configured-model-preflight';
-        proof = { configuredModel: await verifyConfiguredModelHost(services, directory) };
+        proof = {
+          configuredModel: await verifyConfiguredModelHost(
+            services,
+            directory,
+            process.argv[2] === '--configured-owner-input',
+          ),
+        };
       } else if (process.argv[2] === '--native-verification') {
         stage = 'native-verification';
         proof = { native: await verifyNativeVerification(services, directory, owner) };

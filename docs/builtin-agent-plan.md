@@ -51,6 +51,8 @@ picker/loading/refresh и пустой выбор проверены в штат
 четыре настоящих коннектора, явный transport и обязательные request gates;
 native turn/RPC и отказ перед POST приняты на Cat-pilot, live/replay совпали,
 owned process вышел. Это не положительная provider-приёмка активной задачи.
+Через тот же factory приняты обычные durable send/steer одного хода, dedup,
+отказ конфликтующему input ID и automatic native close; новых POST нет.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не
