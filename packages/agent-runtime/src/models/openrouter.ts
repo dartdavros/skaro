@@ -6,7 +6,7 @@ import { OpenRouterStream } from './openrouter-stream.ts';
 import { openRouterBody } from './openrouter-request.ts';
 import { serverEvents } from './sse.ts';
 import { ModelSecretGuard } from './secret-guard.ts';
-import { modelGetJson } from './model-get.ts';
+import { modelGetJson, type ModelFetch } from './model-get.ts';
 import { ModelHttpError, modelFailure } from './model-error.ts';
 export { ModelHttpError } from './model-error.ts';
 
@@ -140,13 +140,18 @@ export class OpenRouterConnector {
 }
 
 /** Public catalogue is evidence of advertised features, never proof of account/model availability. */
-export async function openRouterCatalog(endpoint: string, signal: AbortSignal): Promise<unknown[]> {
+export async function openRouterCatalog(
+  endpoint: string,
+  signal: AbortSignal,
+  load?: ModelFetch,
+): Promise<unknown[]> {
   validateModelEndpoint(endpoint);
   const value = (await modelGetJson(
     `${endpoint.replace(/\/$/, '')}/models`,
     {},
     signal,
     16_777_216,
+    load,
   )) as { data?: unknown[] };
   if (!Array.isArray(value.data)) throw new Error('Invalid model catalogue');
   return value.data;

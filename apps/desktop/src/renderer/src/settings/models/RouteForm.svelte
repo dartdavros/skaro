@@ -4,6 +4,7 @@
   import { DEFAULT_UPSTREAM_POLICY, type Route } from '@skaro/timeline';
   import type { ModelSettingsController } from './controller.svelte';
   import { connectionName } from './profiles';
+  import ModelChoice from './ModelChoice.svelte';
   let { controller, current }: { controller: ModelSettingsController; current: Route | 'new' } =
     $props();
   const original = untrack(() => (current === 'new' ? undefined : current));
@@ -73,11 +74,10 @@
         bind:value={connection}
       />
     </div>
-    <TextField
-      label={t('models.modelId')}
+    <ModelChoice
+      connection={connections.find((entry) => entry.id === connection)}
       bind:value={modelId}
       disabled={controller.busy}
-      spellcheck={false}
     />
     <TextField
       label={t('models.parameters')}

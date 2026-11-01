@@ -36,6 +36,7 @@ import { backgroundWork } from './background-work';
 import { reportGraph } from './background-graph';
 import { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import { BuiltinModelSettingsService } from './builtin-model-settings-service';
+import { BuiltinModelCatalog } from './builtin-model-catalog';
 import { setBackgroundProjectScope } from './background/client';
 
 export async function createServices(
@@ -47,6 +48,12 @@ export async function createServices(
   setBackgroundProjectScope(dataDir, db.shell.projectScope);
   const modelConfiguration = new BuiltinModelConfigurationStore(db);
   const modelSettings = new BuiltinModelSettingsService(modelConfiguration, dataDir);
+  const modelCatalog = new BuiltinModelCatalog(modelConfiguration, {
+    verification: !!db.shell.projectScope,
+    ...(db.shell.projectScope && process.env['SKARO_VERIFY_PROXY']
+      ? { proxy: process.env['SKARO_VERIFY_PROXY'] }
+      : {}),
+  });
   const attachments = new AttachmentStore(join(dataDir, 'attachments'));
   const projects = new Projects(db, (projectId) => emit('project.changed', { projectId }), dataDir);
   backgroundWork.attach((state) => emit('background.changed', state));
@@ -185,6 +192,7 @@ export async function createServices(
     graph,
     modelConfiguration,
     modelSettings,
+    modelCatalog,
     overview,
     c4,
     appState,

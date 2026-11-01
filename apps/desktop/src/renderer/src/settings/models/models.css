@@ -33,3 +33,12 @@
   font-size: var(--sk-fs-4);
   line-height: 1.45;
 }
+.model-catalog-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+}
+.model-catalog-status .model-note {
+  flex: 1;
+}

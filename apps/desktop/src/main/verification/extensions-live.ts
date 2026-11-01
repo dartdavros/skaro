@@ -132,6 +132,7 @@ void app.whenReady().then(async () => {
     process.send?.({ type: 'failed', stage, name: error instanceof Error ? error.name : 'Error' });
   } finally {
     if (services) {
+      await services.modelCatalog.close();
       await services.modelSettings.close();
       await Promise.allSettled([
         services.runs.close(),

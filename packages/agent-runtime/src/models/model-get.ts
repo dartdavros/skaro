@@ -2,16 +2,22 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { boundedJson } from './json-body.ts';
 import { ModelHttpError } from './model-error.ts';
 
+export type ModelFetch = (
+  url: string | URL,
+  init: Parameters<typeof fetch>[1],
+) => ReturnType<typeof fetch>;
+
 /** Retry only idempotent metadata GETs. Model POSTs/tool effects never enter this helper. */
 export async function modelGetJson(
   url: string | URL,
   headers: Record<string, string>,
   signal: AbortSignal,
   limit: number,
+  load: ModelFetch = fetch,
 ): Promise<unknown> {
   for (let attempt = 0; attempt < 3; attempt++) {
     signal.throwIfAborted();
-    const response = await fetch(url, {
+    const response = await load(url, {
       redirect: 'error',
       headers,
       signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]),

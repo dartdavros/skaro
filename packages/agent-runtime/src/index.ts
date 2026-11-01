@@ -20,6 +20,11 @@ export { restoreRuntime, reduceRuntimeRecord, emptyRuntimeState } from './state.
 export { SkaroProjector } from './projector.ts';
 export { toolCatalog } from './tools/schemas.ts';
 export { OpenRouterConnector, ModelHttpError, openRouterCatalog } from './models/openrouter.ts';
+export {
+  parseOpenRouterCatalog,
+  type OpenRouterCatalogEntry,
+} from './models/openrouter-catalog.ts';
+export type { ModelFetch } from './models/model-get.ts';
 export { executeChatTurn } from './models/chat-turn.ts';
 export { executeNativeTurn } from './models/native-turn.ts';
 export { contextChatRequest, contextNativeRequest } from './context/request.ts';
