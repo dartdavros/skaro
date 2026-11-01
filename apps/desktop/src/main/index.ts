@@ -26,6 +26,7 @@ import { trace } from './trace';
 import { HistoryReads, setHistoryReads } from './history-read-service';
 import { registerProjectLogos } from './app-logo';
 import { graphHandlers } from './graph/handlers';
+import { modelSettingsHandlers } from './model-settings-handlers';
 import { keepLoopbackDirect } from './loopback-proxy';
 trace(`main loaded, pid ${process.pid}`);
 keepLoopbackDirect();
@@ -165,6 +166,7 @@ if (!locked) {
       ...sessionHandlers(services),
       ...fileHandlers(services, mainWindow, picked),
       ...graphHandlers(services.graph),
+      ...modelSettingsHandlers(services.modelSettings),
     };
     commands.start(handlers);
     const acceptedHandlers = {

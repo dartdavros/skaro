@@ -71,6 +71,7 @@ it.skipIf(process.platform !== 'win32')(
             'rotation',
             'reopen',
             'revoke',
+            'settings-transaction',
           ],
         },
       ]);

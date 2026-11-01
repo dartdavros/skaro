@@ -149,6 +149,8 @@ export class AppState {
   }
 
   setSetting(key: string, value: unknown): void {
+    if (key.startsWith('builtin.'))
+      throw new Error('Builtin configuration requires its validated host API');
     if (
       this.db.shell.projectScope &&
       (key.startsWith('ui.') || key.startsWith('settings.') || key.startsWith('window.'))

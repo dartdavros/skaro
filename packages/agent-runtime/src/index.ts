@@ -42,6 +42,8 @@ export { appendChatOwnerInput } from './models/owner-chat.ts';
 export {
   parseBuiltinModelChoices,
   parseBuiltinModelConfiguration,
+  parseBuiltinConnectionDraft,
+  parseBuiltinRoute,
 } from './models/configuration-schema.ts';
 export type { BuiltinModelConfigurationState } from './models/configuration-schema.ts';
 export type * from './models/chat-types.ts';

@@ -210,6 +210,7 @@ export async function verifyNativeModelPlan(input: {
     await session?.close();
     await drain;
     if (services) {
+      await services.modelSettings.close();
       await Promise.allSettled([
         services.runs.close(),
         services.chats.close(),

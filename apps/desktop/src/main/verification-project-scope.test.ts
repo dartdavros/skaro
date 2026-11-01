@@ -7,6 +7,8 @@ import { AppState } from './state';
 import { Projects } from './projects';
 import { EnvironmentProjectScope } from './task-environment-scope';
 import { projectRecords } from './project-records';
+import { ProjectIndex } from './background/project-index';
+import { PayloadStore } from './background/payload-store';
 
 const directories: string[] = [];
 const handles: { close(): void }[] = [];
@@ -77,4 +79,24 @@ it('filters environment ownership before any cleanup callback and rejects foreig
   expect(() => scope.require(selected)).not.toThrow();
   expect(scope.containers([], 'unused', new Map())).toEqual([]);
   expect(new EnvironmentProjectScope().records([selected, outside])).toEqual([selected, outside]);
+});
+
+it('indexes only scoped registry metadata in its separate cache without opening project paths', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'skaro-project-scope-'));
+  directories.push(directory);
+  const db = AppDb.open(join(directory, 'skaro.db'));
+  handles.push(db);
+  const target = db.addProject({ name: 'Cat-pilot', path: join(directory, 'not-created') });
+  db.addProject({ name: 'Outside scope', path: join(directory, 'also-not-created') });
+  const global = new PayloadStore(directory, 'registry.db');
+  const scoped = new PayloadStore(directory, `registry-${target.id}.db`);
+  handles.push(global.db, scoped.db);
+  const all = new ProjectIndex(global).query({ query: '', sort: 'name' });
+  const index = new ProjectIndex(scoped, target.id);
+  const selected = index.query({ query: '', sort: 'name' });
+  expect(selected.source.count).toBe(1);
+  expect(index.page(selected.source, 0).map((card) => card.id)).toEqual([target.id]);
+  const outside = all.cards.find((card) => card.id !== target.id)!;
+  expect(() => index.update(outside)).toThrow('outside verification scope');
+  expect(new ProjectIndex(global).query({ query: '', sort: 'name' })).toEqual(all);
 });

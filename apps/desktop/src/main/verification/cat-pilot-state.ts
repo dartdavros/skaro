@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { AppState } from '../state';
 
 /** Choose real registry metadata before AppState reset/recovery/watchers can touch another project. */
-export function catPilotState(data: string) {
+export function catPilotProjectId(data: string) {
   const file = join(data, 'skaro.db');
   const registry = new DatabaseSync(file, { readOnly: true });
   let projectId: string;
@@ -17,5 +17,8 @@ export function catPilotState(data: string) {
   } finally {
     registry.close();
   }
-  return new AppState(file, projectId);
+  return projectId;
+}
+export function catPilotState(data: string) {
+  return new AppState(join(data, 'skaro.db'), catPilotProjectId(data));
 }

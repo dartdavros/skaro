@@ -51,6 +51,20 @@ export class ModelCredentialVault implements CredentialVault {
   async availability() {
     return protection();
   }
+  /** Main-only references. No encrypted envelope or secret bytes are returned. */
+  metadata() {
+    return this.serialize(() => {
+      this.requireOpen();
+      return this.store.metadata().map((row) => ({
+        binding: {
+          connectionId: row.connection,
+          connectionRevision: row.revision,
+          endpoint: row.endpoint,
+        },
+        reference: { id: row.id, revision: row.version },
+      }));
+    });
+  }
   /** Nonsecret configuration reference only; never decrypt or return the envelope. */
   reference(binding: CredentialBinding): Promise<CredentialReference | undefined> {
     const target = structuredClone(binding);
@@ -78,11 +92,13 @@ export class ModelCredentialVault implements CredentialVault {
     binding: CredentialBinding;
     expected: CredentialReference | null;
     secret: Uint8Array;
+    planned?: CredentialReference;
   }) {
     // Own a copy before queueing; the caller retains responsibility for its input buffer.
     const secret = Uint8Array.from(input.secret);
     const binding = structuredClone(input.binding);
     const expected = input.expected && { ...input.expected };
+    const planned = input.planned && { ...input.planned };
     return this.serialize(async () => {
       this.requireOpen();
       validateBinding(binding);
@@ -94,8 +110,19 @@ export class ModelCredentialVault implements CredentialVault {
         throw new Error('Credential must be a nonempty printable ASCII API token');
       const row = this.store.get(binding.connectionId);
       if (!matches(row, expected)) throw new Error('Credential revision conflict');
+      const reference = planned ?? {
+        id: row?.id ?? randomUUID(),
+        revision: (row?.version ?? 0) + 1,
+      };
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          reference.id,
+        ) ||
+        reference.revision !== (row?.version ?? 0) + 1 ||
+        (row && reference.id !== row.id)
+      )
+        throw new Error('Invalid planned credential revision');
       await this.leases.revoke(binding.connectionId);
-      const reference = { id: row?.id ?? randomUUID(), revision: (row?.version ?? 0) + 1 };
       const encrypted = encryptCredential({
         schema: 1,
         binding,

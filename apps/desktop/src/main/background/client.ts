@@ -4,6 +4,11 @@ import { configureC4Locks } from '@skaro/core';
 import { backgroundWorkerEntry } from './worker-entry';
 
 const locks = new SharedArrayBuffer(1024);
+const projectScopes = new Map<string, string>();
+export function setBackgroundProjectScope(dataDir: string, projectId?: string) {
+  if (projectId) projectScopes.set(dataDir, projectId);
+  else projectScopes.delete(dataDir);
+}
 configureC4Locks(locks, 1);
 
 /** Independent queues keep a history replay from delaying document reads or owner decisions. */
@@ -16,15 +21,17 @@ class BackgroundLane {
     { resolve(value: unknown): void; reject(e: Error): void }
   >();
   private readonly dataDir: string;
-  constructor(dataDir: string) {
+  private readonly projectScope?: string;
+  constructor(dataDir: string, projectScope?: string) {
     this.dataDir = dataDir;
+    this.projectScope = projectScope;
   }
 
   call<M extends keyof BackgroundMethods>(method: M, args: Parameters<BackgroundMethods[M]>) {
     clearTimeout(this.idleTimer);
     if (!this.worker) {
       const worker = new Worker(backgroundWorkerEntry(), {
-        workerData: { dataDir: this.dataDir, locks },
+        workerData: { dataDir: this.dataDir, locks, projectScope: this.projectScope },
       });
       this.worker = worker;
       const owner = worker.threadId + 1;
@@ -97,13 +104,14 @@ export function background<M extends keyof BackgroundMethods>(
               : method.startsWith('artifacts.') || method.startsWith('catalog.')
                 ? 'artifacts'
                 : 'storage';
-  const key = `${dataDir}\0${lane}`;
+  const key = `${dataDir}\0${projectScopes.get(dataDir) ?? ''}\0${lane}`;
   let worker = lanes.get(key);
-  if (!worker) lanes.set(key, (worker = new BackgroundLane(dataDir)));
+  if (!worker) lanes.set(key, (worker = new BackgroundLane(dataDir, projectScopes.get(dataDir))));
   return worker.call(method, args);
 }
 
 export async function closeBackground(): Promise<void> {
   await Promise.all([...lanes.values()].map((lane) => lane.close()));
   lanes.clear();
+  projectScopes.clear();
 }

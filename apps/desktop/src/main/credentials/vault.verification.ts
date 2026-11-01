@@ -5,6 +5,7 @@ import { app } from 'electron';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
 import type { CredentialReference, ProcessAdmission } from '@skaro/timeline';
 import { ModelCredentialVault } from './vault';
+import { verifySettingsStorage } from './settings.verification';
 
 // Executed by the real Electron main process. This is storage text, never API authentication.
 app.setName('SkaroCredentialVerification');
@@ -103,7 +104,10 @@ void app.whenReady().then(async () => {
     });
     const cancelled = assert.rejects(consuming, /revoked or cancelled/);
     await active;
-    const next = await vault.replace({ binding, expected: reference, secret: input });
+    const planned = { id: reference.id, revision: reference.revision + 1 };
+    const next = await vault.replace({ binding, expected: reference, planned, secret: input });
+    assert.deepEqual(next, planned);
+    assert.deepEqual(await vault.metadata(), [{ binding, reference: planned }]);
     await cancelled;
     assert(borrowed?.every((byte) => byte === 0));
     assert.equal(next.id, reference.id);
@@ -142,6 +146,8 @@ void app.whenReady().then(async () => {
     assert.equal(fresh.revision, 1);
     await vault.close();
     vault = undefined;
+    stage = 'settings-transaction';
+    await verifySettingsStorage(app.getPath('userData'), text);
     process.send?.(
       {
         type: 'verified',
@@ -157,6 +163,7 @@ void app.whenReady().then(async () => {
           'rotation',
           'reopen',
           'revoke',
+          'settings-transaction',
         ],
       },
       () => app.exit(0),

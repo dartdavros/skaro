@@ -198,6 +198,7 @@ export async function verifyPreparedModelPlan(input: {
       session?.dispose(),
       ...(services
         ? [
+            services.modelSettings.close(),
             services.runs.close(),
             services.chats.close(),
             services.mcp.close(),

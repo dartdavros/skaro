@@ -2,6 +2,10 @@ import type { MethodName, EventName } from './ipc';
 
 /** The whitelist the preload exposes; must list every key of `Methods`. */
 export const METHODS = [
+  'models.settings',
+  'models.saveConnection',
+  'models.saveRoute',
+  'models.remove',
   'graph.status',
   'graph.rebuild',
   'graph.cancel',

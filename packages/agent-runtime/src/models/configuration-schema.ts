@@ -49,11 +49,30 @@ const choices = z.strictObject({
   routes: z.array(route).max(256),
 });
 const version = z.strictObject({ id, revision });
-const state = choices.extend({
+const baseState = choices.extend({
   schema: z.literal(1),
   revision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   connectionVersions: z.array(version).max(4096),
   routeVersions: z.array(version).max(8192),
+});
+const credential = z.strictObject({
+  binding: z.strictObject({
+    connectionId: id,
+    connectionRevision: revision,
+    endpoint: z.string().max(2048),
+  }),
+  reference: z.strictObject({ id: z.uuid(), revision }),
+});
+const state = baseState.extend({
+  pendingCredential: z
+    .strictObject({
+      id: z.uuid(),
+      connectionId: id,
+      previous: credential.nullable(),
+      next: credential.nullable(),
+      nextState: baseState,
+    })
+    .optional(),
 });
 export type BuiltinModelConfigurationState = z.infer<typeof state>;
 const validators: Record<string, (value: unknown) => unknown> = {
@@ -107,6 +126,16 @@ export function parseBuiltinModelChoices(raw: unknown) {
   requireChoices(parsed.data);
   return parsed.data;
 }
+export function parseBuiltinConnectionDraft(raw: unknown) {
+  const parsed = connection.omit({ credential: true }).safeParse(raw);
+  if (!parsed.success) throw new Error('Invalid connection settings');
+  return parsed.data;
+}
+export function parseBuiltinRoute(raw: unknown) {
+  const parsed = route.safeParse(raw);
+  if (!parsed.success) throw new Error('Invalid model route settings');
+  return parsed.data;
+}
 export function parseBuiltinModelConfiguration(raw: unknown): BuiltinModelConfigurationState {
   const parsed = state.safeParse(raw);
   if (!parsed.success) throw new Error('Invalid or unsupported builtin model configuration');
@@ -114,6 +143,31 @@ export function parseBuiltinModelConfiguration(raw: unknown): BuiltinModelConfig
   if (Buffer.byteLength(JSON.stringify(value)) > 1_048_576)
     throw new Error('Builtin model configuration exceeds its storage limit');
   requireChoices(value);
+  if (value.pendingCredential) {
+    const pending = value.pendingCredential;
+    if ((!pending.previous && !pending.next) || pending.nextState.revision !== value.revision + 1)
+      throw new Error('Invalid pending credential configuration');
+    requireChoices(pending.nextState);
+    parseBuiltinModelConfiguration(pending.nextState);
+    for (const item of [pending.previous, pending.next])
+      if (item) {
+        if (item.binding.connectionId !== pending.connectionId)
+          throw new Error('Pending credential identity mismatch');
+        validateModelEndpoint(item.binding.endpoint);
+      }
+    const target = pending.nextState.connections.find(
+      (connection) => connection.id === pending.connectionId,
+    );
+    if (
+      pending.next
+        ? !target ||
+          JSON.stringify(target.credential) !== JSON.stringify(pending.next.reference) ||
+          target.endpoint !== pending.next.binding.endpoint ||
+          target.revision !== pending.next.binding.connectionRevision
+        : !!target
+    )
+      throw new Error('Pending credential does not match its target connection');
+  }
   for (const [items, versions] of [
     [value.connections, value.connectionVersions],
     [value.routes, value.routeVersions],

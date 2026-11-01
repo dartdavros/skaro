@@ -1,7 +1,6 @@
-import { isDeepStrictEqual } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import type { AppDb } from '@skaro/core';
 import {
-  parseBuiltinModelChoices,
   parseBuiltinModelConfiguration,
   type BuiltinModelConfigurationState,
 } from '@skaro/agent-runtime';
@@ -14,22 +13,12 @@ import {
 } from '@skaro/timeline';
 import { BuiltinModelRouteLease } from './builtin-model-route-lease';
 
-const KEY = 'builtin.model-configuration';
-const empty = (): BuiltinModelConfigurationState => ({
-  schema: 1,
-  revision: 0,
-  connections: [],
-  routes: [],
-  connectionVersions: [],
-  routeVersions: [],
-});
-const project = (state: BuiltinModelConfigurationState): BuiltinModelConfiguration =>
-  structuredClone({
-    schema: state.schema,
-    revision: state.revision,
-    connections: state.connections,
-    routes: state.routes,
-  });
+import {
+  MODEL_CONFIGURATION_KEY as KEY,
+  emptyModelConfiguration as empty,
+  projectModelConfiguration as project,
+  nextModelConfiguration,
+} from './builtin-model-configuration-state';
 
 /** Main-only nonsecret choices. This store neither imports keys nor grants model execution. */
 export class BuiltinModelConfigurationStore {
@@ -43,7 +32,55 @@ export class BuiltinModelConfigurationStore {
     return { raw, state: raw === undefined ? empty() : parseBuiltinModelConfiguration(raw) };
   }
   read(): BuiltinModelConfiguration {
-    return project(this.stored().state);
+    const { state } = this.stored();
+    if (state.pendingCredential) throw new Error('Credential configuration recovery is required');
+    return project(state);
+  }
+  pendingCredential() {
+    return structuredClone(this.stored().state.pendingCredential);
+  }
+  prepareCredential(
+    expectedRevision: number,
+    input: {
+      connectionId: string;
+      previous: NonNullable<BuiltinModelConfigurationState['pendingCredential']>['previous'];
+      next: NonNullable<BuiltinModelConfigurationState['pendingCredential']>['next'];
+      choices: Pick<BuiltinModelConfiguration, 'connections' | 'routes'>;
+    },
+  ) {
+    const { raw, state } = this.stored();
+    if (state.pendingCredential || expectedRevision !== state.revision)
+      throw new Error('Builtin model configuration revision conflict');
+    const nextState = nextModelConfiguration(state, input.choices, state.revision + 2);
+    const pending = {
+      id: randomUUID(),
+      connectionId: input.connectionId,
+      previous: input.previous,
+      next: input.next,
+      nextState,
+    };
+    const prepared = parseBuiltinModelConfiguration({
+      ...state,
+      revision: state.revision + 1,
+      pendingCredential: pending,
+    });
+    if (!this.db.settings.compareAndSet(KEY, raw, prepared))
+      throw new Error('Builtin model configuration changed under another writer');
+    for (const lease of [...this.leases]) lease.refresh();
+    return structuredClone(prepared.pendingCredential!);
+  }
+  finishCredential(id: string, committed: boolean) {
+    const { raw, state } = this.stored();
+    const pending = state.pendingCredential;
+    if (!pending || pending.id !== id)
+      throw new Error('Credential configuration identity conflict');
+    const { pendingCredential: _pending, ...previous } = state;
+    const next = parseBuiltinModelConfiguration(
+      committed ? pending.nextState : { ...previous, revision: state.revision + 1 },
+    );
+    if (!this.db.settings.compareAndSet(KEY, raw, next))
+      throw new Error('Builtin model configuration changed under another writer');
+    return project(next);
   }
   update(
     expectedRevision: number,
@@ -52,31 +89,8 @@ export class BuiltinModelConfigurationStore {
     const { raw, state } = this.stored();
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== state.revision)
       throw new Error('Builtin model configuration revision conflict');
-    const value = parseBuiltinModelChoices(proposed);
-    const versions = <T extends { id: string; revision: number }>(
-      previous: readonly T[],
-      next: readonly T[],
-      history: { id: string; revision: number }[],
-    ) => {
-      const current = new Map(previous.map((entry) => [entry.id, entry]));
-      const revisions = new Map(history.map((entry) => [entry.id, entry.revision]));
-      for (const entry of next) {
-        if (
-          !isDeepStrictEqual(current.get(entry.id), entry) &&
-          entry.revision !== (revisions.get(entry.id) ?? 0) + 1
-        )
-          throw new Error('Builtin model entry requires its next configuration revision');
-        revisions.set(entry.id, entry.revision);
-      }
-      return [...revisions].map(([id, revision]) => ({ id, revision }));
-    };
-    const next = parseBuiltinModelConfiguration({
-      schema: 1,
-      revision: state.revision + 1,
-      ...value,
-      connectionVersions: versions(state.connections, value.connections, state.connectionVersions),
-      routeVersions: versions(state.routes, value.routes, state.routeVersions),
-    });
+    if (state.pendingCredential) throw new Error('Credential configuration recovery is required');
+    const next = nextModelConfiguration(state, proposed);
     if (!this.db.settings.compareAndSet(KEY, raw, next))
       throw new Error('Builtin model configuration changed under another writer');
     for (const lease of [...this.leases]) lease.refresh();

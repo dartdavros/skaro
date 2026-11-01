@@ -20,19 +20,15 @@ export class ProjectOverview {
     this.db = db;
     this.projects = projects;
     this.publish = publish;
-    this.ready = db.shell.projectScope
-      ? Promise.resolve()
-      : background(dirname(db.filePath), 'registry.migrate').catch((error: unknown) =>
-          console.error('Project card migration:', error),
-        );
+    this.ready = background(dirname(db.filePath), 'registry.migrate').catch((error: unknown) =>
+      console.error('Project card migration:', error),
+    );
   }
   async query(query: import('../shared/project-catalog').ProjectQuery) {
-    if (this.db.shell.projectScope)
-      throw new Error('Global catalog is unavailable in project-scoped verification');
     await this.ready;
     const result = await background(dirname(this.db.filePath), 'registry.query', query);
     this.refreshCards(result.cards);
-    if (query.remember)
+    if (query.remember && !this.db.shell.projectScope)
       this.db.setSetting(
         'ui.projects.initial',
         result.cards.slice(0, 32).map((card) => card.id),
@@ -40,8 +36,6 @@ export class ProjectOverview {
     return result;
   }
   async page(source: import('../shared/project-catalog').ProjectRange, start: number) {
-    if (this.db.shell.projectScope)
-      throw new Error('Global catalog is unavailable in project-scoped verification');
     const cards = await background(dirname(this.db.filePath), 'registry.page', source, start);
     this.refreshCards(cards);
     return cards;

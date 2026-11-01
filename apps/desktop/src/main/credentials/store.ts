@@ -58,6 +58,13 @@ export class CredentialStore {
       .prepare('SELECT * FROM credentials WHERE connection=?')
       .get(connection) as unknown as StoredCredential | undefined;
   }
+  metadata() {
+    return this.db
+      .prepare(
+        'SELECT connection,revision,endpoint,id,version FROM credentials ORDER BY connection',
+      )
+      .all() as unknown as Omit<StoredCredential, 'encrypted'>[];
+  }
 
   put(value: StoredCredential): void {
     this.db

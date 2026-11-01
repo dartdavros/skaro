@@ -35,6 +35,8 @@ import { GraphService } from './graph/service';
 import { backgroundWork } from './background-work';
 import { reportGraph } from './background-graph';
 import { BuiltinModelConfigurationStore } from './builtin-model-configuration';
+import { BuiltinModelSettingsService } from './builtin-model-settings-service';
+import { setBackgroundProjectScope } from './background/client';
 
 export async function createServices(
   appState: AppState,
@@ -42,6 +44,9 @@ export async function createServices(
   emit: <E extends EventName>(event: E, payload: Events[E]) => void,
 ) {
   const db = appState.db;
+  setBackgroundProjectScope(dataDir, db.shell.projectScope);
+  const modelConfiguration = new BuiltinModelConfigurationStore(db);
+  const modelSettings = new BuiltinModelSettingsService(modelConfiguration, dataDir);
   const attachments = new AttachmentStore(join(dataDir, 'attachments'));
   const projects = new Projects(db, (projectId) => emit('project.changed', { projectId }), dataDir);
   backgroundWork.attach((state) => emit('background.changed', state));
@@ -178,7 +183,8 @@ export async function createServices(
   graph.start();
   return {
     graph,
-    modelConfiguration: new BuiltinModelConfigurationStore(db),
+    modelConfiguration,
+    modelSettings,
     overview,
     c4,
     appState,

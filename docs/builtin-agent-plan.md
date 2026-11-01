@@ -16,7 +16,7 @@ BA-6 начат: [run_check и привязка доказательств к в
 Полная приёмка открыта. Подготовлен [native inspection bridge](builtin-agent-native-verification.md)
 и [native host operations](builtin-agent-native-operations.md) для BA-7;
 проверен [общий отзыв native-сессии](builtin-agent-native-lifetime.md).
-Продуктовые задачи/чаты и scheduler не подключены. BA-8–BA-9 не начаты.
+Продуктовые задачи/чаты и scheduler не подключены. BA-8 начат, BA-9 не начат.
 Добавлен [native model host](builtin-agent-native-model.md): concurrent negative
 preflight и живой native model-plan Cat-pilot приняты; пять запросов через Xray,
 реальные tools/streaming/budget/dedup. Это не выполнение или сдача активной задачи.
@@ -38,9 +38,13 @@ send → durable input → прежний model loop, без повторной 
 route/credential reference, отзыв устаревшего lease; positive configured runtime открыт.
 Исправлена [граница проверочного запуска](builtin-agent-project-scope.md): Cat-pilot
 выбирается до startup/recovery/watchers и Docker cleanup, не только внутри сценария.
+Добавлены [настройки подключений и маршрутов](builtin-agent-model-settings.md):
+main IPC, защищённое хранение и формы существующего раздела «Агенты».
+Полная приёмка BA-8 и включение встроенного агента остаются открытыми.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
-Текущее продолжение — BA-6, без включения в продуктовый UI.
+Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не
+включён в task/chat picker и не становится выбором по умолчанию.
 BA-* — локальные ID плана, не созданные задачи Skaro.
 
 ## Объём и зависимости
@@ -71,7 +75,8 @@ Design work для BA-8 можно подготовить раньше; код �
 системы и визуальный язык». Согласовано переиспользование текущих settings
 surfaces/components/tokens и состояний. Отдельный новый визуальный язык не
 требуется; исходный baseline изучается до правок, штатная browser-проверка
-обязательна. Подготовка BA-8 начата; это не объявляет настройки реализованными.
+обязательна. Настройки BA-8 реализуются по этому решению; закрытие полного
+этапа требует отдельной проверки оставшихся моделей/capabilities/feed/расхода.
 
 ## Исходные точки и структура
 

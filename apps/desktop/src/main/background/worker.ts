@@ -28,6 +28,9 @@ let chatCatalog: ChatCatalogReader | undefined;
 let registry: ProjectIndex | undefined;
 let documents: ReturnType<typeof documentCatalog> | undefined;
 let taskCatalog: ReturnType<typeof taskCatalogWork> | undefined;
+const projectScope = (workerData as { projectScope?: string }).projectScope;
+if (projectScope && !/^[a-zA-Z0-9_-]{1,160}$/.test(projectScope))
+  throw new Error('Invalid worker project scope');
 configureC4Locks((workerData as { locks: SharedArrayBuffer }).locks, threadId + 1);
 parentPort!.on(
   'message',
@@ -57,7 +60,9 @@ parentPort!.on(
       store ??= new PayloadStore(
         (workerData as { dataDir: string }).dataDir,
         request.method.startsWith('registry.')
-          ? 'registry.db'
+          ? projectScope
+            ? `registry-${projectScope}.db`
+            : 'registry.db'
           : request.method.startsWith('tasks.')
             ? 'tasks.db'
             : 'workspace.db',
@@ -82,11 +87,11 @@ parentPort!.on(
           ...(request.args as Parameters<BackgroundMethods['registry.session']>),
         );
       if (request.method === 'registry.migrate') {
-        registry ??= new ProjectIndex(store);
+        registry ??= new ProjectIndex(store, projectScope);
         return;
       }
       if (request.method.startsWith('registry.')) {
-        registry ??= new ProjectIndex(store);
+        registry ??= new ProjectIndex(store, projectScope);
         const args = request.args;
         if (request.method === 'registry.query')
           return registry.query(args[0] as import('../../shared/project-catalog').ProjectQuery);
