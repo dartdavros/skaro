@@ -19,6 +19,7 @@ if (!(
       '--native-owner-steer',
       '--project-scope',
       '--native-admissions',
+      '--configured-credentials',
       '--native-admission-recovery',
       '--task-admission',
     ].includes(process.argv[2])) ||

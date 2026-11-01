@@ -1,10 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { Connection, CredentialBinding, Route } from '@skaro/timeline';
+import type {
+  Connection,
+  CredentialBinding,
+  ProcessAdmission,
+  ProcessAdmissionPort,
+  Route,
+  RouteSnapshot,
+} from '@skaro/timeline';
 import type { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import { ModelCredentialVault } from './credentials/vault';
 import { credentialRecoveryDecision } from './builtin-credential-recovery';
 import { protection } from './credentials/protection';
+import { bindConfiguredCredentials } from './builtin-configured-credentials';
 
 /** Main-only serialized settings. Durable metadata precedes every OS-vault mutation. */
 export class BuiltinModelSettingsService {
@@ -13,6 +21,7 @@ export class BuiltinModelSettingsService {
   private vault?: ModelCredentialVault;
   private queue: Promise<unknown> = Promise.resolve();
   private closed = false;
+  private readonly lifetime = new AbortController();
   constructor(store: BuiltinModelConfigurationStore, dataDir: string) {
     this.store = store;
     this.directory = join(dataDir, 'credentials');
@@ -48,6 +57,29 @@ export class BuiltinModelSettingsService {
         protection: availability,
         credentials: availability.state === 'available' ? await this.credentials().metadata() : [],
       };
+    });
+  }
+  /** Host-only: share the same OS vault owner used by settings; never expose this through IPC. */
+  credentialsFor(
+    route: RouteSnapshot,
+    admission: ProcessAdmission,
+    admissions: Pick<ProcessAdmissionPort, 'requireActive'>,
+    signal: AbortSignal,
+  ) {
+    const expected = structuredClone(route);
+    const owner = structuredClone(admission);
+    return this.serialize(async () => {
+      const active = AbortSignal.any([signal, this.lifetime.signal]);
+      active.throwIfAborted();
+      await this.recover();
+      return bindConfiguredCredentials(
+        this.store,
+        this.credentials(),
+        expected,
+        owner,
+        admissions,
+        active,
+      );
     });
   }
   saveConnection(
@@ -153,6 +185,7 @@ export class BuiltinModelSettingsService {
   }
   async close() {
     this.closed = true;
+    this.lifetime.abort();
     await this.queue;
     await this.vault?.close();
   }

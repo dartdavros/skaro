@@ -89,9 +89,16 @@ void app.whenReady().then(async () => {
       } else if (process.argv[2] === '--native-owner-steer') {
         stage = 'native-owner-steer';
         proof = { steering: await verifyNativeOwnerSteer(services, data, directory, owner) };
-      } else if (process.argv[2] === '--native-admissions') {
+      } else if (['--native-admissions', '--configured-credentials'].includes(process.argv[2]!)) {
         stage = 'native-admissions';
-        proof = { admissions: await verifyNativeAdmissions(services, directory, owner) };
+        proof = {
+          admissions: await verifyNativeAdmissions(
+            services,
+            directory,
+            owner,
+            process.argv[2] === '--configured-credentials',
+          ),
+        };
       } else if (process.argv[2] === '--native-admission-recovery') {
         stage = 'native-admission-recovery';
         proof = { recovery: await verifyNativeAdmissionRecovery(services, data, directory) };

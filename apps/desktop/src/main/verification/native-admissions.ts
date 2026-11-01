@@ -9,12 +9,14 @@ import { startBuiltinNativeSession } from '../native/bundled';
 import { nativeProbeConfig, nativeProbeOptions } from './native-probe-options';
 import { c4ReviewKey } from '../c4-review';
 import { nativeOperationBootstrap } from './native-operation-bootstrap';
+import { configuredCredentialProbe } from './configured-credentials';
 
 /** Persist real process admissions on the registered project; never create a TaskRun. */
 export async function verifyNativeAdmissions(
   services: Services,
   directory: string,
   _owner: RuntimeProcessIdentity,
+  configuredCredentials = false,
 ) {
   const projects = services.db.shell
     .list()
@@ -34,6 +36,7 @@ export async function verifyNativeAdmissions(
   const sessionId = 'native-durable-admission';
   const ownerKey = `verification:${basename(directory)}`;
   const store = new AdmissionStore(services.db, ownerKey);
+  const credentials = configuredCredentials ? await configuredCredentialProbe(services) : undefined;
   const prepare = () =>
     NativeAdmissions.prepare({
       db: services.db,
@@ -120,10 +123,12 @@ export async function verifyNativeAdmissions(
     session = undefined;
   };
   try {
+    await credentials?.prepared(lease);
     await start();
     assert.equal(store.read()?.status, 'active');
     assert.deepEqual(store.read()?.owner, owners[0]);
     await lease.requireActive(firstAdmission, new AbortController().signal);
+    await credentials?.active(lease);
     await assert.rejects(
       lease.requireActive(
         { ...firstAdmission, generation: firstAdmission.generation + 1 },
@@ -134,6 +139,7 @@ export async function verifyNativeAdmissions(
     await inspect('initial');
     const old = lease;
     await lease.revoke(firstAdmission, 'Explicit native verification handoff');
+    credentials?.revoked();
     await operations.requireRevoked();
     assert.equal(store.read()?.status, 'revoked');
     await assert.rejects(prepare(), /no confirmed exit/);
@@ -149,14 +155,17 @@ export async function verifyNativeAdmissions(
     assert.notEqual(lease.admission.id, firstAdmission.id);
     await assert.rejects(old.revoke(firstAdmission, 'Must not revoke the successor'), /stale/);
     await assert.rejects(old.confirmExit(firstAdmission), /stale/);
+    await credentials?.prepared(lease);
     await start();
     await assert.rejects(
       session!.send({ text: 'Resume with the fresh durable native admission only' }),
       /no model request was sent/,
     );
     await lease.requireActive(lease.admission, new AbortController().signal);
+    await credentials?.active(lease);
     await inspect('successor');
     assert.equal(store.read()?.status, 'active');
+    await credentials?.shutdownWhileActive(lease);
     await lease.revoke(lease.admission, 'Native verification completed');
     await operations.requireRevoked();
     await close();
@@ -186,11 +195,13 @@ export async function verifyNativeAdmissions(
       exitsConfirmed: true,
       taskAndC4Unchanged: true,
       modelRequests: 0,
+      ...(credentials ? { credentials: credentials.proof() } : {}),
       finalGeneration: lease.admission.generation,
       status: store.read()?.status,
       journal: config.journalPath,
     };
   } finally {
+    credentials?.close();
     await lease.revoke(lease.admission, 'Native verification cleanup');
     await close();
     await lease.confirmExit(lease.admission);

@@ -41,6 +41,9 @@ route/credential reference, отзыв устаревшего lease; positive co
 Добавлены [настройки подключений и маршрутов](builtin-agent-model-settings.md):
 main IPC, защищённое хранение и формы существующего раздела «Агенты».
 Полная приёмка BA-8 и включение встроенного агента остаются открытыми.
+Добавлен [общий credential authority](builtin-agent-configured-credentials.md)
+для settings и configured host; подготовка до spawn, два настоящих поколения
+процессов, отказы до чтения ключа и отзыв приняты на Cat-pilot, model requests 0.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не
