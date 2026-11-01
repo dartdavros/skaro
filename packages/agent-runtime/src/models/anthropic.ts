@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { CredentialPort } from '@skaro/timeline';
 import type { ConnectorCredential } from './connector-auth.ts';
+import type { ModelFetch } from './model-get.ts';
 import { nativeCatalog, nativeModelStream } from './native-transport.ts';
 import { AnthropicMessagesStream } from './anthropic-stream.ts';
 import { modelParameters, requireDirectProfile } from './direct-request.ts';
@@ -77,9 +78,11 @@ export function anthropicMessagesBody(request: NativeRequest): Record<string, un
 export class AnthropicMessagesConnector {
   private readonly credentials: CredentialPort;
   private readonly auth: ConnectorCredential;
-  constructor(credentials: CredentialPort, auth: ConnectorCredential) {
+  private readonly load?: ModelFetch;
+  constructor(credentials: CredentialPort, auth: ConnectorCredential, load?: ModelFetch) {
     this.credentials = credentials;
     this.auth = structuredClone(auth);
+    this.load = load;
   }
   complete(
     input: NativeRequest,
@@ -89,6 +92,7 @@ export class AnthropicMessagesConnector {
     const request = structuredClone(input);
     return nativeModelStream({
       credentials: this.credentials,
+      load: this.load,
       auth: this.auth,
       route: request.route,
       path: 'messages',
@@ -100,7 +104,7 @@ export class AnthropicMessagesConnector {
     });
   }
   catalog(signal: AbortSignal) {
-    return nativeCatalog(this.credentials, this.auth, 'anthropic', signal);
+    return nativeCatalog(this.credentials, this.auth, 'anthropic', signal, this.load);
   }
   continue(
     request: NativeRequest,

@@ -24,6 +24,7 @@ import { verifyNativeOwnerInput } from './native-owner-input';
 import { verifyNativeOwnerSteer } from './native-owner-steer';
 import { catPilotState } from './cat-pilot-state';
 import { verifyProjectScope } from './project-scope-proof';
+import { verifyConfiguredModelHost } from './configured-model-host';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -71,6 +72,9 @@ void app.whenReady().then(async () => {
         if ([...observedProjects].some((id) => id !== projectScope.projectId))
           throw new Error('Foreign project event during scoped verification');
         proof = { projectScope, observedProjectIds: [...observedProjects] };
+      } else if (process.argv[2] === '--configured-model-preflight') {
+        stage = 'configured-model-preflight';
+        proof = { configuredModel: await verifyConfiguredModelHost(services, directory) };
       } else if (process.argv[2] === '--native-verification') {
         stage = 'native-verification';
         proof = { native: await verifyNativeVerification(services, directory, owner) };

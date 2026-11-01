@@ -14,10 +14,12 @@ export { ModelHttpError } from './model-error.ts';
 export class OpenRouterConnector {
   private readonly auth: ConnectorCredential;
   private readonly credentials: CredentialPort;
-  constructor(credentials: CredentialPort, auth: ConnectorCredential) {
+  private readonly load: ModelFetch;
+  constructor(credentials: CredentialPort, auth: ConnectorCredential, load: ModelFetch = fetch) {
     validateModelEndpoint(auth.binding.endpoint);
     this.auth = structuredClone(auth);
     this.credentials = credentials;
+    this.load = load;
   }
 
   async limits(
@@ -29,6 +31,7 @@ export class OpenRouterConnector {
         { Authorization: `Bearer ${Buffer.from(bytes).toString('ascii')}` },
         leaseSignal,
         65_536,
+        this.load,
       )) as {
         data?: { usage?: number; limit_remaining?: number };
       };
@@ -68,7 +71,7 @@ export class OpenRouterConnector {
             const guard = new ModelSecretGuard(key);
             guard.requireSafe(body);
             const abort = AbortSignal.any([leaseSignal, AbortSignal.timeout(90_000)]);
-            const response = await fetch(
+            const response = await this.load(
               `${request.route.endpoint.replace(/\/$/, '')}/chat/completions`,
               {
                 method: 'POST',

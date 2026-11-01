@@ -1,7 +1,7 @@
 import { validateModelEndpoint, type CredentialPort, type RouteSnapshot } from '@skaro/timeline';
 import type { ConnectorCredential } from './connector-auth.ts';
 import { serverEvents } from './sse.ts';
-import { modelGetJson } from './model-get.ts';
+import { modelGetJson, type ModelFetch } from './model-get.ts';
 import { ModelSecretGuard } from './secret-guard.ts';
 import { ModelHttpError, modelFailure } from './model-error.ts';
 
@@ -39,6 +39,7 @@ export async function nativeModelStream<T>(input: {
   signal: AbortSignal;
   doneMarker?: boolean;
   onText?: (text: string) => void;
+  load?: ModelFetch;
 }): Promise<T> {
   const auth = structuredClone(input.auth);
   const route = structuredClone(input.route);
@@ -55,13 +56,16 @@ export async function nativeModelStream<T>(input: {
           const guard = new ModelSecretGuard(key);
           guard.requireSafe(body);
           const signal = AbortSignal.any([leaseSignal, AbortSignal.timeout(90_000)]);
-          const response = await fetch(`${route.endpoint.replace(/\/$/, '')}/${input.path}`, {
-            method: 'POST',
-            redirect: 'error',
-            signal,
-            headers: headers(input.authentication, key),
-            body,
-          });
+          const response = await (input.load ?? fetch)(
+            `${route.endpoint.replace(/\/$/, '')}/${input.path}`,
+            {
+              method: 'POST',
+              redirect: 'error',
+              signal,
+              headers: headers(input.authentication, key),
+              body,
+            },
+          );
           if (!response.ok) {
             await response.body?.cancel();
             throw new ModelHttpError(response.status);
@@ -115,6 +119,7 @@ export async function nativeCatalog(
   auth: ConnectorCredential,
   authentication: Authentication,
   signal: AbortSignal,
+  load?: ModelFetch,
 ): Promise<Record<string, unknown>[]> {
   auth = structuredClone(auth);
   validateModelEndpoint(auth.binding.endpoint);
@@ -133,6 +138,7 @@ export async function nativeCatalog(
           headers(authentication, Buffer.from(bytes).toString('ascii')),
           leaseSignal,
           16_777_216,
+          load,
         )) as {
           data?: Record<string, unknown>[];
           has_more?: boolean;

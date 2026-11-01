@@ -20,6 +20,7 @@ if (!(
       '--project-scope',
       '--native-admissions',
       '--configured-credentials',
+      '--configured-model-preflight',
       '--native-admission-recovery',
       '--task-admission',
     ].includes(process.argv[2])) ||
@@ -61,6 +62,11 @@ try {
     },
   });
   const env = cleanCommandEnvironment();
+  if (process.argv[2] === '--configured-model-preflight') {
+    if (process.env.SKARO_VERIFY_PROXY !== 'http://127.0.0.1:10809')
+      throw new Error('Configured model preflight requires the explicit owner VPN proxy');
+    env.SKARO_VERIFY_PROXY = process.env.SKARO_VERIFY_PROXY;
+  }
   for (const name of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA'])
     if (process.env[name]) env[name] = process.env[name];
   const child = spawn(require('electron'), [output, ...process.argv.slice(2)], {

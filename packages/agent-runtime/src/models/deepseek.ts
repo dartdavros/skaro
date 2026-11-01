@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { CredentialPort } from '@skaro/timeline';
 import type { ConnectorCredential } from './connector-auth.ts';
+import type { ModelFetch } from './model-get.ts';
 import type { ChatMessage, ChatRequest, ChatResponse } from './chat-types.ts';
 import type { NativeToolResult } from './native-types.ts';
 import { nativeCatalog, nativeModelStream } from './native-transport.ts';
@@ -104,9 +105,11 @@ class DeepSeekStream {
 export class DeepSeekChatConnector {
   private readonly credentials: CredentialPort;
   private readonly auth: ConnectorCredential;
-  constructor(credentials: CredentialPort, auth: ConnectorCredential) {
+  private readonly load?: ModelFetch;
+  constructor(credentials: CredentialPort, auth: ConnectorCredential, load?: ModelFetch) {
     this.credentials = credentials;
     this.auth = structuredClone(auth);
+    this.load = load;
   }
   complete(
     input: DeepSeekRequest,
@@ -116,6 +119,7 @@ export class DeepSeekChatConnector {
     const request = structuredClone(input);
     return nativeModelStream({
       credentials: this.credentials,
+      load: this.load,
       auth: this.auth,
       route: request.route,
       path: 'chat/completions',
@@ -128,7 +132,7 @@ export class DeepSeekChatConnector {
     });
   }
   catalog(signal: AbortSignal) {
-    return nativeCatalog(this.credentials, this.auth, 'bearer', signal);
+    return nativeCatalog(this.credentials, this.auth, 'bearer', signal, this.load);
   }
   continue(
     request: DeepSeekRequest,

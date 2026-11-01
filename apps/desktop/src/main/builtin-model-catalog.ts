@@ -3,7 +3,7 @@ import { openRouterCatalog, parseOpenRouterCatalog, type ModelFetch } from '@ska
 import type { Connection } from '@skaro/timeline';
 import type { ModelCatalogSnapshot } from '../shared/model-catalog';
 import type { BuiltinModelConfigurationStore } from './builtin-model-configuration';
-import { modelMetadataTransport } from './model-metadata-transport';
+import { modelNetworkTransport } from './model-network-transport';
 
 /** Advertised public metadata only, never account availability or permission to run a model. */
 export class BuiltinModelCatalog {
@@ -62,7 +62,7 @@ export class BuiltinModelCatalog {
   private async load(connection: Connection, signal: AbortSignal): Promise<ModelCatalogSnapshot> {
     if (this.options.verification && !this.options.proxy)
       throw new Error('Verification catalog requires the explicit owner VPN proxy');
-    this.transport ??= modelMetadataTransport(this.options.proxy);
+    this.transport ??= modelNetworkTransport(this.options.proxy);
     const load = await this.transport;
     signal.throwIfAborted();
     const raw = await openRouterCatalog(connection.endpoint, signal, load);

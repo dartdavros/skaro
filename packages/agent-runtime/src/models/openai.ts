@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { CredentialPort } from '@skaro/timeline';
 import type { ConnectorCredential } from './connector-auth.ts';
+import type { ModelFetch } from './model-get.ts';
 import { nativeCatalog, nativeModelStream } from './native-transport.ts';
 import { OpenAIResponsesStream } from './openai-stream.ts';
 import { modelParameters, requireDirectProfile, sampling } from './direct-request.ts';
@@ -44,9 +45,11 @@ export function openAIResponsesBody(request: NativeRequest): Record<string, unkn
 export class OpenAIResponsesConnector {
   private readonly credentials: CredentialPort;
   private readonly auth: ConnectorCredential;
-  constructor(credentials: CredentialPort, auth: ConnectorCredential) {
+  private readonly load?: ModelFetch;
+  constructor(credentials: CredentialPort, auth: ConnectorCredential, load?: ModelFetch) {
     this.credentials = credentials;
     this.auth = structuredClone(auth);
+    this.load = load;
   }
   complete(
     input: NativeRequest,
@@ -56,6 +59,7 @@ export class OpenAIResponsesConnector {
     const request = structuredClone(input);
     return nativeModelStream({
       credentials: this.credentials,
+      load: this.load,
       auth: this.auth,
       route: request.route,
       path: 'responses',
@@ -67,7 +71,7 @@ export class OpenAIResponsesConnector {
     });
   }
   catalog(signal: AbortSignal) {
-    return nativeCatalog(this.credentials, this.auth, 'bearer', signal);
+    return nativeCatalog(this.credentials, this.auth, 'bearer', signal, this.load);
   }
   continue(
     request: NativeRequest,

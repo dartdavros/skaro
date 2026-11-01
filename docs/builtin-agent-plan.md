@@ -47,6 +47,10 @@ main IPC, защищённое хранение и формы существую
 Добавлен [настоящий каталог OpenRouter](builtin-agent-model-catalog.md):
 GET через VPN, schema/cache/dedup и catalog-only capabilities проверены;
 picker/loading/refresh и пустой выбор проверены в штатном Electron на Cat-pilot.
+Подготовлена [сборка configured model host](builtin-agent-configured-host.md):
+четыре настоящих коннектора, явный transport и обязательные request gates;
+native turn/RPC и отказ перед POST приняты на Cat-pilot, live/replay совпали,
+owned process вышел. Это не положительная provider-приёмка активной задачи.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не

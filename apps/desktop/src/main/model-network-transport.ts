@@ -4,7 +4,7 @@ import type { ModelFetch } from '@skaro/agent-runtime';
 import { liveProxyEnvironment } from './credentials/live-proxy';
 
 /** An isolated Chromium network session honors OS proxy; verification pins the owner's VPN. */
-export async function modelMetadataTransport(proxy?: string): Promise<ModelFetch> {
+export async function modelNetworkTransport(proxy?: string): Promise<ModelFetch> {
   const explicit = proxy === undefined ? undefined : liveProxyEnvironment(proxy).HTTPS_PROXY;
   const network = session.fromPartition(`skaro-model-metadata-${randomUUID()}`, { cache: false });
   if (explicit)
