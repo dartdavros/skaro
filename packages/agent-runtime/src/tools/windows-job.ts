@@ -44,6 +44,11 @@ public static class SkaroCommandJob {
 }
 '@
 $job = [SkaroCommandJob]::Enter()
-try { & $env:SKARO_COMMAND_NODE $env:SKARO_COMMAND_ENTRY }
+# A GUI-subsystem executable (Electron) otherwise returns before its worker exits.
+# Streaming its protocol through a pipeline makes PowerShell wait inside the job.
+try {
+  & $env:SKARO_COMMAND_NODE $env:SKARO_COMMAND_ENTRY |
+    ForEach-Object { [Console]::Out.WriteLine($_) }
+}
 finally { [SkaroCommandJob]::CloseHandle($job) | Out-Null }
 `;

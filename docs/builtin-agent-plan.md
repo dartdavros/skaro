@@ -9,7 +9,8 @@ OpenRouter проверен живыми cases; прямые API отложен�
 task browser/media. [Итоговая таблица](builtin-agent-ba5-acceptance.md) фиксирует
 доказательства и платформенные ограничения.
 BA-6 начат: [run_check и привязка доказательств к входам](builtin-agent-checks.md);
-полная приёмка открыта. BA-7–BA-9 не начаты.
+добавлены read-only criteria/completion/C4 projection и evidence preflight
+(01.11.2026). Полная приёмка открыта. BA-7–BA-9 не начаты.
 Основание: [ADR-0047](adr/0047-builtin-agent.md), решение владельца об основном
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6, без включения в продуктовый UI.

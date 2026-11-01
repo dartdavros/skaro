@@ -3,6 +3,43 @@
 История выполнения [плана](builtin-agent-plan.md). Результаты каждого этапа
 относятся к его объёму; они не означают готовность всего встроенного агента.
 
+## Продолжение BA-6, 01.11.2026
+
+Добавлена read-only проекция действующих criteria/completion/C4 из TaskRuns и
+предварительная оценка evidence в primary runtime journal. Criterion IDs имеют
+project/task/revision namespace, checkout и admission session проверяются.
+Сверяются host-состояние, полные входы и измеряемое окружение до/после;
+повторная и параллельная оценка с тем же ID запрещены. Продуктовый task/chat
+host не включён, preflight не является разрешением на последующий submit.
+
+На настоящей T-008 Cat-pilot прочитаны 9 критериев. Реальный `git diff --check`
+через Windows Job Object прошёл, но его evidence не объявлено выполнением
+критерия: запуск неактивен, C4 отсутствует, зависимости требуют review.
+Проверены stale criteria, unknown ID, forged reference, reuse/concurrent ID,
+project/checkout binding и прежний отказ submit_result неактивному scope.
+Task и запись C4 остались неизменны; модельных запросов — 0. Proof в userData:
+`verification/extensions-f2b0354d-056b-444c-bbbd-a09d45643ded/proof.json`.
+Тот же прогон проверил настоящие HTTP/internal handlers, route boundaries и
+сохранённые owner decisions без новых модельных запросов.
+
+Первые два запуска остановились до admission command supervisor. Сначала
+исправлен путь к собранному command worker в проверочном driver, затем найден
+дефект самого Windows supervisor: PowerShell не ждал GUI-subsystem Electron и
+закрывал Job Object. Потоковый protocol pipeline удерживает supervisor;
+исполнитель и Job Object сохранены. Два последующих живых прогона прошли.
+Пять целевых тестов builtin-command-tools/builtin-checks подтвердили approval,
+stdin/timeout, остановку дерева, crash/recovery, hashes и retry restrictions.
+Два сценария собранного native worker также прошли. Штатная финальная
+`pnpm build`, TypeScript timeline/runtime/desktop main, ESLint, Prettier и
+`git diff --check` прошли. Изменённые исходники не превышают 300 строк.
+Сохранились предупреждения сторонних Zod/Claude SDK/web-tree-sitter.
+Полный suite не запускался, UI не менялся, новая browser-проверка не выполнялась.
+
+Полная BA-6 открыта: аттестация внешней среды/зависимостей, доказанный полный
+цикл исправления значимого дефекта задачи и применение evidence при настоящей
+сдаче. Исправление supervisor — найденный runtime-дефект, не приёмка автономного
+исправления Cat-pilot. Подробнее: [контракт и ограничения](builtin-agent-checks.md).
+
 ## Начало BA-6, 31.10.2026
 
 Browser evidence добавлено в общую схему check_evidence: source/revision/args hash,

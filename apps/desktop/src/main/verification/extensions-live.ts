@@ -11,6 +11,7 @@ import { verifyContextRoutes } from './context-routes';
 import { verifyBrowserExtensions } from './browser-extensions';
 import { verifyOwnerContext } from './owner-context';
 import { catPilotTarget } from './browser-target';
+import { verifyAcceptanceInspection } from './acceptance-live';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -46,10 +47,13 @@ void app.whenReady().then(async () => {
       const http = await verifyHttpExtensions(services, directory, owner);
       stage = 'context-routes';
       const routes = await verifyContextRoutes(directory, owner);
+      stage = 'acceptance-inspection';
+      const acceptance = await verifyAcceptanceInspection(services, directory, owner);
       stage = 'owner-context';
       proof = {
         http,
         routes,
+        acceptance,
         owner: await verifyOwnerContext(join(data, 'verification/openrouter-ba4'), owner),
       };
     }

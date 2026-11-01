@@ -80,6 +80,8 @@ export interface RuntimeEnvironmentPort {
 /** Read-only projection of the existing completion service, never a second task state store. */
 export interface RuntimeAcceptanceState {
   revision: string;
+  /** Older projections without this binding cannot support evidence preflight. */
+  binding?: { scope: Readonly<SkaroScope>; checkout: string };
   criteriaRevision: string;
   criteria: readonly { id: string; met: boolean; evidenceIds: readonly string[] }[];
   openDecisions: readonly string[];

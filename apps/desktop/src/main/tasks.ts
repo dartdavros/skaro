@@ -24,11 +24,16 @@ import { startTaskEnvironment } from './task-environment-tool';
 import { clearTaskChat } from './task-clear';
 import { configureTaskEnvironment } from './task-environment-config-tool';
 import type { ConfigureEnvironmentArgs } from '@skaro/mcp-server';
+import type { ProcessAdmissionPort } from '@skaro/timeline';
+import { builtinAcceptancePort } from './builtin-acceptance';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
 
 /** Public API: composes focused task-run services without owning their workflows. */
 export class TaskRuns {
+  builtinAcceptance(scope: SkaroScope, admissions: Pick<ProcessAdmissionPort, 'requireActive'>) {
+    return builtinAcceptancePort(this.engine, scope, admissions);
+  }
   projectChanged(projectId: string): void {
     this.engine.merges.coordinator.changed(projectId);
     this.catalog.invalidate(projectId);

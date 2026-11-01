@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   RuntimeSession,
   type RuntimeExtensionHost,
@@ -19,6 +19,7 @@ export async function extensionSession(
   config.sessionId = `extensions-${name}`;
   config.journalPath = join(directory, `${name}.jsonl`);
   config.tools!.readOnly = false;
+  config.tools!.commandEntry = resolve('apps/desktop/out/main/agent-command-worker.js');
   if (cwd) {
     config.tools!.cwd = cwd;
     config.context = undefined;
