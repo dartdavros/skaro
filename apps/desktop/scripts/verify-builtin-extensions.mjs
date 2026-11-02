@@ -28,6 +28,7 @@ if (!(
       '--native-admission-recovery',
       '--task-admission',
       '--task-launch-preflight',
+      '--task-stop-review',
     ].includes(process.argv[2])) ||
   (process.argv.length === 4 && process.argv[2] === '--browser') ||
   (process.argv.length === 5 &&
@@ -78,6 +79,7 @@ try {
       '--configured-plan-live',
       '--configured-plan-review',
       '--task-launch-preflight',
+      '--task-stop-review',
     ].includes(process.argv[2])
   ) {
     if (process.env.SKARO_VERIFY_PROXY !== 'http://127.0.0.1:10809')

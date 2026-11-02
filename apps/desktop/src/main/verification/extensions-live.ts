@@ -30,6 +30,7 @@ import { verifyConfiguredPlanLive } from './configured-plan-live';
 import { readConfiguredPlanReview } from './configured-plan-review';
 import { verifyReportedModelUsage } from './model-usage-report';
 import { verifyTaskLaunchPreflight } from './task-launch-preflight';
+import { prepareTaskStopReview } from './task-stop-review';
 import assert from 'node:assert/strict';
 
 app.setName('Skaro');
@@ -85,7 +86,10 @@ void app.whenReady().then(async () => {
           : {},
       );
       const projectScope = verifyProjectScope(services);
-      if (process.argv[2] === '--task-launch-preflight') {
+      if (process.argv[2] === '--task-stop-review') {
+        stage = 'task-stop-review';
+        proof = await prepareTaskStopReview(services, directory, data);
+      } else if (process.argv[2] === '--task-launch-preflight') {
         stage = 'task-launch-preflight';
         const checked = await verifyTaskLaunchPreflight(services);
         assert.equal(forbiddenHostPreparations, 0);

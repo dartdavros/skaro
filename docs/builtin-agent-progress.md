@@ -30,6 +30,9 @@ Skaro; single-instance blocker устранён. [Новый launch preflight](b
 Реализована [остановка builtin-задачи](builtin-agent-task-stop.md): teardown
 native transport и барьер для отложенного ввода/нового admission. Положительный
 ActiveRun/модельный ход этим не объявляются принятыми.
+Владелец выбрал T-006 для следующего сценария. [Локальный review пакет](builtin-agent-task-stop-review.md)
+подготовлен без run/POST; задача и C4 неизменны. До исполнения нужны runnable
+driver, общий учёт настоящего task journal и отдельное разрешение на данные/запросы.
 
 ## Подробные результаты и доказательства
 
