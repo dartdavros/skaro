@@ -4,7 +4,7 @@ import { sessionFileScope } from '../tools/session-scope.ts';
 import { checkEvidence } from './checks.ts';
 import type { EvidenceReference } from './evidence.ts';
 import { fingerprint } from './inputs.ts';
-import { unresolvedVerificationEffects } from './effects.ts';
+import { unresolvedOperationalEffects } from '../context/effect-boundary.ts';
 
 export interface RecordedAssessment {
   kind: 'verification-assessment';
@@ -77,7 +77,7 @@ export async function requireRecordedSubmission(
     Object.keys(journal.state.interactions).length
   )
     throw new Error('The builtin task session is stopped or awaiting a decision');
-  const unresolved = unresolvedVerificationEffects(journal);
+  const unresolved = unresolvedOperationalEffects(journal);
   if (
     unresolved.length > 1 ||
     unresolved.some(

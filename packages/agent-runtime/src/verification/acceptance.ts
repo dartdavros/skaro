@@ -7,7 +7,7 @@ import { captureCheckInputs, fingerprint } from './inputs.ts';
 import { captureVerificationEnvironment } from './environment.ts';
 import { requirePlannedCheck } from './plans.ts';
 import { schemas } from '../tools/schemas.ts';
-import { unresolvedVerificationEffects } from './effects.ts';
+import { unresolvedOperationalEffects } from '../context/effect-boundary.ts';
 
 const inspecting = new WeakMap<RuntimeJournal, Set<string>>();
 
@@ -54,7 +54,7 @@ async function inspect(input: InspectionInput) {
   if (Object.keys(journal.state.interactions).length)
     reasons.push('Runtime interactions remain open');
   if (
-    unresolvedVerificationEffects(journal).some(
+    unresolvedOperationalEffects(journal).some(
       ([id, effect]) => id !== input.id || effect.state !== 'pending',
     )
   )

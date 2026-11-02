@@ -10,7 +10,7 @@ import { CommandCancelled } from './owner-commands';
 import type { ChatEngine } from './chat-engine';
 import { chatSessionOptions } from './chat-session-options';
 import { startBuiltinChatSession } from './builtin-chat-session';
-import { revokeNativeSession, confirmNativeSessionExit } from './native/session-lease';
+import { retireNativeSession } from './native/session-retirement';
 
 export class ChatSessions {
   private readonly ctx: ChatEngine;
@@ -113,15 +113,15 @@ export class ChatSessions {
       saved.projectId !== live.projectId ||
       saved.agent !== live.chat.agent
     ) {
-      const lease = await revokeNativeSession(live, 'Chat changed during startup');
       live.grant?.revoke();
       live.grant = undefined;
-      try {
-        await session.close();
-      } finally {
-        await this.processes.stop(`chat.${live.chat.id}`);
-        await confirmNativeSessionExit(live, lease);
-      }
+      await retireNativeSession(live, 'Chat changed during startup', async () => {
+        try {
+          await session.close();
+        } finally {
+          await this.processes.stop(`chat.${live.chat.id}`);
+        }
+      });
       throw new CommandCancelled();
     }
     live.session = session;
@@ -141,17 +141,23 @@ export class ChatSessions {
       this.ctx.history.failTurn(live, error);
     }
     if (live.session === session) {
-      const lease = live.builtinAdmission
-        ? await revokeNativeSession(live, 'Chat runtime exited')
-        : undefined;
-      if (live.session !== session) return;
+      const builtin = !!live.builtinAdmission;
       live.session = undefined;
-      live.grant?.revoke();
-      live.grant = undefined;
-      const turn = live.timeline.state.turns.at(-1);
-      if (turn && !turn.outcome)
-        this.ctx.history.failTurn(live, new Error('The agent process exited'));
-      if (lease) await confirmNativeSessionExit(live, lease);
+      const cleanup = async () => {
+        live.grant?.revoke();
+        live.grant = undefined;
+        if (builtin) await this.processes.stop(`chat.${live.chat.id}`);
+        const turn = live.timeline.state.turns.at(-1);
+        if (turn && !turn.outcome)
+          this.ctx.history.failTurn(live, new Error('The agent process exited'));
+      };
+      try {
+        if (builtin) await retireNativeSession(live, 'Chat runtime exited', cleanup);
+        else await cleanup();
+      } catch (error) {
+        live.stopError = errorText(error);
+        this.ctx.history.notice(live, 'other', 'error', live.stopError);
+      }
       this.ctx.listChanged(live.projectId, live.chat.id);
     }
   }
@@ -166,34 +172,32 @@ export class ChatSessions {
     live.grant?.revoke();
     live.grant = undefined;
     try {
-      if (live.builtinAdmission) await revokeNativeSession(live, 'Chat operation cancelled');
-      await operationTimeout(
-        Promise.all([
-          this.ctx.planningContinuation.settled(live),
-          session?.close(),
-          attaching?.then(
-            (attached) => attached.close(),
-            (error: unknown) => {
-              if (!(error instanceof CommandCancelled) && !live.operation.signal.aborted)
-                throw error;
-            },
-          ),
-        ]).then(async () => {
-          await pumping;
-        }),
-        15_000,
-        'Agent session shutdown was not confirmed',
-      );
+      await retireNativeSession(live, 'Chat detached', async () => {
+        try {
+          await operationTimeout(
+            Promise.all([
+              this.ctx.planningContinuation.settled(live),
+              session?.close(),
+              attaching?.then(
+                (attached) => attached.close(),
+                (error: unknown) => {
+                  if (!(error instanceof CommandCancelled) && !live.operation.signal.aborted)
+                    throw error;
+                },
+              ),
+            ]).then(async () => {
+              await pumping;
+            }),
+            15_000,
+            'Agent session shutdown was not confirmed',
+          );
+        } finally {
+          await this.processes.stop(`chat.${live.chat.id}`);
+        }
+      });
     } finally {
-      const lease = live.builtinAdmission;
-      try {
-        await revokeNativeSession(live, 'Chat detached');
-      } finally {
-        await this.processes.stop(`chat.${live.chat.id}`);
-        await confirmNativeSessionExit(live, lease);
-      }
+      this.ctx.history.flush(live);
     }
-    this.ctx.history.flush(live);
     if (!this.ctx.closing && !live.stopping && !live.stopError) live.operation.renew();
   }
 

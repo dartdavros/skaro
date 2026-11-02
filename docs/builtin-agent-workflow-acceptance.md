@@ -104,6 +104,12 @@ background checker проходит. Проверено также выполн�
 
 ## Следующая положительная приёмка
 
+Решение владельца после подготовки пакета: «Только локальный код, без новых POST».
+Предложенные ниже 40 запросов, реализация/сдача T-006/T-008 и установка браузеров
+не разрешены этим ответом и не выполнялись. Активный предел остаётся 89 intents;
+повторно спрашивать тот же допуск без нового указания владельца не требуется.
+Полная BA-7 остаётся открытой до разрешённой положительной приёмки.
+
 Рядом с proof подготовлен `task-workflow-review.json`, canonical SHA256
 `600af359e54afa9328a70a418205f04784220a016778f298bb1bbcc3bc969cb1`.
 Это предложение состава данных/действий: 14 настоящих source files, инструкции
@@ -119,3 +125,30 @@ ceiling $0.95, общий лимит владельца $1. Требуется �
 состав данных/действий и расширение счётчика; подготовка не выдаёт его.
 Прямого fallback нет: только `http://127.0.0.1:10809`. Публичный model catalog
 через этот VPN proxy вернул HTTP 200, без ключа и данных проекта.
+
+## Локальные исправления после решения владельца
+
+Operational gate write tools использует ту же primary-проверку, что и verification:
+неизвестные исходы команд/tools блокируют действия; старое unknown model billing
+может быть отделено только после более позднего подтверждённого continuation.
+Неподкреплённые model metadata дают отказ. Настоящий прежний T-006 primary прочитан
+напрямую, без services/model host: два unknown model receipts сохранились,
+operational blockers — 0. Это не положительная проверка записи после Stop.
+
+Task/chat startup, detach, handoff и неожиданное завершение используют общий
+retirement: отзыв lease, ограниченное ожидание host closer, cleanup и независимое
+подтверждение OS exit. Ошибка или зависание closer не пропускают очистку процесса;
+ошибки возвращаются вызывающему коду. Closer фиксируется до первого await, поэтому
+позднее завершение старой операции не закрывает новый host. Runtime exit сообщает
+ошибку teardown и сохраняет stopError вместо unhandled pump rejection.
+
+Контракт retirement проверяется настоящими SQLite admissions и собственными
+дочерними OS-процессами, без project/task/run seeds, model replies или mock API.
+Отдельно проверяются отказ closer, его deadline и отказ cleanup: процесс должен
+выйти, admission стать exited, старый lease отклоняться, а ошибка сохраниться.
+
+После локальных исправлений прошли production build, main/runtime typecheck,
+lint и 20 целевых тестов в 6 файлах: retirement, operational effects, submission,
+настоящие file/command/question/recovery tools и compiled native worker.
+Полный suite не запускался. Максимальный изменённый файл — 288 строк.
+UI и source Cat-pilot не менялись; новых model POST, задач и browser installs нет.

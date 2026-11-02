@@ -5,12 +5,9 @@ import type { TaskRunEngine } from './task-run-engine';
 import { serializeTaskMutation } from './project-task-mutations';
 import { builtinRunSettings } from './builtin-run-settings';
 import { taskSessionOptions } from './task-session-options';
-import {
-  builtinTaskAdmission,
-  confirmBuiltinTaskExit,
-  revokeBuiltinTaskAdmission,
-} from './builtin-task-admission';
+import { builtinTaskAdmission } from './builtin-task-admission';
 import { builtinSessionDirectory } from './builtin-session-directory';
+import { retireNativeSession } from './native/session-retirement';
 
 /** Main-only review/metadata lease over a genuine stopped run. Never acknowledges input or spawns a model. */
 export async function prepareBuiltinTaskReview(
@@ -55,9 +52,9 @@ export async function prepareBuiltinTaskReview(
       close() {
         return (closing ??= (async () => {
           startup.abort();
-          const lease = await revokeBuiltinTaskAdmission(active, 'Builtin task review finished');
-          await ctx.processes.stop(active.run.id);
-          await confirmBuiltinTaskExit(active, lease);
+          await retireNativeSession(active, 'Builtin task review finished', () =>
+            ctx.processes.stop(active.run.id),
+          );
         })());
       },
     };

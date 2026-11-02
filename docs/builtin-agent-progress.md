@@ -2,6 +2,8 @@
 
 Актуально на 02.11.2026. Сейчас BA-7: внутренняя интеграция task/chat lifecycle.
 Полная приёмка BA-7 и переход к основному агенту ещё не завершены.
+Последнее решение владельца — только локальный код, без новых POST. Живая сдача
+T-006/T-008 и расширение счётчика не выполняются; предел остаётся 89 intents.
 
 | Этап | Что реализовано или проверено | Что осталось |
 | --- | --- | --- |
@@ -13,7 +15,11 @@
 | BA-8 | Реальные настройки Connection/Route и каталог в существующем UI | Product agent catalog/picker, создание builtin-чата, сквозная UI-приёмка |
 | BA-9 | Локальный Windows x64 payload и packaged settings/catalog | Остальные платформы, полный выпуск, приёмка перед сменой default |
 
-Последние изменения: `f521914` — корректное продолжение после unknown model outcome;
+`bedaf68` — guards сдачи, task environment и browser/MCP integration.
+Следующий локальный фикс объединяет operational effects gate и надёжный teardown:
+ошибка/deadline host closer не пропускает cleanup/OS exit; 20 целевых тестов,
+типы/lint/production build прошли. Новых POST после решения владельца нет.
+`f521914` — корректное продолжение после unknown model outcome;
 настоящие T-006 Stop/resume, main restart и повторное восстановление истории приняты.
 Следом приняты [локальные handoff/submit guards и environment/MCP preflight](builtin-agent-workflow-acceptance.md):
 22 целевых теста, production build, POST 0. Полный task workflow ещё не принят.

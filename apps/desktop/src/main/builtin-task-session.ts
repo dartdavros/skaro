@@ -12,18 +12,14 @@ import type { ActiveRun } from './task-run-model';
 import type { NativeAdmissions } from './native/admissions';
 import type { NativeSessionHost } from './native/host-binding';
 import { startBuiltinNativeSession } from './native/bundled';
-import {
-  builtinTaskAdmission,
-  confirmBuiltinTaskExit,
-  revokeBuiltinTaskAdmission,
-  requireCurrentBuiltinTask,
-} from './builtin-task-admission';
+import { builtinTaskAdmission, requireCurrentBuiltinTask } from './builtin-task-admission';
 import { requireBuiltinTaskSessionPolicy } from './builtin-task-session-policy';
 import { taskSessionOptions } from './task-session-options';
 import { builtinAcceptancePort } from './builtin-acceptance';
 import { builtinJournalReplay } from './builtin-journal-replay';
 import { builtinSessionDirectory } from './builtin-session-directory';
 import { builtinRunSettings } from './builtin-run-settings';
+import { retireNativeSession } from './native/session-retirement';
 
 /** Main-only composition port. A saved route alone cannot prepare a task's model/payload/budget grants. */
 export interface BuiltinTaskSessionPreparer {
@@ -129,17 +125,14 @@ export async function startBuiltinTaskSession(
     return { session, segment, resume };
   } catch (error) {
     if (lease) {
-      try {
-        if (!active.builtinClose) await prepared?.close();
-      } finally {
-        const owned = await revokeBuiltinTaskAdmission(active, 'Builtin task startup failed');
+      if (!active.builtinClose && prepared) active.builtinClose = () => prepared!.close();
+      await retireNativeSession(active, 'Builtin task startup failed', async () => {
         try {
           await session?.close();
         } finally {
           await ctx.processes.stop(run.id);
-          await confirmBuiltinTaskExit(active, owned);
         }
-      }
+      });
     }
     throw error;
   } finally {

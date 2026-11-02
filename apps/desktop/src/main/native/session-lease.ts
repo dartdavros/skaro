@@ -7,10 +7,11 @@ export interface NativeSessionLeaseOwner {
 
 export async function revokeNativeSession(owner: NativeSessionLeaseOwner, reason: string) {
   const lease = owner.builtinAdmission;
+  const close = owner.builtinClose;
   try {
     if (lease) await lease.revoke(lease.admission, reason);
   } finally {
-    await owner.builtinClose?.();
+    await close?.();
   }
   return lease;
 }

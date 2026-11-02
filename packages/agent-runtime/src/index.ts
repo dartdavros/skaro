@@ -53,7 +53,7 @@ export type * from './extensions/registry.ts';
 export { connectMcpExtension } from './extensions/mcp.ts';
 export { createMcpImageStore } from './extensions/mcp-content.ts';
 export { inspectVerificationAcceptance } from './verification/acceptance.ts';
-export { unresolvedVerificationEffects } from './verification/effects.ts';
+export { unresolvedOperationalEffects as unresolvedVerificationEffects } from './context/effect-boundary.ts';
 export type { RuntimeVerificationHost } from './verification/host.ts';
 export { VerificationClient } from './verification/ipc-client.ts';
 export { VerificationServer } from './verification/ipc-host.ts';

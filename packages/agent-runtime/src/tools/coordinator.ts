@@ -9,6 +9,7 @@ import { schemas, writeTools, isToolName } from './schemas.ts';
 import type { RuntimeExtensionHost } from '../extensions/registry.ts';
 import { UnknownToolOutcome } from './effect-error.ts';
 import type { RuntimeVerificationHost } from '../verification/host.ts';
+import { unresolvedOperationalEffects } from '../context/effect-boundary.ts';
 
 export class ToolCoordinator {
   readonly registry: ToolRegistry;
@@ -135,7 +136,7 @@ export class ToolCoordinator {
       (extensionWrite || (isToolName(name) && writeTools.has(name))) &&
       name !== 'stop_process' &&
       name !== 'update_plan' &&
-      Object.values(state.effects).some((effect) => effect.state === 'unknown')
+      unresolvedOperationalEffects(this.journal).some(([, effect]) => effect.state === 'unknown')
     )
       throw new Error('An unknown effect outcome blocks new tools');
     const command =

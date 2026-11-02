@@ -46,3 +46,13 @@ export function requiresFreshModelConversation(journal: Pick<RuntimeJournal, 'st
     throw new Error('Unknown model outcome lacks its primary provenance');
   return invalidated >= continuation;
 }
+
+/** Operational gates retain unknown billing, but never mistake it for an unknown command result. */
+export function unresolvedOperationalEffects(journal: Pick<RuntimeJournal, 'state' | 'records'>) {
+  const confirmedLaterConversation = !requiresFreshModelConversation(journal);
+  return Object.entries(journal.state.effects).filter(
+    ([, effect]) =>
+      effect.state !== 'completed' &&
+      !(effect.state === 'unknown' && confirmedLaterConversation && models.has(effect.name)),
+  );
+}

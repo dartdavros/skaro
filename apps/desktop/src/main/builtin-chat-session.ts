@@ -7,7 +7,7 @@ import { requireBuiltinChatSessionPolicy } from './builtin-chat-session-policy';
 import { chatSessionOptions } from './chat-session-options';
 import { TaskRunProcesses } from './task-run-processes';
 import { startBuiltinNativeSession } from './native/bundled';
-import { revokeNativeSession, confirmNativeSessionExit } from './native/session-lease';
+import { retireNativeSession } from './native/session-retirement';
 import { builtinJournalReplay } from './builtin-journal-replay';
 import { builtinSessionDirectory } from './builtin-session-directory';
 import { builtinChatSettings, requireBuiltinChatSettings } from './builtin-chat-settings';
@@ -94,17 +94,14 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
     requireBuiltinChatSettings(ctx, live, settings);
     return { session, segment, resume, signal };
   } catch (error) {
-    try {
-      if (!live.builtinClose) await prepared?.close();
-    } finally {
-      const owned = await revokeNativeSession(live, 'Builtin chat startup failed');
+    if (!live.builtinClose && prepared) live.builtinClose = () => prepared!.close();
+    await retireNativeSession(live, 'Builtin chat startup failed', async () => {
       try {
         await session?.close();
       } finally {
         await processes.stop(`chat.${chat.id}`);
-        await confirmNativeSessionExit(live, owned);
       }
-    }
+    });
     throw error;
   }
 }

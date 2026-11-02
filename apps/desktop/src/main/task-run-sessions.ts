@@ -9,7 +9,7 @@ import { taskRunDirectory } from './task-run-directory';
 import { closeSessionLog } from './close-session-log';
 import { taskSessionOptions } from './task-session-options';
 import { startBuiltinTaskSession } from './builtin-task-session';
-import { revokeBuiltinTaskAdmission, confirmBuiltinTaskExit } from './builtin-task-admission';
+import { retireNativeSession } from './native/session-retirement';
 import { CommandCancelled } from './owner-commands';
 import { requireTaskNotStopping } from './builtin-task-stop';
 
@@ -84,8 +84,9 @@ export class TaskRunSessions {
       active.grant.revoke();
       active.grant = undefined;
       if (active.builtinAdmission) {
-        const lease = await revokeBuiltinTaskAdmission(active, 'Task session startup failed');
-        await confirmBuiltinTaskExit(active, lease);
+        await retireNativeSession(active, 'Task session startup failed', () =>
+          this.ctx.processes.stop(run.id),
+        );
       }
       if (resume) this.ctx.history.notice(active, 'session_lost', 'error', errorText(error));
       throw error;
@@ -111,15 +112,15 @@ export class TaskRunSessions {
       saved.agent !== active.run.agent ||
       saved.retiredAt !== undefined
     ) {
-      const lease = await revokeBuiltinTaskAdmission(active, 'Task changed during session startup');
       active.grant?.revoke();
       active.grant = undefined;
-      try {
-        await session.close();
-      } finally {
-        await this.ctx.processes.stop(active.run.id);
-        await confirmBuiltinTaskExit(active, lease);
-      }
+      await retireNativeSession(active, 'Task changed during session startup', async () => {
+        try {
+          await session.close();
+        } finally {
+          await this.ctx.processes.stop(active.run.id);
+        }
+      });
       if (epoch !== undefined && active.deliveryEpoch !== epoch) throw new CommandCancelled();
       throw new Error('Task changed during session startup');
     }
@@ -143,18 +144,24 @@ export class TaskRunSessions {
       this.ctx.events.failTurn(active, error);
     }
     if (active.session === session && !active.switching) {
-      const lease = active.builtinAdmission
-        ? await revokeBuiltinTaskAdmission(active, 'Task runtime exited')
-        : undefined;
-      if (active.session !== session || active.switching) return;
+      const builtin = !!active.builtinAdmission;
       active.session = undefined;
-      active.grant?.revoke();
-      active.grant = undefined;
-      // A turn still open when the process went away ends here (agent-output.md 6).
-      const turn = active.timeline.state.turns.at(-1);
-      if (turn && !turn.outcome)
-        this.ctx.events.failTurn(active, new Error('The agent process exited'));
-      if (lease) await confirmBuiltinTaskExit(active, lease);
+      const cleanup = async () => {
+        active.grant?.revoke();
+        active.grant = undefined;
+        if (builtin) await this.ctx.processes.stop(active.run.id);
+        // A turn still open when the process went away ends here (agent-output.md 6).
+        const turn = active.timeline.state.turns.at(-1);
+        if (turn && !turn.outcome)
+          this.ctx.events.failTurn(active, new Error('The agent process exited'));
+      };
+      try {
+        if (builtin) await retireNativeSession(active, 'Task runtime exited', cleanup);
+        else await cleanup();
+      } catch (error) {
+        active.stopError = errorText(error);
+        this.ctx.history.notice(active, 'other', 'error', active.stopError);
+      }
       this.ctx.changed(active.projectId, active.taskId);
     }
   }
@@ -163,20 +170,26 @@ export class TaskRunSessions {
     // An attachment already in flight must not publish a new process after cleanup has run.
     active.builtinStartup?.abort(new Error('Builtin task detached during startup'));
     await active.attaching?.catch(() => undefined);
-    const lease = active.builtinAdmission
-      ? await revokeBuiltinTaskAdmission(active, 'Task session detached')
-      : undefined;
+    const builtin = !!active.builtinAdmission;
     const session = active.session;
     active.session = undefined;
     active.grant?.revoke();
     active.grant = undefined;
-    await this.ctx.processes.stop(active.run.id);
-    await session?.close().catch(() => undefined);
-    if (lease) await confirmBuiltinTaskExit(active, lease);
-    this.ctx.history.flush(active);
-    // A closed session ends no turn by itself: its slot must not stay taken.
-    active.release?.();
-    active.release = undefined;
+    try {
+      await retireNativeSession(active, 'Task session detached', async () => {
+        try {
+          await this.ctx.processes.stop(active.run.id);
+        } finally {
+          if (builtin) await session?.close();
+          else await session?.close().catch(() => undefined);
+        }
+      });
+    } finally {
+      this.ctx.history.flush(active);
+      // A closed session ends no turn by itself: its slot must not stay taken.
+      active.release?.();
+      active.release = undefined;
+    }
   }
 
   /** A handoff must prove shutdown; a timeout/error leaves the old run frozen for retry. */
@@ -185,23 +198,32 @@ export class TaskRunSessions {
       active.builtinStartup.abort(new Error('Builtin task changed agent during startup'));
       await active.attaching?.catch(() => undefined);
     }
-    const lease = active.builtinAdmission
-      ? await revokeBuiltinTaskAdmission(active, 'Task agent handoff')
-      : undefined;
+    if (active.builtinAdmission) {
+      const session = active.session;
+      active.session = undefined;
+      return retireNativeSession(active, 'Task agent handoff', async () => {
+        active.grant?.revoke();
+        active.grant = undefined;
+        try {
+          await this.ctx.processes.stop(active.run.id);
+        } finally {
+          await session?.close();
+        }
+        await active.pumping;
+      });
+    }
     active.grant?.revoke();
     active.grant = undefined;
     const session = active.session;
     if (session) {
-      if (!lease)
-        for (const item of active.timeline.state.items)
-          if (item.kind === 'command' && item.background?.state === 'running')
-            await session.stopBackground(item.background.taskId);
+      for (const item of active.timeline.state.items)
+        if (item.kind === 'command' && item.background?.state === 'running')
+          await session.stopBackground(item.background.taskId);
       await this.ctx.processes.stop(active.run.id);
       await session.close();
       await active.pumping;
       active.session = undefined;
     } else await this.ctx.processes.stop(active.run.id);
-    if (lease) await confirmBuiltinTaskExit(active, lease);
   }
 
   async close(): Promise<void> {
