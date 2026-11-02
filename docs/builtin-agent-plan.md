@@ -95,6 +95,9 @@ OpenAI/Anthropic и явный каталог инструментов task host
 Подключена [внутренняя chat-session ветка](builtin-agent-chat-session.md):
 настоящий ChatRecord, chat/import operation lifetime, process ownership и
 общий configured model host. Положительная Electron-приёмка открыта.
+Исправлено [восстановление ленты по primary journal](builtin-agent-journal-replay.md):
+не переиздаёт старые inputs/terminals, восстанавливает недостающий raw tail,
+сохраняет builtin turn IDs и отделяет новый журнал после очистки истории.
 BA-* — локальные ID плана, не созданные задачи Skaro.
 
 ## Объём и зависимости

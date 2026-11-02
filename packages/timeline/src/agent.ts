@@ -66,6 +66,8 @@ export interface SessionOptions {
   /** Optional worker sink: receives an already encoded line without main-thread JSON work. */
   rawSerialized?: (line: Uint8Array) => void;
   rawScope?: { startedAt: number; segment?: number; runId?: string };
+  /** Bundled primary-journal delivery only; managed adapters retain their native replay. */
+  journalReplay?: import('./builtin-session.ts').BuiltinJournalReplayBoundary;
   /** Values accepted through secret questions, redacted before leaving the session worker. */
   secretValues?: () => string[];
   /** Time and attachments for the projection. */

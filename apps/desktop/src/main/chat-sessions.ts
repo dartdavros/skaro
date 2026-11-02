@@ -133,7 +133,7 @@ export class ChatSessions {
   async pump(live: LiveChat, session: AgentSession, segment: number): Promise<void> {
     try {
       for await (const event of session.events) {
-        const projected = segmentTurns(segment, event);
+        const projected = segmentTurns(live.chat.agent === 'skaro' ? 0 : segment, event);
         this.ctx.history.onEvent(live, projected);
         this.ctx.planningContinuation.onEvent(live, projected);
       }

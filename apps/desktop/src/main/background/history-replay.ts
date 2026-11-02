@@ -21,8 +21,11 @@ export async function replayHistory(
   let now = startedAt;
   let segment = -1;
   let segments = 0;
+  let segmentAgent = agent;
+  let adapterVersion: string | undefined;
   const context = { now: () => now, attachImage: attachments.attachImage };
-  const emit = (event: TimelineEvent) => saved(segmentTurns(segment, event));
+  const emit = (event: TimelineEvent) =>
+    saved(segmentTurns(segmentAgent === 'skaro' ? 0 : segment, event));
 
   let projector: Projector | undefined;
   const input = createReadStream(path, { encoding: 'utf8' });
@@ -41,7 +44,15 @@ export async function replayHistory(
         if (raw.line.skaro === 'segment') {
           segment++;
           segments++;
-          projector = (await projectorFor(raw.line.agent, raw.line.adapterVersion))(context, emit);
+          const create = await projectorFor(raw.line.agent, raw.line.adapterVersion);
+          const continuous =
+            projector &&
+            segmentAgent === 'skaro' &&
+            raw.line.agent === 'skaro' &&
+            adapterVersion === raw.line.adapterVersion;
+          segmentAgent = raw.line.agent;
+          adapterVersion = raw.line.adapterVersion;
+          if (!continuous) projector = create(context, emit);
         } else if (raw.line.skaro === 'event') {
           // Saved events already contain scoped turn ids.
           saved(raw.line.event);

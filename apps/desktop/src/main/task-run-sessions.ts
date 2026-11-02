@@ -121,7 +121,7 @@ export class TaskRunSessions {
   async pump(active: ActiveRun, session: AgentSession, segment: number): Promise<void> {
     try {
       for await (const event of session.events) {
-        const scoped = segmentTurns(segment, event);
+        const scoped = segmentTurns(active.run.agent === 'skaro' ? 0 : segment, event);
         this.ctx.events.onEvent(
           active,
           active.run.previousRunId ? runEvent(scoped, active.run.id) : scoped,

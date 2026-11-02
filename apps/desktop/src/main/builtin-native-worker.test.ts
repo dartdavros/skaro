@@ -19,8 +19,9 @@ import {
 } from '@skaro/agent-runtime/process-identity';
 import type { Reply, Request, SessionMethod } from './native/protocol';
 
-for (const admit of [true, false]) {
-  it(`uses the compiled native worker and ${admit ? 'admits' : 'rejects'} the genuine runtime process`, async () => {
+for (const mode of ['admit', 'reject-owner', 'reject-replay'] as const) {
+  it(`uses the compiled native worker with ${mode} admission`, async () => {
+    const admit = mode === 'admit';
     const directory = await mkdtemp(join(tmpdir(), 'skaro-native-builtin-'));
     const config: BuiltinSessionStart = {
       sessionId: 'native-check',
@@ -93,8 +94,21 @@ for (const admit of [true, false]) {
       );
     };
     try {
-      const startup = call('start', [{ cwd: directory, permissionMode: 'ask' }]);
-      if (!admit) {
+      const startup = call('start', [
+        {
+          cwd: directory,
+          permissionMode: 'ask',
+          ...(mode === 'reject-replay'
+            ? {
+                journalReplay: { sessionId: 'another-primary', sequence: 0, hash: '' },
+              }
+            : {}),
+        },
+      ]);
+      if (mode === 'reject-replay') {
+        await expect(startup).rejects.toThrow('Invalid primary journal replay boundary');
+        expect(existsSync(config.journalPath)).toBe(false);
+      } else if (!admit) {
         await expect(startup).rejects.toThrow('admission was rejected');
         expect(existsSync(config.journalPath)).toBe(false);
       } else {
@@ -127,8 +141,8 @@ for (const admit of [true, false]) {
         for (const record of records) projector.output(record);
         expect(events).toEqual(projected);
       }
-      expect(owners).toHaveLength(1);
-      expect(await processBirth(owners[0]!.pid)).toBeUndefined();
+      expect(owners).toHaveLength(mode === 'reject-replay' ? 0 : 1);
+      for (const owner of owners) expect(await processBirth(owner.pid)).toBeUndefined();
     } finally {
       for (const owner of owners) await stopOwnedProcess(owner);
       await worker.terminate();

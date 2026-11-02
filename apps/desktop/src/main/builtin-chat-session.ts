@@ -10,6 +10,8 @@ import { settingsKey } from './chat-settings-helpers';
 import { TaskRunProcesses } from './task-run-processes';
 import { startBuiltinNativeSession } from './native/bundled';
 import { revokeNativeSession, confirmNativeSessionExit } from './native/session-lease';
+import { builtinJournalReplay } from './builtin-journal-replay';
+import { builtinSessionDirectory } from './builtin-session-directory';
 
 /** Attach an existing genuine builtin chat to its normal conversation and process lifecycle. */
 export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
@@ -19,7 +21,7 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
   const { chat } = live;
   const resume = chat.nativeSessionId;
   const sessionId = resume ?? randomUUID();
-  const directory = join(ctx.deps.dataDir, 'builtin', 'chats', chat.id);
+  const directory = builtinSessionDirectory(ctx.deps.dataDir, 'chats', chat.id, sessionId);
   const { lease, scope, requireCurrent } = await builtinChatAdmission(ctx, live, sessionId, signal);
   const processes = new TaskRunProcesses(ctx.deps.db);
   let prepared: Awaited<ReturnType<typeof models.prepare>> | undefined;
@@ -50,7 +52,13 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
       signal: combined,
     });
     requireBuiltinChatSessionPolicy(expected, prepared.config);
+    const replay = await builtinJournalReplay(
+      join(ctx.deps.dataDir, chat.logPath),
+      sessionId,
+      live.log,
+    );
     requireCurrent(combined);
+    if (replay.needsSeparator) ctx.history.writeLine(live, new Uint8Array([10]));
     live.builtinClose = () => prepared!.close();
     ctx.deps.db.updateChat(chat.id, { nativeSessionId: sessionId });
     live.chat = { ...live.chat, nativeSessionId: sessionId };
@@ -70,6 +78,7 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
       ctx.deps.attachments.dir,
       {
         ...options,
+        journalReplay: replay.boundary,
         signal: bound,
         processStarted(pid, identity) {
           if (!identity) throw new Error('Builtin chat process has no OS identity');

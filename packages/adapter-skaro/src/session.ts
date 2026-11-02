@@ -9,8 +9,6 @@ import {
   type TimelineEvent,
 } from '@skaro/timeline';
 import {
-  SkaroProjector,
-  type JournalRecord,
   type RuntimeAction,
   type RuntimeCommand,
   type RuntimeMessage,
@@ -29,6 +27,7 @@ import {
   type OwnedProcess,
 } from '@skaro/agent-runtime/process-identity';
 import { runtimeEnvironment } from './process-env.ts';
+import { SessionProjection } from './projection.ts';
 
 export type SkaroSessionOptions = BuiltinSessionOptions;
 
@@ -37,8 +36,7 @@ export class SkaroSession implements AgentSession {
   readonly events = new EventChannel<TimelineEvent>();
   readonly processId: number;
   private readonly child: ChildProcess;
-  private readonly options: SkaroSessionOptions;
-  private readonly projector: SkaroProjector;
+  private readonly projection: SessionProjection;
   private readonly pending = new Map<
     string,
     { resolve(value: unknown): void; reject(error: Error): void }
@@ -53,8 +51,7 @@ export class SkaroSession implements AgentSession {
   private readonly hosts: RuntimeHostServer;
 
   private constructor(options: SkaroSessionOptions) {
-    this.options = options;
-    this.projector = new SkaroProjector((event) => this.events.push(event));
+    this.projection = new SessionProjection(options, (event) => this.events.push(event));
     this.ready = new Promise((resolve, reject) => {
       this.resolveReady = resolve;
       this.rejectReady = reject;
@@ -145,10 +142,6 @@ export class SkaroSession implements AgentSession {
     }
   }
 
-  private record(record: JournalRecord): void {
-    this.options.raw({ ts: record.timestamp, dir: 'out', line: record });
-    this.projector.output(record);
-  }
   private async requireOwner(signal: AbortSignal): Promise<void> {
     signal.throwIfAborted();
     if (
@@ -172,9 +165,9 @@ export class SkaroSession implements AgentSession {
     ) {
       this.hosts.receive(message);
     } else if (message.type === 'ready') {
-      for (const record of message.records) this.record(record);
+      this.projection.ready(message.records);
       this.resolveReady();
-    } else if (message.type === 'record') this.record(message.record);
+    } else if (message.type === 'record') this.projection.record(message.record);
     else if (message.type === 'fatal') {
       this.fail(new Error(message.error));
       void this.close().catch(() => undefined);

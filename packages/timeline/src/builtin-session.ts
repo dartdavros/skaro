@@ -25,6 +25,13 @@ export interface BuiltinSessionStart {
   model?: RuntimeModelPolicy;
 }
 
+/** A host log's last copied primary record. Ephemeral delivery state, never runtime config. */
+export interface BuiltinJournalReplayBoundary {
+  sessionId: string;
+  sequence: number;
+  hash: string;
+}
+
 export interface RuntimeSessionHost {
   verification?: RuntimeVerificationHost;
   extensions?: RuntimeScopedExtensionHost;
@@ -32,7 +39,9 @@ export interface RuntimeSessionHost {
 }
 
 export interface BuiltinSessionOptions
-  extends Pick<SessionOptions, 'signal' | 'processStarted' | 'raw'>, RuntimeSessionHost {
+  extends
+    Pick<SessionOptions, 'signal' | 'processStarted' | 'raw' | 'journalReplay'>,
+    RuntimeSessionHost {
   config: BuiltinSessionStart;
   entry?: string;
   /** In-process host port. Transports serialize only its scope/admission binding. */

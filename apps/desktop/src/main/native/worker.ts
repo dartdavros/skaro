@@ -96,6 +96,7 @@ async function start(options: NativeOptions): Promise<void> {
       entry: config.entry,
       processStarted: resolved.processStarted,
       raw: resolved.raw,
+      journalReplay: resolved.journalReplay,
       signal: resolved.signal,
       verification: verification?.host(),
       extensions: extensions?.host(),

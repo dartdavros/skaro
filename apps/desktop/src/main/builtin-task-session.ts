@@ -22,6 +22,8 @@ import { requireBuiltinTaskSessionPolicy } from './builtin-task-session-policy';
 import { settingsKey } from './task-run-helpers';
 import { taskSessionOptions, type TaskSessionSettings } from './task-session-options';
 import { builtinAcceptancePort } from './builtin-acceptance';
+import { builtinJournalReplay } from './builtin-journal-replay';
+import { builtinSessionDirectory } from './builtin-session-directory';
 
 /** Main-only composition port. A saved route alone cannot prepare a task's model/payload/budget grants. */
 export interface BuiltinTaskSessionPreparer {
@@ -52,7 +54,7 @@ export async function startBuiltinTaskSession(
   const { projectId, taskId, run } = active;
   const resume = run.nativeSessionId;
   const sessionId = resume ?? randomUUID();
-  const directory = join(ctx.deps.dataDir, 'builtin', 'tasks', run.id);
+  const directory = builtinSessionDirectory(ctx.deps.dataDir, 'tasks', run.id, sessionId);
   const scope: SkaroScope = { kind: 'task', projectId, taskId, runId: run.id };
   const startup = new AbortController();
   active.builtinStartup = startup;
@@ -97,7 +99,13 @@ export async function startBuiltinTaskSession(
       },
     });
     requireBuiltinTaskSessionPolicy(expected, prepared.config);
+    const replay = await builtinJournalReplay(
+      join(ctx.deps.dataDir, run.logPath),
+      sessionId,
+      active.log,
+    );
     requireCurrentBuiltinTask(ctx, scope, sessionId, active, signal);
+    if (replay.needsSeparator) ctx.history.writeLine(active, new Uint8Array([10]));
     active.builtinClose = () => prepared!.close();
     // Persist before spawn: recovery must find the same journal even if main exits before its first event.
     ctx.deps.db.setRunSession(run.id, sessionId);
@@ -115,6 +123,7 @@ export async function startBuiltinTaskSession(
       ctx.deps.attachments.dir,
       {
         ...options,
+        journalReplay: replay.boundary,
         signal: boundSignal,
         processStarted(pid, identity) {
           if (!identity) throw new Error('Builtin task process has no OS identity');
