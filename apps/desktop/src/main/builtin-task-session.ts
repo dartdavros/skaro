@@ -19,11 +19,11 @@ import {
   requireCurrentBuiltinTask,
 } from './builtin-task-admission';
 import { requireBuiltinTaskSessionPolicy } from './builtin-task-session-policy';
-import { settingsKey } from './task-run-helpers';
-import { taskSessionOptions, type TaskSessionSettings } from './task-session-options';
+import { taskSessionOptions } from './task-session-options';
 import { builtinAcceptancePort } from './builtin-acceptance';
 import { builtinJournalReplay } from './builtin-journal-replay';
 import { builtinSessionDirectory } from './builtin-session-directory';
+import { builtinRunSettings } from './builtin-run-settings';
 
 /** Main-only composition port. A saved route alone cannot prepare a task's model/payload/budget grants. */
 export interface BuiltinTaskSessionPreparer {
@@ -65,16 +65,7 @@ export async function startBuiltinTaskSession(
     lease = await builtinTaskAdmission(ctx, scope, sessionId, startup.signal);
     const signal = AbortSignal.any([startup.signal, lease.signal]);
     await ctx.processes.stop(run.id);
-    const saved = ctx.deps.db.getSetting<Partial<TaskSessionSettings> | null>(
-      settingsKey(projectId, taskId),
-      null,
-    );
-    const settings: TaskSessionSettings = {
-      ...saved,
-      ...(saved?.model || run.model ? { model: saved?.model ?? run.model } : {}),
-      permissionMode: saved?.permissionMode ?? artifacts.config.permissionMode,
-      planFirst: saved?.planFirst ?? false,
-    };
+    const settings = builtinRunSettings(ctx, active);
     const segment = active.segments++;
     const options = await taskSessionOptions(ctx, active, artifacts, settings, segment);
     requireCurrentBuiltinTask(ctx, scope, sessionId, active, signal);

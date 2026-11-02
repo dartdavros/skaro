@@ -27,11 +27,16 @@ import type { ConfigureEnvironmentArgs } from '@skaro/mcp-server';
 import type { ProcessAdmissionPort } from '@skaro/timeline';
 import { builtinAcceptancePort } from './builtin-acceptance';
 import { builtinTaskAdmission } from './builtin-task-admission';
+import type { BuiltinTaskLaunchRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
 
 /** Public API: composes focused task-run services without owning their workflows. */
 export class TaskRuns {
+  /** Main-only entry; product picker/IPC selection remains a separate gate. */
+  launchBuiltin(request: BuiltinTaskLaunchRequest): Promise<void> {
+    return this.engine.scheduling.launchBuiltin(request);
+  }
   builtinAdmission(scope: SkaroScope, sessionId: string, signal: AbortSignal) {
     return builtinTaskAdmission(this.engine, scope, sessionId, signal);
   }

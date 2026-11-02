@@ -59,10 +59,12 @@ export class TaskRunMessages {
 
   /** Straight to the agent: only for a turn that holds its slot. */
   async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
+    const epoch = active.deliveryEpoch;
     if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
     input = active.secrets.input(input);
     assertQuestionsAnswered(active.timeline.state);
     const session = await this.ctx.sessions.attach(active);
+    if (active.deliveryEpoch !== epoch) throw new CommandCancelled();
     if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
     assertQuestionsAnswered(active.timeline.state);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
@@ -170,8 +172,14 @@ export class TaskRunMessages {
     this.ctx.continuation.stop(projectId, taskId);
     cancelOwnerMessages(projectId, taskId);
     this.ctx.startup.delivered(projectId, taskId);
-    await this.ctx.integrations.controls.interrupt(projectId, taskId);
     const k = key(projectId, taskId);
+    this.ctx.queuedInputs.delete(k);
+    const current = this.ctx.active.get(k);
+    if (current) {
+      current.deliveryEpoch++;
+      current.builtinStartup?.abort(new CommandCancelled());
+    }
+    await this.ctx.integrations.controls.interrupt(projectId, taskId);
     if (this.ctx.handoff.changing(this.ctx.active.get(k)))
       throw new Error('Wait for the agent handoff to finish before stopping the task.');
     if (this.ctx.queue.cancel(k)) {

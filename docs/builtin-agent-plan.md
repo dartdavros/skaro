@@ -16,7 +16,7 @@ BA-6 начат: [run_check и привязка доказательств к в
 Полная приёмка открыта. Подготовлен [native inspection bridge](builtin-agent-native-verification.md)
 и [native host operations](builtin-agent-native-operations.md) для BA-7;
 проверен [общий отзыв native-сессии](builtin-agent-native-lifetime.md).
-Продуктовый выбор и создание встроенных задач/чатов ещё не включены. BA-8 начат; в BA-9
+Продуктовый выбор встроенных задач/чатов ещё не включён. BA-8 начат; в BA-9
 предварительно проверен локальный Windows x64 payload, полная приёмка открыта.
 Добавлен [native model host](builtin-agent-native-model.md): concurrent negative
 preflight и живой native model-plan Cat-pilot приняты; пять запросов через Xray,
@@ -87,7 +87,7 @@ call ID, исходный hash аргументов и последовател�
 включён в task/chat picker и не становится выбором по умолчанию.
 02.11.2026: [внутренняя task-session ветка](builtin-agent-task-session.md)
 подключена к TaskRunSessions с общим configured host, process ownership,
-отменой startup и durable command IDs. Обычное создание/выбор builtin run,
+отменой startup и durable command IDs. Продуктовое создание/выбор builtin run,
 создание/выбор новых чатов, положительные queue/handoff/submit/merge ещё не приняты.
 Добавлено [форматирование native owner input](builtin-agent-native-context-input.md)
 OpenAI/Anthropic и явный каталог инструментов task host. Прямые API не считаются
@@ -98,6 +98,10 @@ OpenAI/Anthropic и явный каталог инструментов task host
 Исправлено [восстановление ленты по primary journal](builtin-agent-journal-replay.md):
 не переиздаёт старые inputs/terminals, восстанавливает недостающий raw tail,
 сохраняет builtin turn IDs и отделяет новый журнал после очистки истории.
+Добавлен [main-only запуск новой builtin-задачи](builtin-agent-task-launch.md)
+через общую очередь: точные route/права/isolation, durable startup и повтор,
+повторные gates перед созданием run и отмена подготовки/пакета доставки.
+Положительный Electron task workflow, picker, handoff и сдача ещё не приняты.
 BA-* — локальные ID плана, не созданные задачи Skaro.
 
 ## Объём и зависимости

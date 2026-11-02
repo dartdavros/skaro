@@ -10,6 +10,7 @@ import { closeSessionLog } from './close-session-log';
 import { taskSessionOptions } from './task-session-options';
 import { startBuiltinTaskSession } from './builtin-task-session';
 import { revokeBuiltinTaskAdmission, confirmBuiltinTaskExit } from './builtin-task-admission';
+import { CommandCancelled } from './owner-commands';
 
 /** sessions: a focused part of the task-run controller. */
 export class TaskRunSessions {
@@ -32,14 +33,16 @@ export class TaskRunSessions {
   }
 
   async startSession(active: ActiveRun): Promise<AgentSession> {
+    const epoch = active.deliveryEpoch;
     const { projectId, taskId, run } = active;
     const context = this.ctx.project(projectId);
     const artifacts = await context.load();
     if (!artifacts.tasks.some((task) => task.id === taskId))
       throw new Error('Milestones have no agent sessions. Use a task or the project chat.');
     if (run.agent === 'skaro') {
+      if (active.deliveryEpoch !== epoch) throw new CommandCancelled();
       const started = await startBuiltinTaskSession(this.ctx, active, artifacts);
-      return this.publish(active, started.session, started.segment, !!started.resume);
+      return this.publish(active, started.session, started.segment, !!started.resume, epoch);
     }
     const task = findTask(artifacts, taskId);
     const agent = run.agent as AgentId;
@@ -89,11 +92,13 @@ export class TaskRunSessions {
     session: AgentSession,
     segment: number,
     resume: boolean,
+    epoch?: number,
   ) {
     const { projectId, taskId } = active;
     const saved = this.ctx.deps.db.getRun(active.run.id);
     if (
       this.ctx.closing ||
+      (epoch !== undefined && active.deliveryEpoch !== epoch) ||
       active.switching ||
       this.ctx.active.get(key(projectId, taskId)) !== active ||
       !saved ||
@@ -109,6 +114,7 @@ export class TaskRunSessions {
         await this.ctx.processes.stop(active.run.id);
         await confirmBuiltinTaskExit(active, lease);
       }
+      if (epoch !== undefined && active.deliveryEpoch !== epoch) throw new CommandCancelled();
       throw new Error('Task changed during session startup');
     }
     active.session = session;

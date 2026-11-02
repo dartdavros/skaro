@@ -36,7 +36,8 @@ export class TaskRunStages {
       task &&
       (run
         ? !run.worktree
-        : this.ctx.views.settings(projectId, task, artifacts).isolation !== 'worktree');
+        : (this.ctx.startup.read(projectId, taskId)?.builtin?.isolation ??
+            this.ctx.views.settings(projectId, task, artifacts).isolation) !== 'worktree');
     const stageId = inPlace ? '__main__' : run && stageIdOf(run);
     if (!stageId) this.units.delete(k);
     else {

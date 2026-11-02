@@ -46,6 +46,8 @@ export class ActiveRun {
   builtinClose?: () => void;
   /** Cancels a prepared host before detach/shutdown waits for attachment. */
   builtinStartup?: AbortController;
+  /** Invalidates a delivery/attachment already awaiting I/O when the owner stops the task. */
+  deliveryEpoch = 0;
   grant: Grant | undefined;
   log: WriteStream | undefined;
   /** Events not yet sent to the renderer. */

@@ -4,8 +4,7 @@ import { CommandCancelled } from './owner-commands';
 import { hasOwnerCommand } from './owner-command-history';
 import type { MessageInput, RunSlots, TaskAssignment } from '../shared/ipc';
 import { createTaskRun } from './task-run-create';
-import { checkoutKey, ownsCheckout } from './task-stage';
-import { updateSubject } from './task-subject';
+import { checkoutKey } from './task-stage';
 import { key, awaitingKey, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
@@ -13,12 +12,21 @@ import { errorText } from './session-log';
 import { IntegrationPending } from './integration-model';
 import { prepareTaskDependencies } from './task-dependency-checkout';
 import { serializeTaskMutation } from './project-task-mutations';
+import { queueBuiltinTask } from './builtin-task-launch';
+import type { BuiltinTaskLaunchRequest } from './builtin-task-start';
+import { capturePendingBuiltinStart } from './builtin-task-pending';
+import { cancelTaskRun } from './task-run-cancel';
 
 /** scheduling: a focused part of the task-run controller. */
 export class TaskRunScheduling {
   private readonly ctx: TaskRunEngine;
   constructor(ctx: TaskRunEngine) {
     this.ctx = ctx;
+  }
+  launchBuiltin(request: BuiltinTaskLaunchRequest): Promise<void> {
+    return queueBuiltinTask(this.ctx, request, (input, requireCurrent) =>
+      this.enqueueLocked(request.projectId, request.taskId, input, requireCurrent),
+    );
   }
 
   slots(): RunSlots {
@@ -72,26 +80,7 @@ export class TaskRunScheduling {
    * task is not started again; its run, branch and feed stay for the next start.
    */
   async cancel(projectId: string, taskId: string): Promise<void> {
-    const context = this.ctx.project(projectId);
-    const task = findTask(await context.load(), taskId);
-    if (task.status !== 'in_progress' && task.status !== 'todo')
-      throw new Error('Only a task in progress can be taken back');
-    await this.ctx.messages.interrupt(projectId, taskId);
-    await this.ctx.reviews.stop(projectId, taskId);
-    const awaiting = this.awaiting(projectId);
-    if (awaiting[taskId]) {
-      delete awaiting[taskId];
-      this.ctx.deps.db.setSetting(awaitingKey(projectId), awaiting);
-    }
-    if (task.status !== 'todo') await updateSubject(context, taskId, { status: 'todo' });
-    context.invalidate();
-    this.ctx.changed(projectId, taskId);
-    await this.ctx.stages.sync(projectId, taskId);
-    // A task taken back does not keep services running; the copy of its data stays. The
-    // environment of a stage serves its other tasks and goes on.
-    const run = this.ctx.active.get(key(projectId, taskId))?.run;
-    if (!run || ownsCheckout(run))
-      void this.ctx.environments.stop({ projectId, taskId }).catch(() => undefined);
+    return cancelTaskRun(this.ctx, projectId, taskId);
   }
 
   awaiting(projectId: string): Record<string, { message: string; assignment?: TaskAssignment }> {
@@ -155,11 +144,14 @@ export class TaskRunScheduling {
     projectId: string,
     taskId: string,
     input: MessageInput,
+    requireCurrent?: () => void,
   ): Promise<void> {
     // The task can have been replaced while agent setup was awaiting I/O.
     const task = findTask(await this.ctx.project(projectId).store.load(), taskId);
+    requireCurrent?.();
     const k = key(projectId, taskId);
     await this.ctx.stages.sync(projectId, taskId);
+    requireCurrent?.();
     const active = this.ctx.active.get(k);
     if (input.internal && input.commandId?.startsWith('continue-') && task.status !== 'in_progress')
       return;
@@ -173,21 +165,46 @@ export class TaskRunScheduling {
 
   async begin(k: string): Promise<void> {
     const [projectId, taskId] = k.split('\n') as [string, string];
+    try {
+      await this.beginCurrent(projectId, taskId, k);
+    } catch (error) {
+      if (!(error instanceof CommandCancelled)) throw error;
+      this.ctx.setRuntime(projectId, taskId, 'idle');
+    }
+  }
+
+  private async beginCurrent(projectId: string, taskId: string, k: string): Promise<void> {
+    const pending = this.ctx.startup.read(projectId, taskId);
+    if (!pending?.inputs.length && !this.ctx.queuedInputs.get(k)?.length) {
+      this.ctx.setRuntime(projectId, taskId, 'idle');
+      return;
+    }
+    const requireCurrent = pending?.builtin
+      ? capturePendingBuiltinStart(this.ctx.startup, projectId, taskId, () => this.ctx.closing)
+      : undefined;
     const inputs = this.ctx.startup.begin(projectId, taskId, this.ctx.queuedInputs.get(k) ?? []);
     this.ctx.queuedInputs.delete(k);
+    const builtin = this.ctx.startup.read(projectId, taskId)?.builtin;
     const existing = await this.ctx.history.restore(projectId, taskId);
+    requireCurrent?.();
+    if (existing && builtin && existing.run.agent !== 'skaro')
+      throw new Error('Pending builtin launch conflicts with the existing task run');
     if (existing) {
       if (!existing.run.nativeSessionId && !(await this.prepare(existing))) return;
+      requireCurrent?.();
       this.ctx.setRuntime(projectId, taskId, 'running', existing.run.id);
       await this.ctx.stages.opened(existing);
+      requireCurrent?.();
       return this.runTurn(existing, inputs);
     }
-    const active = await createTaskRun(this.ctx, projectId, taskId);
+    const active = await createTaskRun(this.ctx, projectId, taskId, builtin, requireCurrent);
     if (!(await this.prepare(active))) return;
+    requireCurrent?.();
     this.ctx.setRuntime(projectId, taskId, 'running', active.run.id);
     this.ctx.deps.emit('project.changed', { projectId });
     await this.ctx.stages.opened(active);
     await this.ctx.stages.sync(projectId, taskId);
+    requireCurrent?.();
     return this.runTurn(active, inputs);
   }
 
@@ -211,6 +228,7 @@ export class TaskRunScheduling {
 
   /** Holds the slot until the turn ends; later messages of the batch join the running turn. */
   private async runTurn(active: ActiveRun, inputs: MessageInput[]): Promise<void> {
+    const epoch = active.deliveryEpoch;
     inputs = inputs.filter((input) => !hasOwnerCommand(active.timeline.state, input.commandId));
     if (!inputs.length) {
       this.ctx.startup.delivered(active.projectId, active.taskId);
@@ -220,7 +238,10 @@ export class TaskRunScheduling {
     this.ctx.environments.touch(checkoutKey(active));
     const done = new Promise<void>((resolve) => (active.release = resolve));
     try {
-      for (const input of inputs) await this.ctx.messages.deliver(active, input);
+      for (const input of inputs) {
+        if (active.deliveryEpoch !== epoch || this.ctx.closing) throw new CommandCancelled();
+        await this.ctx.messages.deliver(active, input);
+      }
       this.ctx.startup.delivered(active.projectId, active.taskId);
     } catch (error) {
       if (error instanceof CommandCancelled) {
