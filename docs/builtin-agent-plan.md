@@ -4,6 +4,8 @@
 в task/chat lifecycle. Очередь новых builtin-run и handoff реализованы в коде;
 положительная сквозная приёмка задачи/чата, submit/merge и продуктовый выбор
 агента ещё открыты. Встроенный агент не стал выбором по умолчанию.
+Живой [launch preflight Cat-pilot](builtin-agent-task-launch-preflight.md) принят:
+отмена и dependency blocker отказаны до очереди/run/model host, model POST 0.
 
 [Таблица этапов, последние коммиты и подробные доказательства](builtin-agent-progress.md).
 BA-* — локальные ID плана, не созданные задачи Skaro.

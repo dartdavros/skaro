@@ -29,6 +29,8 @@ import { prepareConfiguredPlan } from './configured-plan-payload';
 import { verifyConfiguredPlanLive } from './configured-plan-live';
 import { readConfiguredPlanReview } from './configured-plan-review';
 import { verifyReportedModelUsage } from './model-usage-report';
+import { verifyTaskLaunchPreflight } from './task-launch-preflight';
+import assert from 'node:assert/strict';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -37,6 +39,7 @@ void app.whenReady().then(async () => {
   let code = 1;
   let stage = 'single-instance';
   const observedProjects = new Set<string>();
+  let forbiddenHostPreparations = 0;
   try {
     if (!app.requestSingleInstanceLock()) throw new Error('Skaro is already running');
     const data = app.getPath('userData');
@@ -60,17 +63,39 @@ void app.whenReady().then(async () => {
     } else {
       stage = 'real-services';
       state = catPilotState(data);
-      services = await createServices(state, data, (_event, payload) => {
-        if (
-          payload &&
-          typeof payload === 'object' &&
-          'projectId' in payload &&
-          typeof payload.projectId === 'string'
-        )
-          observedProjects.add(payload.projectId);
-      });
+      services = await createServices(
+        state,
+        data,
+        (_event, payload) => {
+          if (
+            payload &&
+            typeof payload === 'object' &&
+            'projectId' in payload &&
+            typeof payload.projectId === 'string'
+          )
+            observedProjects.add(payload.projectId);
+        },
+        process.argv[2] === '--task-launch-preflight'
+          ? {
+              async builtinTasks() {
+                forbiddenHostPreparations++;
+                throw new Error('Task execution is not authorized by the launch preflight');
+              },
+            }
+          : {},
+      );
       const projectScope = verifyProjectScope(services);
-      if (process.argv[2] === '--project-scope') {
+      if (process.argv[2] === '--task-launch-preflight') {
+        stage = 'task-launch-preflight';
+        const checked = await verifyTaskLaunchPreflight(services);
+        assert.equal(forbiddenHostPreparations, 0);
+        assert([...observedProjects].every((id) => id === projectScope.projectId));
+        proof = {
+          ...checked,
+          modelHostPreparations: forbiddenHostPreparations,
+          observedProjectIds: [...observedProjects],
+        };
+      } else if (process.argv[2] === '--project-scope') {
         stage = 'project-scope';
         await services.graph.status(projectScope.projectId);
         if ([...observedProjects].some((id) => id !== projectScope.projectId))
