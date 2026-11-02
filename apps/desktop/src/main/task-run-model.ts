@@ -27,6 +27,8 @@ export interface TaskRunDeps {
   docker?: EnvironmentDocker;
   /** Explicit main-only task model/payload/budget composition; absent means unavailable. */
   builtinSessions?: BuiltinTaskModels;
+  /** Main-only compiled worker directory; default remains the packaged application. */
+  builtinEntries?: string;
 }
 
 /** A task's latest run, with or without an agent process attached. */

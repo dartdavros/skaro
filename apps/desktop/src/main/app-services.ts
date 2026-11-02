@@ -48,9 +48,13 @@ export async function createServices(
   options: {
     builtinTasks?: BuiltinTaskAuthorization;
     builtinChats?: BuiltinChatAuthorization;
+    /** Compiled worker directory for an explicitly scoped verification entry. */
+    builtinEntries?: string;
   } = {},
 ) {
   const db = appState.db;
+  if (options.builtinEntries && !db.shell.projectScope)
+    throw new Error('An explicit builtin worker directory requires a scoped verification');
   setBackgroundProjectScope(dataDir, db.shell.projectScope);
   const modelConfiguration = new BuiltinModelConfigurationStore(db);
   const modelSettings = new BuiltinModelSettingsService(modelConfiguration, dataDir);
@@ -138,6 +142,7 @@ export async function createServices(
       mcp,
       emit,
       locale: () => appState.getLocale(app.getLocale()),
+      ...(options.builtinEntries ? { builtinEntries: options.builtinEntries } : {}),
       ...(options.builtinTasks
         ? {
             builtinSessions: new BuiltinTaskModels({

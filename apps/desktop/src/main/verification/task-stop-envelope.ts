@@ -6,7 +6,7 @@ import {
 } from '@skaro/agent-runtime';
 import type { RuntimeModelRequest } from '@skaro/timeline';
 import type { TaskStopReview } from './task-stop-review';
-import { requireTaskStopInput, requireTaskStopRequest } from './task-stop-input';
+import { requireTaskStopInputs, requireTaskStopRequest } from './task-stop-input';
 
 export const taskStopPins = (reviewed: TaskStopReview) => [
   {
@@ -39,10 +39,7 @@ export function requireTaskStopEnvelope(
   const inputs = journal.records
     .flatMap((record) => record.facts)
     .filter((fact) => fact.type === 'input');
-  assert(inputs.length >= 1 && inputs.length <= 2);
-  inputs.forEach((fact, index) => {
-    requireTaskStopInput(reviewed, index, fact.id, fact.input);
-  });
+  requireTaskStopInputs(reviewed, inputs);
   assert(
     !journal.records.some((record) =>
       record.facts.some((fact) =>

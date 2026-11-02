@@ -9,17 +9,19 @@
 | BA-4 | Четыре коннектора; живые OpenRouter цепочки, streaming/tools/continuation | Прямые OpenAI/Anthropic/DeepSeek API отложены владельцем |
 | BA-5 | Принят поддерживаемый Windows-контур Cat-pilot: context, compact/restart, MCP/browser/media | Платформенные ограничения сохранены в итоговой таблице |
 | BA-6 | Проверки и происхождение доказательств; живой read-only model-plan Cat-pilot | Полный цикл реального исправления, повторных проверок и сдачи |
-| BA-7 — сейчас | Внутренние task/chat sessions, durable input/replay, очередь новых builtin-run, двусторонний handoff в коде | Положительная сквозная задача, restart/handoff/submit/merge в штатном контуре |
+| BA-7 — сейчас | T-006 Stop/resume, модельное продолжение после main exit и restart/history приняты; handoff в коде | Полная проверенная задача, handoff/submit/merge и product UI |
 | BA-8 | Реальные настройки Connection/Route и каталог в существующем UI | Product agent catalog/picker, создание builtin-чата, сквозная UI-приёмка |
 | BA-9 | Локальный Windows x64 payload и packaged settings/catalog | Остальные платформы, полный выпуск, приёмка перед сменой default |
 
-Последние коммиты: `6bfb696` — общий учёт primary task journals;
-`99e8d6c` — runnable T-006 Stop/resume driver и review gates.
+Последние изменения: `f521914` — корректное продолжение после unknown model outcome;
+настоящие T-006 Stop/resume, main restart и повторное восстановление истории приняты.
 `cdd1b68` — точная граница UserInput вместо копирования inbox metadata.
 Это ещё не включение создания нового чата.
 
-Новых model POST не выполнялось: прежние пять дополнительных запросов
-использованы, ledger — 85 intents / $0.39324124 расходов и удержаний.
+Владелец разрешил ещё до четырёх запросов на точный payload T-006.
+Приняты [настоящий Stop/resume и продолжение после main exit](builtin-agent-task-stop-acceptance.md):
+четыре новых POST, ledger — 89 intents / $0.42841444 расходов и удержаний;
+разрешённый счётчик новых запросов использован полностью, общий $1 сохранён.
 Живые проверки — только Cat-pilot. Владелец закрыл прежний установленный
 Skaro; single-instance blocker устранён. [Новый launch preflight](builtin-agent-task-launch-preflight.md)
 прошёл в штатных scoped services: отмена и реальная зависимость T-008 отказаны
@@ -28,14 +30,13 @@ Skaro; single-instance blocker устранён. [Новый launch preflight](b
 и сохранённые Connection/Route. После штатного закрытия хеш owner settings
 и вкладок совпал, временное переключение трея не сохранено в базу.
 Реализована [остановка builtin-задачи](builtin-agent-task-stop.md): teardown
-native transport и барьер для отложенного ввода/нового admission. Положительный
-ActiveRun/модельный ход этим не объявляются принятыми.
+native transport и барьер для отложенного ввода/нового admission.
 Владелец выбрал T-006 для следующего сценария. [Локальный review пакет](builtin-agent-task-stop-review.md)
 подготовлен без run/POST; задача и C4 неизменны. Добавлен [общий учёт primary task journals](builtin-agent-task-budget.md).
 Добавлен [runnable Stop/resume driver](builtin-agent-task-stop-driver.md) с envelope/budget gates;
 read-only проверка конкретного пакета прошла, неправильный SHA отклонён.
-До исполнения нужно отдельное разрешение на task-run, данные и до четырёх запросов;
-положительная регистрация task journal и Stop/resume ещё не проверены.
+Получено отдельное разрешение на task-run, данные и до четырёх запросов;
+положительные registration/envelope/Stop/resume настоящего task journal приняты.
 Обычная доставка формирует точный UserInput без внутренних inbox-полей;
 command identity и note для dedup сохраняются. Состав согласуемого пакета не изменён.
 

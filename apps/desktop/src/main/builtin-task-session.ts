@@ -123,6 +123,7 @@ export async function startBuiltinTaskSession(
         },
       },
       { ...host, signal: boundSignal },
+      ctx.deps.builtinEntries,
     );
     await lease.requireActive(lease.admission, boundSignal);
     return { session, segment, resume };

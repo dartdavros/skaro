@@ -17,8 +17,8 @@ run T-006 Cat-pilot, его native session, активный admission теку�
 журналы; текущий изменяющийся журнал можно исключить только по его точному ID.
 
 Сценарий должен регистрировать настоящий журнал до reservation и перед dispatch.
-Это ещё не означает регистрацию или исполнение T-006: [runnable driver](builtin-agent-task-stop-driver.md)
-подготовлен, новых TaskRun и model POST не было.
+После отдельного разрешения [живой driver](builtin-agent-task-stop-acceptance.md)
+зарегистрировал настоящий T-006 journal перед reservation/dispatch.
 
 Проверено: production build, TypeScript main, lint и семь целевых тестов
 контрактов источника, budget guard и reported amounts. Тесты источника проверяют
@@ -26,5 +26,7 @@ run T-006 Cat-pilot, его native session, активный admission теку�
 Настоящая scoped preparation повторена:
 `extensions-e3e76675-c778-410b-941c-04429d0a0a50/task-stop-review.json`
 в локальном `Skaro/verification`. Ledger остался 85 intents / 393241240 nanoUSD;
-T-006, C4 и configuration неизменны, model requests 0. Положительная регистрация
-настоящего task journal остаётся частью будущей согласованной приёмки.
+T-006, C4 и configuration неизменны, model requests 0. Это историческая preparation.
+Поздняя положительная приёмка использовала четыре новых POST; ledger 89 intents /
+428414440 nanoUSD, включая прежние holds и две реальные отмены с unknown outcome.
+Свежий main подтвердил тот же ledger и неизменность primary/raw bytes, POST 0.

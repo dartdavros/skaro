@@ -1,6 +1,9 @@
 # Driver настоящего T-006 Stop/resume
 
-02.11.2026. Код подготовлен. Живой запуск не выполнялся и не разрешён.
+02.11.2026. Владелец разрешил точный review payload, настоящий T-006 run и до
+четырёх дополнительных запросов в общем лимите $1. [Stop/resume и модельное
+продолжение после выхода main приняты](builtin-agent-task-stop-acceptance.md),
+все четыре запроса использованы.
 
 `--task-stop-live REVIEW_PATH CANONICAL_SHA256` использует только зарегистрированный
 Cat-pilot и обычные `TaskRuns.launchBuiltin`, `interrupt`, `send`, `cancel`.
@@ -8,6 +11,11 @@ Main-only authorization подключается только в этом CLI mo
 обычный запуск приложения и разрешения других задач не меняются.
 Для подготовки есть `--task-stop-review`, для read-only проверки конкретного
 пакета — `--task-stop-check REVIEW_PATH CANONICAL_SHA256`.
+После успешного Stop/resume предусмотрены
+`--task-stop-main-restart REVIEW_PATH SHA256 STOP_PROOF_PATH` (ровно один
+оставшийся разрешённый запрос) и `--task-stop-replay REVIEW_PATH SHA256 PROOF_PATH`
+(только чтение реальной истории, без model host). Повторный main-restart после
+его успешной записи отклоняется; новый task-run или source payload не создаётся.
 
 Перед созданием run driver проверяет точные review bytes, UUID попытки, текущую
 T-006 todo без runs/startup, зависимости done, C4, configuration, route, цену и
@@ -64,6 +72,41 @@ run/session/journal. Проверяется сохранение прежнег�
 `task-stop-attempt.json` пишется и при ошибке; passed требует успешного cleanup.
 Такую попытку нельзя выдавать за сдачу анимации, merge или полную BA-7.
 
-До явного согласия на конкретный [пакет](builtin-agent-task-stop-review.md),
-task-run и расширение счётчика исполнять live mode запрещено. Владелец ранее
-выбрал подготовку сценария; прежние разрешённые пять новых POST уже использованы.
+Разрешение относится к конкретному [пакету](builtin-agent-task-stop-review.md),
+task-run и четырём новым запросам. Оно не разрешает реализацию/сдачу T-006,
+новые source files, tools или расширение общего $1.
+
+## Найдено настоящими попытками
+
+`extensions-8de75d97-12e8-425c-9e4d-d274c667060f/task-stop-attempt.json`:
+настоящий run создан, quotes/POST 0. Worker не найден из-за удвоенного out/main
+в app.getAppPath verification entry. Добавлен явный main-only worker directory
+для scoped services; обычный packaged путь не меняется. Первый cleanup отказал
+только на требовании OS owner, которого startup ещё не создал. Cleanup теперь
+различает exited без spawn и положительную приёмку настоящего owner.
+
+`extensions-eee0adf0-9c31-4bd2-b399-8c27b00b3157/task-stop-attempt.json`:
+run сохранён, один POST, реальный Stop/OS exit прошёл; новый admission получен.
+Второй ввод отклонён до POST: context projection блокировался неизвестным
+результатом отменённого model request. Cleanup подтверждён, задача вернулась в todo.
+
+Runtime разрешает fresh owner context при unknown именно model:chat,
+model:openai.responses или model:anthropic.messages. Старое состояние unknown,
+квитанции и удержания не изменяются; автоматического replay нет. Pending model,
+unknown tools/commands и открытые interactions остаются блокирующими. Старый
+provider continuation после unknown request не переиспользуется; новый запрос
+формируется из точного host context и настоящих refs предыдущей попытки.
+Сравнивается provenance sequence неизвестного outcome и последнего подтверждённого
+continuation: более поздний успешный conversation можно продолжить, сохраняя
+неизвестное списание в budget. Исторические holds не сбрасывают новый conversation
+навсегда. Оба случая проверены read-only на настоящем primary journal.
+
+Повтор driver сохраняет единственный настоящий run/primary journal. Он проверяет
+exited OS owner, прежний payload/route/settings, один настоящий unknown model
+intent и отклонённый второй command без input facts. Разрешён один новый pair
+тех же сообщений с суффиксом command IDs retry-1; старый failed command не
+переигрывается. Новых source data или разрешений выполнения нет. Budget по-прежнему
+считает первый intent вместе с новыми. Завершённый driver не запускается повторно.
+Отдельный owner command second-after-main-restart доставляет то же второе
+сообщение после выхода main. Счётчик принимает максимум 89 intents, schema tools
+остаётся пустой, после результата run возвращается в todo и process exit проверяется.

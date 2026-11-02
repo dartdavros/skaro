@@ -18,18 +18,24 @@ export const TASK_STOP_MESSAGES = [
 ] as const;
 
 /** Real task/prompt/configuration; an existing run is accepted only by its exact ID. */
-export async function taskStopReviewView(services: Services, data: string, runId?: string) {
+export async function taskStopReviewView(
+  services: Services,
+  data: string,
+  runId?: string,
+  runStatus: 'todo' | 'in_progress' = 'in_progress',
+) {
   const projectId = services.db.shell.projectScope;
   assert.equal(projectId, '78bc2cd3-981b-40ed-a395-c6c6bc7da51b');
   const context = services.projects.get(projectId);
   const currentTask = await context.store.readTask('T-006');
-  assert.equal(currentTask.status, runId ? 'in_progress' : 'todo');
+  assert.equal(currentTask.status, runId ? runStatus : 'todo');
   const task = { ...currentTask, status: 'todo' as const };
   assert.equal(task.archived, false);
   const runs = services.db.listRuns(projectId, task.id);
   assert.equal(runs.length, runId ? 1 : 0, 'Unexpected task runs');
   if (runId) assert.equal(runs[0]?.id, runId);
-  if (!runId) assert.equal(services.db.getSetting(`startup.${projectId}.${task.id}`, null), null);
+  if (!runId || runStatus === 'todo')
+    assert.equal(services.db.getSetting(`startup.${projectId}.${task.id}`, null), null);
   const reviewKey = c4ReviewKey(projectId, task.id);
   const review = services.db.getSetting(reviewKey, null);
   const artifacts = await context.load();

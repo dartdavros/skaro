@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { app, type Session } from 'electron';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readRuntimeJournal } from '@skaro/agent-runtime';
@@ -11,7 +10,9 @@ import type { taskStopModels } from './task-stop-models';
 import type { TaskStopReview } from './task-stop-review';
 import { registerTaskBudgetJournal } from '../credentials/task-budget-journals';
 import { requireTaskStopCurrent } from './task-stop-packet';
-import { taskStopOwnerInput } from './task-stop-input';
+import { taskStopOwnerInput, requireTaskStopInputs } from './task-stop-input';
+import { taskStopRecoverableRun, resumeTaskStopRun } from './task-stop-retry';
+import { observeModelPosts } from './model-post-observer';
 import {
   waitTaskStop,
   taskAdmissionStore,
@@ -28,15 +29,17 @@ export async function verifyTaskStopLive(
   hash: string,
   models: ReturnType<typeof taskStopModels>,
 ) {
-  await requireTaskStopCurrent(services, data, reviewed);
+  const retry = await taskStopRecoverableRun(services, data, reviewed);
+  await requireTaskStopCurrent(services, data, reviewed, retry);
   const projectId = reviewed.project.id,
     taskId = 'T-006';
   const context = services.projects.get(projectId);
   const beforeTask = await context.store.readTask(taskId);
   const beforeC4 = services.db.getSetting(c4ReviewKey(projectId, taskId), null);
   const beforeConfiguration = services.modelConfiguration.read();
-  const commandPrefix = `task-stop-${reviewed.attemptId}`;
-  const networks: Session[] = [];
+  const round = retry?.round ?? 0;
+  const firstCommand = taskStopOwnerInput(reviewed, 0, round).commandId;
+  const secondCommand = taskStopOwnerInput(reviewed, 1, round).commandId;
   let posts = 0,
     stage = 'launch',
     passed = false,
@@ -47,26 +50,18 @@ export async function verifyTaskStopLive(
     stages.push(next);
     process.send?.({ type: 'stage', stage: `task-stop:${next}` });
   };
-  const observe = (network: Session) => {
-    networks.push(network);
-    network.webRequest.onBeforeRequest(
-      { urls: ['https://openrouter.ai/api/v1/chat/completions'] },
-      (details, callback) => {
-        if (details.method === 'POST') posts++;
-        callback({ cancel: false });
-      },
-    );
-  };
-  app.on('session-created', observe);
+  const closeObservation = observeModelPosts(() => posts++);
   let result: unknown;
   try {
-    await services.runs.launchBuiltin({
-      projectId,
-      taskId,
-      settings: reviewed.launch,
-      input: taskStopOwnerInput(reviewed, 0),
-      signal: new AbortController().signal,
-    });
+    if (retry) await resumeTaskStopRun(services, data, reviewed, retry);
+    else
+      await services.runs.launchBuiltin({
+        projectId,
+        taskId,
+        settings: reviewed.launch,
+        input: taskStopOwnerInput(reviewed, 0, round),
+        signal: new AbortController().signal,
+      });
     const run = await waitTaskStop('real run', () => services.db.listRuns(projectId, taskId)[0]);
     assert.equal(run.agent, 'skaro');
     assert.equal(run.worktree, undefined);
@@ -81,8 +76,12 @@ export async function verifyTaskStopLive(
     const beforeStop = await waitTaskStop('stable first journal', () =>
       observeTaskJournal(firstInput.journalPath, firstInput.sessionId),
     );
-    const firstCompletedBeforeStop = beforeStop.records.some((record) =>
-      record.id.startsWith('cmd:owner-'),
+    const firstAck = beforeStop.records.find((record) => record.id === `cmd:${firstCommand}`);
+    const firstModel = (firstAck?.result.value as { modelTurnId?: string } | undefined)
+      ?.modelTurnId;
+    assert(firstModel);
+    const firstCompletedBeforeStop = beforeStop.records.some(
+      (record) => record.id === `cmd:${firstModel}`,
     );
     mark('stop-first');
     await services.runs.interrupt(projectId, taskId);
@@ -100,7 +99,7 @@ export async function verifyTaskStopLive(
     const firstPostCount = posts;
     assert.equal(firstPostCount, 1, 'Unexpected automatic first-turn continuation');
     mark('resume-second');
-    await services.runs.send(projectId, taskId, taskStopOwnerInput(reviewed, 1));
+    await services.runs.send(projectId, taskId, taskStopOwnerInput(reviewed, 1, round));
     const second = await waitTaskStop('new active admission', () => {
       const state = store.read();
       return state?.status === 'active' && state.owner && state.admission.id !== first.admission.id
@@ -115,7 +114,7 @@ export async function verifyTaskStopLive(
     assert.equal(resumed.records[stoppedHead.sequence - 1]?.hash, stoppedHead.hash);
     const answer = await waitTaskStop('second real model terminal', async () => {
       const journal = await observeTaskJournal(secondInput.journalPath, secondInput.sessionId);
-      const ack = journal?.records.find((record) => record.id === `cmd:${commandPrefix}-second`);
+      const ack = journal?.records.find((record) => record.id === `cmd:${secondCommand}`);
       const modelId = (ack?.result.value as { modelTurnId?: string } | undefined)?.modelTurnId;
       return modelId
         ? journal?.records.find((record) => record.id === `cmd:${modelId}`)
@@ -156,8 +155,9 @@ export async function verifyTaskStopLive(
     const inputs = final.records
       .flatMap((record) => record.facts)
       .filter((fact) => fact.type === 'input');
+    requireTaskStopInputs(reviewed, inputs);
     assert.deepEqual(
-      inputs.map((fact) => withoutSkaroNote(fact.input.text)),
+      inputs.slice(-2).map((fact) => withoutSkaroNote(fact.input.text)),
       reviewed.wireComposition.ownerMessages,
     );
     assert.equal(services.db.listRuns(projectId, taskId).length, 1);
@@ -168,6 +168,9 @@ export async function verifyTaskStopLive(
       taskId,
       runId: run.id,
       payloadHash: hash,
+      recoveredUnspawnedRun: !!retry,
+      retryRound: round,
+      priorOwnerInputs: inputs.length - 2,
       primaryJournal: secondInput.journalPath,
       sessionId: secondInput.sessionId,
       firstExit,
@@ -184,8 +187,7 @@ export async function verifyTaskStopLive(
   } finally {
     const completedStage = stage;
     mark('cleanup');
-    app.removeListener('session-created', observe);
-    for (const network of networks) network.webRequest.onBeforeRequest(null);
+    closeObservation();
     try {
       await services.runs.cancel(projectId, taskId);
       assert.deepEqual(await context.store.readTask(taskId), beforeTask);
@@ -198,6 +200,7 @@ export async function verifyTaskStopLive(
           await requireTaskProcessExit(
             taskAdmissionStore(services, projectId, latest.id),
             last.admission.id,
+            false,
           );
       }
       cleanupConfirmed = true;

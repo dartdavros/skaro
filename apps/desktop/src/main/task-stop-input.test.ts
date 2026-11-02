@@ -8,6 +8,8 @@ import {
   requireTaskStopInput,
   requireTaskStopRequest,
   taskStopOwnerInput,
+  requireTaskStopInputs,
+  taskStopMainRestartInput,
 } from './verification/task-stop-input';
 
 // Pure input/request DTO contracts. No primary journal, task/run or provider is manufactured.
@@ -17,6 +19,31 @@ const policy = {
 };
 
 describe('reviewed task Stop envelope', () => {
+  it('bounds a reviewed-message retry to one genuine prior first input and one new pair', () => {
+    const input = (phase: number, round: number) => {
+      const owner = taskStopOwnerInput(policy, phase, round);
+      return { id: `input-${owner.commandId}`, input: taskAgentInput(owner) };
+    };
+    const first = input(0, 0),
+      retry = input(0, 1),
+      second = input(1, 1);
+    expect(() => requireTaskStopInputs(policy, [first, retry])).not.toThrow();
+    expect(() => requireTaskStopInputs(policy, [first, retry, second])).not.toThrow();
+    const restart = taskStopMainRestartInput(policy);
+    const restarted = { id: `input-${restart.commandId}`, input: taskAgentInput(restart) };
+    expect(() => requireTaskStopInputs(policy, [first, retry, second, restarted])).not.toThrow();
+    expect(() =>
+      requireTaskStopInputs(policy, [first, retry, second, restarted, restarted]),
+    ).toThrow();
+    for (const value of [
+      [retry],
+      [first, second],
+      [first, retry, second, second],
+      [first, input(1, 0), retry],
+    ])
+      expect(() => requireTaskStopInputs(policy, value)).toThrow();
+    expect(() => taskStopOwnerInput(policy, 0, 2)).toThrow();
+  });
   it('accepts only the exact command identity, note and owner text for the current attempt/phase', () => {
     const owner = taskStopOwnerInput(policy, 0);
     const input = taskAgentInput(owner);

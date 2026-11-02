@@ -6,7 +6,7 @@ import type { TaskRunDeps } from './task-run-model';
 import { scopeTimeline } from '../shared/task-timeline';
 
 /** Follow explicit predecessors only: unrelated historical runs are not part of this chat. */
-export async function loadTaskHistory(deps: TaskRunDeps, run: RunRecord) {
+export async function loadTaskHistory(deps: Pick<TaskRunDeps, 'dataDir' | 'db'>, run: RunRecord) {
   const chain: RunRecord[] = [];
   const seen = new Set<string>();
   let cursor: RunRecord | undefined = run;

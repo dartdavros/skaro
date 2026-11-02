@@ -35,6 +35,7 @@ send после close. TypeScript main, lint, форматирование и pr
 `verification/extensions-12943b0a-ebde-4bb4-b31f-0aaf40fd0513/proof.json` —
 отмена и реальный blocker отказаны до run/model host, model POST 0.
 
-Положительная остановка настоящего ActiveRun и его следующий
-модельный ход ещё не приняты: последнее разрешение владельца на живую
-проверку исключает запуск задач и model POST. UI не изменён.
+После отдельного разрешения владельца приняты [настоящий ActiveRun Stop и
+следующий модельный ход](builtin-agent-task-stop-acceptance.md) на T-006:
+OS exit, отзыв старого lease, новый admission и сохранённый run/journal.
+UI не изменён; это не полная BA-7 и не сдача результата T-006.

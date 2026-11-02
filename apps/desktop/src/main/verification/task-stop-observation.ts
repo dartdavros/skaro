@@ -22,12 +22,16 @@ export function taskAdmissionStore(services: Services, projectId: string, runId:
   return new AdmissionStore(services.db, `task:${projectId}:T-006:${runId}`);
 }
 
-export async function requireTaskProcessExit(store: AdmissionStore, id: string) {
+export async function requireTaskProcessExit(
+  store: AdmissionStore,
+  id: string,
+  requireOwner = true,
+) {
   const saved = store.read();
   assert.equal(saved?.admission.id, id);
   assert.equal(saved?.status, 'exited');
-  assert(saved?.owner);
-  assert.notEqual(await processBirth(saved.owner.pid), saved.owner.birth);
+  if (requireOwner) assert(saved?.owner);
+  if (saved?.owner) assert.notEqual(await processBirth(saved.owner.pid), saved.owner.birth);
   return saved;
 }
 
