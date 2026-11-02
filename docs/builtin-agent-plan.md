@@ -74,6 +74,10 @@ Route: точные metadata, JSON sync и явный отказ несовме�
 и restart с нулём новых POST. Общий ledger 85 intents / $0.39324124 расходов
 и удержаний, пять дополнительных запросов использованы. Выполнение/сдача задачи
 и полная BA-7 остаются открытыми.
+Из завершённого configured journal извлечено [доказательство Chat tools](builtin-agent-tool-evidence.md):
+call ID, исходный hash аргументов и последовательность execution связаны с
+настоящими receipts. Verified только tools на точном маршруте; остальные
+возможности и допуск нового execution этим не выдаются.
 Добавлен [read-only учёт reported usage](builtin-agent-model-usage.md): квитанции
 из primary journal, точные decimal суммы и явный unknown; бюджетные удержания
 учитываются отдельно. UI расхода и полная приёмка ещё открыты.
