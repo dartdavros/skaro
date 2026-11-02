@@ -24,6 +24,7 @@ if (!(
       '--configured-owner-input',
       '--configured-context-input',
       '--configured-plan-payload',
+      '--model-usage-report',
       '--native-admission-recovery',
       '--task-admission',
     ].includes(process.argv[2])) ||

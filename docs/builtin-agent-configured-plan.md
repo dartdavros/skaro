@@ -69,6 +69,10 @@ contract tests прошли. Финальные verification entries также 
 `verification/extensions-b8155cdf-18d1-43f0-bcea-971d381f0de4/proof.json`.
 Два точных input одного хода, прежний envelope, redelivery, live/replay и
 подтверждённый выход настоящего процесса сохранены; task/C4/configuration неизменны.
+Общая configured composition с context/compact/restart также повторно принята:
+`verification/extensions-b4f93030-4c21-4400-915c-dc94e1f7e101/proof.json`.
+Свежий input второго поколения подготовлен, старые не доставлялись повторно,
+оба runtime завершены; новых model POST/резервов и изменений task/C4 нет.
 Live completion/tools/continuation и полный product task lifecycle этим
 не приняты. UI не менялся, full suite не запускался. Модули разделены по
 payload/review/policy/budget/history/turn/driver; каждый меньше 300 строк.

@@ -28,6 +28,7 @@ import { verifyConfiguredModelHost } from './configured-model-host';
 import { prepareConfiguredPlan } from './configured-plan-payload';
 import { verifyConfiguredPlanLive } from './configured-plan-live';
 import { readConfiguredPlanReview } from './configured-plan-review';
+import { verifyReportedModelUsage } from './model-usage-report';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -75,6 +76,9 @@ void app.whenReady().then(async () => {
         if ([...observedProjects].some((id) => id !== projectScope.projectId))
           throw new Error('Foreign project event during scoped verification');
         proof = { projectScope, observedProjectIds: [...observedProjects] };
+      } else if (process.argv[2] === '--model-usage-report') {
+        stage = 'model-usage-report';
+        proof = await verifyReportedModelUsage(data, directory);
       } else if (process.argv[2] === '--configured-plan-review') {
         stage = 'configured-plan-review';
         const checked = await readConfiguredPlanReview(
