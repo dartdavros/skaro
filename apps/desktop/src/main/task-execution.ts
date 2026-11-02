@@ -1,6 +1,6 @@
 import type { AppDb } from '@skaro/core';
 
-interface Execution {
+export interface TaskExecutionState {
   enabled: boolean;
   blocked?: string;
   turn?: string;
@@ -16,8 +16,13 @@ export class TaskExecution {
     this.db = db;
     this.key = `execution.${runId}`;
   }
-  read(): Execution {
-    return this.db.getSetting<Execution>(this.key, { enabled: false, stalls: 0 });
+  read(): TaskExecutionState {
+    return this.db.getSetting<TaskExecutionState>(this.key, { enabled: false, stalls: 0 });
+  }
+  inherit(state: TaskExecutionState): void {
+    // A new agent has different turn IDs, but changing it must not reset a blocker or stall bound.
+    const { turn: _turn, ...retained } = state;
+    if (this.db.getSetting(this.key, null) === null) this.db.setSetting(this.key, retained);
   }
   start(): void {
     this.db.setSetting(this.key, { enabled: true, stalls: 0 });

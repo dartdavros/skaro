@@ -53,11 +53,12 @@ export class DbRuns extends DbTable {
     return this.getRun(id)!;
   }
 
-  /** Publishes the successor, settings and consumed handoff intent atomically. */
+  /** Publishes the successor and its synchronous state writes on this connection atomically. */
   continueRun(
     input: Parameters<DbRuns['createRun']>[0] & { previousRunId: string },
     settingsKey: string,
     settings: unknown,
+    publishState?: (run: RunRecord) => undefined,
   ): RunRecord {
     this.db.exec('BEGIN IMMEDIATE');
     try {
@@ -78,6 +79,7 @@ export class DbRuns extends DbTable {
           'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
         )
         .run(settingsKey, JSON.stringify(settings));
+      publishState?.(next);
       this.db.prepare('DELETE FROM settings WHERE key = ?').run(`${settingsKey}.handoff`);
       this.db.exec('COMMIT');
       return next;

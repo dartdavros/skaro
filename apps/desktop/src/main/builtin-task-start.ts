@@ -10,6 +10,7 @@ export interface BuiltinTaskLaunchRequest {
   /** Cancels admission before it enters the durable task queue; never serialized or saved. */
   signal: AbortSignal;
 }
+export type BuiltinTaskHandoffRequest = Omit<BuiltinTaskLaunchRequest, 'input'>;
 
 /** Main-only launch selection. A route ID is required; no managed or provider fallback is inferred. */
 export function parseBuiltinTaskStart(value: unknown): BuiltinTaskStart {

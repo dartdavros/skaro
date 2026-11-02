@@ -232,6 +232,11 @@ export class TaskRunViews {
       (await this.ctx.history.restore(projectId, taskId));
     const artifacts = await this.ctx.project(projectId).load();
     const task = findTask(artifacts, taskId);
+    if (active?.run.agent === 'skaro') {
+      // The managed target is explicit; never cast builtin settings to a managed AgentId.
+      await this.ctx.handoff.change(active, next);
+      return;
+    }
     const before = this.settings(projectId, task, artifacts);
     if (active && next.isolation !== before.isolation)
       throw new Error('Keep the existing isolation of a started task.');

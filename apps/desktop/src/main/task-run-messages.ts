@@ -169,6 +169,8 @@ export class TaskRunMessages {
   }
 
   async interrupt(projectId: string, taskId: string): Promise<void> {
+    if (this.ctx.handoff.changing(this.ctx.active.get(key(projectId, taskId))))
+      throw new Error('Wait for the agent handoff to finish before stopping the task.');
     this.ctx.continuation.stop(projectId, taskId);
     cancelOwnerMessages(projectId, taskId);
     this.ctx.startup.delivered(projectId, taskId);
@@ -180,8 +182,6 @@ export class TaskRunMessages {
       current.builtinStartup?.abort(new CommandCancelled());
     }
     await this.ctx.integrations.controls.interrupt(projectId, taskId);
-    if (this.ctx.handoff.changing(this.ctx.active.get(k)))
-      throw new Error('Wait for the agent handoff to finish before stopping the task.');
     if (this.ctx.queue.cancel(k)) {
       this.ctx.queuedInputs.delete(k);
       // A started task goes back to what its feed says; a new one was never running.

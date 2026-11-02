@@ -187,6 +187,11 @@ export class TaskRunScheduling {
     const builtin = this.ctx.startup.read(projectId, taskId)?.builtin;
     const existing = await this.ctx.history.restore(projectId, taskId);
     requireCurrent?.();
+    if (existing?.switching) {
+      const recovered = await this.ctx.handoff.recover(existing, true, true);
+      if (recovered === existing) throw new Error('The task handoff is incomplete');
+      return this.beginCurrent(projectId, taskId, k);
+    }
     if (existing && builtin && existing.run.agent !== 'skaro')
       throw new Error('Pending builtin launch conflicts with the existing task run');
     if (existing) {

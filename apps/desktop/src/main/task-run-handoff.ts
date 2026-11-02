@@ -1,8 +1,7 @@
-import { agentDefinition } from '@skaro/agents';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { continuationTimeline } from '@skaro/timeline';
-import type { AgentSettings, MessageInput } from '../shared/ipc';
+import type { MessageInput } from '../shared/ipc';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { key, settingsKey } from './task-run-helpers';
@@ -10,10 +9,20 @@ import { handoffContext } from './task-history-context';
 import { loadTaskHistory } from './task-history-load';
 import type { TimelineState } from '@skaro/timeline';
 import { errorText } from './session-log';
+import {
+  handoffAgentName,
+  prepareTaskHandoff,
+  type TaskHandoffSettings,
+} from './task-handoff-settings';
+import { handoffInputs } from './task-handoff-inputs';
+import type { BuiltinTaskHandoffRequest } from './builtin-task-start';
+import { saveBuiltinRunSettings } from './builtin-run-settings';
+import { TaskExecution } from './task-execution';
+import { CommandCancelled } from './owner-commands';
 
 interface Intent {
   from: string;
-  next: AgentSettings;
+  next: TaskHandoffSettings;
   inputs: MessageInput[];
   interactions: TimelineState['interactions'];
   plan?: TimelineState['plan'];
@@ -35,14 +44,14 @@ export class TaskRunHandoff {
     return !!active && this.pending.has(key(active.projectId, active.taskId));
   }
 
-  async recover(active: ActiveRun, strict = true): Promise<ActiveRun> {
+  async recover(active: ActiveRun, strict = true, queuedRecovery = false): Promise<ActiveRun> {
     const intent = this.ctx.deps.db.getSetting<Intent | null>(
       `${settingsKey(active.projectId, active.taskId)}.handoff`,
       null,
     );
     if (intent?.from !== active.run.id) return active;
     try {
-      return await this.change(active, intent.next);
+      return await this.change(active, intent.next, queuedRecovery);
     } catch (error) {
       if (strict) throw error;
       const message = errorText(error);
@@ -54,14 +63,33 @@ export class TaskRunHandoff {
     }
   }
 
-  change(active: ActiveRun, next: AgentSettings): Promise<ActiveRun> {
+  async changeBuiltin(request: BuiltinTaskHandoffRequest): Promise<void> {
+    const { projectId, taskId, signal } = request;
+    signal.throwIfAborted();
+    const epoch = this.ctx.startup.cancellationEpoch(projectId, taskId);
+    const active = await this.ctx.history.restore(projectId, taskId);
+    if (!active) throw new Error('Builtin handoff requires an existing task run');
+    if (!this.ctx.deps.builtinSessions)
+      throw new Error('Builtin task authorization is unavailable');
+    const settings = await this.ctx.deps.builtinSessions.resolveStart(request.settings, signal);
+    signal.throwIfAborted();
+    if (epoch !== this.ctx.startup.cancellationEpoch(projectId, taskId))
+      throw new CommandCancelled();
+    await this.change(active, settings);
+  }
+
+  change(active: ActiveRun, next: TaskHandoffSettings, queuedRecovery = false): Promise<ActiveRun> {
     const k = key(active.projectId, active.taskId);
     const pending = this.pending.get(k);
     if (pending) return pending;
-    if (active.timeline.state.status === 'working' || active.attaching)
+    if (
+      active.timeline.state.status === 'working' ||
+      active.attaching ||
+      (!queuedRecovery && this.ctx.scheduling.holdsSlot(active.projectId, active.taskId))
+    )
       return Promise.reject(new Error('Stop the current turn before changing the agent.'));
     active.switching = true;
-    const operation = this.perform(active, next).finally(() => {
+    const operation = this.perform(active, structuredClone(next)).finally(() => {
       this.pending.delete(k);
       this.ctx.queue.poke();
     });
@@ -69,7 +97,7 @@ export class TaskRunHandoff {
     return operation;
   }
 
-  private async perform(active: ActiveRun, next: AgentSettings): Promise<ActiveRun> {
+  private async perform(active: ActiveRun, next: TaskHandoffSettings): Promise<ActiveRun> {
     const { projectId, taskId } = active;
     const k = key(projectId, taskId);
     const setting = settingsKey(projectId, taskId);
@@ -79,7 +107,9 @@ export class TaskRunHandoff {
     try {
       if (intent && intent.from !== active.run.id)
         throw new Error('The handoff intent belongs to another run');
-      await this.ctx.views.ensureAgent(next.agent);
+      const fromName = handoffAgentName(active.run.agent);
+      const toName = handoffAgentName(next.agent);
+      await prepareTaskHandoff(this.ctx, active, next, new AbortController().signal);
       // Work admitted before the handoff may finish; later requests are rejected.
       await Promise.allSettled([...active.operations]);
       await this.ctx.merges.idle(projectId);
@@ -88,7 +118,10 @@ export class TaskRunHandoff {
         intent = {
           from: active.run.id,
           next,
-          inputs: this.ctx.queuedInputs.get(k) ?? [],
+          inputs: handoffInputs(
+            this.ctx.startup.read(projectId, taskId)?.inputs ?? [],
+            this.ctx.queuedInputs.get(k) ?? [],
+          ),
           interactions: structuredClone(active.timeline.state.interactions),
           ...(active.timeline.state.plan
             ? { plan: structuredClone(active.timeline.state.plan) }
@@ -115,11 +148,15 @@ export class TaskRunHandoff {
         commitMessage: active.commitMessage,
         inputs: intent.inputs,
       });
-      const saved = await this.ctx.views.withDefaults(
-        next.agent,
-        this.ctx.project(projectId).root,
+      // Metadata or task identity may have changed while the old process was closing.
+      const prepared = await prepareTaskHandoff(
+        this.ctx,
+        active,
         next,
+        new AbortController().signal,
       );
+      const saved = prepared.settings;
+      const execution = this.ctx.continuation.execution(active).read();
       const run = db.continueRun(
         {
           projectId,
@@ -129,12 +166,21 @@ export class TaskRunHandoff {
           ...(active.run.worktree ? { worktree: active.run.worktree } : {}),
           ...(active.run.branch ? { branch: active.run.branch } : {}),
           logPath: join('runs', projectId, taskId, `${Date.now()}-${randomUUID()}.jsonl`),
-          adapterVersion: this.ctx.deps.agents.adapter(saved.agent).adapterVersion,
+          adapterVersion: prepared.adapterVersion,
           previousRunId: active.run.id,
           handoff,
         },
         setting,
-        saved,
+        saved.agent === 'skaro' ? db.getSetting(setting, null) : saved,
+        (run) => {
+          if (saved.agent === 'skaro') saveBuiltinRunSettings(db, run.id, saved);
+          new TaskExecution(db, run.id).inherit(execution);
+          this.ctx.startup.delivered(projectId, taskId);
+          if (intent!.inputs.length) {
+            if (saved.agent === 'skaro') this.ctx.startup.selectBuiltin(projectId, taskId, saved);
+            this.ctx.startup.begin(projectId, taskId, intent!.inputs);
+          }
+        },
       );
       const successor = new ActiveRun(
         projectId,
@@ -152,8 +198,8 @@ export class TaskRunHandoff {
         'other',
         'info',
         this.ctx.deps.locale() === 'ru'
-          ? `Агент изменён: ${agentDefinition(active.run.agent).presentation.name} → ${agentDefinition(saved.agent).presentation.name}. Работа продолжится со следующего сообщения.`
-          : `Agent changed: ${agentDefinition(active.run.agent).presentation.name} → ${agentDefinition(saved.agent).presentation.name}. Work continues with the next message.`,
+          ? `Агент изменён: ${fromName} → ${toName}. Работа продолжится со следующего сообщения.`
+          : `Agent changed: ${fromName} → ${toName}. Work continues with the next message.`,
       );
       await this.ctx.history.drain(successor);
       this.ctx.setRuntime(projectId, taskId, 'idle', run.id);
@@ -161,7 +207,7 @@ export class TaskRunHandoff {
       if (intent.inputs.length) {
         this.ctx.queuedInputs.set(k, intent.inputs);
         this.ctx.queue.enqueue([k]);
-      }
+      } else this.ctx.queuedInputs.delete(k);
       active.release?.();
       active.release = undefined;
       this.ctx.changed(projectId, taskId);

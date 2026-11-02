@@ -102,6 +102,10 @@ OpenAI/Anthropic и явный каталог инструментов task host
 через общую очередь: точные route/права/isolation, durable startup и повтор,
 повторные gates перед созданием run и отмена подготовки/пакета доставки.
 Положительный Electron task workflow, picker, handoff и сдача ещё не приняты.
+Подключён [внутренний handoff builtin ↔ managed](builtin-agent-task-handoff.md):
+повторный preflight, прежний process shutdown и атомарная публикация successor,
+его настроек, execution intent и pending input. Положительная живая приёмка
+переходов, отзыва permissions и продолжения после restart остаётся открытой.
 BA-* — локальные ID плана, не созданные задачи Skaro.
 
 ## Объём и зависимости
