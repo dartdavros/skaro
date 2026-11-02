@@ -24,6 +24,14 @@ Grant не выдаёт model tools или MCP operations, остаётся read
 inputs/images/answers/rewind/tool requests/interactions. Новые файлы не читаются
 для отправки; локальные C4/SHA guards в prompt не включаются.
 
+Обычная доставка task messages теперь явно формирует `UserInput`: только текст
+со стандартной Skaro note и непустые ссылки attachments. Внутренние commandId,
+internal и privateText из inbox не копируются в durable input. Command ID остаётся
+отдельным аргументом send/steer и в прежней note для delivery recovery/dedup.
+Это устраняет найденный при просмотре кода конфликт с точным envelope gate.
+Четыре затронутых test files (девять тестов) и main TypeScript/lint прошли;
+положительная delivery в настоящем T-006 остаётся до согласованного live запуска.
+
 Перед quotation и dispatch нужен настоящий активный task admission и регистрация
 [primary task journal](builtin-agent-task-budget.md). Прежние источники frozen;
 только точный собственный journal может меняться. Отдельный guard допускает

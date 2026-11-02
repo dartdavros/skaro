@@ -1,6 +1,6 @@
 import { QuestionAnswers } from './question-answers';
 import { cancelOwnerMessages, CommandCancelled } from './owner-commands';
-import { withSkaroNote, assertQuestionsAnswered, validateQuestionAnswer } from '@skaro/timeline';
+import { assertQuestionsAnswered, validateQuestionAnswer } from '@skaro/timeline';
 import { isAsyncQuestion, type Interaction, type InteractionAnswer } from '@skaro/timeline';
 import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
 import { readSubject, updateSubject } from './task-subject';
@@ -11,6 +11,7 @@ import { ActiveRun } from './task-run-model';
 import { trackRun } from './task-run-access';
 import type { TaskRunEngine } from './task-run-engine';
 import { stopBuiltinTask, requireTaskNotStopping } from './builtin-task-stop';
+import { taskAgentInput } from './task-agent-input';
 
 /** messages: a focused part of the task-run controller. */
 export class TaskRunMessages {
@@ -89,13 +90,7 @@ export class TaskRunMessages {
     assertQuestionsAnswered(active.timeline.state);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
       throw new CommandCancelled();
-    const note = [
-      input.commandId && `command_id: ${input.commandId}`,
-      input.internal && 'orchestration: task',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    const message = { ...input, text: withSkaroNote(note, input.text) };
+    const message = taskAgentInput(input);
     if (active.timeline.state.status === 'idle') await session.send(message, input.commandId);
     else await session.steer(message, input.commandId);
   }
