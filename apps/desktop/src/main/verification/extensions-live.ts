@@ -25,6 +25,9 @@ import { verifyNativeOwnerSteer } from './native-owner-steer';
 import { catPilotState } from './cat-pilot-state';
 import { verifyProjectScope } from './project-scope-proof';
 import { verifyConfiguredModelHost } from './configured-model-host';
+import { prepareConfiguredPlan } from './configured-plan-payload';
+import { verifyConfiguredPlanLive } from './configured-plan-live';
+import { readConfiguredPlanReview } from './configured-plan-review';
 
 app.setName('Skaro');
 void app.whenReady().then(async () => {
@@ -72,6 +75,37 @@ void app.whenReady().then(async () => {
         if ([...observedProjects].some((id) => id !== projectScope.projectId))
           throw new Error('Foreign project event during scoped verification');
         proof = { projectScope, observedProjectIds: [...observedProjects] };
+      } else if (process.argv[2] === '--configured-plan-review') {
+        stage = 'configured-plan-review';
+        const checked = await readConfiguredPlanReview(
+          services,
+          data,
+          owner,
+          process.argv[3]!,
+          process.argv[4]!,
+        );
+        proof = {
+          project: 'Cat-pilot',
+          payloadHash: process.argv[4],
+          currentRouteAndCriteria: true,
+          priorJournalsUnchanged: true,
+          budget: checked.reviewed.budget,
+          credentialBytesRead: false,
+          modelRequests: 0,
+        };
+      } else if (process.argv[2] === '--configured-plan-live') {
+        stage = 'configured-plan-live';
+        proof = await verifyConfiguredPlanLive(
+          services,
+          directory,
+          data,
+          owner,
+          process.argv[3]!,
+          process.argv[4]!,
+        );
+      } else if (process.argv[2] === '--configured-plan-payload') {
+        stage = 'configured-plan-payload';
+        proof = await prepareConfiguredPlan(services, directory, owner, data);
       } else if (
         [
           '--configured-model-preflight',
@@ -147,7 +181,16 @@ void app.whenReady().then(async () => {
     code = 0;
   } catch (error) {
     // Local verification errors contain no remote model payload or API credentials.
-    process.send?.({ type: 'failed', stage, name: error instanceof Error ? error.name : 'Error' });
+    process.send?.({
+      type: 'failed',
+      stage,
+      name: error instanceof Error ? error.name : 'Error',
+      ...(stage === 'configured-plan-payload' &&
+      error instanceof Error &&
+      error.name === 'AssertionError'
+        ? { reason: error.message.slice(0, 160) }
+        : {}),
+    });
   } finally {
     if (services) {
       await services.modelCatalog.close();

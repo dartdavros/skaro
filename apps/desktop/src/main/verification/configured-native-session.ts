@@ -8,6 +8,7 @@ import {
   type RuntimeModelInputPort,
   type SessionOptions,
   type TimelineEvent,
+  type ModelToolAdmission,
 } from '@skaro/timeline';
 import type { Services } from '../app-services';
 import type { NativeAdmissions } from '../native/admissions';
@@ -23,6 +24,7 @@ export async function configuredNativeSession(input: {
   options: SessionOptions;
   directory: string;
   ownerInput?: RuntimeModelInputPort;
+  toolAdmission?: ModelToolAdmission;
   observe?: (event: TimelineEvent) => void;
   requests: Parameters<typeof prepareConfiguredModelHost>[0]['requests'];
 }) {
@@ -43,6 +45,7 @@ export async function configuredNativeSession(input: {
     },
     admissions: lease,
     ownerInput: input.ownerInput,
+    toolAdmission: input.toolAdmission,
     signal: lease.signal,
     transport: await modelNetworkTransport(process.env['SKARO_VERIFY_PROXY']),
     metadata: services.modelCatalog,

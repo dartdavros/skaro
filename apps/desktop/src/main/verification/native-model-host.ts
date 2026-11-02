@@ -10,12 +10,12 @@ import { quoteLiveRequest, requireLiveBudget } from '../credentials/live-budget'
 import { catPilotVerificationTarget } from './task-verification';
 import { nativeProbeConfig } from './native-probe-options';
 import {
-  MODEL_PLAN_REJECTION,
   modelPlanInspection,
   modelPlanPayload,
   modelPlanToolAdmission,
   planPayloadHash,
 } from './model-plan-request';
+import { requireModelPlanEnvelope } from './model-plan-envelope';
 
 /** No approval => real admission refusal. The connector is always the actual configured service. */
 export async function nativePlanHost(
@@ -87,34 +87,9 @@ export async function nativePlanHost(
   let requests = 0;
   let preparations = 0;
   let steerings = 0;
-  const envelope = (request: ChatRequest) => {
-    assert.equal(planPayloadHash(request.route), planPayloadHash(payload.request.route));
-    assert.deepEqual(request.price, payload.request.price);
-    assert.deepEqual(
-      request.messages.slice(0, payload.request.messages.length),
-      payload.request.messages,
-    );
-    for (const tool of request.tools ?? [])
-      assert(
-        payload.request.tools!.some((entry) => planPayloadHash(entry) === planPayloadHash(tool)),
-      );
-    for (const message of request.messages) {
-      if (message.role !== 'tool') continue;
-      assert.equal(typeof message.content, 'string');
-      const value = JSON.parse(message.content!);
-      if (value.error) {
-        assert.deepEqual(Object.keys(value), ['error']);
-        assert(
-          [MODEL_PLAN_REJECTION, 'Tool is not in the admitted model catalogue'].includes(
-            value.error,
-          ),
-        );
-      }
-    }
-  };
   const allowed = async (request: ChatRequest, signal: AbortSignal) => {
     assert(approvalHash, 'No reviewed payload admission was provided');
-    envelope(request);
+    requireModelPlanEnvelope(request, payload);
     const latest = await target.verification.acceptance.inspect(
       target.verification.admission,
       signal,
@@ -138,7 +113,7 @@ export async function nativePlanHost(
             preparations++;
             assert.deepEqual(input.input, { text: payload.request.messages[0]!.content });
             // Local steering preflight may prepare metadata; reserve/complete still deny all POSTs.
-            if (steering) envelope(payload.request);
+            if (steering) requireModelPlanEnvelope(payload.request, payload);
             else await allowed(payload.request, signal);
             signal.throwIfAborted();
             return { request: { kind: 'chat', value: payload.request }, maxSteps: 5 };
@@ -153,7 +128,7 @@ export async function nativePlanHost(
                   assert.deepEqual(input.input, { text: payload.request.messages[0]!.content });
                   if (request.kind !== 'chat')
                     throw new Error('Plan steering requires chat protocol');
-                  envelope(request.value);
+                  requireModelPlanEnvelope(request.value, payload);
                   return appendChatOwnerInput(input, request, terminal, signal);
                 },
               }

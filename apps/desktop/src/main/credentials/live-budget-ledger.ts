@@ -9,6 +9,9 @@ export interface LiveBudgetReservation {
   nanoUsd: number;
   requestBytes: number;
 }
+/** Legacy acceptance journals plus unique reviewed configured attempts, all in the same directory. */
+export const isLiveBudgetJournal = (name: string) =>
+  /^session(?:-[a-z]+|-configured-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})?\.jsonl$/.test(name);
 export function usdNanos(value: string): number {
   if (typeof value !== 'string' || !/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value))
     throw new Error('Invalid cost receipt');
@@ -22,7 +25,7 @@ export async function liveBudgetLedger(directory: string) {
   let committedNanoUsd = 0;
   let requests = 0;
   for (const name of await readdir(directory)) {
-    if (!/^session(?:-[a-z]+)?\.jsonl$/.test(name)) continue;
+    if (!isLiveBudgetJournal(name)) continue;
     const records = (await readFile(join(directory, name), 'utf8'))
       .trim()
       .split('\n')

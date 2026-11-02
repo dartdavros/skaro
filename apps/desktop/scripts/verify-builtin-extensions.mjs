@@ -23,10 +23,13 @@ if (!(
       '--configured-model-preflight',
       '--configured-owner-input',
       '--configured-context-input',
+      '--configured-plan-payload',
       '--native-admission-recovery',
       '--task-admission',
     ].includes(process.argv[2])) ||
-  (process.argv.length === 4 && process.argv[2] === '--browser')
+  (process.argv.length === 4 && process.argv[2] === '--browser') ||
+  (process.argv.length === 5 &&
+    ['--configured-plan-live', '--configured-plan-review'].includes(process.argv[2]))
 ))
   throw new Error(
     'Usage: verify-builtin-extensions.mjs [--native-verification | --native-operations | --native-lifetime | --native-model-preflight | --browser CAT_PILOT_PROJECT_ROOT]',
@@ -69,6 +72,9 @@ try {
       '--configured-model-preflight',
       '--configured-owner-input',
       '--configured-context-input',
+      '--configured-plan-payload',
+      '--configured-plan-live',
+      '--configured-plan-review',
     ].includes(process.argv[2])
   ) {
     if (process.env.SKARO_VERIFY_PROXY !== 'http://127.0.0.1:10809')
