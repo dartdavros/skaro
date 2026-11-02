@@ -21,8 +21,11 @@ criteria/C4, advertised pricing и SHA256 старых primary journals. Клю�
 runtime не нужны. Hash идентифицирует конкретный файл, но не заменяет отдельное
 разрешение владельца на новый живой прогон/расширение счётчика.
 
-`--configured-plan-live PATH SHA256` подготовлен, **не запускался**. Он требует
-отдельного согласования. Данные проходят ordinary durable send, процесс получает
+Владелец 02.11.2026 явно согласовал тот же payload и до пяти дополнительных
+запросов в общем лимите $1. Непосредственно перед запуском повторный review
+принят: `verification/extensions-7ee688b9-ccc7-49d4-85cc-c46247774b02/proof.json`.
+`--configured-plan-live PATH SHA256` запущен после этого согласования;
+результат фиксируется отдельно ниже. Данные проходят ordinary durable send, процесс получает
 admission в настоящем spawn callback. Секрет выдаётся только действующему
 process lease. Отдельно проверяются актуальный payload/route/catalog и бюджет
 на reservation/dispatch. Штатные tools не могут превратить план в выполнение
@@ -33,8 +36,8 @@ Stable input ID и journal path зависят от reviewed attempt: повто
 ## Бюджет
 
 Настоящий ledger на подготовке: 80 intents, $0.39157154 расходов и удержаний.
-Старый guard существующих сценариев (80 intents) не менялся. Предлагаемый
-отдельно согласуемый лимит — ещё максимум пять intents, то есть 85 суммарно,
+Старый guard существующих сценариев (80 intents) не менялся. Отдельно
+согласованный лимит — ещё максимум пять intents, то есть 85 суммарно,
 при прежнем общем бюджете до $1 и техническом потолке $0.95 с запасом $0.05.
 Исторические journals не сбрасываются: их hashes закреплены в локальном файле
 согласования и сверяются перед dispatch. Эти hashes и budget metadata остаются
@@ -73,10 +76,38 @@ contract tests прошли. Финальные verification entries также 
 `verification/extensions-b4f93030-4c21-4400-915c-dc94e1f7e101/proof.json`.
 Свежий input второго поколения подготовлен, старые не доставлялись повторно,
 оба runtime завершены; новых model POST/резервов и изменений task/C4 нет.
-Live completion/tools/continuation и полный product task lifecycle этим
-не приняты. UI не менялся, full suite не запускался. Модули разделены по
+Перечисленные no-POST прогоны сами по себе не принимали live completion;
+положительный результат приведён ниже. Полный product task lifecycle не принят.
+UI не менялся, full suite не запускался. Модули разделены по
 payload/review/policy/budget/history/turn/driver; каждый меньше 300 строк.
 
 Предыдущие попытки lint/build были остановлены лимитом автоматической проверки
 и не выполнялись. После продолжения владельца проверки успешно запущены.
 Это не расход OpenRouter и не оценка кода как небезопасного.
+
+## Живая приёмка после согласования
+
+Принят `verification/extensions-65ea78b6-0e16-499f-a90f-919baf78cbfe/proof.json`.
+Пять настоящих POST через заданный VPN и configured host на сохранённом маршруте
+`openai/gpt-4.1-nano`. Обычный durable send, общий credential authority,
+process admission, текущие metadata и reservation-before-dispatch gates
+прошли. Модель вызвала inspect_acceptance, plan_checks и assess_checks через
+штатный executor с ограниченными projections. Один terminal done, streaming text
+сохранён, live/replay совпали. OS owner завершён, running items после close нет.
+
+Расход этого прогона — $0.00166970. Общий ledger стал 85 intents и $0.39324124
+расходов/удержаний; прежние holds не сбрасывались, старые journal bytes совпали
+с закреплёнными hashes. Все пять дополнительных запросов использованы;
+новые POST этим разрешением больше не допускаются.
+
+Новый main/runtime запуск с тем же payload, session и stable input ID принят:
+`verification/extensions-a56cff41-de88-4bef-a30a-44bd2e8c3c1e/proof.json`.
+`replayOnly: true`, modelPostAttempts 0, бюджет остался прежним. Сохранённый
+успех и terminal воспроизведены без новой подготовки/отправки; процесс завершён.
+
+В обоих случаях TaskRun не создавался, task T-008, C4 и настройки не менялись,
+readyToSubmit=false. Нет проверки выполнения команд, исправления кода или сдачи
+активной задачи. Приняты именно configured provider completion/tool loop и
+повторная доставка после restart. Настройки Skaro по умолчанию и picker
+остаются прежними. Это первые положительные results данного factory, прежние
+no-POST proofs не переименовываются в положительную приёмку.

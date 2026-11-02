@@ -1,5 +1,10 @@
 # Сборка model host из сохранённого маршрута
 
+Актуализация 02.11.2026: положительный configured OpenRouter read-only plan
+и restart/redelivery без новых POST приняты в
+[живом сценарии](builtin-agent-configured-plan.md#живая-приёмка-после-согласования).
+Ниже сохранены отдельные no-POST proofs; они не подменяют эту новую проверку.
+
 Дата: 01.11.2026. Продолжение BA-7. Main-only `prepareConfiguredModelHost`
 собирает настоящий коннектор, credential authority и configuration lease до
 native spawn. Секреты не входят в binding, runtime config или RPC. Общий vault

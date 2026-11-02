@@ -36,7 +36,8 @@ send → durable input → прежний model loop, без повторной 
 Добавлено [backend-хранилище Connection/Route](builtin-agent-model-configuration.md):
 атомарные ревизии и общие connector validators, без включения UI или model admission.
 Добавлен [configured model host](builtin-agent-configured-model-host.md): точные
-route/credential reference, отзыв устаревшего lease; positive configured runtime открыт.
+route/credential reference и отзыв устаревшего lease. Положительный configured
+read-only model-plan принят 02.11.2026; активная task/chat интеграция открыта.
 Исправлена [граница проверочного запуска](builtin-agent-project-scope.md): Cat-pilot
 выбирается до startup/recovery/watchers и Docker cleanup, не только внутри сценария.
 Добавлены [настройки подключений и маршрутов](builtin-agent-model-settings.md):
@@ -68,9 +69,11 @@ Configured host требует отдельную проверку актуал�
 Приняты [каталоговые уровни усилия](builtin-agent-model-effort.md) в прежней форме
 Route: точные metadata, JSON sync и явный отказ несовместимому уровню проверены
 на Cat-pilot; provider reasoning/расход и полная BA-8 ещё не приняты.
-Подготовлен [живой configured plan](builtin-agent-configured-plan.md): конкретный
-payload и no-POST review проверены, пять дополнительных intents в прежнем общем
-бюджете требуют отдельного согласования; живой сценарий ещё не запускался.
+Принят [живой configured plan](builtin-agent-configured-plan.md) после отдельного
+согласования: пять POST, три настоящих tools, ordinary send, streaming/live-replay
+и restart с нулём новых POST. Общий ledger 85 intents / $0.39324124 расходов
+и удержаний, пять дополнительных запросов использованы. Выполнение/сдача задачи
+и полная BA-7 остаются открытыми.
 Добавлен [read-only учёт reported usage](builtin-agent-model-usage.md): квитанции
 из primary journal, точные decimal суммы и явный unknown; бюджетные удержания
 учитываются отдельно. UI расхода и полная приёмка ещё открыты.

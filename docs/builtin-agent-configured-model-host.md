@@ -1,5 +1,9 @@
 # Model host и актуальная конфигурация маршрута
 
+Актуализация 02.11.2026: через тот же wrapper приняты настоящий configured
+provider/tool loop и повторный native запуск без POST; факты и ограничения —
+[configured plan](builtin-agent-configured-plan.md#живая-приёмка-после-согласования).
+
 Дата: 01.11.2026. Main-only `bindConfiguredModelHost` требует точный configured
 route snapshot и credential reference того коннектора, который он оборачивает.
 Это configuration gate, а не подтверждение profile/capability, ключа или бюджета.
