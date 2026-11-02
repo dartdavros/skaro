@@ -89,6 +89,9 @@ call ID, исходный hash аргументов и последовател�
 подключена к TaskRunSessions с общим configured host, process ownership,
 отменой startup и durable command IDs. Обычное создание/выбор builtin run,
 chat startup, положительные queue/handoff/submit/merge ещё не приняты.
+Добавлено [форматирование native owner input](builtin-agent-native-context-input.md)
+OpenAI/Anthropic и явный каталог инструментов task host. Прямые API не считаются
+принятыми без живых проверок; metadata gate сохраняется.
 BA-* — локальные ID плана, не созданные задачи Skaro.
 
 ## Объём и зависимости

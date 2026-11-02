@@ -63,7 +63,10 @@ export function requireBuiltinTaskSessionPolicy(
     throw new Error('Builtin context must retain the exact task and handoff instructions');
   if (
     (options.model && ![config.route.routeId, config.route.modelId].includes(options.model)) ||
-    (options.effort && config.route.parameters['effort'] !== options.effort)
+    (options.effort &&
+      config.route.parameters[
+        ['openai', 'deepseek'].includes(config.route.connector) ? 'reasoning_effort' : 'effort'
+      ] !== options.effort)
   )
     throw new Error('Builtin route differs from the selected task model or effort');
 }

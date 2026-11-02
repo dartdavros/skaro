@@ -6,12 +6,12 @@ import { nativeCatalog, nativeModelStream } from './native-transport.ts';
 import { AnthropicMessagesStream } from './anthropic-stream.ts';
 import { modelParameters, requireDirectProfile } from './direct-request.ts';
 import {
-  requireSameRoute,
   requireToolResults,
   type NativeRequest,
   type NativeResponse,
   type NativeToolResult,
 } from './native-types.ts';
+import { continueNativeConversation } from './native-continuation.ts';
 
 const parameters = z.strictObject({
   max_tokens: z.number().int().min(1).max(131_072).default(1024),
@@ -111,26 +111,7 @@ export class AnthropicMessagesConnector {
     response: NativeResponse,
     results: readonly NativeToolResult[],
   ): NativeRequest {
-    requireSameRoute(request, response);
     requireToolResults(response.calls, results);
-    return structuredClone({
-      ...request,
-      input: [
-        ...request.input,
-        { role: 'assistant', content: response.output },
-        {
-          role: 'user',
-          content: response.calls.map((call) => {
-            const result = results.find((result) => result.id === call.id)!;
-            return {
-              type: 'tool_result',
-              tool_use_id: call.id,
-              content: result.text,
-              ...(result.isError ? { is_error: true } : {}),
-            };
-          }),
-        },
-      ],
-    });
+    return continueNativeConversation(request, response, results);
   }
 }

@@ -32,6 +32,7 @@ export { executeChatTurn } from './models/chat-turn.ts';
 export { executeNativeTurn } from './models/native-turn.ts';
 export { contextChatRequest, contextNativeRequest } from './context/request.ts';
 export { continueContextChatRequest } from './context/chat-continuation.ts';
+export { continueContextNativeRequest } from './context/native-continuation.ts';
 export { latestContext } from './context/checkpoint.ts';
 export { inspectSkill } from './context/skills.ts';
 export type * from './context/model.ts';
@@ -47,6 +48,7 @@ export { ExtensionServer } from './extensions/ipc-host.ts';
 export { extensionBinding, requireExtensionBinding } from './extensions/ipc-binding.ts';
 export { bindSkaroOperations, prepareSkaroOperations } from './extensions/skaro.ts';
 export { appendChatOwnerInput } from './models/owner-chat.ts';
+export { appendNativeOwnerInput } from './models/owner-native.ts';
 export {
   parseBuiltinModelChoices,
   parseBuiltinModelConfiguration,

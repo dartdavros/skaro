@@ -108,6 +108,8 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
       continuation: (response) => ({
         schema: 1,
         protocol: request.route.apiProfile,
+        context: request.context,
+        system: request.system,
         input: request.input,
         response,
       }),
@@ -146,6 +148,8 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
           value: {
             schema: 1,
             protocol: request.route.apiProfile,
+            context: request.context,
+            system: request.system,
             input: request.input,
             response,
             results,

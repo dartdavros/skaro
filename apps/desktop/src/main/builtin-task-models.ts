@@ -1,14 +1,21 @@
 import { prepareSkaroOperations, readRuntimeJournal } from '@skaro/agent-runtime';
 import type { McpHttpServer, SkaroScope } from '@skaro/mcp-server';
-import type { BuiltinSessionStart, ChatRequest, ModelToolAdmission } from '@skaro/timeline';
+import type {
+  BuiltinSessionStart,
+  ChatRequest,
+  ModelTool,
+  ModelToolAdmission,
+} from '@skaro/timeline';
 import type { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import type { BuiltinModelSettingsService } from './builtin-model-settings-service';
 import type { BuiltinModelCatalog } from './builtin-model-catalog';
 import type { BuiltinTaskSessionPreparer } from './builtin-task-session';
 import { prepareConfiguredModelHost } from './builtin-configured-host';
 import { createContextChatInput } from './builtin-context-chat-input';
+import { createContextNativeInput } from './builtin-context-native-input';
 import { modelNetworkTransport } from './model-network-transport';
 import { requireBuiltinTaskSessionPolicy } from './builtin-task-session-policy';
+import { configuredTaskTools } from './builtin-model-tools';
 
 type Preparation = Parameters<BuiltinTaskSessionPreparer['prepare']>[0];
 
@@ -17,6 +24,7 @@ export interface BuiltinTaskModelGrant {
   price: ChatRequest['price'];
   maxSteps: number;
   tools: ModelToolAdmission;
+  modelTools: readonly ModelTool[];
   operations: readonly { name: string; readOnly: boolean }[];
   requests: Parameters<typeof prepareConfiguredModelHost>[0]['requests'];
 }
@@ -45,17 +53,7 @@ export class BuiltinTaskModels implements BuiltinTaskSessionPreparer {
     const grant = await this.deps.authorize(input);
     input.signal.throwIfAborted();
     const selected = structuredClone(grant.config);
-    if (!['openrouter', 'deepseek'].includes(selected.route.connector))
-      throw new Error(
-        'Task owner input requires a Chat Completions route; native input is unavailable',
-      );
-    const ownerInput = createContextChatInput({
-      journalPath: input.journalPath,
-      sessionId: input.sessionId,
-      route: selected.route,
-      price: grant.price,
-      maxSteps: grant.maxSteps,
-    });
+    const chat = ['openrouter', 'deepseek'].includes(selected.route.connector);
     const extensions = prepareSkaroOperations(
       this.deps.mcp.operations(input.scope, input.admissions),
       input.admissions.admission,
@@ -63,6 +61,16 @@ export class BuiltinTaskModels implements BuiltinTaskSessionPreparer {
       grant.operations,
       input.signal,
     );
+    const formatting = {
+      journalPath: input.journalPath,
+      sessionId: input.sessionId,
+      route: selected.route,
+      maxSteps: grant.maxSteps,
+      tools: configuredTaskTools(grant.modelTools, extensions),
+    };
+    const ownerInput = chat
+      ? createContextChatInput({ ...formatting, price: grant.price })
+      : createContextNativeInput(formatting);
     const config: BuiltinSessionStart = {
       ...selected,
       tools: selected.tools && {
@@ -77,7 +85,7 @@ export class BuiltinTaskModels implements BuiltinTaskSessionPreparer {
       extensionsScope: structuredClone(input.scope),
       model: {
         scope: structuredClone(input.scope),
-        protocol: 'chat',
+        protocol: chat ? 'chat' : 'native',
         input: { revision: ownerInput.revision, steer: true },
         tools: {
           revision: grant.tools.revision,

@@ -15,9 +15,10 @@ IPC для передачи этого port не добавлен, обычны�
 
 Authorization port обязан предоставить конкретные context/tool policies,
 цену, предел шагов и gates резервирования/отправки каждого запроса. Фабрика
-не подставляет permissive policy. Пока поддержано форматирование owner input
-для Chat Completions; native owner input OpenAI/Anthropic остаётся отдельной
-незакрытой частью. Живые проверки прямых API отложены владельцем.
+не подставляет permissive policy. Поддержано форматирование owner input
+для Chat Completions и [native owner input OpenAI/Anthropic](builtin-agent-native-context-input.md).
+Живые проверки прямых API отложены владельцем; metadata gate пока доступен
+только для OpenRouter и не обходится новым formatter.
 
 Общие task/handoff instructions, environment description и history sinks
 вынесены в `task-session-options.ts`; managed Claude/Codex используют их же.

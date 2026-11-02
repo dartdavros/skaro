@@ -6,12 +6,12 @@ import { nativeCatalog, nativeModelStream } from './native-transport.ts';
 import { OpenAIResponsesStream } from './openai-stream.ts';
 import { modelParameters, requireDirectProfile, sampling } from './direct-request.ts';
 import {
-  requireSameRoute,
   requireToolResults,
   type NativeRequest,
   type NativeResponse,
   type NativeToolResult,
 } from './native-types.ts';
+import { continueNativeConversation } from './native-continuation.ts';
 
 const parameters = z.strictObject({
   max_output_tokens: z.number().int().min(1).max(131_072).default(1024),
@@ -78,16 +78,7 @@ export class OpenAIResponsesConnector {
     response: NativeResponse,
     results: readonly NativeToolResult[],
   ): NativeRequest {
-    requireSameRoute(request, response);
     requireToolResults(response.calls, results);
-    const items = response.calls.map((call) => {
-      const result = results.find((result) => result.id === call.id)!;
-      return {
-        type: 'function_call_output',
-        call_id: call.id,
-        output: result.isError ? JSON.stringify({ error: result.text }) : result.text,
-      };
-    });
-    return structuredClone({ ...request, input: [...request.input, ...response.output, ...items] });
+    return continueNativeConversation(request, response, results);
   }
 }
