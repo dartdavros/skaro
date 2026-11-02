@@ -9,10 +9,11 @@
 C4-review и configuration до/после совпали. Ключ модели не читался.
 
 Пакет в userData:
-`verification/extensions-9f95dbfa-5126-40b7-bbfa-dfd5b7395e9d/task-stop-review.json`.
+`verification/extensions-0f40de4e-e26f-4a74-8000-c149611ee7c6/task-stop-review.json`.
 SHA256 канонического JSON, как в прежних review envelopes:
-`b9135426bf242173e488db75e6c9b8fd83b6c8b8550fd97d2bc9fa6160092a95`.
-Рядом сохранён proof.json. Это review composition, ещё не исполняемый wire request.
+`7a4d2c056c2a741547b26428bc13b953a53f32fff22197f93fd2f7ee6543be9d`.
+Рядом сохранён proof.json. Это состав wire envelope с ещё не созданными
+run/session/command IDs; разрешение на его отправку не получено.
 
 ## Состав и ожидаемый сценарий
 
@@ -22,6 +23,10 @@ T-006 — todo, 10 критериев, T-003/T-004 — done, прежних run/
 контекст проекта и точный сохранённый маршрут `openai/gpt-4.1-nano`.
 Root AGENTS.md отсутствует, дополнительных source files в wire composition 0.
 Служебные SHA/C4 guards находятся отдельно и не предназначены для отправки.
+Runtime envelope включает стандартные инструкции о полномочиях, точный host pin,
+owner statements, Skaro command notes, context epoch/revision и ссылки sequence/hash/ID
+на новый primary journal; после Stop — только результаты этой же новой сессии.
+Revision host pin — константа, не локальный task guard hash.
 
 Запланированы настоящий run в in-place/ask/planFirst, первый тестовый ввод,
 Stop с подтверждением OS exit/отзыва admission, продолжение того же run/journal
@@ -35,16 +40,24 @@ Baseline — 85 intents / 393241240 nanoUSD расходов и удержани
 неизвестные удержания сохраняются; прежний общий лимит $1 не увеличивается,
 технический ceiling остаётся 950000000 nanoUSD. Нового разрешения ещё нет.
 
-## Что требуется до исполнения
+## Driver и проверки до исполнения
 
-- Runnable driver с проверкой review/hash, текущего T-006, route и scope;
-  наблюдением двух настоящих admission generations и подтверждением cleanup.
-- [Учёт primary task journal](builtin-agent-task-budget.md) добавлен; driver
-  должен регистрировать настоящий журнал перед reservation/dispatch. Положительная
-  регистрация требует будущего согласованного task-run.
-- Envelope/budget gates и отдельное согласие владельца на конкретный состав
-  данных и расширение счётчика. До этого provider POST остаётся запрещён.
+Добавлен [runnable driver](builtin-agent-task-stop-driver.md): обычная task queue,
+два native generations, Stop/exit/new admission, сохранение primary prefix и cleanup.
+Он регистрирует настоящий task journal перед reservation/dispatch, проверяет полный
+сформированный envelope и общий budget. Tools и автоматическая реализация не выдаются.
+
+Read-only `--task-stop-check` принят на точном пакете:
+`extensions-afd21c65-3ade-4c89-830c-a3046c8ea803/proof.json`.
+Текущие task/route/scope/history совпали, budget прежний, run/POST 0.
+Тот же настоящий файл с неверным SHA отклонён до createServices (`AssertionError`).
+Никаких fake payload/journal/run для этих проверок не создавалось.
+
+Остаётся отдельное согласие владельца на запуск T-006, этот состав данных и до
+четырёх дополнительных запросов. Положительные registration/envelope/Stop/resume
+проверки настоящего ActiveRun ещё не выполнялись; BA-7 ими не объявляется принятым.
 
 TypeScript main, lint, CLI syntax, форматирование и production build прошли.
-Новые проверки — реальная scoped preparation, без fake API/fixtures/run.
+Новые проверки — реальная scoped preparation/check, девять целевых тестов DTO/budget,
+без fake API/fixtures/run.
 Файлы меньше 300 строк. Полная приёмка BA-7 остаётся открытой.

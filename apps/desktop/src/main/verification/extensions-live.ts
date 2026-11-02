@@ -31,6 +31,9 @@ import { readConfiguredPlanReview } from './configured-plan-review';
 import { verifyReportedModelUsage } from './model-usage-report';
 import { verifyTaskLaunchPreflight } from './task-launch-preflight';
 import { prepareTaskStopReview } from './task-stop-review';
+import { readTaskStopPacket, requireTaskStopCurrent } from './task-stop-packet';
+import { taskStopModels } from './task-stop-models';
+import { verifyTaskStopLive } from './task-stop-live';
 import assert from 'node:assert/strict';
 
 app.setName('Skaro');
@@ -64,6 +67,20 @@ void app.whenReady().then(async () => {
     } else {
       stage = 'real-services';
       state = catPilotState(data);
+      const taskStopPacket = ['--task-stop-live', '--task-stop-check'].includes(process.argv[2]!)
+        ? await readTaskStopPacket(data, process.argv[3]!, process.argv[4]!)
+        : undefined;
+      const taskModels =
+        process.argv[2] === '--task-stop-live' && taskStopPacket
+          ? taskStopModels(
+              () => {
+                assert(services);
+                return services;
+              },
+              data,
+              taskStopPacket,
+            )
+          : undefined;
       services = await createServices(
         state,
         data,
@@ -83,10 +100,34 @@ void app.whenReady().then(async () => {
                 throw new Error('Task execution is not authorized by the launch preflight');
               },
             }
-          : {},
+          : taskModels
+            ? { builtinTasks: taskModels.authorize }
+            : {},
       );
       const projectScope = verifyProjectScope(services);
-      if (process.argv[2] === '--task-stop-review') {
+      if (process.argv[2] === '--task-stop-check') {
+        stage = 'task-stop-check';
+        assert(taskStopPacket);
+        proof = {
+          budget: await requireTaskStopCurrent(services, data, taskStopPacket),
+          payloadHash: process.argv[4],
+          currentTaskRouteScopeAndHistory: true,
+          modelRequests: 0,
+          taskRunCreated: false,
+          executionAuthorized: false,
+        };
+      } else if (process.argv[2] === '--task-stop-live') {
+        stage = 'task-stop-live';
+        assert(taskStopPacket && taskModels);
+        proof = await verifyTaskStopLive(
+          services,
+          data,
+          directory,
+          taskStopPacket,
+          process.argv[4]!,
+          taskModels,
+        );
+      } else if (process.argv[2] === '--task-stop-review') {
         stage = 'task-stop-review';
         proof = await prepareTaskStopReview(services, directory, data);
       } else if (process.argv[2] === '--task-launch-preflight') {

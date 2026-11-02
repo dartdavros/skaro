@@ -32,7 +32,12 @@ if (!(
     ].includes(process.argv[2])) ||
   (process.argv.length === 4 && process.argv[2] === '--browser') ||
   (process.argv.length === 5 &&
-    ['--configured-plan-live', '--configured-plan-review'].includes(process.argv[2]))
+    [
+      '--configured-plan-live',
+      '--configured-plan-review',
+      '--task-stop-live',
+      '--task-stop-check',
+    ].includes(process.argv[2]))
 ))
   throw new Error(
     'Usage: verify-builtin-extensions.mjs [--native-verification | --native-operations | --native-lifetime | --native-model-preflight | --browser CAT_PILOT_PROJECT_ROOT]',
@@ -80,6 +85,8 @@ try {
       '--configured-plan-review',
       '--task-launch-preflight',
       '--task-stop-review',
+      '--task-stop-check',
+      '--task-stop-live',
     ].includes(process.argv[2])
   ) {
     if (process.env.SKARO_VERIFY_PROXY !== 'http://127.0.0.1:10809')
@@ -94,7 +101,10 @@ try {
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
   });
   child.on('message', (message) => console.log(JSON.stringify(message)));
-  const timeout = setTimeout(() => child.kill(), 180_000);
+  const timeout = setTimeout(
+    () => child.kill(),
+    process.argv[2] === '--task-stop-live' ? 360_000 : 180_000,
+  );
   process.exitCode = await new Promise((done) => {
     child.once('exit', (code) => done(code ?? 1));
     child.once('error', () => done(1));

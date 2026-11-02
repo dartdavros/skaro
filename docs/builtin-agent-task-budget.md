@@ -17,8 +17,8 @@ run T-006 Cat-pilot, его native session, активный admission теку�
 журналы; текущий изменяющийся журнал можно исключить только по его точному ID.
 
 Сценарий должен регистрировать настоящий журнал до reservation и перед dispatch.
-Это ещё не означает регистрацию или исполнение T-006: runnable driver находится
-в работе, новых TaskRun и model POST не было.
+Это ещё не означает регистрацию или исполнение T-006: [runnable driver](builtin-agent-task-stop-driver.md)
+подготовлен, новых TaskRun и model POST не было.
 
 Проверено: production build, TypeScript main, lint и семь целевых тестов
 контрактов источника, budget guard и reported amounts. Тесты источника проверяют

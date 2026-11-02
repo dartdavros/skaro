@@ -39,6 +39,13 @@ export const taskBudgetSource = {
 };
 
 /** Paths are constructed from validated identities; registry records cannot supply a file path. */
+export function taskBudgetSourceId(runId: string, sessionId: string) {
+  assert(uuid(runId) && uuid(sessionId), 'Invalid task budget identity');
+  return createHash('sha256')
+    .update(JSON.stringify([runId, sessionId]))
+    .digest('hex');
+}
+
 export function taskBudgetSourcePaths(ledger: string, input: TaskBudgetSource) {
   const value = taskBudgetSource.parse(input);
   if (
@@ -47,9 +54,7 @@ export function taskBudgetSourcePaths(ledger: string, input: TaskBudgetSource) {
   )
     throw new Error('Task budget source requires the canonical acceptance ledger');
   const data = resolve(ledger, '../..');
-  const id = createHash('sha256')
-    .update(JSON.stringify([value.runId, value.sessionId]))
-    .digest('hex');
+  const id = taskBudgetSourceId(value.runId, value.sessionId);
   return {
     id,
     journal: join(

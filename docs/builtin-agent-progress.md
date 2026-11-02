@@ -32,8 +32,10 @@ native transport и барьер для отложенного ввода/нов
 ActiveRun/модельный ход этим не объявляются принятыми.
 Владелец выбрал T-006 для следующего сценария. [Локальный review пакет](builtin-agent-task-stop-review.md)
 подготовлен без run/POST; задача и C4 неизменны. Добавлен [общий учёт primary task journals](builtin-agent-task-budget.md).
-До исполнения нужны runnable driver и отдельное разрешение на данные/запросы;
-положительная регистрация настоящего task journal ещё не проверена.
+Добавлен [runnable Stop/resume driver](builtin-agent-task-stop-driver.md) с envelope/budget gates;
+read-only проверка конкретного пакета прошла, неправильный SHA отклонён.
+До исполнения нужно отдельное разрешение на task-run, данные и до четырёх запросов;
+положительная регистрация task journal и Stop/resume ещё не проверены.
 
 ## Подробные результаты и доказательства
 
