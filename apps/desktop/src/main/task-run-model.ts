@@ -9,6 +9,7 @@ import type { Projects } from './projects';
 import type { NotifyKind } from './notifier';
 import type { EnvironmentDocker } from './task-environment-docker';
 import type { NativeAdmissions } from './native/admissions';
+import type { BuiltinTaskModels } from './builtin-task-models';
 
 export interface TaskRunDeps {
   db: AppDb;
@@ -24,6 +25,8 @@ export interface TaskRunDeps {
   notify?: (kind: NotifyKind, text: string, title?: string) => void;
   /** Docker operations of task environments; the system Docker unless a test replaces them. */
   docker?: EnvironmentDocker;
+  /** Explicit main-only task model/payload/budget composition; absent means unavailable. */
+  builtinSessions?: BuiltinTaskModels;
 }
 
 /** A task's latest run, with or without an agent process attached. */
@@ -39,6 +42,10 @@ export class ActiveRun {
   session: AgentSession | undefined;
   /** Present only for the builtin runtime; managed agents keep their existing lifecycle. */
   builtinAdmission?: NativeAdmissions;
+  /** Closes configured credential/route leases with the task's process admission. */
+  builtinClose?: () => void;
+  /** Cancels a prepared host before detach/shutdown waits for attachment. */
+  builtinStartup?: AbortController;
   grant: Grant | undefined;
   log: WriteStream | undefined;
   /** Events not yet sent to the renderer. */

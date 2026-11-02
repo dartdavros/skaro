@@ -1,5 +1,9 @@
 # Builtin task admission binding
 
+Обновление 02.11.2026: добавлена [внутренняя task-session ветка](builtin-agent-task-session.md).
+Она использует этот admission в настоящем TaskRunSessions attachment;
+создание/выбор нового builtin run и положительная продуктовая приёмка открыты.
+
 Дата: 01.11.2026. TaskRuns предоставляет внутренний `builtinAdmission` для
 реального текущего builtin run. Каталог агентов, task/chat startup выбора
 встроенного агента, модельный send/steer и сдача здесь не включаются.

@@ -4,6 +4,33 @@ import type { ActiveRun } from './task-run-model';
 import { NativeAdmissions } from './native/admissions';
 import { key } from './task-run-helpers';
 
+export function requireCurrentBuiltinTask(
+  engine: TaskRunEngine,
+  scope: SkaroScope,
+  sessionId: string,
+  active: ActiveRun,
+  signal: AbortSignal,
+) {
+  signal.throwIfAborted();
+  const saved = engine.deps.db.getRun(scope.runId!);
+  if (
+    engine.closing ||
+    active.switching ||
+    engine.active.get(key(scope.projectId, scope.taskId!)) !== active ||
+    active.run.id !== scope.runId ||
+    active.run.agent !== 'skaro' ||
+    !saved ||
+    saved.retiredAt !== undefined ||
+    saved.projectId !== scope.projectId ||
+    saved.taskId !== scope.taskId ||
+    saved.agent !== 'skaro' ||
+    (saved.nativeSessionId && saved.nativeSessionId !== sessionId) ||
+    (active.run.nativeSessionId && active.run.nativeSessionId !== sessionId)
+  )
+    throw new Error('Builtin task admission is no longer current');
+  signal.throwIfAborted();
+}
+
 /** The real task-run controller owns the lease; a runtime cannot create a matching ActiveRun. */
 export async function builtinTaskAdmission(
   engine: TaskRunEngine,
@@ -25,29 +52,15 @@ export async function builtinTaskAdmission(
   if (!active || active.run.id !== runId || active.run.agent !== 'skaro')
     throw new Error('No matching active builtin task run');
   if (active.builtinAdmission) throw new Error('This task run already owns a builtin admission');
-  const current = async (signal: AbortSignal) => {
-    signal.throwIfAborted();
-    const saved = engine.deps.db.getRun(runId);
-    if (
-      engine.closing ||
-      active.switching ||
-      engine.active.get(key(projectId, taskId)) !== active ||
-      active.run.id !== runId ||
-      active.run.agent !== 'skaro' ||
-      !saved ||
-      saved.retiredAt !== undefined ||
-      saved.projectId !== projectId ||
-      saved.taskId !== taskId ||
-      saved.agent !== 'skaro' ||
-      (saved.nativeSessionId && saved.nativeSessionId !== sessionId) ||
-      (active.run.nativeSessionId && active.run.nativeSessionId !== sessionId)
-    )
-      throw new Error('Builtin task admission is no longer current');
-    signal.throwIfAborted();
-  };
+  const current = async (signal: AbortSignal) =>
+    requireCurrentBuiltinTask(engine, scope, sessionId, active, signal);
+  await current(signal);
+  const ownerKey = `task:${projectId}:${taskId}:${runId}`;
+  await NativeAdmissions.recover(engine.deps.db, ownerKey, signal);
+  await current(signal);
   const lease = await NativeAdmissions.prepare({
     db: engine.deps.db,
-    ownerKey: `task:${projectId}:${taskId}:${runId}`,
+    ownerKey,
     scope,
     sessionId,
     requireCurrent: current,
@@ -67,11 +80,18 @@ export async function builtinTaskAdmission(
 
 export async function revokeBuiltinTaskAdmission(active: ActiveRun, reason: string) {
   const lease = active.builtinAdmission;
-  if (lease) await lease.revoke(lease.admission, reason);
+  try {
+    active.builtinClose?.();
+  } finally {
+    if (lease) await lease.revoke(lease.admission, reason);
+  }
   return lease;
 }
 export async function confirmBuiltinTaskExit(active: ActiveRun, lease?: NativeAdmissions) {
   if (!lease) return;
   await lease.confirmExit(lease.admission);
-  if (active.builtinAdmission === lease) active.builtinAdmission = undefined;
+  if (active.builtinAdmission === lease) {
+    active.builtinAdmission = undefined;
+    active.builtinClose = undefined;
+  }
 }

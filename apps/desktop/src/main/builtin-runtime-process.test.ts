@@ -93,6 +93,37 @@ it('cancels startup at admission without a late journal write or remaining runti
   expect(await processBirth(owners.at(-1)!.pid)).toBeUndefined();
 }, 30_000);
 
+it('retains host command identities through ordinary send/steer and a real process restart', async () => {
+  const config = await options();
+  const first = await SkaroSession.start(config);
+  sessions.push(first);
+  const input = { text: 'Durable delivery without model authorization' };
+  await expect(first.send(input, 'task-command')).rejects.toThrow('no model request was sent');
+  await expect(first.steer(input, 'chat-command')).rejects.toThrow('no model request was sent');
+  const before = await readFile(config.config.journalPath, 'utf8');
+  await expect(first.send(input, 'task-command')).rejects.toThrow('no model request was sent');
+  await expect(first.steer(input, 'chat-command')).rejects.toThrow('no model request was sent');
+  expect(await readFile(config.config.journalPath, 'utf8')).toBe(before);
+  await first.close();
+
+  config.processStarted = (pid, identity) => owners.push({ pid, ...identity! });
+  const resumed = await SkaroSession.start(config);
+  sessions.push(resumed);
+  const restored = await readFile(config.config.journalPath, 'utf8');
+  await expect(resumed.send(input, 'task-command')).rejects.toThrow('no model request was sent');
+  await expect(resumed.steer(input, 'chat-command')).rejects.toThrow('no model request was sent');
+  await expect(resumed.send({ text: 'Different input' }, 'task-command')).rejects.toThrow(
+    'Command identity reused',
+  );
+  expect(await readFile(config.config.journalPath, 'utf8')).toBe(restored);
+  const records = restored
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+  for (const id of ['task-command', 'chat-command'])
+    expect(records.filter((record) => record.id === `cmd:${id}`)).toHaveLength(1);
+}, 60_000);
+
 it('recovers the real journal after an OS kill and truncates only an unacknowledged torn tail', async () => {
   const config = await options();
   const first = await SkaroSession.start(config);

@@ -92,10 +92,10 @@ export interface AgentCommand {
 export interface AgentSession {
   /** Canonical events, in order. Ends when the session closes. */
   readonly events: AsyncIterable<TimelineEvent>;
-  /** A new turn. */
-  send(input: UserInput): Promise<void>;
-  /** Adds to the running turn; starts a turn if none runs. */
-  steer(input: UserInput): Promise<void>;
+  /** A new turn. Hosts may supply their durable command ID for replay-safe delivery. */
+  send(input: UserInput, commandId?: string): Promise<void>;
+  /** Adds to the running turn; starts a turn if none runs. Same ID means the same input/mode. */
+  steer(input: UserInput, commandId?: string): Promise<void>;
   respond(interactionId: string, answer: InteractionAnswer): Promise<void>;
   setModel(model: string, effort?: string): Promise<void>;
   setPermissionMode(mode: PermissionMode): Promise<void>;

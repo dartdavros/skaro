@@ -16,7 +16,7 @@ BA-6 начат: [run_check и привязка доказательств к в
 Полная приёмка открыта. Подготовлен [native inspection bridge](builtin-agent-native-verification.md)
 и [native host operations](builtin-agent-native-operations.md) для BA-7;
 проверен [общий отзыв native-сессии](builtin-agent-native-lifetime.md).
-Продуктовые задачи/чаты и scheduler не подключены. BA-8 начат; в BA-9
+Продуктовый запуск/выбор задач и чатов ещё не включён. BA-8 начат; в BA-9
 предварительно проверен локальный Windows x64 payload, полная приёмка открыта.
 Добавлен [native model host](builtin-agent-native-model.md): concurrent negative
 preflight и живой native model-plan Cat-pilot приняты; пять запросов через Xray,
@@ -85,6 +85,10 @@ call ID, исходный hash аргументов и последовател�
 агенте Skaro, BYOK и самостоятельном исправлении ошибок до проверенной сдачи.
 Текущее продолжение — BA-6/BA-7 и настройки BA-8; встроенный агент пока не
 включён в task/chat picker и не становится выбором по умолчанию.
+02.11.2026: [внутренняя task-session ветка](builtin-agent-task-session.md)
+подключена к TaskRunSessions с общим configured host, process ownership,
+отменой startup и durable command IDs. Обычное создание/выбор builtin run,
+chat startup, положительные queue/handoff/submit/merge ещё не приняты.
 BA-* — локальные ID плана, не созданные задачи Skaro.
 
 ## Объём и зависимости

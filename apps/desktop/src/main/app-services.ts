@@ -37,12 +37,14 @@ import { reportGraph } from './background-graph';
 import { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import { BuiltinModelSettingsService } from './builtin-model-settings-service';
 import { BuiltinModelCatalog } from './builtin-model-catalog';
+import { BuiltinTaskModels, type BuiltinTaskAuthorization } from './builtin-task-models';
 import { setBackgroundProjectScope } from './background/client';
 
 export async function createServices(
   appState: AppState,
   dataDir: string,
   emit: <E extends EventName>(event: E, payload: Events[E]) => void,
+  options: { builtinTasks?: BuiltinTaskAuthorization } = {},
 ) {
   const db = appState.db;
   setBackgroundProjectScope(dataDir, db.shell.projectScope);
@@ -132,6 +134,20 @@ export async function createServices(
       mcp,
       emit,
       locale: () => appState.getLocale(app.getLocale()),
+      ...(options.builtinTasks
+        ? {
+            builtinSessions: new BuiltinTaskModels({
+              store: modelConfiguration,
+              settings: modelSettings,
+              catalog: modelCatalog,
+              mcp,
+              authorize: options.builtinTasks,
+              ...(db.shell.projectScope && process.env['SKARO_VERIFY_PROXY']
+                ? { proxy: process.env['SKARO_VERIFY_PROXY'] }
+                : {}),
+            }),
+          }
+        : {}),
     },
     Number(appState.getSetting('runs.slots')) || 3,
   );

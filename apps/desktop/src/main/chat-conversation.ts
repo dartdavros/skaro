@@ -167,8 +167,8 @@ export class ChatConversation {
     };
     try {
       if (revision !== undefined) live.planningSent = true;
-      if (live.timeline.state.status === 'idle') await session.send(message);
-      else await session.steer(message);
+      if (live.timeline.state.status === 'idle') await session.send(message, input.commandId);
+      else await session.steer(message, input.commandId);
     } catch (error) {
       if (revision !== undefined) live.planningSent = false;
       this.ctx.proposals.addNotes(live.chat.id, notes);

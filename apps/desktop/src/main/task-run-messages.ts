@@ -74,8 +74,8 @@ export class TaskRunMessages {
       .filter(Boolean)
       .join('\n');
     const message = { ...input, text: withSkaroNote(note, input.text) };
-    if (active.timeline.state.status === 'idle') await session.send(message);
-    else await session.steer(message);
+    if (active.timeline.state.status === 'idle') await session.send(message, input.commandId);
+    else await session.steer(message, input.commandId);
   }
 
   async respond(

@@ -99,9 +99,14 @@ for (const admit of [true, false]) {
         expect(existsSync(config.journalPath)).toBe(false);
       } else {
         await startup;
-        await expect(call('send', [{ text: 'Native lifecycle verification' }])).rejects.toThrow(
-          'no model request was sent',
-        );
+        for (const mode of ['send', 'steer'] as const) {
+          const args = [{ text: 'Native lifecycle verification' }, `native-${mode}`];
+          await expect(call(mode, args)).rejects.toThrow('no model request was sent');
+          const acknowledged = await readFile(config.journalPath, 'utf8');
+          await expect(call(mode, args)).rejects.toThrow('no model request was sent');
+          expect(await readFile(config.journalPath, 'utf8')).toBe(acknowledged);
+          expect(acknowledged).toContain(`"id":"cmd:native-${mode}"`);
+        }
         const file = await call<Record<string, unknown>>('invokeTool', [
           'read_file',
           { path: 'owners.jsonl' },

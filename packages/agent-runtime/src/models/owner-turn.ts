@@ -8,6 +8,7 @@ import { runPreparedHostModelTurn } from './host-turn.ts';
 import { preparedModelTurn } from './host-schemas.ts';
 import { ownerInputRecord } from './owner-input-record.ts';
 import { OwnerSteering } from './owner-steering.ts';
+import { refreshOwnerContext } from '../context/owner-context.ts';
 
 /** Input admission uses RuntimeSession's queue; there is no new task scheduler or executor. */
 export class OwnerModelTurns {
@@ -52,6 +53,8 @@ export class OwnerModelTurns {
     const timeline = new ModelTurnTimeline(this.session.journal, id, hash, `cmd:${command.id}`);
     const { input, facts } = ownerInputRecord(command, timeline.turnId);
     const signal = AbortSignal.any([this.resume(), ...(hostSignal ? [hostSignal] : [])]);
+    await refreshOwnerContext(this.session, command.id, signal);
+    signal.throwIfAborted();
     const steering = new OwnerSteering(this.session.journal, this.host.input, id, timeline.turnId);
     const acknowledged = await timeline.begin(facts, {
       value: { kind: 'owner-input', mode: input.mode, modelTurnId: id },

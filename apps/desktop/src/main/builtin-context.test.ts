@@ -17,6 +17,7 @@ import {
   contextPage,
 } from '../../../../packages/agent-runtime/src/context/sources';
 import { PathScope } from '../../../../packages/agent-runtime/src/tools/path-scope';
+import { refreshOwnerContext } from '../../../../packages/agent-runtime/src/context/owner-context';
 
 async function setup() {
   const directory = await mkdtemp(join(tmpdir(), 'skaro-real-context-'));
@@ -250,3 +251,37 @@ it('rejects stale source revisions against a real repository document', async ()
     'changed; refresh required',
   );
 });
+
+it('prepares fresh owner context from real sources without requiring manual compact or changing its epoch', async () => {
+  const live = await setup();
+  try {
+    const signal = new AbortController().signal;
+    expect(latestContext(live.session.journal)).toBeUndefined();
+    await refreshOwnerContext(live.session, 'first-owner-command', signal);
+    expect(latestContext(live.session.journal)!.epoch).toBe(0);
+    const first = contextChatRequest(live.session, {
+      route: live.config.route,
+      price: { prompt: 0.5, completion: 2 },
+      messages: [{ role: 'user', content: 'First ordinary input' }],
+    });
+    expect(first.messages[0]!.content).toContain('Без явного указания владельца');
+    const compacted = await live.session.execute({
+      id: 'compact-owner',
+      action: { type: 'compact' },
+    });
+    expect(compacted.result.error).toBeUndefined();
+    const before = [...live.session.journal.records];
+    await live.reopen();
+    await refreshOwnerContext(live.session, 'next-owner-command', signal);
+    expect(latestContext(live.session.journal)!.epoch).toBe(1);
+    expect(live.session.journal.records.slice(0, before.length)).toEqual(before);
+    const aborted = AbortSignal.abort(new Error('Owner startup cancelled'));
+    const size = live.session.journal.records.length;
+    await expect(refreshOwnerContext(live.session, 'cancelled-owner', aborted)).rejects.toThrow(
+      'cancelled',
+    );
+    expect(live.session.journal.records).toHaveLength(size);
+  } finally {
+    await live.close();
+  }
+}, 30_000);

@@ -242,8 +242,8 @@ export class SkaroSession implements AgentSession {
   ): Promise<void> {
     return this.request({ id, action: { type: mode, input } }).then(() => undefined);
   }
-  send: AgentSession['send'] = (input) => this.deliverInput(input);
-  steer: AgentSession['steer'] = (input) => this.deliverInput(input, randomUUID(), 'steer');
+  send: AgentSession['send'] = (input, commandId) => this.deliverInput(input, commandId);
+  steer: AgentSession['steer'] = (input, commandId) => this.deliverInput(input, commandId, 'steer');
   respond: AgentSession['respond'] = (interactionId, answer) =>
     this.call({ type: 'respond', interactionId, answer });
   setModel: AgentSession['setModel'] = (model, effort) =>

@@ -142,7 +142,7 @@ class NativeSession implements AgentSession {
       this.worker.postMessage(request);
     });
   }
-  send: AgentSession['send'] = (input) => this.call('send', [input]);
+  send: AgentSession['send'] = (input, commandId) => this.call('send', [input, commandId]);
   deliverInput(input: import('@skaro/timeline').UserInput, id: string, mode = 'send') {
     return this.call('deliverInput', [input, id, mode]);
   }
@@ -152,7 +152,7 @@ class NativeSession implements AgentSession {
   runModelTurn(request: import('@skaro/timeline').RuntimeModelRequest, id: string, maxSteps = 20) {
     return this.call<unknown>('runModelTurn', [request, id, maxSteps]);
   }
-  steer: AgentSession['steer'] = (input) => this.call('steer', [input]);
+  steer: AgentSession['steer'] = (input, commandId) => this.call('steer', [input, commandId]);
   respond: AgentSession['respond'] = (id, answer) => this.call('respond', [id, answer]);
   setModel: AgentSession['setModel'] = (model, effort) => this.call('setModel', [model, effort]);
   setPermissionMode: AgentSession['setPermissionMode'] = (mode) =>
