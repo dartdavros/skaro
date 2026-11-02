@@ -11,6 +11,7 @@ import { taskSessionOptions } from './task-session-options';
 import { startBuiltinTaskSession } from './builtin-task-session';
 import { revokeBuiltinTaskAdmission, confirmBuiltinTaskExit } from './builtin-task-admission';
 import { CommandCancelled } from './owner-commands';
+import { requireTaskNotStopping } from './builtin-task-stop';
 
 /** sessions: a focused part of the task-run controller. */
 export class TaskRunSessions {
@@ -20,6 +21,11 @@ export class TaskRunSessions {
   }
 
   attach(active: ActiveRun): Promise<AgentSession> {
+    try {
+      requireTaskNotStopping(active);
+    } catch (error) {
+      return Promise.reject(error);
+    }
     if (this.ctx.closing) return Promise.reject(new Error('Task controller is closing.'));
     if (active.switching) return Promise.reject(new Error('The agent is being changed.'));
     if (this.ctx.deps.db.getRun(active.run.id)?.retiredAt !== undefined)

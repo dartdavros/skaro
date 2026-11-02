@@ -75,7 +75,7 @@ it('retains the builtin selection with durable startup input/error and revokes i
     expect(() => restored.selectBuiltin('startup-marker', 'task-marker', settings)).toThrow(
       'pending owner input',
     );
-    restored.delivered('startup-marker', 'task-marker');
+    restored.cancel('startup-marker', 'task-marker');
     expect(() => requireCurrent()).toThrow('cancelled');
     expect(restored.read('startup-marker', 'task-marker')).toBeUndefined();
     expect(() =>
@@ -94,7 +94,9 @@ it('retains the builtin selection with durable startup input/error and revokes i
       () => false,
     );
     expect(() => replacement()).not.toThrow();
+    const beforeDelivery = restored.cancellationEpoch('startup-marker', 'task-marker');
     restored.delivered('startup-marker', 'task-marker');
+    expect(restored.cancellationEpoch('startup-marker', 'task-marker')).toBe(beforeDelivery);
     expect(restored.cancellationEpoch('startup-marker', 'task-marker')).toBeGreaterThan(epoch);
     expect(() => replacement()).toThrow('cancelled');
     expect(db.listProjects()).toEqual([]);

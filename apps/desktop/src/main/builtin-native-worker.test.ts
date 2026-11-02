@@ -129,6 +129,9 @@ for (const mode of ['admit', 'reject-owner', 'reject-replay'] as const) {
         expect(String(file.text)).toContain(String(owners[0]!.pid));
         await call('interrupt');
         await call('close');
+        await expect(
+          call('send', [{ text: 'Rejected on the retired transport' }, 'after-close']),
+        ).rejects.toThrow(/closed|exited/i);
         const records = (await readFile(config.journalPath, 'utf8'))
           .trim()
           .split('\n')

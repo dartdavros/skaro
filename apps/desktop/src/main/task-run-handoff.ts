@@ -19,6 +19,7 @@ import type { BuiltinTaskHandoffRequest } from './builtin-task-start';
 import { saveBuiltinRunSettings } from './builtin-run-settings';
 import { TaskExecution } from './task-execution';
 import { CommandCancelled } from './owner-commands';
+import { requireTaskNotStopping } from './builtin-task-stop';
 
 interface Intent {
   from: string;
@@ -79,6 +80,11 @@ export class TaskRunHandoff {
   }
 
   change(active: ActiveRun, next: TaskHandoffSettings, queuedRecovery = false): Promise<ActiveRun> {
+    try {
+      requireTaskNotStopping(active);
+    } catch (error) {
+      return Promise.reject(error);
+    }
     const k = key(active.projectId, active.taskId);
     const pending = this.pending.get(k);
     if (pending) return pending;

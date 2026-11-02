@@ -70,8 +70,11 @@ export class TaskStartup {
     return combined.length ? combined : [{ text: '' }];
   }
   delivered(project: string, task: string): void {
-    this.epochs.set(this.key(project, task), this.cancellationEpoch(project, task) + 1);
     this.db.setSetting(this.key(project, task), null);
+  }
+  cancel(project: string, task: string): void {
+    this.epochs.set(this.key(project, task), this.cancellationEpoch(project, task) + 1);
+    this.delivered(project, task);
   }
   fail(project: string, task: string, error: string): void {
     const saved = this.read(project, task);

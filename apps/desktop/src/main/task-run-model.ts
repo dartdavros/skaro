@@ -48,6 +48,8 @@ export class ActiveRun {
   builtinStartup?: AbortController;
   /** Invalidates a delivery/attachment already awaiting I/O when the owner stops the task. */
   deliveryEpoch = 0;
+  stopping?: Promise<void>;
+  stopError?: string;
   grant: Grant | undefined;
   log: WriteStream | undefined;
   /** Events not yet sent to the renderer. */

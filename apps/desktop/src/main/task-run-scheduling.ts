@@ -16,6 +16,7 @@ import { queueBuiltinTask } from './builtin-task-launch';
 import type { BuiltinTaskLaunchRequest } from './builtin-task-start';
 import { capturePendingBuiltinStart } from './builtin-task-pending';
 import { cancelTaskRun } from './task-run-cancel';
+import { requireTaskNotStopping } from './builtin-task-stop';
 
 /** scheduling: a focused part of the task-run controller. */
 export class TaskRunScheduling {
@@ -114,14 +115,20 @@ export class TaskRunScheduling {
     }
   }
 
-  async start(projectId: string, taskId: string, input: MessageInput): Promise<void> {
+  async start(
+    projectId: string,
+    taskId: string,
+    input: MessageInput,
+    requireCurrent?: () => void,
+  ): Promise<void> {
     const artifacts = await this.ctx.project(projectId).load();
+    requireCurrent?.();
     const task = findTask(artifacts, taskId);
     if (task.archived) throw new Error('The task is archived');
     if (isBlocked(task, indexTasks(artifacts.tasks))) throw new Error('The task is blocked');
     const settings = this.ctx.views.settings(projectId, task, artifacts);
     await this.ctx.views.ensureAgent(settings.agent);
-    await this.enqueue(projectId, taskId, input);
+    await this.enqueue(projectId, taskId, input, requireCurrent);
   }
 
   /** Whether the task's agent works now: its turn took a slot and has not ended. */
@@ -134,9 +141,14 @@ export class TaskRunScheduling {
    * until one is free. Messages sent meanwhile join it and go to the agent in order. A task of a
    * stage also waits while another task of the stage works in their checkout.
    */
-  async enqueue(projectId: string, taskId: string, input: MessageInput): Promise<void> {
+  async enqueue(
+    projectId: string,
+    taskId: string,
+    input: MessageInput,
+    requireCurrent?: () => void,
+  ): Promise<void> {
     return serializeTaskMutation(this.ctx.project(projectId), () =>
-      this.enqueueLocked(projectId, taskId, input),
+      this.enqueueLocked(projectId, taskId, input, requireCurrent),
     );
   }
 
@@ -153,6 +165,7 @@ export class TaskRunScheduling {
     await this.ctx.stages.sync(projectId, taskId);
     requireCurrent?.();
     const active = this.ctx.active.get(k);
+    if (active) requireTaskNotStopping(active);
     if (input.internal && input.commandId?.startsWith('continue-') && task.status !== 'in_progress')
       return;
     if (active && !this.ctx.continuation.canDeliver(active, input)) return;
