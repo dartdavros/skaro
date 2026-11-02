@@ -31,8 +31,9 @@ Skaro; single-instance blocker устранён. [Новый launch preflight](b
 native transport и барьер для отложенного ввода/нового admission. Положительный
 ActiveRun/модельный ход этим не объявляются принятыми.
 Владелец выбрал T-006 для следующего сценария. [Локальный review пакет](builtin-agent-task-stop-review.md)
-подготовлен без run/POST; задача и C4 неизменны. До исполнения нужны runnable
-driver, общий учёт настоящего task journal и отдельное разрешение на данные/запросы.
+подготовлен без run/POST; задача и C4 неизменны. Добавлен [общий учёт primary task journals](builtin-agent-task-budget.md).
+До исполнения нужны runnable driver и отдельное разрешение на данные/запросы;
+положительная регистрация настоящего task journal ещё не проверена.
 
 ## Подробные результаты и доказательства
 

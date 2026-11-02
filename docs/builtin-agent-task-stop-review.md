@@ -39,9 +39,9 @@ Baseline — 85 intents / 393241240 nanoUSD расходов и удержани
 
 - Runnable driver с проверкой review/hash, текущего T-006, route и scope;
   наблюдением двух настоящих admission generations и подтверждением cleanup.
-- Подключение primary task journal к общему учёту acceptance expenses:
-  текущий ledger читает verification journals, тогда как TaskRunSessions
-  сохраняет journal в builtin/tasks. Игнорировать новые расходы нельзя.
+- [Учёт primary task journal](builtin-agent-task-budget.md) добавлен; driver
+  должен регистрировать настоящий журнал перед reservation/dispatch. Положительная
+  регистрация требует будущего согласованного task-run.
 - Envelope/budget gates и отдельное согласие владельца на конкретный состав
   данных и расширение счётчика. До этого provider POST остаётся запрещён.
 

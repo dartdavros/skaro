@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { JournalRecord } from '@skaro/agent-runtime';
+import { taskBudgetJournals } from './task-budget-journals';
 
 export interface LiveBudgetReservation {
   kind: 'live-budget';
@@ -22,14 +23,20 @@ export function usdNanos(value: string): number {
 }
 /** Single credential-host owner serializes acceptance calls. Unknown billing keeps its reservation. */
 export async function liveBudgetLedger(directory: string) {
-  let committedNanoUsd = 0;
-  let requests = 0;
+  const journals: JournalRecord[][] = [];
   for (const name of await readdir(directory)) {
     if (!isLiveBudgetJournal(name)) continue;
-    const records = (await readFile(join(directory, name), 'utf8'))
-      .trim()
-      .split('\n')
-      .map((line) => JSON.parse(line) as JournalRecord);
+    journals.push(
+      (await readFile(join(directory, name), 'utf8'))
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as JournalRecord),
+    );
+  }
+  for (const source of await taskBudgetJournals(directory)) journals.push(source.records);
+  let committedNanoUsd = 0;
+  let requests = 0;
+  for (const records of journals) {
     const byId = new Map(records.map((record) => [record.id, record]));
     for (const record of records)
       for (const fact of record.facts) {
