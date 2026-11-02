@@ -1,5 +1,6 @@
 import type { ChatMessage, ChatRequest } from '../models/chat-types.ts';
 import { contextChatRequest, type ContextSelection, type ContextJournalView } from './request.ts';
+import { requiresFreshModelConversation, contextProjectionBlocked } from './effect-boundary.ts';
 
 /** Continue only the exact route/context epoch; compact starts a fresh native conversation. */
 export function continueContextChatRequest(
@@ -7,6 +8,7 @@ export function continueContextChatRequest(
   request: ChatRequest,
 ): ChatRequest {
   const fresh = contextChatRequest(session, request);
+  if (requiresFreshModelConversation(session.journal)) return fresh;
   const stored = session.journal.state.continuation;
   const value = stored?.value as
     { schema?: number; context?: ContextSelection; messages?: ChatMessage[] } | undefined;
@@ -19,10 +21,7 @@ export function continueContextChatRequest(
     JSON.stringify(value.messages?.[0]) !== JSON.stringify(fresh.messages[0])
   )
     return fresh;
-  if (
-    Object.keys(session.journal.state.interactions).length ||
-    Object.values(session.journal.state.effects).some((effect) => effect.state !== 'completed')
-  )
+  if (contextProjectionBlocked(session.journal.state, true))
     throw new Error('Unresolved work prevents native chat continuation');
   if (!Array.isArray(value.messages)) throw new Error('Invalid saved chat continuation');
   const open = new Set<string>();

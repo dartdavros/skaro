@@ -5,6 +5,7 @@ import { sessionFileScope } from '../tools/session-scope.ts';
 import { collectContext, contextPage } from './sources.ts';
 import { contextCheckpoint, latestContext } from './checkpoint.ts';
 import type { ContextCheckpoint } from './model.ts';
+import { contextProjectionBlocked } from './effect-boundary.ts';
 
 export class RuntimeContext {
   private readonly journal: RuntimeJournal;
@@ -22,13 +23,14 @@ export class RuntimeContext {
     const scope = await sessionFileScope(journal);
     return new RuntimeContext(journal, config.context, scope);
   }
-  async project(compact: boolean, signal: AbortSignal): Promise<ContextCheckpoint> {
+  async project(
+    compact: boolean,
+    signal: AbortSignal,
+    freshOwnerInput = false,
+  ): Promise<ContextCheckpoint> {
     signal.throwIfAborted();
     const state = this.journal.state;
-    if (
-      Object.keys(state.interactions).length ||
-      Object.values(state.effects).some((effect) => effect.state !== 'completed')
-    )
+    if (contextProjectionBlocked(state, freshOwnerInput))
       throw new Error('Open interactions or unresolved effects prevent context projection');
     const snapshot = await collectContext(this.scope, this.config, signal);
     signal.throwIfAborted();

@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 import type { NativeRequest, NativeResponse, NativeToolResult } from '@skaro/timeline';
 import { contextNativeRequest, type ContextJournalView } from './request.ts';
 import { continueNativeConversation } from '../models/native-continuation.ts';
+import { requiresFreshModelConversation, contextProjectionBlocked } from './effect-boundary.ts';
 
 /** Reuse exact native items only within the same route and scoped context epoch. */
 export function continueContextNativeRequest(
@@ -9,6 +10,7 @@ export function continueContextNativeRequest(
   request: NativeRequest,
 ): NativeRequest {
   const fresh = contextNativeRequest(session, request);
+  if (requiresFreshModelConversation(session.journal)) return fresh;
   const stored = session.journal.state.continuation;
   const value = stored?.value as
     | {
@@ -34,8 +36,7 @@ export function continueContextNativeRequest(
     !Array.isArray(value.input) ||
     !value.input.length ||
     typeof value.system !== 'string' ||
-    Object.keys(session.journal.state.interactions).length ||
-    Object.values(session.journal.state.effects).some((effect) => effect.state !== 'completed')
+    contextProjectionBlocked(session.journal.state, true)
   )
     throw new Error('Unresolved or incompatible native context continuation');
   const previous = continueNativeConversation(

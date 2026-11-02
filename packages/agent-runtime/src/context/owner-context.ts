@@ -9,7 +9,7 @@ export async function refreshOwnerContext(
 ) {
   if (!session.context) return;
   signal.throwIfAborted();
-  const value = await session.context.project(false, signal);
+  const value = await session.context.project(false, signal, true);
   signal.throwIfAborted();
   return session.journal.append(
     `owner-context:${commandId}`,
