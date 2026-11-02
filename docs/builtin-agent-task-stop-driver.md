@@ -32,6 +32,15 @@ internal и privateText из inbox не копируются в durable input. C
 Четыре затронутых test files (девять тестов) и main TypeScript/lint прошли;
 положительная delivery в настоящем T-006 остаётся до согласованного live запуска.
 
+Guard проверяет точный `input-<commandId>` и полный текст со штатной note,
+а не только текст после удаления note. Чужая command identity, добавленный текст
+в note и любой лишний input-field отклоняются. Сравнение полного Chat DTO допускает
+только отсутствие необязательного toolChoice либо его явное undefined,
+которое добавляет штатный model loop; реальное значение choice запрещено.
+Шесть целевых DTO/budget тестов прошли без создания журналов/run.
+Прежний пакет повторно принят read-only проверкой на новом коде:
+`extensions-94416b9c-6e5b-4586-9056-e16f1abd4586/proof.json`, run/POST 0.
+
 Перед quotation и dispatch нужен настоящий активный task admission и регистрация
 [primary task journal](builtin-agent-task-budget.md). Прежние источники frozen;
 только точный собственный journal может меняться. Отдельный guard допускает
@@ -45,7 +54,9 @@ Driver наблюдает настоящий provider POST, вызывает Sto
 должен получить новый admission generation и другой process owner при прежних
 run/session/journal. Проверяется сохранение прежнего primary prefix и настоящий
 второй ответ «Продолжение принято». Наличие terminal первого хода до Stop
-записывается отдельно; mid-stream Stop не утверждается без наблюдения.
+записывается отдельно; если terminal уже существовал до Stop, проверка
+останавливается с непройденным результатом, без автоматического повторного POST.
+Завершённый первый ход не засчитывается как прерывание активного хода.
 
 В конце обычный cancel возвращает T-006 в todo. Проверяются выход второго owner,
 неактивность обоих leases, ровно два owner inputs, один run, выключенный execution,

@@ -15,6 +15,7 @@
 
 Последние коммиты: `6bfb696` — общий учёт primary task journals;
 `99e8d6c` — runnable T-006 Stop/resume driver и review gates.
+`cdd1b68` — точная граница UserInput вместо копирования inbox metadata.
 Это ещё не включение создания нового чата.
 
 Новых model POST не выполнялось: прежние пять дополнительных запросов

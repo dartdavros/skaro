@@ -4,8 +4,9 @@ import {
   latestContext,
   type readRuntimeJournal,
 } from '@skaro/agent-runtime';
-import { withoutSkaroNote, type RuntimeModelRequest } from '@skaro/timeline';
+import type { RuntimeModelRequest } from '@skaro/timeline';
 import type { TaskStopReview } from './task-stop-review';
+import { requireTaskStopInput, requireTaskStopRequest } from './task-stop-input';
 
 export const taskStopPins = (reviewed: TaskStopReview) => [
   {
@@ -40,8 +41,7 @@ export function requireTaskStopEnvelope(
     .filter((fact) => fact.type === 'input');
   assert(inputs.length >= 1 && inputs.length <= 2);
   inputs.forEach((fact, index) => {
-    assert.deepEqual(Object.keys(fact.input), ['text']);
-    assert.equal(withoutSkaroNote(fact.input.text), reviewed.wireComposition.ownerMessages[index]);
+    requireTaskStopInput(reviewed, index, fact.id, fact.input);
   });
   assert(
     !journal.records.some((record) =>
@@ -60,5 +60,5 @@ export function requireTaskStopEnvelope(
       messages: [{ role: 'user', content: inputs.at(-1)!.input.text }],
     },
   );
-  assert.deepEqual(request.value, expected);
+  requireTaskStopRequest(request.value, expected);
 }

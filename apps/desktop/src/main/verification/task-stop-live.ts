@@ -11,6 +11,7 @@ import type { taskStopModels } from './task-stop-models';
 import type { TaskStopReview } from './task-stop-review';
 import { registerTaskBudgetJournal } from '../credentials/task-budget-journals';
 import { requireTaskStopCurrent } from './task-stop-packet';
+import { taskStopOwnerInput } from './task-stop-input';
 import {
   waitTaskStop,
   taskAdmissionStore,
@@ -63,10 +64,7 @@ export async function verifyTaskStopLive(
       projectId,
       taskId,
       settings: reviewed.launch,
-      input: {
-        text: reviewed.wireComposition.ownerMessages[0],
-        commandId: `${commandPrefix}-first`,
-      },
+      input: taskStopOwnerInput(reviewed, 0),
       signal: new AbortController().signal,
     });
     const run = await waitTaskStop('real run', () => services.db.listRuns(projectId, taskId)[0]);
@@ -92,15 +90,17 @@ export async function verifyTaskStopLive(
     await assert.rejects(
       firstInput.admissions.requireActive(first.admission, new AbortController().signal),
     );
+    assert.equal(
+      firstCompletedBeforeStop,
+      false,
+      'First turn finished before Stop; in-flight interruption was not exercised',
+    );
     const stopped = await readRuntimeJournal(firstInput.journalPath, firstInput.sessionId);
     const stoppedHead = stopped.records.at(-1)!;
     const firstPostCount = posts;
     assert.equal(firstPostCount, 1, 'Unexpected automatic first-turn continuation');
     mark('resume-second');
-    await services.runs.send(projectId, taskId, {
-      text: reviewed.wireComposition.ownerMessages[1],
-      commandId: `${commandPrefix}-second`,
-    });
+    await services.runs.send(projectId, taskId, taskStopOwnerInput(reviewed, 1));
     const second = await waitTaskStop('new active admission', () => {
       const state = store.read();
       return state?.status === 'active' && state.owner && state.admission.id !== first.admission.id
@@ -182,6 +182,7 @@ export async function verifyTaskStopLive(
     };
     passed = true;
   } finally {
+    const completedStage = stage;
     mark('cleanup');
     app.removeListener('session-created', observe);
     for (const network of networks) network.webRequest.onBeforeRequest(null);
@@ -207,6 +208,7 @@ export async function verifyTaskStopLive(
           {
             passed: passed && cleanupConfirmed,
             cleanupConfirmed,
+            completedStage,
             stage,
             stages,
             payloadHash: hash,
