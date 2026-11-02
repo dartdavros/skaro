@@ -2,6 +2,7 @@ import type { BuiltinTaskSessionPreparer } from './builtin-task-session';
 import { requireBuiltinTaskSessionPolicy } from './builtin-task-session-policy';
 import { agentRegistration } from '@skaro/agents';
 import { parseBuiltinTaskStart, type BuiltinTaskStartOptions } from './builtin-task-start';
+import { requireBuiltinSessionRoute } from './builtin-session-route';
 import {
   prepareBuiltinSessionModel,
   type BuiltinSessionModelDependencies,
@@ -25,23 +26,8 @@ export class BuiltinTaskModels implements BuiltinTaskSessionPreparer {
     this.deps = deps;
   }
   async resolveStart(input: BuiltinTaskStartOptions, signal: AbortSignal) {
-    signal.throwIfAborted();
     const settings = parseBuiltinTaskStart({ agent: 'skaro', ...input });
-    const choices = this.deps.store.read();
-    const route = choices.routes.find((route) => route.id === settings.model);
-    const connection = choices.connections.find((entry) => entry.id === route?.connectionId);
-    if (!route || !connection) throw new Error('Selected builtin task route is unavailable');
-    const catalog = await this.deps.catalog.read(connection.id, connection.revision);
-    const current = this.deps.store.snapshot(route.id, catalog.models);
-    await this.deps.catalog.requireCurrent(current, undefined, signal);
-    if (
-      settings.effort &&
-      current.parameters[
-        ['openai', 'deepseek'].includes(current.connector) ? 'reasoning_effort' : 'effort'
-      ] !== settings.effort
-    )
-      throw new Error('Selected task effort differs from the configured route');
-    signal.throwIfAborted();
+    await requireBuiltinSessionRoute(this.deps, settings, signal);
     return settings;
   }
   async prepare(input: Preparation) {

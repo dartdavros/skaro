@@ -6,6 +6,8 @@ import {
 } from './builtin-session-models';
 import { requireBuiltinChatSessionPolicy } from './builtin-chat-session-policy';
 import { agentRegistration } from '@skaro/agents';
+import { parseBuiltinChatSettings, type BuiltinChatOptions } from './builtin-chat-settings';
+import { requireBuiltinSessionRoute } from './builtin-session-route';
 
 export type BuiltinChatPreparation = Omit<BuiltinSessionPreparation, 'verification'>;
 export type BuiltinChatAuthorization = (
@@ -23,6 +25,11 @@ export class BuiltinChatModels {
   private readonly deps: Dependencies;
   constructor(deps: Dependencies) {
     this.deps = deps;
+  }
+  async resolveStart(input: BuiltinChatOptions, signal: AbortSignal) {
+    const settings = parseBuiltinChatSettings({ agent: 'skaro', ...input });
+    await requireBuiltinSessionRoute(this.deps, settings, signal);
+    return settings;
   }
   async prepare(input: BuiltinChatPreparation) {
     input.signal.throwIfAborted();

@@ -1,4 +1,5 @@
 import type { AgentSettings, MessageInput } from '../shared/ipc';
+import { parseBuiltinSessionSelection } from './builtin-session-selection';
 
 export type BuiltinTaskStartOptions = Omit<AgentSettings, 'agent'> & { model: string };
 export type BuiltinTaskStart = BuiltinTaskStartOptions & { agent: 'skaro' };
@@ -18,31 +19,16 @@ export function parseBuiltinTaskStart(value: unknown): BuiltinTaskStart {
   if (
     !selected ||
     typeof selected !== 'object' ||
-    selected.agent !== 'skaro' ||
     Object.keys(selected).some(
       (key) =>
         !['agent', 'model', 'effort', 'permissionMode', 'planFirst', 'isolation'].includes(key),
     ) ||
-    typeof selected.model !== 'string' ||
-    !selected.model.trim() ||
-    selected.model.length > 512 ||
-    (selected.effort !== undefined &&
-      (typeof selected.effort !== 'string' ||
-        !selected.effort.trim() ||
-        selected.effort.length > 64)) ||
-    !['ask', 'auto', 'full'].includes(selected.permissionMode ?? '') ||
     typeof selected.planFirst !== 'boolean' ||
     !['worktree', 'in-place'].includes(selected.isolation ?? '')
   )
     throw new Error(
       'Builtin launch requires an exact route, permission mode and isolation selection',
     );
-  return {
-    agent: 'skaro',
-    model: selected.model,
-    ...(selected.effort ? { effort: selected.effort } : {}),
-    permissionMode: selected.permissionMode!,
-    planFirst: selected.planFirst,
-    isolation: selected.isolation!,
-  };
+  const { planFirst, isolation, ...common } = selected;
+  return { ...parseBuiltinSessionSelection(common), planFirst, isolation: isolation! };
 }

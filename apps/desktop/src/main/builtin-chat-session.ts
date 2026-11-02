@@ -1,23 +1,25 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { ChatSettings } from '../shared/ipc';
 import type { ChatEngine } from './chat-engine';
 import type { LiveChat } from './chat-model';
 import { builtinChatAdmission } from './builtin-chat-admission';
 import { requireBuiltinChatSessionPolicy } from './builtin-chat-session-policy';
 import { chatSessionOptions } from './chat-session-options';
-import { settingsKey } from './chat-settings-helpers';
 import { TaskRunProcesses } from './task-run-processes';
 import { startBuiltinNativeSession } from './native/bundled';
 import { revokeNativeSession, confirmNativeSessionExit } from './native/session-lease';
 import { builtinJournalReplay } from './builtin-journal-replay';
 import { builtinSessionDirectory } from './builtin-session-directory';
+import { builtinChatSettings, requireBuiltinChatSettings } from './builtin-chat-settings';
 
 /** Attach an existing genuine builtin chat to its normal conversation and process lifecycle. */
 export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
   const models = ctx.deps.builtinChatSessions;
   if (!models) throw new Error('Builtin chat model/payload/budget admission is not configured');
+  const settings = builtinChatSettings(ctx, live);
   const signal = live.operation.signal;
+  await models.resolveStart(settings, signal);
+  requireBuiltinChatSettings(ctx, live, settings);
   const { chat } = live;
   const resume = chat.nativeSessionId;
   const sessionId = resume ?? randomUUID();
@@ -31,12 +33,11 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
     await processes.stop(`chat.${chat.id}`);
     const context = ctx.project(live.projectId);
     const artifacts = await context.summary();
-    const settings =
-      ctx.deps.db.getSetting<Omit<ChatSettings, 'agent'> | null>(settingsKey(chat.id), null) ?? {};
     const options = await chatSessionOptions(ctx, live, artifacts, settings, (pid, identity) =>
       processes.started(`chat.${chat.id}`, pid, false, identity),
     );
     requireCurrent(combined);
+    requireBuiltinChatSettings(ctx, live, settings);
     const expected = {
       scope,
       sessionId,
@@ -58,6 +59,7 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
       live.log,
     );
     requireCurrent(combined);
+    requireBuiltinChatSettings(ctx, live, settings);
     if (replay.needsSeparator) ctx.history.writeLine(live, new Uint8Array([10]));
     live.builtinClose = () => prepared!.close();
     ctx.deps.db.updateChat(chat.id, { nativeSessionId: sessionId });
@@ -89,6 +91,7 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
       { ...prepared.host, signal: bound },
     );
     await lease.requireActive(lease.admission, bound);
+    requireBuiltinChatSettings(ctx, live, settings);
     return { session, segment, resume, signal };
   } catch (error) {
     try {
