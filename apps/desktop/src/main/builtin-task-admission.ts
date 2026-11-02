@@ -78,20 +78,7 @@ export async function builtinTaskAdmission(
   }
 }
 
-export async function revokeBuiltinTaskAdmission(active: ActiveRun, reason: string) {
-  const lease = active.builtinAdmission;
-  try {
-    active.builtinClose?.();
-  } finally {
-    if (lease) await lease.revoke(lease.admission, reason);
-  }
-  return lease;
-}
-export async function confirmBuiltinTaskExit(active: ActiveRun, lease?: NativeAdmissions) {
-  if (!lease) return;
-  await lease.confirmExit(lease.admission);
-  if (active.builtinAdmission === lease) {
-    active.builtinAdmission = undefined;
-    active.builtinClose = undefined;
-  }
-}
+export {
+  revokeNativeSession as revokeBuiltinTaskAdmission,
+  confirmNativeSessionExit as confirmBuiltinTaskExit,
+} from './native/session-lease';

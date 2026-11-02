@@ -1,8 +1,6 @@
 import { agentDefinition } from '@skaro/agents';
 import { operationTimeout, segmentTurns, type AgentSession } from '@skaro/timeline';
 import type { AgentId } from '../shared/ipc';
-import { hasCode } from './new-project';
-import { chatInstructions, importInstructions } from './prompt';
 import { errorText } from './session-log';
 import { LiveChat } from './chat-model';
 import { closeSessionLog } from './close-session-log';
@@ -10,6 +8,9 @@ import { TaskRunProcesses } from './task-run-processes';
 import { CommandCancelled } from './owner-commands';
 
 import type { ChatEngine } from './chat-engine';
+import { chatSessionOptions } from './chat-session-options';
+import { startBuiltinChatSession } from './builtin-chat-session';
+import { revokeNativeSession, confirmNativeSessionExit } from './native/session-lease';
 
 export class ChatSessions {
   private readonly ctx: ChatEngine;
@@ -21,6 +22,7 @@ export class ChatSessions {
   // ── sessions ─────────────────────────────────────────────────────────────
 
   attach(live: LiveChat): Promise<AgentSession> {
+    if (this.ctx.closing) return Promise.reject(new Error('Chat controller is closing.'));
     if (live.stopping || live.stopError)
       return Promise.reject(new Error(live.stopError ?? 'Chat is stopping'));
     live.operation.signal.throwIfAborted();
@@ -33,6 +35,10 @@ export class ChatSessions {
     const { projectId, chat } = live;
     const signal = live.operation.signal;
     signal.throwIfAborted();
+    if (chat.agent === 'skaro') {
+      const started = await startBuiltinChatSession(this.ctx, live);
+      return this.publish(live, started.session, started.segment, !!started.resume, started.signal);
+    }
     await this.processes.stop(`chat.${chat.id}`);
     const context = this.ctx.project(projectId);
     // Instructions use presence, ids and configuration; document bodies remain available to tools.
@@ -66,51 +72,19 @@ export class ChatSessions {
       chatId: chat.id,
       ...(imported ? { importId: imported.id } : {}),
     });
-    const instructions = imported
-      ? importInstructions({
-          projectName: this.ctx.deps.db.getProject(projectId)?.name ?? '',
-          root: context.root,
-          artifacts,
-          locale: this.ctx.deps.locale(),
-          dir: imported.dir,
-          hasCode: await hasCode(context.root),
-        })
-      : chatInstructions({
-          projectName: this.ctx.deps.db.getProject(projectId)?.name ?? '',
-          root: context.root,
-          artifacts,
-          locale: this.ctx.deps.locale(),
-        });
     let session: AgentSession;
     try {
+      const options = await chatSessionOptions(
+        this.ctx,
+        live,
+        artifacts,
+        settings,
+        (pid, identity) => this.processes.started(`chat.${chat.id}`, pid, false, identity),
+      );
       session = await adapter.start({
-        signal,
-        cwd: context.root,
-        processStarted: (pid, identity) =>
-          this.processes.started(`chat.${chat.id}`, pid, false, identity),
-        ...(settings.model ? { model: settings.model } : {}),
-        ...(settings.effort ? { effort: settings.effort } : {}),
-        permissionMode: settings.permissionMode ?? 'ask',
-        planFirst: false,
-        instructions,
-        ...(imported ? { readDirs: [imported.dir] } : {}),
-        mcpServers: {
-          skaro: {
-            type: 'http',
-            url: live.grant.url,
-            headers: live.grant.headers,
-            trusted: true,
-          },
-        },
+        ...options,
         ...(sandbox ? { sandboxVerified: sandbox.holds } : {}),
         ...(sandbox?.mode ? { sandboxMode: sandbox.mode } : {}),
-        ...(resume ? { resume } : {}),
-        raw: (line) =>
-          this.ctx.history.writeLine(live, { ...line, ts: Date.now() - chat.createdAt }),
-        rawSerialized: (line) => this.ctx.history.writeLine(live, line),
-        rawScope: { startedAt: chat.createdAt },
-        secretValues: () => live.secrets.list(),
-        context: this.ctx.deps.attachments.context(),
       });
     } catch (error) {
       live.grant?.revoke();
@@ -118,10 +92,36 @@ export class ChatSessions {
       if (resume) this.ctx.history.notice(live, 'session_lost', 'error', errorText(error));
       throw error;
     }
-    if (live.chat.archived || signal.aborted) {
-      await session.close();
+    return this.publish(live, session, segment, !!resume, signal);
+  }
+
+  private async publish(
+    live: LiveChat,
+    session: AgentSession,
+    segment: number,
+    resume: boolean,
+    signal: AbortSignal,
+  ) {
+    const saved = this.ctx.deps.db.getChat(live.chat.id);
+    if (
+      this.ctx.closing ||
+      live.chat.archived ||
+      signal.aborted ||
+      this.ctx.live.get(live.chat.id) !== live ||
+      !saved ||
+      saved.archived ||
+      saved.projectId !== live.projectId ||
+      saved.agent !== live.chat.agent
+    ) {
+      const lease = await revokeNativeSession(live, 'Chat changed during startup');
       live.grant?.revoke();
       live.grant = undefined;
+      try {
+        await session.close();
+      } finally {
+        await this.processes.stop(`chat.${live.chat.id}`);
+        await confirmNativeSessionExit(live, lease);
+      }
       throw new CommandCancelled();
     }
     live.session = session;
@@ -141,12 +141,17 @@ export class ChatSessions {
       this.ctx.history.failTurn(live, error);
     }
     if (live.session === session) {
+      const lease = live.builtinAdmission
+        ? await revokeNativeSession(live, 'Chat runtime exited')
+        : undefined;
+      if (live.session !== session) return;
       live.session = undefined;
       live.grant?.revoke();
       live.grant = undefined;
       const turn = live.timeline.state.turns.at(-1);
       if (turn && !turn.outcome)
         this.ctx.history.failTurn(live, new Error('The agent process exited'));
+      if (lease) await confirmNativeSessionExit(live, lease);
       this.ctx.listChanged(live.projectId, live.chat.id);
     }
   }
@@ -161,6 +166,7 @@ export class ChatSessions {
     live.grant?.revoke();
     live.grant = undefined;
     try {
+      if (live.builtinAdmission) await revokeNativeSession(live, 'Chat operation cancelled');
       await operationTimeout(
         Promise.all([
           this.ctx.planningContinuation.settled(live),
@@ -179,13 +185,20 @@ export class ChatSessions {
         'Agent session shutdown was not confirmed',
       );
     } finally {
-      await this.processes.stop(`chat.${live.chat.id}`);
+      const lease = live.builtinAdmission;
+      try {
+        await revokeNativeSession(live, 'Chat detached');
+      } finally {
+        await this.processes.stop(`chat.${live.chat.id}`);
+        await confirmNativeSessionExit(live, lease);
+      }
     }
     this.ctx.history.flush(live);
-    if (!live.stopping && !live.stopError) live.operation.renew();
+    if (!this.ctx.closing && !live.stopping && !live.stopError) live.operation.renew();
   }
 
   async close(): Promise<void> {
+    this.ctx.closing = true;
     await Promise.all([...this.ctx.live.values()].map((l) => this.detach(l)));
     await Promise.all([...this.ctx.live.values()].map((live) => closeSessionLog(live.log)));
   }

@@ -38,13 +38,17 @@ import { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import { BuiltinModelSettingsService } from './builtin-model-settings-service';
 import { BuiltinModelCatalog } from './builtin-model-catalog';
 import { BuiltinTaskModels, type BuiltinTaskAuthorization } from './builtin-task-models';
+import { BuiltinChatModels, type BuiltinChatAuthorization } from './builtin-chat-models';
 import { setBackgroundProjectScope } from './background/client';
 
 export async function createServices(
   appState: AppState,
   dataDir: string,
   emit: <E extends EventName>(event: E, payload: Events[E]) => void,
-  options: { builtinTasks?: BuiltinTaskAuthorization } = {},
+  options: {
+    builtinTasks?: BuiltinTaskAuthorization;
+    builtinChats?: BuiltinChatAuthorization;
+  } = {},
 ) {
   const db = appState.db;
   setBackgroundProjectScope(dataDir, db.shell.projectScope);
@@ -173,6 +177,20 @@ export async function createServices(
     mcp,
     emit,
     locale: () => appState.getLocale(app.getLocale()),
+    ...(options.builtinChats
+      ? {
+          builtinChatSessions: new BuiltinChatModels({
+            store: modelConfiguration,
+            settings: modelSettings,
+            catalog: modelCatalog,
+            mcp,
+            authorize: options.builtinChats,
+            ...(db.shell.projectScope && process.env['SKARO_VERIFY_PROXY']
+              ? { proxy: process.env['SKARO_VERIFY_PROXY'] }
+              : {}),
+          }),
+        }
+      : {}),
   });
   trace('task runs created');
   const c4 = new C4Service({

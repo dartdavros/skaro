@@ -13,6 +13,8 @@ import {
 import type { EventName, Events } from '../shared/ipc';
 import type { AgentManager } from './agents';
 import type { Projects } from './projects';
+import type { BuiltinChatModels } from './builtin-chat-models';
+import type { NativeAdmissions } from './native/admissions';
 
 export type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 
@@ -28,6 +30,7 @@ export interface Deps {
   mcp: McpHttpServer<SkaroScope>;
   emit: <E extends EventName>(event: E, payload: Events[E]) => void;
   locale: () => string;
+  builtinChatSessions?: BuiltinChatModels;
 }
 
 export class LiveChat {
@@ -39,6 +42,8 @@ export class LiveChat {
   chat: ChatRecord;
   readonly timeline: Timeline;
   session: AgentSession | undefined;
+  builtinAdmission?: NativeAdmissions;
+  builtinClose?: () => void;
   grant: Grant | undefined;
   log: WriteStream | undefined;
   /** Events not yet sent to the renderer. */

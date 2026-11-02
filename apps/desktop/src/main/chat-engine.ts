@@ -20,6 +20,7 @@ import { ChatPlanDecisions } from './chat-plan-decisions';
 import { ChatPlanReview } from './chat-plan-review';
 import { ChatTaskReplans } from './chat-task-replans';
 export class ChatEngine {
+  closing = false;
   readonly live = new Map<string, LiveChat>();
   readonly views = new ChatViews(this);
   readonly conversation = new ChatConversation(this);

@@ -16,7 +16,7 @@ BA-6 начат: [run_check и привязка доказательств к в
 Полная приёмка открыта. Подготовлен [native inspection bridge](builtin-agent-native-verification.md)
 и [native host operations](builtin-agent-native-operations.md) для BA-7;
 проверен [общий отзыв native-сессии](builtin-agent-native-lifetime.md).
-Продуктовый запуск/выбор задач и чатов ещё не включён. BA-8 начат; в BA-9
+Продуктовый выбор и создание встроенных задач/чатов ещё не включены. BA-8 начат; в BA-9
 предварительно проверен локальный Windows x64 payload, полная приёмка открыта.
 Добавлен [native model host](builtin-agent-native-model.md): concurrent negative
 preflight и живой native model-plan Cat-pilot приняты; пять запросов через Xray,
@@ -88,10 +88,13 @@ call ID, исходный hash аргументов и последовател�
 02.11.2026: [внутренняя task-session ветка](builtin-agent-task-session.md)
 подключена к TaskRunSessions с общим configured host, process ownership,
 отменой startup и durable command IDs. Обычное создание/выбор builtin run,
-chat startup, положительные queue/handoff/submit/merge ещё не приняты.
+создание/выбор новых чатов, положительные queue/handoff/submit/merge ещё не приняты.
 Добавлено [форматирование native owner input](builtin-agent-native-context-input.md)
 OpenAI/Anthropic и явный каталог инструментов task host. Прямые API не считаются
 принятыми без живых проверок; metadata gate сохраняется.
+Подключена [внутренняя chat-session ветка](builtin-agent-chat-session.md):
+настоящий ChatRecord, chat/import operation lifetime, process ownership и
+общий configured model host. Положительная Electron-приёмка открыта.
 BA-* — локальные ID плана, не созданные задачи Skaro.
 
 ## Объём и зависимости
