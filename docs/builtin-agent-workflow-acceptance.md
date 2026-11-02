@@ -154,3 +154,30 @@ lint и 20 целевых тестов в 6 файлах: retirement, operationa
 настоящие file/command/question/recovery tools и compiled native worker.
 Полный suite не запускался. Максимальный изменённый файл — 288 строк.
 UI и source Cat-pilot не менялись; новых model POST, задач и browser installs нет.
+
+## Повторная сверка workflow-пакета, 02.11.2026
+
+Добавлен CLI-only `--task-workflow-check`: фиксированный canonical hash пакета,
+14 настоящих source files, три checker hash, criteria revisions/dependencies,
+точный текущий run, сохранённые права и snapshot маршрута проверяются через
+штатные scoped services. Этот режим не может подготовить model host.
+Отдельный guard расширения 89→129 сохраняет baseline и unknown holds, проверяет
+ledger вместе с предложенной reservation; старые guards не изменены.
+Это ещё не подключение grants/envelope/tool allowlist к живому workflow.
+
+Настоящий proof: `verification/extensions-327a63cf-afae-4fcb-922a-77d0e1059a6a/proof.json`.
+Пакет совпал, T-008 blocked, T-006 todo, execution выключен, текущий run прежний,
+nativeSessionId отсутствует. Ledger **89 / 428414440 nanoUSD**, новых POST 0.
+Сохранён `permissionMode=ask`, `planFirst=true`, `isolation=in-place`.
+Plan-first запрещает реализацию в штатной session policy; владельцу отправлен
+запрос на явный переход после проверки плана. Права не менялись.
+
+План реализации T-006 в границах пакета: отдельные cat/plane motion stylesheets
+по общей 10-секундной раскадровке; в index только ссылки и утверждённый порядок
+групп, без изменения SVG-рисунков; flight/background checks до и после,
+browser measurements, C4 и свежая assessment перед submit_result.
+Замечание/повторная сдача и capture/merge остаются самостоятельной приёмкой.
+
+Main typecheck, lint, format и семь целевых тестов budget guards в трёх файлах
+прошли; production build прошла. Полный suite не запускался. Изменённые code
+files ≤241 строки, UI не менялся, browser acceptance этим не утверждается.

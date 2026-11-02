@@ -37,6 +37,7 @@ if (!(
       '--configured-plan-review',
       '--task-stop-live',
       '--task-stop-check',
+      '--task-workflow-check',
     ].includes(process.argv[2])) ||
   (process.argv.length === 6 &&
     [
@@ -93,6 +94,7 @@ try {
       '--task-launch-preflight',
       '--task-stop-review',
       '--task-stop-check',
+      '--task-workflow-check',
       '--task-stop-live',
       '--task-stop-replay',
       '--task-stop-main-restart',

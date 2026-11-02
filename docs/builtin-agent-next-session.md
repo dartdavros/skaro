@@ -100,3 +100,15 @@ runtime/task/model ports. Реализовать точные grants/envelope/to
 metadata preflight или успешному тесту вспомогательного checker. При исчерпании
 разрешённого счётчика/денежного запаса остановить новые POST и честно зафиксировать
 остаток приёмки. После коммитов продолжать разрешённую работу по плану.
+
+## Уточнение после повторной сверки
+
+CLI `--task-workflow-check <packet> <canonical hash>` проверен штатными scoped
+services. Proof: `extensions-327a63cf-afae-4fcb-922a-77d0e1059a6a/proof.json`.
+Источники/checkers/критерии/маршрут совпали, ledger прежний 89 / 428414440 nanoUSD.
+Добавлен отдельный guard 89→129 с proposed reservation; живой driver, grants,
+envelope и tool allowlist ещё не подключены. Model POST 0, права не менялись.
+У текущего T-006 фактически planFirst=true: реализация запрещена session policy.
+Отправлен запрос владельцу на явный штатный переход после проверки плана,
+с сохранением ask/пакета/бюджета. До ответа не менять planFirst скрытым grant.
+Краткий конкретный план записан в builtin-agent-workflow-acceptance.md.

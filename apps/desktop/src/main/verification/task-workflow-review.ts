@@ -29,7 +29,7 @@ const SOURCE_PATHS = [
   '.skaro/tasks/T-008-knopka-pauzy-i-reduced-motion.md',
 ] as const;
 
-async function actualSource(root: string, path: string) {
+export async function actualWorkflowSource(root: string, path: string) {
   const filename = resolve(root, path),
     canonical = await realpath(filename);
   const rel = relative(root, canonical),
@@ -97,7 +97,7 @@ export async function prepareTaskWorkflowReview(
     };
   });
   const sources = [];
-  for (const path of SOURCE_PATHS) sources.push(await actualSource(root, path));
+  for (const path of SOURCE_PATHS) sources.push(await actualWorkflowSource(root, path));
   const runtimeNames = [
     'read_file',
     'apply_patch',

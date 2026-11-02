@@ -163,3 +163,10 @@ managed work turns, worktree/environment и live permissions ещё не при�
 отдельный точный route/permissions, общий task/chat catalog preflight и отказ
 до admission при отсутствии выбора. Product chat creation/picker ещё закрыты.
 BA-* — локальные ID плана, не созданные задачи Skaro.
+
+02.11.2026: повторная штатная сверка фиксированного workflow-пакета подтвердила
+14 source files, три checker hash, route/task state и ledger 89 / 428414440 nanoUSD.
+Добавлены CLI inspection и отдельный budget guard 89→129 с reservation;
+живой workflow binding ещё открыт. Plan-first текущего T-006 сохраняется,
+запрошен явный штатный переход после плана; новых POST/изменений Cat-pilot нет.
+Proof и план — в [протоколе BA-7](builtin-agent-workflow-acceptance.md#повторная-сверка-workflow-пакета-02112026).
