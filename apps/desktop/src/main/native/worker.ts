@@ -98,6 +98,7 @@ async function start(options: NativeOptions): Promise<void> {
       raw: resolved.raw,
       journalReplay: resolved.journalReplay,
       signal: resolved.signal,
+      commandEnvironment: resolved.env,
       verification: verification?.host(),
       extensions: extensions?.host(),
       model: model?.host(),

@@ -39,7 +39,7 @@ export interface BuiltinTaskSessionPreparer {
   }): Promise<{
     config: BuiltinSessionStart;
     host: NativeSessionHost & { model: NonNullable<NativeSessionHost['model']> };
-    close(): void;
+    close(): void | Promise<void>;
   }>;
 }
 
@@ -130,7 +130,7 @@ export async function startBuiltinTaskSession(
   } catch (error) {
     if (lease) {
       try {
-        if (!active.builtinClose) prepared?.close();
+        if (!active.builtinClose) await prepared?.close();
       } finally {
         const owned = await revokeBuiltinTaskAdmission(active, 'Builtin task startup failed');
         try {

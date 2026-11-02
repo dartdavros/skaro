@@ -117,6 +117,7 @@ export type ParentMessage =
       verification?: RuntimeVerificationBinding;
       extensions?: RuntimeExtensionBinding;
       model?: RuntimeModelBinding;
+      commandEnvironment?: Readonly<Record<string, string>>;
     }
   | { type: 'command'; command: RuntimeCommand }
   | VerificationInspectReply

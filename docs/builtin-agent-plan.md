@@ -2,7 +2,8 @@
 
 Актуально на 02.11.2026. **Текущий этап — BA-7**, внутренняя интеграция
 в task/chat lifecycle. Очередь новых builtin-run и handoff реализованы в коде;
-положительная сквозная приёмка задачи/чата, submit/merge и продуктовый выбор
+transactional handoff остановленного Cat-pilot run принят отдельно.
+Положительная сквозная приёмка задачи/чата, submit/merge и продуктовый выбор
 агента ещё открыты. Встроенный агент не стал выбором по умолчанию.
 Живой [launch preflight Cat-pilot](builtin-agent-task-launch-preflight.md) принят:
 отмена и dependency blocker отказаны до очереди/run/model host, model POST 0.

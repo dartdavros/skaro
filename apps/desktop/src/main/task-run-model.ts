@@ -45,7 +45,7 @@ export class ActiveRun {
   /** Present only for the builtin runtime; managed agents keep their existing lifecycle. */
   builtinAdmission?: NativeAdmissions;
   /** Closes configured credential/route leases with the task's process admission. */
-  builtinClose?: () => void;
+  builtinClose?: () => void | Promise<void>;
   /** Cancels a prepared host before detach/shutdown waits for attachment. */
   builtinStartup?: AbortController;
   /** Invalidates a delivery/attachment already awaiting I/O when the owner stops the task. */

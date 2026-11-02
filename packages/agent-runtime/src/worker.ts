@@ -56,6 +56,7 @@ process.on('message', (message: ParentMessage) => {
         extensions?.host().extensions,
         verification?.host(),
         model?.host(),
+        message.commandEnvironment,
       );
       session.onBackgroundError(fatal);
       post({ type: 'ready', records: session.journal.records });

@@ -1,5 +1,12 @@
 export type CommandControl =
-  | { type: 'run'; command: string; shell: string; cwd: string; outputPath: string }
+  | {
+      type: 'run';
+      command: string;
+      shell: string;
+      cwd: string;
+      outputPath: string;
+      environment?: Readonly<Record<string, string>>;
+    }
   | { type: 'stdin'; id: string; chars: string; end: boolean };
 export type CommandEvent =
   | { type: 'ready' }

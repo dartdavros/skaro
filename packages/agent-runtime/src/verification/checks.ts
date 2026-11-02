@@ -12,6 +12,8 @@ import { requireCheckRetry } from './repairs.ts';
 import { verifyEvidenceArtifact } from './artifacts.ts';
 import { requirePlannedCheck } from './plans.ts';
 import type { RuntimeVerificationHost } from './host.ts';
+import { reviewedCheckEnvironment } from './environment-review.ts';
+import { sameObservationHost } from './observation-source.ts';
 
 export async function runCheck(
   id: string,
@@ -88,7 +90,7 @@ export async function runCheck(
 export async function checkEvidence(
   raw: unknown,
   scope: PathScope,
-  journal: RuntimeJournal,
+  journal: Pick<RuntimeJournal, 'records' | 'state'>,
   signal: AbortSignal,
 ) {
   const input = schemas.check_evidence.parse(raw);
@@ -112,7 +114,13 @@ export async function checkEvidence(
         artifactsCurrent = false;
       }
     }
+  const review = reviewedCheckEnvironment(
+    journal.state.config!.tools?.verificationReview,
+    value,
+    currentEnvironment,
+  );
   return {
+    ...(review ? { environmentReview: review } : {}),
     inputsCurrent:
       fingerprint(value.inputs) === fingerprint(current) &&
       fingerprint(value.after) === fingerprint(current),
@@ -130,7 +138,8 @@ export async function checkEvidence(
             .slice(input.sequence)
             .some((record) =>
               record.facts.some(
-                (fact) => fact.type === 'tool-request' && fact.name.startsWith('mcp__'),
+                (fact) =>
+                  fact.type === 'tool-request' && sameObservationHost(value.source.name, fact.name),
               ),
             ),
         }
@@ -155,6 +164,8 @@ export async function checkEvidence(
         }
       : {}),
     acceptance: 'requires-environment-and-criteria-review',
-    unresolved: value.environment.unresolved,
+    unresolved: value.environment.unresolved.filter(
+      (concern) => !review?.assumptions.some((item) => item.concern === concern),
+    ),
   };
 }

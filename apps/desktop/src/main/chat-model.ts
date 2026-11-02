@@ -43,7 +43,7 @@ export class LiveChat {
   readonly timeline: Timeline;
   session: AgentSession | undefined;
   builtinAdmission?: NativeAdmissions;
-  builtinClose?: () => void;
+  builtinClose?: () => void | Promise<void>;
   grant: Grant | undefined;
   log: WriteStream | undefined;
   /** Events not yet sent to the renderer. */

@@ -1,6 +1,7 @@
 # Внутренний handoff builtin ↔ managed
 
-Дата: 02.11.2026. Код BA-7; положительная приёмка настоящей задачи открыта.
+Дата: 02.11.2026. Transactional handoff настоящего остановленного run принят;
+положительная приёмка полной задачи открыта.
 
 `TaskRuns.handoffBuiltin` принимает явный route/effort, права и isolation для
 существующего настоящего run. Обратный переход к Claude Code/Codex использует
@@ -43,9 +44,13 @@ live permissions истекают по прежним правилам continuat
   blocker/stall bound, имена из реестра и task session policy.
 - TypeScript main, lint, форматирование и production build прошли.
   Изменённые файлы не превышают 300 строк.
-- Тесты не создают проекты/задачи/run, не используют fake agent/backend или
-  ответы модели. Сам положительный transactional handoff настоящего run,
-  process/permission expiry, Electron feed и продолжение после рестарта
-  этими проверками не приняты.
+- Unit-тесты не создают проекты/задачи/run, не используют fake agent/backend
+  или ответы модели. Эти unit-проверки сами по себе не принимают live workflow.
+- Позже прошёл [настоящий transactional handoff](builtin-agent-workflow-acceptance.md)
+  T-006 Skaro → Codex → Skaro → Claude → Skaro: четыре реальных successor runs,
+  сохранение истории/stop intent/in-place checkout, старый lease остаётся exited,
+  owner preference восстановлена CAS. Model POST/managed sessions 0.
+  Реальные worktree/environment, pending questions/live permissions и managed
+  work turns этим сценарием не приняты.
 - Живая проверка допускается только на Cat-pilot. Дополнительных model POST
   не было. Продуктовый picker, полная сдача/merge и BA-7 остаются открытыми.

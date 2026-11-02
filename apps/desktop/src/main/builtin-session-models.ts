@@ -1,4 +1,8 @@
-import { prepareSkaroOperations, readRuntimeJournal } from '@skaro/agent-runtime';
+import {
+  prepareSkaroOperations,
+  readRuntimeJournal,
+  taskCommandEnvironmentRevision,
+} from '@skaro/agent-runtime';
 import type { McpHttpServer, SkaroScope } from '@skaro/mcp-server';
 import type {
   BuiltinSessionStart,
@@ -7,6 +11,7 @@ import type {
   ModelToolAdmission,
   RuntimeVerificationHost,
   SessionOptions,
+  RuntimeScopedExtensionHost,
 } from '@skaro/timeline';
 import type { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import type { BuiltinModelSettingsService } from './builtin-model-settings-service';
@@ -17,6 +22,7 @@ import { createContextChatInput } from './builtin-context-chat-input';
 import { createContextNativeInput } from './builtin-context-native-input';
 import { modelNetworkTransport } from './model-network-transport';
 import { configuredTaskTools } from './builtin-model-tools';
+import { builtinSessionExtensions } from './builtin-session-extensions';
 
 export interface BuiltinSessionPreparation {
   scope: SkaroScope;
@@ -36,6 +42,8 @@ export interface BuiltinSessionModelGrant {
   tools: ModelToolAdmission;
   modelTools: readonly ModelTool[];
   operations: readonly { name: string; readOnly: boolean }[];
+  /** Main-only actual MCP hosts, bound to this exact process admission. */
+  extensions?: RuntimeScopedExtensionHost;
   requests: Parameters<typeof prepareConfiguredModelHost>[0]['requests'];
 }
 
@@ -57,83 +65,95 @@ export async function prepareBuiltinSessionModel(
   input.signal.throwIfAborted();
   const selected = structuredClone(grant.config);
   const chat = ['openrouter', 'deepseek'].includes(selected.route.connector);
-  const extensions = prepareSkaroOperations(
+  const skaro = prepareSkaroOperations(
     deps.mcp.operations(input.scope, input.admissions),
     input.admissions.admission,
     deps.mcp.describe(input.scope),
     grant.operations,
     input.signal,
   );
-  const formatting = {
-    journalPath: input.journalPath,
-    sessionId: input.sessionId,
-    route: selected.route,
-    maxSteps: grant.maxSteps,
-    tools: configuredTaskTools(grant.modelTools, extensions),
-  };
-  const ownerInput = chat
-    ? createContextChatInput({ ...formatting, price: grant.price })
-    : createContextNativeInput(formatting);
-  const config: BuiltinSessionStart = {
-    ...selected,
-    tools: selected.tools && {
-      ...selected.tools,
-      ...(input.verification ? { verificationScope: structuredClone(input.scope) } : {}),
-    },
-    extensions: extensions.tools.map(({ name, revision, readOnly }) => ({
-      name,
-      revision,
-      readOnly,
-    })),
-    extensionsScope: structuredClone(input.scope),
-    model: {
-      scope: structuredClone(input.scope),
-      protocol: chat ? 'chat' : 'native',
-      input: { revision: ownerInput.revision, steer: true },
-      tools: {
-        revision: grant.tools.revision,
-        selectChatTools: !!grant.tools.selectChatTools,
-        chatToolsRequired: grant.tools.chatToolsRequired,
-        rejectionMessage: grant.tools.rejectionMessage,
-      },
-    },
-  };
-  validate(config);
-  const baseline = await readRuntimeJournal(input.journalPath, input.sessionId, true);
-  input.signal.throwIfAborted();
-  const configured = await prepareConfiguredModelHost({
-    store: deps.store,
-    settings: deps.settings,
-    metadata: deps.catalog,
-    binding: {
-      scope: input.scope,
-      admission: input.admissions.admission,
-      route: config.route,
+  const extensions = builtinSessionExtensions(input, skaro, grant.extensions);
+  try {
+    const formatting = {
       journalPath: input.journalPath,
-      baseSequence: baseline.records.length,
-      baseHash: baseline.records.at(-1)?.hash ?? '',
-      policy: config.model!,
-    },
-    admissions: input.admissions,
-    signal: input.signal,
-    ownerInput,
-    toolAdmission: grant.tools,
-    requests: grant.requests,
-    transport: await modelNetworkTransport(deps.proxy),
-  });
-  return {
-    config,
-    host: {
-      signal: configured.signal,
-      model: configured.model,
-      verification: input.verification,
-      extensions: {
+      sessionId: input.sessionId,
+      route: selected.route,
+      maxSteps: grant.maxSteps,
+      tools: configuredTaskTools(grant.modelTools, extensions),
+    };
+    const ownerInput = chat
+      ? createContextChatInput({ ...formatting, price: grant.price })
+      : createContextNativeInput(formatting);
+    const config: BuiltinSessionStart = {
+      ...selected,
+      tools: selected.tools && {
+        ...selected.tools,
+        ...(input.options.env
+          ? { commandEnvironmentRevision: taskCommandEnvironmentRevision(input.options.env) }
+          : {}),
+        ...(input.verification ? { verificationScope: structuredClone(input.scope) } : {}),
+      },
+      extensions: extensions.tools.map(({ name, revision, readOnly }) => ({
+        name,
+        revision,
+        readOnly,
+      })),
+      extensionsScope: structuredClone(input.scope),
+      model: {
+        scope: structuredClone(input.scope),
+        protocol: chat ? 'chat' : 'native',
+        input: { revision: ownerInput.revision, steer: true },
+        tools: {
+          revision: grant.tools.revision,
+          selectChatTools: !!grant.tools.selectChatTools,
+          chatToolsRequired: grant.tools.chatToolsRequired,
+          rejectionMessage: grant.tools.rejectionMessage,
+        },
+      },
+    };
+    validate(config);
+    const baseline = await readRuntimeJournal(input.journalPath, input.sessionId, true);
+    input.signal.throwIfAborted();
+    const configured = await prepareConfiguredModelHost({
+      store: deps.store,
+      settings: deps.settings,
+      metadata: deps.catalog,
+      binding: {
         scope: input.scope,
         admission: input.admissions.admission,
-        extensions,
-        signal: input.signal,
+        route: config.route,
+        journalPath: input.journalPath,
+        baseSequence: baseline.records.length,
+        baseHash: baseline.records.at(-1)?.hash ?? '',
+        policy: config.model!,
       },
-    },
-    close: configured.close,
-  };
+      admissions: input.admissions,
+      signal: input.signal,
+      ownerInput,
+      toolAdmission: grant.tools,
+      requests: grant.requests,
+      transport: await modelNetworkTransport(deps.proxy),
+    });
+    return {
+      config,
+      host: {
+        signal: configured.signal,
+        model: configured.model,
+        verification: input.verification,
+        extensions: {
+          scope: input.scope,
+          admission: input.admissions.admission,
+          extensions,
+          signal: input.signal,
+        },
+      },
+      async close() {
+        configured.close();
+        await extensions.close();
+      },
+    };
+  } catch (error) {
+    await extensions.close();
+    throw error;
+  }
 }

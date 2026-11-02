@@ -9,12 +9,14 @@
 | BA-4 | Четыре коннектора; живые OpenRouter цепочки, streaming/tools/continuation | Прямые OpenAI/Anthropic/DeepSeek API отложены владельцем |
 | BA-5 | Принят поддерживаемый Windows-контур Cat-pilot: context, compact/restart, MCP/browser/media | Платформенные ограничения сохранены в итоговой таблице |
 | BA-6 | Проверки и происхождение доказательств; живой read-only model-plan Cat-pilot | Полный цикл реального исправления, повторных проверок и сдачи |
-| BA-7 — сейчас | T-006 Stop/resume, модельное продолжение после main exit и restart/history приняты; handoff в коде | Полная проверенная задача, handoff/submit/merge и product UI |
+| BA-7 — сейчас | Stop/resume, main restart/history; transactional handoff настоящего run; guards сдачи, task env и MCP preflight | Проверенная задача, замечание/повторная сдача, worktree/environment handoff и capture/merge |
 | BA-8 | Реальные настройки Connection/Route и каталог в существующем UI | Product agent catalog/picker, создание builtin-чата, сквозная UI-приёмка |
 | BA-9 | Локальный Windows x64 payload и packaged settings/catalog | Остальные платформы, полный выпуск, приёмка перед сменой default |
 
 Последние изменения: `f521914` — корректное продолжение после unknown model outcome;
 настоящие T-006 Stop/resume, main restart и повторное восстановление истории приняты.
+Следом приняты [локальные handoff/submit guards и environment/MCP preflight](builtin-agent-workflow-acceptance.md):
+22 целевых теста, production build, POST 0. Полный task workflow ещё не принят.
 `cdd1b68` — точная граница UserInput вместо копирования inbox metadata.
 Это ещё не включение создания нового чата.
 
@@ -146,8 +148,9 @@ OpenAI/Anthropic и явный каталог инструментов task host
 Положительный Electron task workflow, picker, handoff и сдача ещё не приняты.
 Подключён [внутренний handoff builtin ↔ managed](builtin-agent-task-handoff.md):
 повторный preflight, прежний process shutdown и атомарная публикация successor,
-его настроек, execution intent и pending input. Положительная живая приёмка
-переходов, отзыва permissions и продолжения после restart остаётся открытой.
+его настроек, execution intent и pending input. Transactional переходы настоящего
+остановленного run к установленным Codex/Claude и обратно приняты отдельно;
+managed work turns, worktree/environment и live permissions ещё не приняты.
 Уточнён [контракт builtin chat settings](builtin-agent-chat-settings.md):
 отдельный точный route/permissions, общий task/chat catalog preflight и отказ
 до admission при отсутствии выбора. Product chat creation/picker ещё закрыты.

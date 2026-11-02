@@ -2,15 +2,15 @@ import type { NativeAdmissions } from './admissions';
 
 export interface NativeSessionLeaseOwner {
   builtinAdmission?: NativeAdmissions;
-  builtinClose?: () => void;
+  builtinClose?: () => void | Promise<void>;
 }
 
 export async function revokeNativeSession(owner: NativeSessionLeaseOwner, reason: string) {
   const lease = owner.builtinAdmission;
   try {
-    owner.builtinClose?.();
-  } finally {
     if (lease) await lease.revoke(lease.admission, reason);
+  } finally {
+    await owner.builtinClose?.();
   }
   return lease;
 }

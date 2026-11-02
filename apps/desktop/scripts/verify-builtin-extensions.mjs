@@ -39,7 +39,12 @@ if (!(
       '--task-stop-check',
     ].includes(process.argv[2])) ||
   (process.argv.length === 6 &&
-    ['--task-stop-replay', '--task-stop-main-restart'].includes(process.argv[2]))
+    [
+      '--task-stop-replay',
+      '--task-stop-main-restart',
+      '--task-handoff-local',
+      '--task-completion-preflight',
+    ].includes(process.argv[2]))
 ))
   throw new Error(
     'Usage: verify-builtin-extensions.mjs [--native-verification | --native-operations | --native-lifetime | --native-model-preflight | --browser CAT_PILOT_PROJECT_ROOT]',
@@ -91,6 +96,8 @@ try {
       '--task-stop-live',
       '--task-stop-replay',
       '--task-stop-main-restart',
+      '--task-handoff-local',
+      '--task-completion-preflight',
     ].includes(process.argv[2])
   ) {
     if (process.env.SKARO_VERIFY_PROXY !== 'http://127.0.0.1:10809')

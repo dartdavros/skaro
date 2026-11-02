@@ -95,7 +95,7 @@ export async function startBuiltinChatSession(ctx: ChatEngine, live: LiveChat) {
     return { session, segment, resume, signal };
   } catch (error) {
     try {
-      if (!live.builtinClose) prepared?.close();
+      if (!live.builtinClose) await prepared?.close();
     } finally {
       const owned = await revokeNativeSession(live, 'Builtin chat startup failed');
       try {

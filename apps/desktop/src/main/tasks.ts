@@ -27,6 +27,9 @@ import type { ConfigureEnvironmentArgs } from '@skaro/mcp-server';
 import type { ProcessAdmissionPort } from '@skaro/timeline';
 import { builtinAcceptancePort } from './builtin-acceptance';
 import { builtinTaskAdmission } from './builtin-task-admission';
+import { submitTaskResult } from './task-submit';
+import { taskArchitectureEvent } from './task-architecture-events';
+import { prepareBuiltinTaskReview } from './builtin-task-review';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
@@ -43,6 +46,9 @@ export class TaskRuns {
   builtinAdmission(scope: SkaroScope, sessionId: string, signal: AbortSignal) {
     return builtinTaskAdmission(this.engine, scope, sessionId, signal);
   }
+  builtinReview(projectId: string, taskId: string) {
+    return prepareBuiltinTaskReview(this.engine, projectId, taskId);
+  }
   builtinAcceptance(scope: SkaroScope, admissions: Pick<ProcessAdmissionPort, 'requireActive'>) {
     return builtinAcceptancePort(this.engine, scope, admissions);
   }
@@ -57,39 +63,7 @@ export class TaskRuns {
     scope: SkaroScope,
     item: Extract<Item, { kind: 'proposal' }>,
   ): Promise<void> {
-    if (!scope.taskId) throw new Error('Missing architecture task');
-    const active = await this.engine.history.restore(scope.projectId, scope.taskId);
-    if (!active) throw new Error('Architecture task history is unavailable');
-    await this.engine.history.drain(active);
-    const previous = active.timeline.state.items.find((i) => i.id === item.id);
-    if (
-      previous?.kind === 'proposal' &&
-      previous.proposal.type === 'architecture' &&
-      item.proposal.type === 'architecture' &&
-      previous.proposal.packageId === item.proposal.packageId &&
-      previous.state === item.state &&
-      previous.result?.error === item.result?.error &&
-      previous.proposal.contentRef === item.proposal.contentRef
-    )
-      return;
-    this.engine.history.skaroEvent(active, {
-      t: 'item.upsert',
-      item: { ...item, turnId: previous?.turnId ?? active.timeline.state.turns.at(-1)?.id ?? '' },
-    });
-    // The agent ended its turn to wait for this decision: Skaro hands it over and the task goes on.
-    const decided = item.state === 'applied' || item.state === 'rejected';
-    if (!decided || (previous?.kind === 'proposal' && previous.state === item.state)) return;
-    const context = this.engine.project(scope.projectId);
-    context.invalidate();
-    const task = (await context.load()).tasks.find((t) => t.id === scope.taskId);
-    // A finished task has nothing to continue; its feed keeps the decision.
-    if (task && !['done', 'cancelled'].includes(task.status))
-      // The decision is already applied; a failed hand-over leaves the owner to continue the task.
-      await this.engine.messages
-        .continueAfter(active, architectureDecision(item))
-        .catch((error: unknown) =>
-          console.error(`${scope.taskId} continue after C4 decision:`, error),
-        );
+    return taskArchitectureEvent(this.engine, scope, item);
   }
   revertMerge(projectId: string, taskId: string, commit: string): Promise<void> {
     return this.engine.mergeActions.revert(projectId, taskId, commit);
@@ -225,7 +199,7 @@ export class TaskRuns {
     if (active) this.engine.history.notice(active, 'other', error ? 'error' : 'info', text);
   }
   submitResult(args: SubmitResultArgs, scope: SkaroScope): Promise<ToolResult> {
-    return taskTool(this.engine, scope, () => this.engine.results.submitResult(args, scope));
+    return submitTaskResult(this.engine, args, scope);
   }
   reportBlocker(reason: string, scope: SkaroScope): Promise<ToolResult> {
     return taskTool(this.engine, scope, async () => {
@@ -285,11 +259,4 @@ export class TaskRuns {
   close(): Promise<void> {
     return this.engine.sessions.close();
   }
-}
-
-function architectureDecision(item: Extract<Item, { kind: 'proposal' }>): string {
-  const title = item.proposal.type === 'architecture' ? item.proposal.title : '';
-  return item.state === 'applied'
-    ? `The owner accepted the architecture package "${title}" and Skaro applied it. Continue the task.`
-    : `The owner rejected the architecture package "${title}". Continue the task without it.`;
 }

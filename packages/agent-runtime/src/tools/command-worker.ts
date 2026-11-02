@@ -4,6 +4,7 @@ import { open, type FileHandle } from 'node:fs/promises';
 import { cleanCommandEnvironment } from './command-env.ts';
 import type { CommandControl, CommandEvent } from './command-protocol.ts';
 import { checkCommand } from './shell.ts';
+import { taskCommandEnvironment } from './task-command-env.ts';
 
 let child: ChildProcessWithoutNullStreams | undefined;
 let output: FileHandle | undefined;
@@ -24,7 +25,7 @@ input.on('line', (line) => {
       child = spawn(invocation.command, invocation.args, {
         shell: invocation.shell,
         cwd: message.cwd,
-        env: cleanCommandEnvironment(),
+        env: { ...cleanCommandEnvironment(), ...taskCommandEnvironment(message.environment) },
         windowsHide: true,
         stdio: 'pipe',
       });

@@ -7,6 +7,7 @@ import { captureCheckInputs, fingerprint } from './inputs.ts';
 import { captureVerificationEnvironment } from './environment.ts';
 import { requirePlannedCheck } from './plans.ts';
 import { schemas } from '../tools/schemas.ts';
+import { unresolvedVerificationEffects } from './effects.ts';
 
 const inspecting = new WeakMap<RuntimeJournal, Set<string>>();
 
@@ -48,13 +49,13 @@ async function inspect(input: InspectionInput) {
     throw new Error('Acceptance proposal exceeds its inspection limit');
   const before = await input.host.inspect(input.admission, signal);
   const reasons = [...before.reasons];
+  const unsupported = new Map<string, string>();
   if (journal.state.stopped || journal.state.closed) reasons.push('Runtime session is stopped');
   if (Object.keys(journal.state.interactions).length)
     reasons.push('Runtime interactions remain open');
   if (
-    Object.entries(journal.state.effects).some(
-      ([id, effect]) =>
-        effect.state === 'unknown' || (effect.state === 'pending' && id !== input.id),
+    unresolvedVerificationEffects(journal).some(
+      ([id, effect]) => id !== input.id || effect.state !== 'pending',
     )
   )
     reasons.push('Runtime effects remain unresolved');
@@ -77,7 +78,9 @@ async function inspect(input: InspectionInput) {
   for (const criterion of known) {
     const verdict = input.verdicts.find((item) => item.id === criterion);
     if (!verdict?.met || !verdict.evidence.length) {
-      reasons.push(`Criterion lacks a supported positive verdict: ${criterion}`);
+      const reason = `Criterion lacks a supported positive verdict: ${criterion}`;
+      reasons.push(reason);
+      unsupported.set(criterion, reason);
       continue;
     }
     for (const reference of verdict.evidence) {
@@ -122,6 +125,11 @@ async function inspect(input: InspectionInput) {
           reasons.push('Evidence has no successful outcome');
         if (state.unresolved.length)
           reasons.push('Evidence environment/dependencies require review');
+        if (
+          state.environmentReview &&
+          state.environmentReview.criteriaRevision !== before.criteriaRevision
+        )
+          reasons.push('Host environment review criterion revision changed');
       } catch {
         signal.throwIfAborted();
         reasons.push('Invalid or unavailable evidence reference');
@@ -145,6 +153,10 @@ async function inspect(input: InspectionInput) {
     criteriaRevision: after.criteriaRevision,
     verdicts: structuredClone(input.verdicts),
     reasons: [...new Set(reasons)],
+    unsupportedCriteria: [...unsupported.keys()],
+    blockingReasons: [
+      ...new Set(reasons.filter((reason) => ![...unsupported.values()].includes(reason))),
+    ],
   };
   await journal.append(
     `verification-assessment:${input.id}`,

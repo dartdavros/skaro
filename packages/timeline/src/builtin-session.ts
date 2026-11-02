@@ -44,6 +44,7 @@ export interface BuiltinSessionOptions
     RuntimeSessionHost {
   config: BuiltinSessionStart;
   entry?: string;
+  commandEnvironment?: Readonly<Record<string, string>>;
   /** In-process host port. Transports serialize only its scope/admission binding. */
 }
 

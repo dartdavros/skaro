@@ -55,6 +55,7 @@ export class RuntimeSession {
     extensions?: RuntimeExtensionHost,
     verification?: RuntimeVerificationHost,
     model?: RuntimeModelHost,
+    commandEnvironment?: Readonly<Record<string, string>>,
   ): Promise<RuntimeSession> {
     requireBuiltinCompatibility(config.versions);
     requireModelBinding(config, model);
@@ -116,7 +117,12 @@ export class RuntimeSession {
       const session = new RuntimeSession(journal);
       await recoverModelTurns(journal);
       session.modelHost = model;
-      session.tools = await ToolCoordinator.create(journal, extensions, verification);
+      session.tools = await ToolCoordinator.create(
+        journal,
+        extensions,
+        verification,
+        commandEnvironment,
+      );
       session.context = await RuntimeContext.create(journal);
       if (model?.input)
         session.ownerTurns = new OwnerModelTurns(

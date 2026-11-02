@@ -35,11 +35,12 @@ export class ToolRegistry {
     journal: RuntimeJournal,
     host?: RuntimeExtensionHost,
     verification?: RuntimeVerificationHost,
+    commandEnvironment?: Readonly<Record<string, string>>,
   ) {
     this.scope = scope;
     this.config = config;
     this.journal = journal;
-    this.processes = new ToolProcesses(config, journal);
+    this.processes = new ToolProcesses(config, journal, commandEnvironment);
     this.extensions = new ExtensionRegistry(journal.state.config!.extensions ?? [], host);
     if (config.verificationScope || verification) {
       const supplied = requireVerificationHost(journal, verification);
@@ -55,9 +56,10 @@ export class ToolRegistry {
     journal: RuntimeJournal,
     host?: RuntimeExtensionHost,
     verification?: RuntimeVerificationHost,
+    commandEnvironment?: Readonly<Record<string, string>>,
   ): Promise<ToolRegistry> {
     const scope = await sessionFileScope(journal);
-    return new ToolRegistry(scope, config, journal, host, verification);
+    return new ToolRegistry(scope, config, journal, host, verification, commandEnvironment);
   }
   parse(name: string, args: unknown): { name: string; args: Record<string, unknown> } {
     if (this.extensions.has(name)) return { name, args: this.extensions.parse(name, args) };

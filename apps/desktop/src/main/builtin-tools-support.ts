@@ -11,9 +11,14 @@ import {
 import { stopOwnedProcess, type OwnedProcess } from '@skaro/agent-runtime/process-identity';
 import type { SkaroSessionOptions } from '../../../../packages/adapter-skaro/src/index.ts';
 import { SkaroSession } from '../../../../packages/adapter-skaro/src/index.ts';
+import { taskCommandEnvironmentRevision } from '@skaro/agent-runtime';
 
 /** Creates an actual empty runtime workspace; all scenario files are produced by real tools. */
-export async function startToolSession(mode: PermissionMode = 'full', readOnly = false) {
+export async function startToolSession(
+  mode: PermissionMode = 'full',
+  readOnly = false,
+  commandEnvironment?: Record<string, string>,
+) {
   const directory = await mkdtemp(join(tmpdir(), 'skaro-builtin-tools-'));
   const workspace = join(directory, 'workspace');
   await mkdir(workspace);
@@ -38,7 +43,15 @@ export async function startToolSession(mode: PermissionMode = 'full', readOnly =
         parameters: {},
         upstream: DEFAULT_UPSTREAM_POLICY,
       },
-      tools: { cwd: workspace, readDirs: [], readOnly, artifactDir: join(directory, 'artifacts') },
+      tools: {
+        cwd: workspace,
+        readDirs: [],
+        readOnly,
+        artifactDir: join(directory, 'artifacts'),
+        ...(commandEnvironment
+          ? { commandEnvironmentRevision: taskCommandEnvironmentRevision(commandEnvironment) }
+          : {}),
+      },
     },
     processStarted: (pid, identity) => {
       if (!identity) throw new Error('Runtime owner identity missing');
@@ -46,6 +59,7 @@ export async function startToolSession(mode: PermissionMode = 'full', readOnly =
       appendFileSync(join(directory, 'owners.jsonl'), JSON.stringify(owner) + '\n');
     },
     raw: () => undefined,
+    ...(commandEnvironment ? { commandEnvironment } : {}),
   };
   let session = await SkaroSession.start(options);
   const observe = async (current: SkaroSession) => {

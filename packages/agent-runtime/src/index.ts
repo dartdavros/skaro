@@ -2,6 +2,19 @@ export type * from './model.ts';
 export { RuntimeSession } from './session.ts';
 export { RuntimeJournal } from './journal.ts';
 export {
+  verificationReviewSchema,
+  verificationCommandHash,
+} from './verification/environment-review.ts';
+export {
+  requireRecordedSubmission,
+  requireSubmissionAssessment,
+} from './verification/submission.ts';
+export {
+  taskCommandEnvironment,
+  taskCommandEnvironmentRevision,
+  requireTaskCommandEnvironment,
+} from './tools/task-command-env.ts';
+export {
   admissionState as nativeAdmissionState,
   processIdentity as nativeProcessIdentity,
 } from './admissions/schema.ts';
@@ -40,6 +53,7 @@ export type * from './extensions/registry.ts';
 export { connectMcpExtension } from './extensions/mcp.ts';
 export { createMcpImageStore } from './extensions/mcp-content.ts';
 export { inspectVerificationAcceptance } from './verification/acceptance.ts';
+export { unresolvedVerificationEffects } from './verification/effects.ts';
 export type { RuntimeVerificationHost } from './verification/host.ts';
 export { VerificationClient } from './verification/ipc-client.ts';
 export { VerificationServer } from './verification/ipc-host.ts';

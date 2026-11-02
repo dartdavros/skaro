@@ -15,7 +15,11 @@ export interface BuiltinToolScope {
   artifactDir: string;
   /** Host/build supplies the bundled command supervisor entry. Never a model argument. */
   commandEntry?: string;
+  /** Hash of explicit host task variables. Values travel only over private startup/command IPC. */
+  commandEnvironmentRevision?: string;
   verificationDependencies?: readonly BuiltinVerificationDependency[];
+  /** Explicit owner-reviewed assumptions for exact checks, not measured dependency closure. */
+  verificationReview?: BuiltinVerificationReview;
   /** Persisted host binding for authoritative verification tools. */
   verificationScope?: Readonly<SkaroScope>;
   capabilities?: RouteCapabilityAssessment;
@@ -23,6 +27,15 @@ export interface BuiltinToolScope {
 
 export interface BuiltinToolResult {
   [key: string]: unknown;
+}
+
+export interface BuiltinVerificationReview {
+  revision: string;
+  criteriaRevision: string;
+  dependencies: string;
+  commands: readonly string[];
+  observations: readonly { name: string; revision: string; argsHash: string }[];
+  assumptions: readonly { concern: string; rationale: string }[];
 }
 
 export interface BuiltinSandboxStatus {

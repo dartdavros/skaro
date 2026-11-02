@@ -7,6 +7,8 @@ import { taskStopModels } from './task-stop-models';
 import { verifyTaskStopLive } from './task-stop-live';
 import { verifyTaskStopReplay } from './task-stop-replay';
 import { verifyTaskStopMainRestart } from './task-stop-main-restart';
+import { verifyTaskHandoffLocal } from './task-handoff-local';
+import { verifyTaskCompletionPreflight } from './task-completion-preflight';
 
 /** CLI-only composition. Read/replay modes cannot prepare a model host. */
 export async function taskStopMode(args: string[], data: string, getServices: () => Services) {
@@ -18,6 +20,8 @@ export async function taskStopMode(args: string[], data: string, getServices: ()
       '--task-stop-live',
       '--task-stop-replay',
       '--task-stop-main-restart',
+      '--task-handoff-local',
+      '--task-completion-preflight',
     ].includes(name)
   )
     return undefined;
@@ -64,6 +68,17 @@ export async function taskStopMode(args: string[], data: string, getServices: ()
           );
         } else if (name === '--task-stop-replay') {
           proof = await verifyTaskStopReplay(services, data, packet, args[4]!, args[5]!);
+        } else if (name === '--task-handoff-local') {
+          proof = await verifyTaskHandoffLocal(
+            services,
+            data,
+            directory,
+            packet,
+            args[4]!,
+            args[5]!,
+          );
+        } else if (name === '--task-completion-preflight') {
+          proof = await verifyTaskCompletionPreflight(services, data, packet, args[5]!, directory);
         } else
           proof = {
             budget: await requireTaskStopCurrent(services, data, packet),

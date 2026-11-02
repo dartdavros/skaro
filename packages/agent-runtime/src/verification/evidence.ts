@@ -38,7 +38,7 @@ export interface BrowserEvidence extends Omit<
   artifacts: { path: string; sha256: string; bytes: number }[];
 }
 export function requireEvidence(
-  journal: RuntimeJournal,
+  journal: Pick<RuntimeJournal, 'records'>,
   reference: EvidenceReference,
 ): CheckEvidence | BrowserEvidence {
   const record = journal.records[reference.sequence - 1];
@@ -56,7 +56,7 @@ export function requireEvidence(
   return value;
 }
 export function requireCheckEvidence(
-  journal: RuntimeJournal,
+  journal: Pick<RuntimeJournal, 'records'>,
   reference: EvidenceReference,
 ): CheckEvidence {
   const value = requireEvidence(journal, reference);

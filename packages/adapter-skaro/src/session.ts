@@ -20,6 +20,7 @@ import {
   requireModelBinding,
   requireModelBaseline,
   requireSameHostScope,
+  requireTaskCommandEnvironment,
 } from '@skaro/agent-runtime';
 import {
   processBirth,
@@ -95,6 +96,10 @@ export class SkaroSession implements AgentSession {
   }
 
   static async start(options: SkaroSessionOptions): Promise<SkaroSession> {
+    requireTaskCommandEnvironment(
+      options.commandEnvironment,
+      options.config.tools?.commandEnvironmentRevision,
+    );
     options.signal?.throwIfAborted();
     options.extensions?.signal?.throwIfAborted();
     requireExtensionBinding(
@@ -124,6 +129,7 @@ export class SkaroSession implements AgentSession {
         type: 'start',
         config: options.config,
         owner: session.owner,
+        commandEnvironment: options.commandEnvironment,
         extensions: options.extensions && extensionBinding(options.extensions),
         model: options.model && modelBinding(options.model),
         verification: options.verification && {

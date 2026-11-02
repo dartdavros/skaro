@@ -29,10 +29,17 @@ export class ToolCoordinator {
     journal: RuntimeJournal,
     host?: RuntimeExtensionHost,
     verification?: RuntimeVerificationHost,
+    commandEnvironment?: Readonly<Record<string, string>>,
   ): Promise<ToolCoordinator | undefined> {
     const config = journal.state.config!.tools;
     if (!config) return undefined;
-    const registry = await ToolRegistry.create(config, journal, host, verification);
+    const registry = await ToolRegistry.create(
+      config,
+      journal,
+      host,
+      verification,
+      commandEnvironment,
+    );
     await registry.processes.recover();
     return new ToolCoordinator(registry, journal);
   }

@@ -11,12 +11,22 @@ import type { CommandEvent } from './command-protocol.ts';
 import type { ToolArgs } from './schemas.ts';
 import { outputPage } from './output-page.ts';
 import { yieldProcess } from './process-yield.ts';
+import { requireTaskCommandEnvironment } from './task-command-env.ts';
 
 export class ToolProcesses {
   private readonly config: BuiltinToolScope;
   private readonly journal: RuntimeJournal;
   private readonly running = new Map<string, ManagedProcess>();
-  constructor(config: BuiltinToolScope, journal: RuntimeJournal) {
+  private readonly environment?: Record<string, string>;
+  constructor(
+    config: BuiltinToolScope,
+    journal: RuntimeJournal,
+    environment?: Readonly<Record<string, string>>,
+  ) {
+    this.environment = requireTaskCommandEnvironment(
+      environment,
+      config.commandEnvironmentRevision,
+    );
     this.config = config;
     this.journal = journal;
   }
@@ -146,6 +156,7 @@ export class ToolProcesses {
           cwd,
           shell: args.shell ?? 'powershell',
           outputPath: record.output,
+          environment: this.environment,
         }) + '\n',
       );
       await operationTimeout(

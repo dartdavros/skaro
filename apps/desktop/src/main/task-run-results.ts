@@ -2,17 +2,18 @@ import { MergeBlockedError, newlyUnblocked } from '@skaro/core';
 import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
 import { AUTO_MERGE_KEY } from '../shared/ipc';
 import { errorText } from './session-log';
-import { setCriteria, taskSections } from './task-body';
+import { taskSections } from './task-body';
 import { type MergeInteraction } from './task-merge-card';
-import { completedTaskReply, mergedTaskReply, unmetReply } from './task-merge-result';
+import { mergedTaskReply, unmetReply } from './task-merge-result';
 import { key, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { lastAgentText } from './task-merges';
-import { readSubject, updateSubject } from './task-subject';
+import { updateSubject } from './task-subject';
 import { IntegrationPending } from './integration-model';
-import { assertC4TaskReview } from './c4-review';
 import { completeInPlaceC4 } from './c4-in-place';
+import { writeTaskResult } from './task-result-write';
+import { serializeTaskMutation } from './project-task-mutations';
 
 /** results: a focused part of the task-run controller. */
 export class TaskRunResults {
@@ -182,7 +183,11 @@ export class TaskRunResults {
     this.ctx.deps.emit('project.changed', { projectId });
   }
 
-  async submitResult(args: SubmitResultArgs, scope: SkaroScope): Promise<ToolResult> {
+  async submitResult(
+    args: SubmitResultArgs,
+    scope: SkaroScope,
+    beforeWrite?: () => Promise<void>,
+  ): Promise<ToolResult> {
     if (!scope.taskId)
       return { text: 'submit_result works only in a task session.', isError: true };
     const active = this.ctx.active.get(key(scope.projectId, scope.taskId));
@@ -190,48 +195,17 @@ export class TaskRunResults {
       return { text: 'This session is no longer the current run of the task.', isError: true };
     }
     const context = this.ctx.project(active.projectId);
-    const task = await readSubject(context, active.taskId);
-    if (task.status === 'done') {
-      this.closeMergeCard(active, 'answered');
-      const artifacts = await context.load();
-      return { text: completedTaskReply(active, artifacts.config.baseBranch, this.ctx.deps.db) };
-    }
-    const criteria = taskSections(task.body).criteria;
-    const verdicts = new Map(args.criteria.map((v) => [v.number, v]));
-    const wrong = [...verdicts.keys()].filter((n) => n > criteria.length);
-    const missing = criteria.map((_, i) => i + 1).filter((n) => !verdicts.has(n));
-    if (wrong.length || missing.length) {
-      return {
-        text:
-          `The task has ${criteria.length} acceptance criteria, numbered 1–${criteria.length}. ` +
-          (missing.length ? `No verdict for: ${missing.join(', ')}. ` : '') +
-          (wrong.length ? `No such criteria: ${wrong.join(', ')}. ` : '') +
-          'Give a verdict for every criterion and call submit_result again.',
-        isError: true,
-      };
-    }
-    const met = criteria.map((_, i) => verdicts.get(i + 1)!.met);
-    if (met.every(Boolean)) {
-      try {
-        await assertC4TaskReview(
-          this.ctx.deps.db,
-          context,
-          task.id,
-          active.run.worktree ?? context.root,
-          active.run.id,
-        );
-      } catch (error) {
-        return { text: String(error), isError: true };
-      }
-    }
-    await updateSubject(context, task.id, { body: setCriteria(task.body, met) });
+    const write = () => writeTaskResult(this.ctx, active, args, beforeWrite);
+    const prepared = beforeWrite ? await serializeTaskMutation(context, write) : await write();
+    if (prepared.kind === 'reply') return prepared.reply;
+    const { task, met } = prepared;
     active.mergeSummary = args.summary;
     active.verification = args.verification;
     if (args.commitMessage) active.commitMessage = args.commitMessage;
     const state = await this.criteriaChanged(active.projectId, active.taskId);
     const open = met.flatMap((ok, i) => (ok ? [] : [i + 1]));
     if (open.length) return { text: unmetReply(task, open, 'result') };
-    const done = `All ${criteria.length} acceptance criteria are ticked in the task. `;
+    const done = `All ${met.length} acceptance criteria are ticked in the task. `;
     if (state === 'integrating')
       return {
         text:

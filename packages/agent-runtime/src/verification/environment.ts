@@ -5,8 +5,17 @@ import type { BuiltinVerificationDependency } from '@skaro/timeline';
 import { captureDependencies } from './dependencies.ts';
 import type { RuntimeJournal } from '../journal.ts';
 
-export function captureVerificationEnvironment(journal: RuntimeJournal, signal: AbortSignal) {
-  return captureCheckEnvironment(signal, journal.state.config!.tools?.verificationDependencies);
+export async function captureVerificationEnvironment(
+  journal: Pick<RuntimeJournal, 'state'>,
+  signal: AbortSignal,
+) {
+  const tools = journal.state.config!.tools;
+  return {
+    ...(await captureCheckEnvironment(signal, tools?.verificationDependencies)),
+    ...(tools?.commandEnvironmentRevision
+      ? { taskEnvironmentRevision: tools.commandEnvironmentRevision }
+      : {}),
+  };
 }
 
 /** Measured host/child environment only; never attest unknown command dependencies. */
