@@ -27,14 +27,8 @@ import { prepareBuiltinTaskBrowser } from '../builtin-task-browser';
 import { taskAgentInput } from '../task-agent-input';
 import { taskBudgetSourceId } from '../credentials/task-budget-source';
 
-export const workflowOwnerInput = (
-  packet: TaskWorkflowPacket,
-  review: number | boolean = false,
-  runId?: string,
-) => ({
-  commandId: `workflow-${TASK_WORKFLOW_HASH.slice(0, 32)}-t006${review ? '-review' + (Number(review) > 1 ? '-' + review : '') : ''}${runId ? '-' + runId : ''}`,
-  text: packet.wireComposition.ownerMessages[review ? 1 : 0]!,
-});
+import { workflowOwnerInput, type WorkflowModelBinding } from './task-workflow-binding';
+export { workflowOwnerInput } from './task-workflow-binding';
 
 /** TaskRunSessions remains the only runtime owner; no credentials leave its normal host. */
 export function workflowModels(
@@ -42,7 +36,11 @@ export function workflowModels(
   data: string,
   packet: TaskWorkflowPacket,
   strict = false,
+  binding?: WorkflowModelBinding,
 ) {
+  const hash = binding?.hash ?? TASK_WORKFLOW_HASH;
+  const requireBudget = binding?.requireBudget ?? requireTaskWorkflowBudget;
+  const requireStep = binding?.requireStep ?? requireTaskWorkflowStep;
   const generations: Parameters<BuiltinTaskAuthorization>[0][] = [];
   let runId: string | undefined;
   const ledger = join(data, 'verification/openrouter-ba4');
@@ -67,14 +65,14 @@ export function workflowModels(
         id: 'workflow-task',
         kind: 'constraint' as const,
         origin: 'host' as const,
-        revision: TASK_WORKFLOW_HASH,
+        revision: hash,
         text: instructions,
       },
       {
         id: 'workflow-scope',
         kind: 'constraint' as const,
         origin: 'host' as const,
-        revision: TASK_WORKFLOW_HASH,
+        revision: hash,
         text: JSON.stringify({
           sourceEdits: packet.actionProposal.sourceEdits,
           commands: packet.actionProposal.commands.slice(0, 2),
@@ -113,7 +111,7 @@ export function workflowModels(
           else if (source.path === '.skaro/tasks/T-006-animirovat-prohod-i-pryzhok-kota.md')
             assert.equal(
               actual.text.replace(/^status: in_progress$/m, 'status: todo'),
-              source.text,
+              source.text.replace(/^status: in_progress$/m, 'status: todo'),
             );
           else assert.deepEqual(actual, source);
         }
@@ -167,7 +165,7 @@ export function workflowModels(
           .filter((fact) => fact.type === 'input');
         assert(inputs.length >= 1 && inputs.length <= 40);
         inputs.forEach((item, index) => {
-          const owner = workflowOwnerInput(packet, index, strict ? runId : undefined);
+          const owner = workflowOwnerInput(packet, index, strict ? runId : undefined, hash);
           assert.equal(item.id, `input-${owner.commandId}`);
           assert.deepEqual(item.input, taskAgentInput(owner));
         });
@@ -210,6 +208,7 @@ export function workflowModels(
             readDirs: [],
             readOnly: false,
             artifactDir: input.artifactDir,
+            ...(binding ? { verificationDependencies: binding.dependencies } : {}),
           },
           context: { scopePath: '.', documents: [], pins },
         },
@@ -221,7 +220,7 @@ export function workflowModels(
           async selectChatTools(catalog, signal) {
             signal?.throwIfAborted();
             const budget = await liveBudgetLedger(ledger);
-            requireTaskWorkflowStep(packet.budgetProposal, budget);
+            requireStep(packet.budgetProposal, budget);
             await tools.policy.selectChatTools!(catalog, signal);
             return selectTools(catalog);
           },
@@ -235,7 +234,7 @@ export function workflowModels(
               gateStage = 'quotation-budget';
               assert(request.kind === 'chat');
               const quote = quoteLiveRequest(request.value, id);
-              requireTaskWorkflowBudget(packet.budgetProposal, budget, quote.nanoUsd);
+              requireBudget(packet.budgetProposal, budget, quote.nanoUsd);
               return { ...quote };
             } catch (error) {
               process.send?.({ type: 'workflow-gate-rejected', phase: 'reserve', gateStage });
@@ -243,7 +242,7 @@ export function workflowModels(
             }
           },
           async requireDispatch(_id, request, signal) {
-            requireTaskWorkflowBudget(packet.budgetProposal, await requireRequest(request, signal));
+            requireBudget(packet.budgetProposal, await requireRequest(request, signal));
           },
         },
       };

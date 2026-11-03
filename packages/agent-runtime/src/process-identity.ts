@@ -9,6 +9,15 @@ export interface ProcessIdentity {
 export interface OwnedProcess extends ProcessIdentity {
   pid: number;
 }
+function groupExists(pid: number): boolean {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    throw error;
+  }
+}
 function command(pid: number): { file: string; args: string[] } {
   if (!Number.isSafeInteger(pid) || pid <= 0) throw new Error('Invalid agent process id');
   return process.platform === 'win32'
@@ -54,7 +63,13 @@ export async function processBirth(pid: number): Promise<string | undefined> {
 export async function stopOwnedProcess(record: OwnedProcess): Promise<void> {
   if (record.platform !== process.platform)
     throw new Error('Agent process ownership belongs to another OS');
-  if ((await processBirth(record.pid)) !== record.birth) return;
+  if ((await processBirth(record.pid)) !== record.birth) {
+    if (process.platform !== 'win32' && groupExists(record.pid))
+      throw new Error(
+        'Old process group still exists without its recorded owner; handoff is blocked',
+      );
+    return;
+  }
   try {
     if (process.platform === 'win32')
       await execute('taskkill.exe', ['/PID', String(record.pid), '/T', '/F'], {
@@ -68,5 +83,11 @@ export async function stopOwnedProcess(record: OwnedProcess): Promise<void> {
   for (let n = 0; (await processBirth(record.pid)) === record.birth; n++) {
     if (n === 20) throw new Error('The old agent process is still running. Handoff is blocked.');
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
+  }
+  if (process.platform !== 'win32') {
+    for (let n = 0; groupExists(record.pid); n++) {
+      if (n === 20) throw new Error('The old process group is still present. Handoff is blocked.');
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    }
   }
 }

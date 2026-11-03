@@ -14,7 +14,7 @@ import { taskBrowserServer } from './task-browser';
 
 export type TaskSessionSettings = Pick<
   AgentSettings,
-  'model' | 'effort' | 'permissionMode' | 'planFirst'
+  'model' | 'effort' | 'permissionMode' | 'planFirst' | 'budgetUsd'
 >;
 
 /** Common task instructions, environment and history sinks; never chooses an agent or grants a tool. */
@@ -42,6 +42,7 @@ export async function taskSessionOptions(
     processStarted: (pid, identity) => ctx.processes.started(run.id, pid, false, identity),
     ...(settings.model ? { model: settings.model } : {}),
     ...(settings.effort ? { effort: settings.effort } : {}),
+    ...(settings.budgetUsd !== undefined ? { budgetUsd: settings.budgetUsd } : {}),
     permissionMode: settings.permissionMode,
     planFirst: settings.planFirst,
     instructions:

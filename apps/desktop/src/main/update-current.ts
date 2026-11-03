@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { agentPackage, type AgentId } from '@skaro/core';
+import { agentPackage } from '@skaro/core';
+import type { ManagedAgentId as AgentId } from '@skaro/agents';
 import {
   RELEASE_AGENT_IDS,
   agentDefinition,

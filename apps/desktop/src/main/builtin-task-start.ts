@@ -21,7 +21,15 @@ export function parseBuiltinTaskStart(value: unknown): BuiltinTaskStart {
     typeof selected !== 'object' ||
     Object.keys(selected).some(
       (key) =>
-        !['agent', 'model', 'effort', 'permissionMode', 'planFirst', 'isolation'].includes(key),
+        ![
+          'agent',
+          'model',
+          'effort',
+          'permissionMode',
+          'planFirst',
+          'isolation',
+          'budgetUsd',
+        ].includes(key),
     ) ||
     typeof selected.planFirst !== 'boolean' ||
     !['worktree', 'in-place'].includes(selected.isolation ?? '')

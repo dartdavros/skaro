@@ -5,6 +5,18 @@ import type { captureCheckEnvironment } from './environment.ts';
 import { fingerprint } from './inputs.ts';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
+export const environmentAssumptions = z
+  .array(
+    z.strictObject({
+      concern: z.enum([
+        'ignored files and installed dependencies',
+        'external services and mutable environment',
+        'command toolchain resolution and binaries',
+      ]),
+      rationale: z.string().min(1).max(4096),
+    }),
+  )
+  .max(3);
 export const verificationReviewSchema: z.ZodType<BuiltinVerificationReview> = z
   .strictObject({
     revision: hash,
@@ -14,18 +26,7 @@ export const verificationReviewSchema: z.ZodType<BuiltinVerificationReview> = z
     observations: z
       .array(z.strictObject({ name: z.string().min(1).max(200), revision: hash, argsHash: hash }))
       .max(32),
-    assumptions: z
-      .array(
-        z.strictObject({
-          concern: z.enum([
-            'ignored files and installed dependencies',
-            'external services and mutable environment',
-            'command toolchain resolution and binaries',
-          ]),
-          rationale: z.string().min(1).max(4096),
-        }),
-      )
-      .max(3),
+    assumptions: environmentAssumptions,
   })
   .superRefine((value, context) => {
     if (

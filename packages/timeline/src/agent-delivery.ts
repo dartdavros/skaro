@@ -35,7 +35,7 @@ export interface ReservedBundledRegistration extends BundledRegistrationBase {
 
 export interface BundledRuntimeRegistration extends BundledRegistrationBase {
   stage: 'runtime-core';
-  unavailableReason: 'model-host-not-connected';
+  unavailableReason: 'configured-host-required';
   package: { name: string; version: string; dependencies: Record<string, string> };
   adapterVersion: string;
   loadSessionRuntime(): Promise<BundledSessionRuntime>;

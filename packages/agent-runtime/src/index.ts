@@ -38,8 +38,13 @@ export {
   type OpenRouterCatalogEntry,
 } from './models/openrouter-catalog.ts';
 export type { ModelFetch } from './models/model-get.ts';
+export { authenticatedCatalog } from './models/catalog-pages.ts';
+export type { ModelCatalogEntry } from './models/catalog-entry.ts';
+export { parseDirectCatalog, requireDirectCatalogRoute } from './models/direct-catalog.ts';
 export { requireOpenRouterCatalogRoute } from './models/openrouter-catalog-route.ts';
 export { reportModelUsage, type ModelUsageReceipt } from './models/usage-report.ts';
+export { sumReportedAmounts } from './models/reported-amount.ts';
+export { parseModelUsageSources } from './models/usage-sources.ts';
 export { chatToolEvidence } from './models/tool-evidence.ts';
 export { executeChatTurn } from './models/chat-turn.ts';
 export { executeNativeTurn } from './models/native-turn.ts';

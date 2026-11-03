@@ -3,6 +3,7 @@ import type { RuntimeSession } from '../session.ts';
 import { modelStep } from './model-step.ts';
 import { admittedChatTools, executeModelTool, type ModelToolAdmission } from './model-tools.ts';
 import type { ChatMessage, ChatRequest, ChatResponse } from './chat-types.ts';
+import { ModelToolProgress } from './tool-progress.ts';
 
 interface ChatConnector {
   complete(
@@ -76,12 +77,16 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
     throw new Error('Model turn identity reused for different input');
   if (!start) await journal.append(`model-turn:${input.id}`, [], {}, hash);
   let messages: ChatMessage[] = structuredClone(request.messages) as ChatMessage[];
+  const progress = ModelToolProgress.restore(journal, input.id);
   for (let step = 0; step < input.maxSteps; step++) {
     const updated = await input.boundary?.({ ...request, messages }, false, signal);
     if (updated) {
+      progress.reset();
+      await progress.checkpoint(journal, input.id, `${step}:owner-before`);
       request = structuredClone(updated);
       messages = structuredClone(request.messages) as ChatMessage[];
     }
+    progress.requireProgress();
     if (session.context) {
       if (!request.context) throw new Error('Configured context selection is required');
       await session.context.requireCurrent(request.context.revision, request.context.epoch, signal);
@@ -116,12 +121,15 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
       const next = await input.boundary?.({ ...request, messages }, true, signal);
       await input.onStep?.(id, response, !next);
       if (!next) return response;
+      progress.reset();
+      await progress.checkpoint(journal, input.id, `${step}:owner-final`);
       request = structuredClone(next);
       messages = structuredClone(request.messages) as ChatMessage[];
       continue;
     }
     await input.onStep?.(id, response, false);
     const allowed = new Set(tools?.map((tool) => tool.name));
+    const counted = !!journal.find(`model-progress:${input.id}:${step}:tools`);
     for (const call of response.message.tool_calls ?? []) {
       signal.throwIfAborted();
       let args: unknown;
@@ -137,6 +145,10 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
         allowed,
         call: { id: call.id, name: call.function.name, arguments: args },
         admission: input.toolAdmission,
+        onResult: counted
+          ? undefined
+          : (result) =>
+              progress.observe(call.function.name, args ?? call.function.arguments, result),
       });
       const content = JSON.stringify(
         input.toolAdmission && !result.error
@@ -152,6 +164,7 @@ async function runChatTurn(input: ChatTurnInput): Promise<ChatResponse> {
         },
       ]);
     }
+    if (!counted) await progress.checkpoint(journal, input.id, `${step}:tools`);
   }
   throw new Error('Model turn step limit reached');
 }

@@ -9,5 +9,5 @@
 <div data-agents-settings class="agent set-card">
   <AgentSettingsIdentity {a} {state} />
   <AgentSettingsFields {a} {state} />
-  <AgentSettingsConfig {a} {state} />
+  {#if a.delivery !== 'bundled'}<AgentSettingsConfig {a} {state} />{/if}
 </div>

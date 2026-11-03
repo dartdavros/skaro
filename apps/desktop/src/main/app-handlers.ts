@@ -1,4 +1,4 @@
-import { agentCatalog } from '@skaro/agents';
+import { productAgentCatalog } from './builtin-product-agents';
 import { app, dialog, shell, type BrowserWindow } from 'electron';
 import { PROJECT_DEFAULTS_KEY, type ExternalApp } from '../shared/ipc';
 import {
@@ -16,6 +16,7 @@ import type { Handlers } from './ipc';
 import type { Services } from './app-services';
 import { background } from './background/client';
 import { collectDiagnostics } from './diagnostics';
+import { productModelUsage } from './builtin-product-usage';
 
 export function appHandlers(
   { appState, db, runs, projects, agents, chats, dataDir, overview, graph }: Services,
@@ -71,6 +72,7 @@ export function appHandlers(
   | 'tabs.get'
   | 'tabs.set'
   | 'agents.catalog'
+  | 'models.usage'
   | 'agents.list'
   | 'agents.refresh'
   | 'agents.install'
@@ -222,7 +224,8 @@ export function appHandlers(
     },
     'tabs.get': () => appState.getTabs(),
     'tabs.set': (tabs) => appState.setTabs(tabs),
-    'agents.catalog': () => agentCatalog(),
+    'agents.catalog': () => productAgentCatalog(),
+    'models.usage': (projectId) => productModelUsage({ db, projects, dataDir }, projectId),
     'agents.list': () => agents.list(),
     'agents.refresh': () => agents.refresh(),
     'agents.install': (agent) => agents.install(agent),
@@ -232,6 +235,7 @@ export function appHandlers(
       agents.listModels(agent, projectId ? projects.get(projectId).root : app.getPath('home')),
     'agents.config': (agent) => agents.userConfig(agent, app.getPath('home')),
     'agents.limits': async (agent) => {
+      if (agent === 'skaro') return { checkedAt: new Date().toISOString(), windows: [] };
       await agents.requireReady(agent);
       return agents.adapter(agent).limits(app.getPath('home'));
     },

@@ -1,12 +1,7 @@
 import { RELEASE_AGENT_IDS, matchesLegacyBundlePins, type LegacyBundlePins } from '@skaro/agents';
+import type { ManagedAgentId as AgentId } from '@skaro/agents';
 import { isDeepStrictEqual } from 'node:util';
-import {
-  agentPackage,
-  type AgentId,
-  type AgentPackage,
-  type AgentArtifact,
-  type Platform,
-} from '@skaro/core';
+import { agentPackage, type AgentPackage, type AgentArtifact, type Platform } from '@skaro/core';
 import type { UpdateComponent } from '../shared/updates';
 
 export const RELEASE_ROOT = 'https://github.com/dartdavros/skaro/releases';

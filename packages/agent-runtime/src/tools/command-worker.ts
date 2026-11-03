@@ -3,7 +3,7 @@ import { createInterface } from 'node:readline';
 import { open, type FileHandle } from 'node:fs/promises';
 import { cleanCommandEnvironment } from './command-env.ts';
 import type { CommandControl, CommandEvent } from './command-protocol.ts';
-import { checkCommand } from './shell.ts';
+import { commandInvocation } from './shell.ts';
 import { taskCommandEnvironment } from './task-command-env.ts';
 
 let child: ChildProcessWithoutNullStreams | undefined;
@@ -18,10 +18,7 @@ input.on('line', (line) => {
     if (message.type === 'run') {
       if (child) throw new Error('Command already launched');
       output = await open(message.outputPath, 'wx', 0o600);
-      const invocation = checkCommand(
-        message.command,
-        message.shell === 'powershell' ? 'powershell' : 'system',
-      );
+      const invocation = commandInvocation(message.command, message.shell);
       child = spawn(invocation.command, invocation.args, {
         shell: invocation.shell,
         cwd: message.cwd,
@@ -81,6 +78,17 @@ input.on('line', (line) => {
     }),
   );
 });
-// A lost runtime closes the Job Object owner; no tool continues independently.
-input.on('close', () => process.exit(1));
+// On Windows EOF releases the Job Object owner. POSIX uses the worker's group.
+const terminate = () => {
+  if (process.platform !== 'win32') process.kill(-process.pid, 'SIGKILL');
+  process.exit(1);
+};
+input.on('close', terminate);
+if (process.platform !== 'win32') {
+  process.on('SIGTERM', terminate);
+  process.on('SIGINT', terminate);
+  process.on('SIGHUP', terminate);
+  process.on('uncaughtException', terminate);
+  process.on('unhandledRejection', terminate);
+}
 post({ type: 'ready' });

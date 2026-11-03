@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { join } from 'node:path';
 import type {
   Connection,
@@ -81,6 +82,42 @@ export class BuiltinModelSettingsService {
         active,
       );
     });
+  }
+  /** Only fixed metadata loaders in main receive this callback; no key crosses renderer IPC. */
+  async withMetadataCredential<T>(
+    connection: Connection,
+    signal: AbortSignal,
+    consume: (secret: Uint8Array, signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    const expected = structuredClone(connection);
+    const active = AbortSignal.any([signal, this.lifetime.signal]);
+    const requireCurrent = (check: AbortSignal) => {
+      check.throwIfAborted();
+      if (
+        this.closed ||
+        !isDeepStrictEqual(
+          this.store.read().connections.find((item) => item.id === expected.id),
+          expected,
+        )
+      )
+        throw new Error('Model metadata connection changed');
+    };
+    const vault = await this.serialize(async () => {
+      await this.recover();
+      requireCurrent(active);
+      return this.credentials();
+    });
+    return vault.withMetadataCredential(
+      {
+        connectionId: expected.id,
+        connectionRevision: expected.revision,
+        endpoint: expected.endpoint,
+      },
+      expected.credential,
+      active,
+      requireCurrent,
+      consume,
+    );
   }
   saveConnection(
     expectedRevision: number,

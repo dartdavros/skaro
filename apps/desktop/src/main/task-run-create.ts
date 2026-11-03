@@ -118,7 +118,8 @@ async function createLockedTaskRun(
     logPath,
     adapterVersion,
   });
-  if (settings.agent === 'skaro') saveBuiltinRunSettings(ctx.deps.db, run.id, settings);
+  if (settings.agent === 'skaro')
+    saveBuiltinRunSettings(ctx.deps.db, run.id, parseBuiltinTaskStart(settings));
   const active = new ActiveRun(projectId, taskId, run, new Timeline());
   ctx.active.set(key(projectId, taskId), active);
   ctx.continuation.execution(active).start();

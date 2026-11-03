@@ -137,7 +137,7 @@ it('cannot broaden a plan/read-only session or silently substitute its model/eff
   }
   const selected = { ...expected, options: { ...expected.options, model: 'route', effort: 'low' } };
   expect(() => requireBuiltinTaskSessionPolicy(selected, config)).toThrow('model or effort');
-  config.route.parameters = { effort: 'low' };
+  config.route.parameters = { reasoning_effort: 'low' };
   expect(() => requireBuiltinTaskSessionPolicy(selected, config)).not.toThrow();
   for (const connector of ['openai', 'deepseek']) {
     const direct = {

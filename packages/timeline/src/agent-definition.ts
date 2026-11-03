@@ -8,6 +8,8 @@ export interface AgentPresentation {
   id: string;
   name: string;
   logo: {
+    /** Trusted main-supplied existing application asset, never model markup. */
+    image?: string;
     viewBox: string;
     fill?: string;
     color?: string;

@@ -13,6 +13,7 @@ for (const failure of ['host-close', 'host-timeout', 'cleanup'] as const)
     const db = AppDb.open(':memory:');
     const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
       windowsHide: true,
+      detached: process.platform !== 'win32',
       stdio: 'ignore',
     });
     let identity: { pid: number; birth: string; platform: NodeJS.Platform } | undefined;

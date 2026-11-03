@@ -10,6 +10,11 @@ export async function withAgentDefaults<T extends { model?: string; effort?: str
   settings: T,
 ): Promise<T> {
   const preset = agents.defaults(agent);
+  if (agent === 'skaro') {
+    const selected = settings.model ? settings : { ...settings, ...preset };
+    if (!selected.model) throw new Error('Select an explicit builtin model route');
+    return selected;
+  }
   if (!settings.model && preset.model)
     settings = { ...settings, model: preset.model, effort: settings.effort ?? preset.effort };
   const models = await agents.listModels(agent, cwd).catch(() => []);

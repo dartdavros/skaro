@@ -5,13 +5,14 @@ import type { ChatEngine } from './chat-engine';
 import type { LiveChat } from './chat-model';
 import { hasCode } from './new-project';
 import { chatInstructions, importInstructions } from './prompt';
+import { chatContinuationKey } from './builtin-chat-rebind';
 
 /** Existing chat/import instructions and history sinks shared by managed and bundled sessions. */
 export async function chatSessionOptions(
   ctx: ChatEngine,
   live: LiveChat,
   artifacts: ProjectArtifacts,
-  settings: Pick<ChatSettings, 'model' | 'effort' | 'permissionMode'>,
+  settings: Pick<ChatSettings, 'model' | 'effort' | 'permissionMode' | 'budgetUsd'>,
   processStarted: NonNullable<SessionOptions['processStarted']>,
 ): Promise<SessionOptions> {
   const { projectId, chat } = live;
@@ -23,15 +24,24 @@ export async function chatSessionOptions(
     artifacts,
     locale: ctx.deps.locale(),
   };
-  const instructions = imported
+  let instructions = imported
     ? importInstructions({ ...common, dir: imported.dir, hasCode: await hasCode(context.root) })
     : chatInstructions(common);
+  if (chat.agent === 'skaro') {
+    const continuation = ctx.deps.db.getSetting<{ sessionId: string; context: string } | null>(
+      chatContinuationKey(chat.id),
+      null,
+    );
+    if (continuation && continuation.sessionId === chat.nativeSessionId)
+      instructions += '\n\n' + continuation.context;
+  }
   return {
     signal: live.operation.signal,
     cwd: context.root,
     processStarted,
     ...(settings.model ? { model: settings.model } : {}),
     ...(settings.effort ? { effort: settings.effort } : {}),
+    ...(settings.budgetUsd !== undefined ? { budgetUsd: settings.budgetUsd } : {}),
     permissionMode: settings.permissionMode ?? 'ask',
     planFirst: false,
     instructions,

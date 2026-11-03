@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Model } from '@skaro/timeline';
+import type { ModelCatalogEntry } from './catalog-entry.ts';
 
 const text = z.string().min(1).max(512);
 const count = z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable().optional();
@@ -29,20 +29,7 @@ const entry = z.object({
     .optional(),
 });
 
-export interface OpenRouterCatalogEntry extends Model {
-  name: string;
-  supportedParameters: string[];
-  /** Service-advertised USD per token/request; null is unknown, never a free price. */
-  pricing: { prompt: string | null; completion: string | null; request: string | null };
-  reasoning?: {
-    /** Missing means no advertised effort selector; null means all gateway efforts. */
-    supportedEfforts?: string[] | null;
-    defaultEffort?: string | null;
-    defaultEnabled?: boolean | null;
-    mandatory?: boolean | null;
-    supportsMaxTokens?: boolean | null;
-  };
-}
+export type OpenRouterCatalogEntry = ModelCatalogEntry;
 
 /** Only documented catalogue claims. No manufacturer inference or account/profile verification. */
 export function parseOpenRouterCatalog(

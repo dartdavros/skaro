@@ -19,6 +19,7 @@ import { milestoneWork } from './milestone-work';
 import { saveSessionCache } from './session-cache';
 import { taskCatalogWork } from './task-catalog-work';
 import { ChatCatalogReader } from './chat-catalog';
+import { aggregateModelUsage } from './model-usage-work';
 
 let c4: ReturnType<typeof c4Work> | undefined;
 let store: PayloadStore | undefined;
@@ -42,6 +43,12 @@ parentPort!.on(
       return;
     }
     void (async () => {
+      if (request.method === 'models.usage') {
+        const projectId = request.args[0];
+        if (typeof projectId !== 'string' || (projectScope && projectScope !== projectId))
+          throw new Error('Model usage is outside the worker project scope');
+        return aggregateModelUsage((workerData as { dataDir: string }).dataDir, request.args[1]);
+      }
       if (request.method.startsWith('chats.')) {
         chatCatalog ??= new ChatCatalogReader((workerData as { dataDir: string }).dataDir);
         const args = request.args;

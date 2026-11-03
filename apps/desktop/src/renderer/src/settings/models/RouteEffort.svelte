@@ -1,23 +1,24 @@
 <script lang="ts">
   import { Select, t } from '@skaro/ui';
-  import type { OpenRouterCatalogEntry } from '@skaro/agent-runtime';
-  import { openRouterEfforts } from '@skaro/agent-runtime/openrouter-effort';
+  import type { ModelCatalogEntry } from '@skaro/agent-runtime';
+  import { catalogEfforts, effortParameter } from '@skaro/agent-runtime/catalog-effort';
   import { effortLabel } from '../../screens/agent-settings-presentation';
   import { effortParameters, withEffort } from './route-parameters';
   let {
     metadata,
+    connector,
     parameters = $bindable(''),
     disabled = false,
   }: {
-    metadata: OpenRouterCatalogEntry | undefined;
+    metadata: ModelCatalogEntry | undefined;
+    connector: string;
     parameters: string;
     disabled?: boolean;
   } = $props();
   const parsed = $derived(effortParameters(parameters));
-  const levels = $derived(openRouterEfforts(metadata));
-  const selected = $derived(
-    typeof parsed?.reasoning_effort === 'string' ? parsed.reasoning_effort : '',
-  );
+  const levels = $derived(catalogEfforts(connector, metadata));
+  const effort = $derived(parsed?.[effortParameter(connector)]);
+  const selected = $derived(typeof effort === 'string' ? effort : '');
   const options = $derived([
     { value: '', label: t(levels.length ? 'models.serviceDefault' : 'models.effortUnknown') },
     ...(selected && !levels.includes(selected)
@@ -38,7 +39,7 @@
     bind:value={
       () => selected,
       (value) => {
-        parameters = withEffort(parameters, value);
+        parameters = withEffort(parameters, value, connector);
       }
     }
   />

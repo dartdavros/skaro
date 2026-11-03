@@ -127,6 +127,21 @@ export class TaskRunScheduling {
     if (task.archived) throw new Error('The task is archived');
     if (isBlocked(task, indexTasks(artifacts.tasks))) throw new Error('The task is blocked');
     const settings = this.ctx.views.settings(projectId, task, artifacts);
+    if (settings.agent === 'skaro' && !this.ctx.deps.db.listRuns(projectId, taskId).length) {
+      const selected = await this.ctx.views.withDefaults(
+        'skaro',
+        this.ctx.project(projectId).root,
+        settings,
+      );
+      requireCurrent?.();
+      return this.launchBuiltin({
+        projectId,
+        taskId,
+        settings: { ...selected, model: selected.model ?? '' },
+        input: { ...input, commandId: input.commandId ?? randomUUID() },
+        signal: new AbortController().signal,
+      });
+    }
     await this.ctx.views.ensureAgent(settings.agent);
     await this.enqueue(projectId, taskId, input, requireCurrent);
   }

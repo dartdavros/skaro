@@ -13,6 +13,7 @@ import { verifyEvidenceArtifact } from './artifacts.ts';
 import { requirePlannedCheck } from './plans.ts';
 import type { RuntimeVerificationHost } from './host.ts';
 import { reviewedCheckEnvironment } from './environment-review.ts';
+import { ownerEnvironmentReviews } from './owner-environment-review.ts';
 import { sameObservationHost } from './observation-source.ts';
 
 export async function runCheck(
@@ -114,11 +115,12 @@ export async function checkEvidence(
         artifactsCurrent = false;
       }
     }
-  const review = reviewedCheckEnvironment(
+  const review = [
+    ...ownerEnvironmentReviews(journal),
     journal.state.config!.tools?.verificationReview,
-    value,
-    currentEnvironment,
-  );
+  ]
+    .map((candidate) => reviewedCheckEnvironment(candidate, value, currentEnvironment))
+    .find(Boolean);
   return {
     ...(review ? { environmentReview: review } : {}),
     inputsCurrent:

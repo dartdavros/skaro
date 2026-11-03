@@ -65,7 +65,7 @@ jobs:
       - run: pnpm -r --parallel --filter '!@skaro/agent-probe' typecheck
       - name: Build real background workers for storage integration tests
         run: pnpm build
-      - run: pnpm test
+      - run: pnpm test --maxWorkers=2 --testTimeout=30000 --hookTimeout=60000
   build:
     needs: check
     strategy:

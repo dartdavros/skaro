@@ -11,29 +11,31 @@
   );
 </script>
 
-<Row title={t('settings.agent.account')}>
-  <div data-agents-settings class="value">
-    {#if a.installed && a.authenticated !== false}
-      <span data-agents-settings class="account"
-        >{#if a.account}{t('settings.agent.signedIn')}
-          <span data-agents-settings class="mono">{a.account}</span>{:else}{t(
-            'settings.agent.signedInNoAccount',
-          )}{/if}</span
-      >
-    {:else}
-      <span data-agents-settings class="need-login">{t('settings.agent.signedOut')}</span>
-      <button
-        data-agents-settings
-        type="button"
-        class="btn"
-        disabled={!a.installed || state.busy[a.id]}
-        data-tip={t('settings.agent.login.tip')}
-        onclick={() => void state.run(a.id, () => window.skaro.invoke('agents.login', a.id))}
-        >{t('agent.login')}</button
-      >
-    {/if}
-  </div>
-</Row>
+{#if a.delivery !== 'bundled'}
+  <Row title={t('settings.agent.account')}>
+    <div data-agents-settings class="value">
+      {#if a.installed && a.authenticated !== false}
+        <span data-agents-settings class="account"
+          >{#if a.account}{t('settings.agent.signedIn')}
+            <span data-agents-settings class="mono">{a.account}</span>{:else}{t(
+              'settings.agent.signedInNoAccount',
+            )}{/if}</span
+        >
+      {:else}
+        <span data-agents-settings class="need-login">{t('settings.agent.signedOut')}</span>
+        <button
+          data-agents-settings
+          type="button"
+          class="btn"
+          disabled={!a.installed || state.busy[a.id]}
+          data-tip={t('settings.agent.login.tip')}
+          onclick={() => void state.run(a.id, () => window.skaro.invoke('agents.login', a.id))}
+          >{t('agent.login')}</button
+        >
+      {/if}
+    </div>
+  </Row>
+{/if}
 <Row title={t('settings.agent.model')}>
   {#if state.models[a.id]?.length}
     <Select
@@ -41,6 +43,8 @@
       width={280}
       menuWidth={280}
       label={t('settings.agent.model')}
+      disabled={a.inDevelopment}
+      placeholder={a.delivery === 'bundled' ? t('models.chooseModel') : ''}
       bind:value={() => model?.id ?? '', (v) => state.save(a.id, { model: v, effort: undefined })}
       options={(state.models[a.id] ?? []).map((m) => ({
         value: m.id,
@@ -50,13 +54,15 @@
       }))}
     />
   {:else}
-    <span data-agents-settings class="field-off">{t('settings.agent.model.off')}</span>
+    <span data-agents-settings class="field-off"
+      >{t(a.delivery === 'bundled' ? 'models.emptyRoutes' : 'settings.agent.model.off')}</span
+    >
   {/if}
 </Row>
 <Row title={t('settings.agent.effort')}>
   {#if efforts.length > 1}
     {@const effortDefault = modelEffortDefault(model) ?? ''}
-    <div data-agents-settings class="field-width">
+    <div data-agents-settings class="field-width" inert={a.inDevelopment}>
       <EffortSlider
         levels={efforts}
         bind:value={
@@ -74,6 +80,14 @@
       />
     </div>
   {:else}
-    <span data-agents-settings class="field-off">{t('settings.agent.model.off')}</span>
+    <span data-agents-settings class="field-off"
+      >{t(
+        a.delivery === 'bundled'
+          ? model
+            ? 'models.effortUnknown'
+            : 'models.chooseModel'
+          : 'settings.agent.model.off',
+      )}</span
+    >
   {/if}
 </Row>

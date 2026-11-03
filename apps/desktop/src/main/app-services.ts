@@ -10,6 +10,7 @@ import {
   taskBlockerTool,
   verifyIntegrationTool,
   taskHistoryTool,
+  chatHistoryTool,
   ciRunTool,
   projectTools,
   c4Tools,
@@ -17,7 +18,7 @@ import {
   type SkaroScope,
 } from '@skaro/mcp-server';
 import type { EventName, Events } from '../shared/ipc';
-import { AgentManager } from './agents';
+import { ProductAgents } from './builtin-product-agents';
 import { ChatSessions } from './chats';
 import { Notifier } from './notifier';
 import { Docs } from './docs';
@@ -37,8 +38,9 @@ import { reportGraph } from './background-graph';
 import { BuiltinModelConfigurationStore } from './builtin-model-configuration';
 import { BuiltinModelSettingsService } from './builtin-model-settings-service';
 import { BuiltinModelCatalog } from './builtin-model-catalog';
-import { BuiltinTaskModels, type BuiltinTaskAuthorization } from './builtin-task-models';
-import { BuiltinChatModels, type BuiltinChatAuthorization } from './builtin-chat-models';
+import type { BuiltinTaskAuthorization } from './builtin-task-models';
+import type { BuiltinChatAuthorization } from './builtin-chat-models';
+import { builtinServiceModels } from './builtin-service-models';
 import { setBackgroundProjectScope } from './background/client';
 
 export async function createServices(
@@ -59,6 +61,7 @@ export async function createServices(
   const modelConfiguration = new BuiltinModelConfigurationStore(db);
   const modelSettings = new BuiltinModelSettingsService(modelConfiguration, dataDir);
   const modelCatalog = new BuiltinModelCatalog(modelConfiguration, {
+    credentials: modelSettings,
     verification: !!db.shell.projectScope,
     ...(db.shell.projectScope && process.env['SKARO_VERIFY_PROXY']
       ? { proxy: process.env['SKARO_VERIFY_PROXY'] }
@@ -72,16 +75,20 @@ export async function createServices(
     reportGraph(status, db.getProject(status.projectId)?.name ?? '');
   });
   const overview = new ProjectOverview(db, projects, (card) => emit('projects.card', card));
-  const agents = new AgentManager({
-    // Development and tests share one download of the agents.
-    agentsDir: process.env['SKARO_AGENTS_DIR'] ?? join(dataDir, 'agents'),
-    scratchDir: join(dataDir, 'scratch'),
-    attachmentsDir: attachments.dir,
-    store: appState,
-    openUrl: (url) => void shell.openExternal(url),
-    onChange: (list) => emit('agents.changed', list),
-    locale: () => appState.getLocale(app.getLocale()),
-  });
+  const agents = new ProductAgents(
+    {
+      // Development and tests share one download of the agents.
+      agentsDir: process.env['SKARO_AGENTS_DIR'] ?? join(dataDir, 'agents'),
+      scratchDir: join(dataDir, 'scratch'),
+      attachmentsDir: attachments.dir,
+      store: appState,
+      openUrl: (url) => void shell.openExternal(url),
+      onChange: (list) => emit('agents.changed', list),
+      locale: () => appState.getLocale(app.getLocale()),
+    },
+    { store: modelConfiguration, settings: modelSettings, catalog: modelCatalog },
+    dataDir,
+  );
   const mcp = new McpHttpServer<SkaroScope>({
     name: 'skaro',
     version: app.getVersion(),
@@ -104,6 +111,7 @@ export async function createServices(
       configureEnvironmentTool((args, scope) => runs.configureEnvironment(args, scope)),
       verifyIntegrationTool((checks, scope) => runs.verifyIntegration(checks, scope)),
       taskHistoryTool((args, scope) => runs.readHistory(args, scope)),
+      chatHistoryTool((args, scope) => chats.readHistory(args, scope)),
       ciRunTool((args, scope) => ci.call(args, scope)),
       ...projectTools({
         planning: {
@@ -127,6 +135,20 @@ export async function createServices(
   });
   await mcp.listen();
   trace('mcp server listening');
+  const models = builtinServiceModels(
+    {
+      store: modelConfiguration,
+      settings: modelSettings,
+      catalog: modelCatalog,
+      mcp,
+      ...(db.shell.projectScope && process.env['SKARO_VERIFY_PROXY']
+        ? { proxy: process.env['SKARO_VERIFY_PROXY'] }
+        : {}),
+    },
+    !!db.shell.projectScope,
+    options,
+    db,
+  );
   const notifier = new Notifier({
     setting: (key) => appState.getSetting(key),
     locale: () => appState.getLocale(app.getLocale()),
@@ -143,20 +165,7 @@ export async function createServices(
       emit,
       locale: () => appState.getLocale(app.getLocale()),
       ...(options.builtinEntries ? { builtinEntries: options.builtinEntries } : {}),
-      ...(options.builtinTasks
-        ? {
-            builtinSessions: new BuiltinTaskModels({
-              store: modelConfiguration,
-              settings: modelSettings,
-              catalog: modelCatalog,
-              mcp,
-              authorize: options.builtinTasks,
-              ...(db.shell.projectScope && process.env['SKARO_VERIFY_PROXY']
-                ? { proxy: process.env['SKARO_VERIFY_PROXY'] }
-                : {}),
-            }),
-          }
-        : {}),
+      ...(models.builtinSessions ? { builtinSessions: models.builtinSessions } : {}),
     },
     Number(appState.getSetting('runs.slots')) || 3,
   );
@@ -182,20 +191,7 @@ export async function createServices(
     mcp,
     emit,
     locale: () => appState.getLocale(app.getLocale()),
-    ...(options.builtinChats
-      ? {
-          builtinChatSessions: new BuiltinChatModels({
-            store: modelConfiguration,
-            settings: modelSettings,
-            catalog: modelCatalog,
-            mcp,
-            authorize: options.builtinChats,
-            ...(db.shell.projectScope && process.env['SKARO_VERIFY_PROXY']
-              ? { proxy: process.env['SKARO_VERIFY_PROXY'] }
-              : {}),
-          }),
-        }
-      : {}),
+    ...(models.builtinChatSessions ? { builtinChatSessions: models.builtinChatSessions } : {}),
   });
   trace('task runs created');
   const c4 = new C4Service({

@@ -48,10 +48,11 @@ export class ToolProcesses {
   }
 
   async exec(id: string, args: ToolArgs<'exec_command'>, cwd: string, signal: AbortSignal) {
-    if (process.platform !== 'win32')
-      throw new Error('Managed command containment is not implemented for this OS');
-    if (args.shell && !['powershell', 'cmd'].includes(args.shell))
-      throw new Error('Selected shell is unavailable on Windows');
+    if (
+      args.shell &&
+      !(process.platform === 'win32' ? ['powershell', 'cmd'] : ['sh', 'bash']).includes(args.shell)
+    )
+      throw new Error('Selected shell is unavailable on this OS');
     signal.throwIfAborted();
     await mkdir(this.config.artifactDir, { recursive: true });
     const child = spawnCommandSupervisor(this.config);
@@ -143,7 +144,7 @@ export class ToolProcesses {
         { type: 'process', id, owner: record.owner, state: 'running' },
       ]);
       signal.throwIfAborted();
-      await operationTimeout(ready, 15_000, 'Command Job Object setup timed out');
+      await operationTimeout(ready, 15_000, 'Command supervisor setup timed out');
       signal.throwIfAborted();
       record.timer = setTimeout(() => {
         record!.error = 'Command timed out';
@@ -154,7 +155,7 @@ export class ToolProcesses {
           type: 'run',
           command: args.command,
           cwd,
-          shell: args.shell ?? 'powershell',
+          shell: args.shell ?? (process.platform === 'win32' ? 'powershell' : 'sh'),
           outputPath: record.output,
           environment: this.environment,
         }) + '\n',

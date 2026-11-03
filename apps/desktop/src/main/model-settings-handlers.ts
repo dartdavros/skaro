@@ -3,7 +3,15 @@ import type { Handlers } from './ipc';
 import type { ModelSettingsMethods } from '../shared/model-settings';
 import type { Services } from './app-services';
 
-export function modelSettingsHandlers(service: Services['modelSettings']) {
+export function modelSettingsHandlers(
+  service: Services['modelSettings'],
+  changed: () => void = () => {},
+) {
+  const mutate = async <T>(work: Promise<T>) => {
+    const value = await work;
+    changed();
+    return value;
+  };
   const revision = (value: number) => {
     if (!Number.isSafeInteger(value) || value < 0) throw new Error('Invalid settings revision');
   };
@@ -27,12 +35,12 @@ export function modelSettingsHandlers(service: Services['modelSettings']) {
             [...secret].some((char) => char.charCodeAt(0) < 33 || char.charCodeAt(0) > 126))
         )
           throw new Error('Invalid API key');
-        return service.saveConnection(expected, parseBuiltinConnectionDraft(raw), secret);
+        return mutate(service.saveConnection(expected, parseBuiltinConnectionDraft(raw), secret));
       }),
     'models.saveRoute': (expected, raw) =>
       safe(async () => {
         revision(expected);
-        return service.saveRoute(expected, parseBuiltinRoute(raw));
+        return mutate(service.saveRoute(expected, parseBuiltinRoute(raw)));
       }),
     'models.remove': (expected, kind, id) =>
       safe(async () => {
@@ -43,7 +51,7 @@ export function modelSettingsHandlers(service: Services['modelSettings']) {
           !/^[a-zA-Z0-9_-]{1,160}$/.test(id)
         )
           throw new Error('Invalid settings identity');
-        return service.remove(expected, kind, id);
+        return mutate(service.remove(expected, kind, id));
       }),
   } satisfies Pick<Handlers, keyof ModelSettingsMethods>;
 }

@@ -6,6 +6,7 @@
   import { createAgentModalController } from './agent-modal-controller.svelte';
   import AgentPicker from './AgentPicker.svelte';
   import AgentModelFields from './AgentModelFields.svelte';
+  import BuiltinBudgetField from './BuiltinBudgetField.svelte';
   import './agent-modal.css';
 
   /**
@@ -110,6 +111,9 @@
     </div>
 
     <AgentModelFields {controller} />
+    {#if controller.draft.agent === 'skaro'}<BuiltinBudgetField
+        bind:value={controller.draft.budgetUsd}
+      />{/if}
 
     {#if kind !== 'chat'}
       <div class="section">

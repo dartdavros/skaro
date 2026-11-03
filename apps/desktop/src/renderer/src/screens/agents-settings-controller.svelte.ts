@@ -3,6 +3,7 @@ import { agentDefaultsKey, type AgentId } from '../../../shared/ipc';
 import type { AgentsSettingsProps } from './agents-settings-props';
 export function createAgentsSettingsController(p: AgentsSettingsProps) {
   const models = $state<Partial<Record<AgentId, AgentModel[]>>>({});
+  const versions = $state<Partial<Record<AgentId, number>>>({});
   const defaults = $state<Partial<Record<AgentId, { model?: string; effort?: string }>>>({});
   const spin = $state<Partial<Record<AgentId, number>>>({});
   const busy = $state<Partial<Record<AgentId, boolean>>>({});
@@ -33,7 +34,13 @@ export function createAgentsSettingsController(p: AgentsSettingsProps) {
   // Models come from the agent itself, so only a downloaded agent has them.
   $effect(() => {
     for (const a of p.agents) {
-      if (a.installed && !models[a.id]) void loadModels(a.id);
+      if (
+        a.installed &&
+        (!models[a.id] || (a.delivery === 'bundled' && versions[a.id] !== a.configurationRevision))
+      ) {
+        versions[a.id] = a.configurationRevision;
+        void loadModels(a.id);
+      }
     }
   });
 
@@ -52,6 +59,7 @@ export function createAgentsSettingsController(p: AgentsSettingsProps) {
 
   function modelOf(id: AgentId): AgentModel | undefined {
     const list = models[id] ?? [];
+    if (id === 'skaro') return list.find((model) => model.id === defaults[id]?.model);
     return (
       list.find((m) => m.id === defaults[id]?.model) ?? list.find((m) => m.isDefault) ?? list[0]
     );

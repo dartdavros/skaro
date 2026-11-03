@@ -9,7 +9,8 @@
     "./worker": "./src/worker.ts",
     "./shell": "./src/tools/shell.ts",
     "./environment": "./src/tools/command-env.ts",
-    "./openrouter-effort": "./src/models/openrouter-effort.ts"
+    "./openrouter-effort": "./src/models/openrouter-effort.ts",
+    "./catalog-effort": "./src/models/catalog-effort.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."

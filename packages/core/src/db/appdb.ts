@@ -35,7 +35,7 @@ export class AppDb extends DbTable {
   readonly settings: DbSettings;
   private readonly runtime: DbRuntime;
   private readonly runs: DbRuns;
-  private readonly chats: DbChats;
+  readonly chats: DbChats;
   private readonly merges: DbMerges;
   private readonly events: DbEvents;
   private readonly interactions: DbInteractions;

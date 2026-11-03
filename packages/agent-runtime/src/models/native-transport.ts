@@ -1,7 +1,12 @@
 import { validateModelEndpoint, type CredentialPort, type RouteSnapshot } from '@skaro/timeline';
 import type { ConnectorCredential } from './connector-auth.ts';
 import { serverEvents } from './sse.ts';
-import { modelGetJson, type ModelFetch } from './model-get.ts';
+import { type ModelFetch } from './model-get.ts';
+import { authenticatedCatalog } from './catalog-pages.ts';
+import {
+  modelHeaders as headers,
+  type ModelAuthentication as Authentication,
+} from './model-headers.ts';
 import { ModelSecretGuard } from './secret-guard.ts';
 import { ModelHttpError, modelFailure } from './model-error.ts';
 
@@ -10,12 +15,6 @@ export interface NativeStream<T> {
   snapshot(): unknown;
   complete: boolean;
   finish(requestId: string | null): T;
-}
-type Authentication = 'bearer' | 'anthropic';
-function headers(authentication: Authentication, key: string): Record<string, string> {
-  return authentication === 'anthropic'
-    ? { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' }
-    : { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
 }
 function requireBinding(auth: ConnectorCredential, route: RouteSnapshot): void {
   validateModelEndpoint(route.endpoint);
@@ -123,38 +122,7 @@ export async function nativeCatalog(
 ): Promise<Record<string, unknown>[]> {
   auth = structuredClone(auth);
   validateModelEndpoint(auth.binding.endpoint);
-  return credentials.withCredential(
-    { ...structuredClone(auth), signal },
-    async (bytes, leaseSignal) => {
-      const guard = new ModelSecretGuard(Buffer.from(bytes).toString('ascii'));
-      const result: Record<string, unknown>[] = [];
-      let after: string | undefined;
-      const seen = new Set<string>();
-      for (let page = 0; page < 100; page++) {
-        const url = new URL(`${auth.binding.endpoint.replace(/\/$/, '')}/models`);
-        if (after) url.searchParams.set('after_id', after);
-        const value = (await modelGetJson(
-          url,
-          headers(authentication, Buffer.from(bytes).toString('ascii')),
-          leaseSignal,
-          16_777_216,
-          load,
-        )) as {
-          data?: Record<string, unknown>[];
-          has_more?: boolean;
-          last_id?: string;
-        };
-        guard.requireSafe(value);
-        if (!Array.isArray(value.data) || value.data.some((model) => typeof model?.id !== 'string'))
-          throw new Error('Invalid model catalogue');
-        result.push(...value.data);
-        if (!value.has_more) return result;
-        if (authentication !== 'anthropic' || !value.last_id || seen.has(value.last_id))
-          throw new Error('Unsupported or cyclic model catalogue pagination');
-        seen.add(value.last_id);
-        after = value.last_id;
-      }
-      throw new Error('Model catalogue page limit exceeded');
-    },
+  return credentials.withCredential({ ...structuredClone(auth), signal }, (bytes, leaseSignal) =>
+    authenticatedCatalog(auth.binding.endpoint, authentication, bytes, leaseSignal, load),
   );
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { environmentReviewInput } from '../verification/owner-environment-review.ts';
 import {
   evidenceReference,
   commandCheck,
@@ -34,6 +35,7 @@ export const schemas = {
     sequence: z.number().int().min(1),
     hash: z.string().regex(/^[a-f0-9]{64}$/),
   }),
+  review_check_environment: environmentReviewInput,
   find_files: z.strictObject({
     path: path.optional(),
     pattern: z.string().max(512).optional(),

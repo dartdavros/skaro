@@ -12,6 +12,10 @@ export interface BackgroundMethods
     ReturnType<typeof import('./task-catalog-work').taskCatalogWork>,
     ChatCatalogMethods,
     C4ReviewMethods {
+  'models.usage': (
+    projectId: string,
+    sources: import('../../shared/model-usage').ModelUsageSource[],
+  ) => Promise<import('../../shared/model-usage').ModelUsageSummary>;
   'registry.session': (
     key: string,
     view:

@@ -3,6 +3,7 @@ import type { RuntimeSession } from '../session.ts';
 import { modelStep } from './model-step.ts';
 import { executeModelTool, type ModelToolAdmission } from './model-tools.ts';
 import type { NativeRequest, NativeResponse, NativeToolResult } from './native-types.ts';
+import { ModelToolProgress } from './tool-progress.ts';
 
 interface NativeConnector {
   complete(
@@ -86,9 +87,15 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
   requireRoute();
   if (!previous) await journal.append(turnId, [], {}, hash);
   const allowed = new Set(request.tools?.map((tool) => tool.name));
+  const progress = ModelToolProgress.restore(journal, input.id);
   for (let step = 0; step < input.maxSteps; step++) {
     const updated = await input.boundary?.(request, false, signal);
-    if (updated) request = structuredClone(updated);
+    if (updated) {
+      progress.reset();
+      await progress.checkpoint(journal, input.id, `${step}:owner-before`);
+      request = structuredClone(updated);
+    }
+    progress.requireProgress();
     if (session.context) {
       if (!request.context) throw new Error('Configured context selection is required');
       await session.context.requireCurrent(request.context.revision, request.context.epoch, signal);
@@ -118,11 +125,14 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
       const next = await input.boundary?.(request, true, signal, id);
       await input.onStep?.(id, response, !next);
       if (!next) return response;
+      progress.reset();
+      await progress.checkpoint(journal, input.id, `${step}:owner-final`);
       request = structuredClone(next);
       continue;
     }
     await input.onStep?.(id, response, false);
     const results: NativeToolResult[] = [];
+    const counted = !!journal.find(`model-progress:${input.id}:${step}:tools`);
     for (const call of response.calls) {
       const result = await executeModelTool({
         stepId: id,
@@ -131,6 +141,9 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
         allowed,
         call,
         admission: input.toolAdmission,
+        onResult: counted
+          ? undefined
+          : (result) => progress.observe(call.name, call.arguments, result),
       });
       results.push({
         id: call.id,
@@ -157,6 +170,7 @@ async function run(input: NativeTurnInput, hash: string): Promise<NativeResponse
         },
       ]);
     }
+    if (!counted) await progress.checkpoint(journal, input.id, `${step}:tools`);
     request = await input.connector.continue(request, response, results);
   }
   throw new Error('Native model turn step limit reached');

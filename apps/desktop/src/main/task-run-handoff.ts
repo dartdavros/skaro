@@ -15,7 +15,7 @@ import {
   type TaskHandoffSettings,
 } from './task-handoff-settings';
 import { handoffInputs } from './task-handoff-inputs';
-import type { BuiltinTaskHandoffRequest } from './builtin-task-start';
+import { parseBuiltinTaskStart, type BuiltinTaskHandoffRequest } from './builtin-task-start';
 import { saveBuiltinRunSettings } from './builtin-run-settings';
 import { TaskExecution } from './task-execution';
 import { CommandCancelled } from './owner-commands';
@@ -179,11 +179,13 @@ export class TaskRunHandoff {
         setting,
         saved.agent === 'skaro' ? db.getSetting(setting, null) : saved,
         (run) => {
-          if (saved.agent === 'skaro') saveBuiltinRunSettings(db, run.id, saved);
+          if (saved.agent === 'skaro')
+            saveBuiltinRunSettings(db, run.id, parseBuiltinTaskStart(saved));
           new TaskExecution(db, run.id).inherit(execution);
           this.ctx.startup.delivered(projectId, taskId);
           if (intent!.inputs.length) {
-            if (saved.agent === 'skaro') this.ctx.startup.selectBuiltin(projectId, taskId, saved);
+            if (saved.agent === 'skaro')
+              this.ctx.startup.selectBuiltin(projectId, taskId, parseBuiltinTaskStart(saved));
             this.ctx.startup.begin(projectId, taskId, intent!.inputs);
           }
         },

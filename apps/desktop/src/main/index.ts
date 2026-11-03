@@ -167,7 +167,9 @@ if (!locked) {
       ...sessionHandlers(services),
       ...fileHandlers(services, mainWindow, picked),
       ...graphHandlers(services.graph),
-      ...modelSettingsHandlers(services.modelSettings),
+      ...modelSettingsHandlers(services.modelSettings, () => {
+        void services.agents.refreshOne('skaro');
+      }),
       ...modelCatalogHandlers(services.modelCatalog),
     };
     commands.start(handlers);

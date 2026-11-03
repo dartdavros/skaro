@@ -28,7 +28,7 @@ export function validateAgentRegistrations(
       requireBuiltinCompatibility(entry.delivery.contracts);
       if (entry.stage === 'runtime-core') {
         if (
-          entry.unavailableReason !== 'model-host-not-connected' ||
+          entry.unavailableReason !== 'configured-host-required' ||
           typeof entry.loadSessionRuntime !== 'function' ||
           typeof entry.loadProjector !== 'function' ||
           !/^\d+\.\d+\.\d+$/.test(entry.package.version) ||

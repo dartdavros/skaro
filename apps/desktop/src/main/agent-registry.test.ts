@@ -32,7 +32,7 @@ describe('registered agents', () => {
     expect(registration).toMatchObject({
       id: 'skaro',
       stage: 'runtime-core',
-      unavailableReason: 'model-host-not-connected',
+      unavailableReason: 'configured-host-required',
       delivery: { kind: 'bundled', versioning: 'with-skaro' },
     });
     expect('presentation' in registration).toBe(false);
@@ -40,7 +40,8 @@ describe('registered agents', () => {
     expect('pin' in registration.delivery).toBe(false);
     expect('distribution' in registration.delivery).toBe(false);
     expect('downloadSize' in registration.delivery).toBe(false);
-    expect(() => requireAgentId('skaro')).toThrow('model-host-not-connected');
+    expect(requireAgentId('skaro')).toBe('skaro');
+    expect(() => agentPackage('skaro')).toThrow('configured-host-required');
     expect(await projectorFor('skaro')).toBeTypeOf('function');
     expect(() => agentRegistration('missing')).toThrow('Unknown agent');
     expect(() => validateAgentRegistrations([registration, registration])).toThrow('duplicate');

@@ -4,6 +4,7 @@ import type { MethodName, EventName } from './ipc';
 export const METHODS = [
   'models.settings',
   'models.catalog',
+  'models.usage',
   'models.saveConnection',
   'models.saveRoute',
   'models.remove',

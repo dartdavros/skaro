@@ -41,6 +41,8 @@ export interface SessionOptions {
   cwd: string;
   model?: string;
   effort?: string;
+  /** Host-owned optional BYOK limit; never a model parameter. */
+  budgetUsd?: number;
   permissionMode: PermissionMode;
   /** Explore and propose a plan first; edits start after the plan is approved (D-24). */
   planFirst?: boolean;

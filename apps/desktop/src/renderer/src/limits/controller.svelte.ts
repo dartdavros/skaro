@@ -1,6 +1,7 @@
 import { defaultAgent } from '@skaro/agents/catalog';
 import type { AgentLimits } from '@skaro/timeline';
 import type { AgentId, AgentSettings } from '../../../shared/ipc';
+import type { ModelUsageSummary } from '../../../shared/model-usage';
 
 export class LimitsController {
   draft = $state<AgentSettings>({
@@ -13,9 +14,12 @@ export class LimitsController {
   loading = $state(true);
   failed = $state(false);
   snapshot = $state<AgentLimits>();
+  usage = $state<ModelUsageSummary>();
+  private projectId = '';
   private generation = 0;
 
   async initialize(projectId: string): Promise<void> {
+    this.projectId = projectId;
     this.loading = true;
     this.failed = false;
     const generation = this.generation;
@@ -36,7 +40,13 @@ export class LimitsController {
     this.loading = true;
     this.failed = false;
     this.snapshot = undefined;
+    this.usage = undefined;
     try {
+      if (agent === 'skaro') {
+        const usage = await window.skaro.invoke('models.usage', this.projectId);
+        if (generation === this.generation) this.usage = usage;
+        return;
+      }
       const snapshot = await window.skaro.invoke('agents.limits', agent);
       if (generation === this.generation) this.snapshot = snapshot;
     } catch {

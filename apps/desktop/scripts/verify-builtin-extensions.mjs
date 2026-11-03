@@ -51,6 +51,9 @@ if (!(
       '--task-workflow-rebind-live',
       '--task-workflow-retry-strict',
       '--task-workflow-audit',
+      '--task-workflow-prepare-continuation',
+      '--task-workflow-continuation-check',
+      '--task-workflow-continuation-live',
     ].includes(process.argv[2]))
 ))
   throw new Error(
@@ -107,6 +110,9 @@ try {
       '--task-workflow-rebind-live',
       '--task-workflow-retry-strict',
       '--task-workflow-audit',
+      '--task-workflow-prepare-continuation',
+      '--task-workflow-continuation-check',
+      '--task-workflow-continuation-live',
       '--task-stop-live',
       '--task-stop-replay',
       '--task-stop-main-restart',
@@ -129,29 +135,57 @@ try {
   let ownerBuffer = '';
   const ownerInput = (chunk) => {
     ownerBuffer += chunk;
-    if (ownerBuffer.length > 8192) { ownerBuffer = ''; return; }
+    if (ownerBuffer.length > 8192) {
+      ownerBuffer = '';
+      return;
+    }
     let newline;
     while ((newline = ownerBuffer.indexOf('\n')) >= 0) {
-      const line = ownerBuffer.slice(0, newline); ownerBuffer = ownerBuffer.slice(newline + 1);
+      const line = ownerBuffer.slice(0, newline);
+      ownerBuffer = ownerBuffer.slice(newline + 1);
       try {
         const value = JSON.parse(line);
         if (value.type === 'workflow-owner-answer' && child.connected) child.send(value);
-      } catch { /* Only explicit structured owner answers are relayed. */ }
+      } catch {
+        /* Only explicit structured owner answers are relayed. */
+      }
     }
   };
-  if (['--task-workflow-rebind-live', '--task-workflow-retry-strict'].includes(process.argv[2])) {
-    process.stdin.setEncoding('utf8'); process.stdin.on('data', ownerInput);
+  if (
+    [
+      '--task-workflow-rebind-live',
+      '--task-workflow-retry-strict',
+      '--task-workflow-continuation-live',
+    ].includes(process.argv[2])
+  ) {
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', ownerInput);
   }
   const timeout = setTimeout(
     () => child.kill(),
-    ['--task-workflow-rebind-live', '--task-workflow-retry-strict'].includes(process.argv[2]) ? 1_800_000 : ['--task-stop-live', '--task-stop-main-restart', '--task-workflow-live', '--task-workflow-retry-unspawned', '--task-workflow-review-live'].includes(process.argv[2]) ? 360_000 : 180_000,
+    [
+      '--task-workflow-rebind-live',
+      '--task-workflow-retry-strict',
+      '--task-workflow-continuation-live',
+    ].includes(process.argv[2])
+      ? 1_800_000
+      : [
+            '--task-stop-live',
+            '--task-stop-main-restart',
+            '--task-workflow-live',
+            '--task-workflow-retry-unspawned',
+            '--task-workflow-review-live',
+          ].includes(process.argv[2])
+        ? 360_000
+        : 180_000,
   );
   process.exitCode = await new Promise((done) => {
     child.once('exit', (code) => done(code ?? 1));
     child.once('error', () => done(1));
   });
   clearTimeout(timeout);
-  process.stdin.off('data', ownerInput); process.stdin.pause();
+  process.stdin.off('data', ownerInput);
+  process.stdin.pause();
 } finally {
   await rm(output, { force: true });
   if (process.argv[2] === '--native-admission-recovery') await rm(recoveryHost, { force: true });

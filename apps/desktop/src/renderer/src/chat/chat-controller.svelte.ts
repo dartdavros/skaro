@@ -1,4 +1,5 @@
 import { chatDefaults } from './chat-defaults';
+import { chatModalSettings } from './chat-modal-settings';
 import { OwnerMessages } from '../feed/owner-messages.svelte';
 import { cleanError } from '../feed/action-error';
 import type { AgentModel, InteractionAnswer, PermissionMode } from '@skaro/timeline';
@@ -80,14 +81,7 @@ export function createChatController(
   );
   /** The modal's settings; the same object until they change, so an open modal keeps its draft. */
   const modalSettings = $derived<AgentSettings | undefined>(
-    settings && {
-      agent: settings.agent,
-      ...(settings.model ? { model: settings.model } : {}),
-      ...(settings.effort ? { effort: settings.effort } : {}),
-      permissionMode: settings.permissionMode ?? 'ask',
-      planFirst: false,
-      isolation: 'in-place',
-    },
+    settings && chatModalSettings(settings),
   );
 
   async function guard(action: () => Promise<unknown>): Promise<void> {
@@ -143,12 +137,15 @@ export function createChatController(
       agent: next.agent,
       ...(next.model ? { model: next.model } : {}),
       ...(next.effort ? { effort: next.effort } : {}),
+      ...(next.agent === 'skaro' && next.budgetUsd !== undefined
+        ? { budgetUsd: next.budgetUsd }
+        : {}),
       ...(next.permissionMode === 'full' ? { permissionMode: 'full' as const } : {}),
     };
     if (!chatId) {
       draft = value;
       // A new chat starts with what was chosen last (main: ChatSessions.defaults), always asking.
-      const { permissionMode: _mode, ...last } = value;
+      const { permissionMode: _mode, budgetUsd: _budget, ...last } = value;
       void window.skaro.invoke('app.setSetting', `chats.${projectId}.last`, last);
       return;
     }
@@ -166,6 +163,9 @@ export function createChatController(
       agent: next.agent,
       ...(next.model ? { model: next.model } : {}),
       ...(next.effort ? { effort: next.effort } : {}),
+      ...(next.agent === 'skaro' && next.budgetUsd !== undefined
+        ? { budgetUsd: next.budgetUsd }
+        : {}),
       ...(settings?.permissionMode === 'full' ? { permissionMode: 'full' as const } : {}),
     });
   }

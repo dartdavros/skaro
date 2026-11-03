@@ -13,7 +13,7 @@ it('delivers explicit task variables to a real supervised command, without stori
     const start = await current.tool('exec_command', {
       command:
         'node -e "process.stdout.write(JSON.stringify({name:process.env.SKARO_ENV_NAME,root:process.env.TASK_WORKING_ROOT,keys:Object.keys(process.env)}))"',
-      shell: 'cmd',
+      shell: process.platform === 'win32' ? 'cmd' : 'sh',
       yieldMs: 1000,
     });
     let result = start;

@@ -9,6 +9,7 @@
   import { connectionName } from './profiles';
   import './i18n';
   import './models.css';
+  let { disabled = false }: { disabled?: boolean } = $props();
   const state = createModelSettingsController();
   const connections = $derived(state.snapshot?.configuration.connections ?? []);
   const routes = $derived(state.snapshot?.configuration.routes ?? []);
@@ -43,7 +44,7 @@
       >
       <Button
         size="sm"
-        disabled={state.busy || state.loading || !protectedStorage}
+        disabled={disabled || state.busy || state.loading || !protectedStorage}
         onclick={() => {
           state.connection = 'new';
         }}>{t('models.addConnection')}</Button
@@ -52,8 +53,10 @@
   </Row>
   {#if state.error || (state.snapshot && !protectedStorage)}
     <Row title={state.error || t('models.protectionUnavailable')}>
-      <Button size="sm" disabled={state.loading || state.busy} onclick={() => void state.load()}
-        >{t('models.refresh')}</Button
+      <Button
+        size="sm"
+        disabled={disabled || state.loading || state.busy}
+        onclick={() => void state.load()}>{t('models.refresh')}</Button
       >
     </Row>
   {/if}
@@ -65,7 +68,7 @@
       <div class="model-actions">
         <Button
           size="sm"
-          disabled={state.busy || state.loading || !protectedStorage}
+          disabled={disabled || state.busy || state.loading || !protectedStorage}
           onclick={() => {
             state.connection = connection;
           }}>{t('models.edit')}</Button
@@ -73,7 +76,7 @@
         <Button
           size="sm"
           variant="ghost"
-          disabled={state.busy || state.loading || !protectedStorage}
+          disabled={disabled || state.busy || state.loading || !protectedStorage}
           onclick={() => {
             state.removal = { kind: 'connection', id: connection.id };
           }}>{t('models.remove')}</Button
@@ -86,7 +89,7 @@
   <Row title={!state.snapshot || routes.length ? t('models.routes') : t('models.emptyRoutes')}>
     <Button
       size="sm"
-      disabled={state.busy || state.loading || !connections.length}
+      disabled={disabled || state.busy || state.loading || !connections.length}
       onclick={() => {
         state.route = 'new';
       }}>{t('models.addRoute')}</Button
@@ -100,7 +103,7 @@
       <div class="model-actions">
         <Button
           size="sm"
-          disabled={state.busy || state.loading}
+          disabled={disabled || state.busy || state.loading}
           onclick={() => {
             state.route = route;
           }}>{t('models.edit')}</Button
@@ -108,7 +111,7 @@
         <Button
           size="sm"
           variant="ghost"
-          disabled={state.busy || state.loading}
+          disabled={disabled || state.busy || state.loading}
           onclick={() => {
             state.removal = { kind: 'route', id: route.id };
           }}>{t('models.remove')}</Button

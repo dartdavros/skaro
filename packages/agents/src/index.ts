@@ -8,10 +8,16 @@ import type {
 import { validateAgentDefinitions, validateAgentRegistrations } from './validation.ts';
 import { registrations, activeRegistrations } from './registrations.ts';
 
-export type AgentId = (typeof activeRegistrations)[number]['presentation']['id'];
+export type ManagedAgentId = (typeof activeRegistrations)[number]['presentation']['id'];
+export type AgentId = ManagedAgentId | 'skaro';
 export type ProbeAgent = (typeof activeRegistrations)[number]['probeAlias'];
 export type DiagnosticVersionKey = (typeof activeRegistrations)[number]['diagnosticVersionKey'];
-export type AgentCatalogEntry = AgentPresentation & { id: AgentId };
+export type AgentCatalogEntry = AgentPresentation & { id: AgentId; newSettingsDefault?: boolean };
+export {
+  newSettingsAgent,
+  BUILTIN_DEFAULT_RELEASED,
+  BUILTIN_PRODUCT_RELEASED,
+} from './builtin-default.ts';
 export type LegacyBundlePins = {
   [
     D in (typeof activeRegistrations)[number] as D extends { legacyBundlePin: string }
@@ -38,9 +44,12 @@ export const RELEASE_AGENT_IDS = [...activeRegistrations]
 export const DEFAULT_AGENT = AGENT_IDS[0]!;
 export const AGENT_PINS = Object.fromEntries(
   activeRegistrations.map((agent) => [agent.presentation.id, agent.delivery.pin.version]),
-) as Record<AgentId, string>;
+) as Record<ManagedAgentId, string>;
 
 export function isAgentId(value: unknown): value is AgentId {
+  return typeof value === 'string' && (definitions.has(value) || value === 'skaro');
+}
+export function isManagedAgentId(value: unknown): value is ManagedAgentId {
   return typeof value === 'string' && definitions.has(value);
 }
 

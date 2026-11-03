@@ -38,7 +38,9 @@ export class AgentManager {
   private readonly store: Store;
   private readonly onChange: (agents: AgentInfo[]) => void;
   private readonly attachmentsDir?: string;
-  private readonly authRevisions = new Map(AGENT_IDS.map((id) => [id, new SharedArrayBuffer(4)]));
+  private readonly authRevisions = new Map<AgentId, SharedArrayBuffer>(
+    AGENT_IDS.map((id) => [id, new SharedArrayBuffer(4)]),
+  );
 
   constructor(options: {
     agentsDir: string;

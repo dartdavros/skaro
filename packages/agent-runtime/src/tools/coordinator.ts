@@ -144,23 +144,26 @@ export class ToolCoordinator {
       name === 'run_check' ||
       (name === 'write_stdin' && (args.chars !== undefined || args.end === true));
     const writes = name === 'apply_patch';
+    const review = name === 'review_check_environment';
     const requires =
-      config.permissionMode !== 'full' &&
-      (command || extensionWrite || (config.permissionMode === 'ask' && writes));
+      review ||
+      (config.permissionMode !== 'full' &&
+        (command || extensionWrite || (config.permissionMode === 'ask' && writes)));
     if (!requires) return;
     const interaction: Interaction = {
       kind: 'approval',
       id: `approval-${id}`,
       action: {
-        type: command ? 'command' : extensionWrite ? 'mcp' : 'file_write',
+        type: review ? 'mcp' : command ? 'command' : extensionWrite ? 'mcp' : 'file_write',
         title: name,
         ...(name === 'exec_command' || name === 'run_check'
           ? { command: String(args.command) }
           : {}),
         ...(name === 'apply_patch' ? { paths: [String(args.path)] } : {}),
-        reason:
-          builtinSandboxStatus(config.permissionMode).detail +
-          (extensionWrite ? `\n${JSON.stringify(args)}` : ''),
+        reason: review
+          ? JSON.stringify(this.journal.find(`environment-review-proposal:${id}`)!.result.value)
+          : builtinSandboxStatus(config.permissionMode).detail +
+            (extensionWrite ? `\n${JSON.stringify(args)}` : ''),
       },
       choices: ['allow_once', 'deny'],
     };
@@ -198,6 +201,12 @@ export class ToolCoordinator {
         throw new Error(
           'Tool effect already has a recorded or unknown outcome; it will not be replayed',
         );
+      if (tool.name === 'review_check_environment') {
+        const candidate = await this.registry.prepareEnvironmentReview(tool.args, signal);
+        await this.journal.append(`environment-review-proposal:${command.id}`, [], {
+          value: candidate,
+        });
+      }
       await this.authorize(command.id, tool.name, tool.args, signal);
       signal.throwIfAborted();
       if (tool.name === 'ask_user') {

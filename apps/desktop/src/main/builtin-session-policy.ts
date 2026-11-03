@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import { isAbsolute, resolve } from 'node:path';
 import type { BuiltinSessionStart, SessionOptions, SkaroScope } from '@skaro/timeline';
+import { effortParameter } from '@skaro/agent-runtime/catalog-effort';
 
 /** A prepared host may narrow task access, but cannot substitute its scope or task instructions. */
 export function requireBuiltinSessionPolicy(
@@ -57,9 +58,7 @@ export function requireBuiltinSessionPolicy(
   if (
     (options.model && ![config.route.routeId, config.route.modelId].includes(options.model)) ||
     (options.effort &&
-      config.route.parameters[
-        ['openai', 'deepseek'].includes(config.route.connector) ? 'reasoning_effort' : 'effort'
-      ] !== options.effort)
+      config.route.parameters[effortParameter(config.route.connector)] !== options.effort)
   )
     throw new Error('Builtin route differs from the selected model or effort');
 }

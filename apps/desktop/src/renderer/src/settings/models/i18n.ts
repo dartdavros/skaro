@@ -1,6 +1,15 @@
 import { addMessages } from '@skaro/ui';
 
 addMessages('ru', {
+  'models.inDevelopment': 'В разработке',
+  'models.usage': 'Расход модели',
+  'models.projectUsage': 'Квитанции запросов этого проекта',
+  'models.requests': 'Ответы / запросы',
+  'models.tokens': 'Известные токены: вход / выход',
+  'models.reportedCost': 'Стоимость по квитанциям',
+  'models.usageIncomplete':
+    'Часть стоимости, токенов или журналов недоступна. Показаны только известные значения.',
+  'models.optionalBudget': 'Лимит сессии, USD (необязательно)',
   'models.connections': 'Подключения моделей',
   'models.note':
     'Собственные API-ключи. Оплата — по тарифам сервиса; лимиты подписки Claude Code и Codex здесь не применяются.',
@@ -50,6 +59,15 @@ addMessages('ru', {
   'models.removeRouteText': 'Активные допуски этого маршрута будут отозваны.',
 });
 addMessages('en', {
+  'models.inDevelopment': 'In development',
+  'models.usage': 'Model usage',
+  'models.projectUsage': 'Request receipts for this project',
+  'models.requests': 'Responses / requests',
+  'models.tokens': 'Known tokens: input / output',
+  'models.reportedCost': 'Reported cost',
+  'models.usageIncomplete':
+    'Some billing, token data or journals are unavailable. Only known values are shown.',
+  'models.optionalBudget': 'Session limit, USD (optional)',
   'models.connections': 'Model connections',
   'models.note':
     'Your own API keys. Service pricing applies; Claude Code and Codex subscription quotas do not apply here.',

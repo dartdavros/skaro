@@ -18,12 +18,16 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { readLocalPacket } from './local-packet';
 import { readRuntimeJournal } from '@skaro/agent-runtime';
 import { awaitWorkflowApproval } from './task-workflow-owner-control';
+import type { WorkflowModelBinding } from './task-workflow-binding';
 
 export interface WorkflowLiveOptions {
   proofPath?: string;
   review?: boolean;
   rebind?: boolean;
   strict?: boolean;
+  continuation?: Pick<WorkflowModelBinding, 'hash' | 'requireBudget'> & {
+    prepare: () => ReturnType<typeof verifyTaskWorkflowPacket>;
+  };
 }
 
 /** Owner authorized the plan-first transition on 03.11.2026; no permission-mode widening. */
@@ -60,15 +64,17 @@ export async function verifyTaskWorkflowLive(
       retry.budget,
     );
   }
-  const before = await verifyTaskWorkflowPacket(
-    services,
-    data,
-    packet,
-    retry && {
-      runId: retry.runId,
-      ...(review || rebind ? { sessionId: retry.primary[0]!.sessionId } : {}),
-    },
-  );
+  const before = options.continuation
+    ? await options.continuation.prepare()
+    : await verifyTaskWorkflowPacket(
+        services,
+        data,
+        packet,
+        retry && {
+          runId: retry.runId,
+          ...(review || rebind ? { sessionId: retry.primary[0]!.sessionId } : {}),
+        },
+      );
   const projectId = packet.project.id,
     taskId = 'T-006';
   const context = services.projects.get(projectId);
@@ -104,7 +110,12 @@ export async function verifyTaskWorkflowLive(
           .flatMap((record) => record.facts)
           .filter((fact) => fact.type === 'input').length
       : 0;
-    const ownerInput = workflowOwnerInput(packet, priorInputs, strict ? run.id : undefined);
+    const ownerInput = workflowOwnerInput(
+      packet,
+      priorInputs,
+      strict ? run.id : undefined,
+      options.continuation?.hash,
+    );
     await services.runs.send(projectId, taskId, ownerInput);
     const prepared = await waitTaskStop('workflow native host', () => models.generations[0]);
     await waitTaskStop('workflow initial primary journal', async () => {
@@ -214,7 +225,10 @@ export async function verifyTaskWorkflowLive(
         ),
         { flag: 'wx', mode: 0o600 },
       );
-      requireTaskWorkflowBudget(packet.budgetProposal, budget);
+      (options.continuation?.requireBudget ?? requireTaskWorkflowBudget)(
+        packet.budgetProposal,
+        budget,
+      );
     }
   }
   return { runId: run.id, outcome, cleanupConfirmed, fullyAccepted: false };

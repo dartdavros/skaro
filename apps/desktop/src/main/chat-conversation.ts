@@ -18,6 +18,7 @@ import { saved, lastOf, settingsKey, lastKey, currentTurn, titleOf } from './cha
 
 import type { ChatEngine } from './chat-engine';
 import { stopChat } from './chat-stop';
+import { parseBuiltinChatSettings, saveBuiltinChatSettings } from './builtin-chat-settings';
 
 export class ChatConversation {
   private readonly ctx: ChatEngine;
@@ -48,6 +49,21 @@ export class ChatConversation {
         throw new Error('The command identifies a different message');
       return this.ctx.views.summary(chat);
     }
+    if (settings.agent === 'skaro') {
+      const models = this.ctx.deps.builtinChatSessions;
+      if (!models) throw new Error('Builtin chat authorization is unavailable');
+      const resolved = await this.ctx.settings.withDefaults(
+        'skaro',
+        this.ctx.project(projectId).root,
+        settings,
+      );
+      const parsed = parseBuiltinChatSettings({
+        ...resolved,
+        permissionMode: resolved.permissionMode ?? 'ask',
+      });
+      await models.resolveStart(parsed, new AbortController().signal);
+      settings = parsed;
+    }
     const chat = this.ctx.deps.db.createChat({
       projectId,
       agent: settings.agent,
@@ -55,6 +71,8 @@ export class ChatConversation {
       logPath: join('chats', projectId, `${Date.now()}-${randomUUID().slice(0, 8)}.jsonl`),
     });
     this.ctx.deps.db.setSetting(settingsKey(chat.id), saved(settings));
+    if (settings.agent === 'skaro')
+      saveBuiltinChatSettings(this.ctx.deps.db, chat.id, parseBuiltinChatSettings(settings));
     this.ctx.deps.db.setSetting(lastKey(projectId), lastOf(settings));
     const live = new LiveChat(projectId, chat, new Timeline());
     this.ctx.live.set(chat.id, live);

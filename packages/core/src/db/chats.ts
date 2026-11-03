@@ -4,6 +4,23 @@ import { type Row, toChat } from './rows.ts';
 import { randomUUID } from 'node:crypto';
 
 export class DbChats extends DbTable {
+  /** Publish a stopped builtin chat's next native journal and settings as one transaction. */
+  rebind(id: string, expected: string, next: string, commit: () => void): void {
+    this.transaction(() => {
+      const chat = this.getChat(id);
+      if (
+        !chat ||
+        chat.agent !== 'skaro' ||
+        chat.archived ||
+        chat.nativeSessionId !== expected ||
+        !next ||
+        next === expected
+      )
+        throw new Error('Chat changed before builtin rebind');
+      this.updateChat(id, { nativeSessionId: next });
+      commit();
+    });
+  }
   /** Reset conversation storage only; project files and task/runtime records are untouched. */
   clearHistory(id: string, logPath: string): void {
     const chat = this.getChat(id);

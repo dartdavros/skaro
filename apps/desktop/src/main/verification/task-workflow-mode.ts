@@ -4,8 +4,12 @@ import { readTaskWorkflowPacket, verifyTaskWorkflowPacket } from './task-workflo
 import { workflowModels } from './task-workflow-models';
 import { verifyTaskWorkflowLive } from './task-workflow-live';
 import { auditTaskWorkflow } from './task-workflow-audit';
+import { prepareTaskWorkflowContinuation } from './task-workflow-continuation';
+import { taskContinuationMode } from './task-continuation-mode';
 
 export async function taskWorkflowMode(args: string[], data: string, getServices: () => Services) {
+  const continuation = await taskContinuationMode(args, data, getServices);
+  if (continuation) return continuation;
   const rebind = args[2] === '--task-workflow-rebind-live';
   const strict = rebind || args[2] === '--task-workflow-retry-strict';
   const live =
@@ -16,11 +20,18 @@ export async function taskWorkflowMode(args: string[], data: string, getServices
       '--task-workflow-review-live',
     ].includes(args[2]!);
   const audit = args[2] === '--task-workflow-audit';
-  if (!live && !audit && args[2] !== '--task-workflow-check') return undefined;
+  const prepare = args[2] === '--task-workflow-prepare-continuation';
+  if (!live && !audit && !prepare && args[2] !== '--task-workflow-check') return undefined;
   const packet = await readTaskWorkflowPacket(data, args[3]!, args[4]!);
   const models = live ? workflowModels(getServices, data, packet, strict) : undefined;
   return {
-    stage: live ? 'task-workflow-live' : audit ? 'task-workflow-audit' : 'task-workflow-check',
+    stage: live
+      ? 'task-workflow-live'
+      : prepare
+        ? 'task-workflow-prepare-continuation'
+        : audit
+          ? 'task-workflow-audit'
+          : 'task-workflow-check',
     options: {
       builtinEntries: resolve('apps/desktop/out/main'),
       builtinTasks:
@@ -37,8 +48,10 @@ export async function taskWorkflowMode(args: string[], data: string, getServices
             rebind,
             strict,
           })
-        : audit
-          ? auditTaskWorkflow(services, data, packet, args[5]!)
-          : verifyTaskWorkflowPacket(services, data, packet),
+        : prepare
+          ? prepareTaskWorkflowContinuation(services, data, directory, packet, args[5]!)
+          : audit
+            ? auditTaskWorkflow(services, data, packet, args[5]!)
+            : verifyTaskWorkflowPacket(services, data, packet),
   };
 }

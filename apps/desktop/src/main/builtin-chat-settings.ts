@@ -19,7 +19,7 @@ export function parseBuiltinChatSettings(value: unknown): BuiltinChatSettings {
     !selected ||
     typeof selected !== 'object' ||
     Object.keys(selected).some(
-      (key) => !['agent', 'model', 'effort', 'permissionMode'].includes(key),
+      (key) => !['agent', 'model', 'effort', 'permissionMode', 'budgetUsd'].includes(key),
     ) ||
     !['ask', 'full'].includes(selected.permissionMode ?? '')
   )

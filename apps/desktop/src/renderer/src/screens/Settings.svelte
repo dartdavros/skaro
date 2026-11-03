@@ -67,7 +67,7 @@
       {/if}
       {#if current === 'agents'}
         <AgentsSettings agents={agents.list} />
-        <ModelSettings />
+        <ModelSettings disabled />
       {:else if current === 'work'}
         <RunsCard />
         <ProjectDefaultsBlocks part="work" />

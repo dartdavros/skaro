@@ -3,6 +3,7 @@
   import type { AgentInfo, AgentSettings } from '../../../shared/ipc';
   import { agentName } from '../feed/format';
   import { agentState } from './agent-status';
+  import AgentDevelopmentBadge from '../AgentDevelopmentBadge.svelte';
 
   /**
    * Agents as tiles, two in a row: the chosen one is ringed with the accent and checked in the
@@ -17,7 +18,7 @@
     {@const s = agentState(a)}
     {@const on = draft.agent === a.id}
     {@const barred = locked && !on}
-    {@const disabled = barred || (!a.installed && !on)}
+    {@const disabled = a.inDevelopment || barred || (!a.installed && !on)}
     <button
       type="button"
       class="agent"
@@ -32,7 +33,9 @@
     >
       <AgentLogo agent={a.id} size={22} />
       <span class="texts">
-        <span class="name">{agentName(a.id)}</span>
+        <span class="name agent-name"
+          >{agentName(a.id)}{#if a.inDevelopment}<AgentDevelopmentBadge />{/if}</span
+        >
         <span class="state" style="color: {s.color}">
           {s.text}
           {#if s.link === 'login'}
@@ -78,3 +81,12 @@
     </button>
   {/each}
 </div>
+
+<style>
+  .agent-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+</style>

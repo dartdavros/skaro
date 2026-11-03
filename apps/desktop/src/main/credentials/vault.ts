@@ -10,7 +10,8 @@ import {
 } from '@skaro/timeline';
 import { CredentialStore, type StoredCredential } from './store';
 import { CredentialLeases } from './leases';
-import { decryptCredential, encryptCredential, protection, requireProtection } from './protection';
+import { encryptCredential, protection, requireProtection } from './protection';
+import { borrowCredential } from './borrow';
 
 function validateBinding(binding: CredentialBinding): void {
   if (
@@ -189,27 +190,13 @@ export class ModelCredentialVault implements CredentialVault {
             throw new Error('Credential port scope mismatch');
           await admissions.requireActive(allowed.admission, signal);
           signal.throwIfAborted();
-          const row = this.store.get(allowed.binding.connectionId);
-          if (!row || !matches(row, allowed.reference) || !sameBinding(row, allowed.binding))
-            throw new Error('Credential binding or revision conflict');
-          const value = decryptCredential(row.encrypted) as {
-            schema?: number;
-            binding?: CredentialBinding;
-            reference?: CredentialReference;
-            secret?: string;
-          };
-          if (
-            value?.schema !== 1 ||
-            !value.binding ||
-            !value.reference ||
-            !sameBinding(row, value.binding) ||
-            !matches(row, value.reference) ||
-            typeof value.secret !== 'string'
-          )
-            throw new Error('Credential envelope mismatch');
-          const secret = Buffer.from(value.secret, 'base64');
-          const lease = this.leases.open(allowed.binding.connectionId, signal);
-          return { ...lease, secret };
+          return borrowCredential(
+            this.store,
+            this.leases,
+            allowed.binding,
+            allowed.reference,
+            signal,
+          );
         });
         try {
           lease.signal.throwIfAborted();
@@ -231,6 +218,47 @@ export class ModelCredentialVault implements CredentialVault {
         }
       },
     };
+  }
+
+  /** Main-only metadata authority, distinct from a native model process admission. */
+  async withMetadataCredential<T>(
+    binding: CredentialBinding,
+    reference: CredentialReference,
+    signal: AbortSignal,
+    requireCurrent: (signal: AbortSignal) => void,
+    consume: (secret: Uint8Array, signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    const expected = structuredClone({ binding, reference });
+    validateBinding(expected.binding);
+    const lease = await this.serialize(() => {
+      this.requireOpen();
+      requireCurrent(signal);
+      signal.throwIfAborted();
+      return borrowCredential(
+        this.store,
+        this.leases,
+        expected.binding,
+        expected.reference,
+        signal,
+      );
+    });
+    try {
+      requireCurrent(lease.signal);
+      lease.signal.throwIfAborted();
+      const result = await consume(lease.secret, lease.signal);
+      requireCurrent(lease.signal);
+      lease.signal.throwIfAborted();
+      return result;
+    } catch {
+      throw new Error(
+        lease.signal.aborted
+          ? 'Metadata credential lease revoked or cancelled'
+          : 'Metadata credential consumer failed',
+      );
+    } finally {
+      lease.secret.fill(0);
+      lease.close();
+    }
   }
 
   close(): Promise<void> {

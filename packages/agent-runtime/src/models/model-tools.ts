@@ -34,19 +34,24 @@ export async function executeModelTool(input: {
   session: RuntimeSession;
   signal: AbortSignal;
   admission?: ModelToolAdmission;
+  onResult?: (result: CommandResult) => void;
 }): Promise<CommandResult> {
   input.signal.throwIfAborted();
   const call = input.call;
+  const finish = (result: CommandResult) => {
+    input.onResult?.(result);
+    return result;
+  };
   if (!input.allowed.has(call.name))
-    return { error: 'Tool is not in the admitted model catalogue' };
+    return finish({ error: 'Tool is not in the admitted model catalogue' });
   try {
     await input.admission?.requireAllowed(call.name, call.arguments, input.signal);
   } catch {
     input.signal.throwIfAborted();
     const hint = input.admission?.rejectionMessage;
-    return {
+    return finish({
       error: hint && hint.length <= 512 ? hint : 'Tool request is outside the admitted scope',
-    };
+    });
   }
   const id = createHash('sha256').update(`${input.stepId}:${call.id}`).digest('hex');
   const record = await input.session.execute({
@@ -54,6 +59,7 @@ export async function executeModelTool(input: {
     action: { type: 'tool', name: call.name, args: call.arguments },
   });
   input.signal.throwIfAborted();
+  input.onResult?.(record.result);
   if (Buffer.byteLength(JSON.stringify(record.result)) > 16_384)
     return {
       value: {

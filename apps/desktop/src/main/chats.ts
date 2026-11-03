@@ -28,6 +28,7 @@ import { background } from './background/client';
 
 import { ChatEngine } from './chat-engine';
 import { clearChat } from './chat-clear';
+import { historyText, historyPage } from './task-history-context';
 export { titleOf } from './chat-settings-helpers';
 export { projectContextText } from './chat-context-text';
 
@@ -112,6 +113,19 @@ export class ChatSessions implements ProjectToolHandlers {
   }
   async defaults(projectId: string): Promise<ChatSettings> {
     return this.engine.views.defaults(projectId);
+  }
+  async readHistory(
+    args: import('@skaro/mcp-server').HistoryArgs,
+    scope: SkaroScope,
+  ): Promise<ToolResult> {
+    if (scope.kind !== 'project_chat' || !scope.chatId)
+      throw new Error('Chat history requires its exact scope');
+    const live = await this.engine.history.restore(scope.projectId, scope.chatId);
+    return {
+      text: JSON.stringify(
+        historyPage(historyText(live.timeline.state), args.query, args.offset, args.limit),
+      ),
+    };
   }
   async open(projectId: string, chatId: string, options?: { paged: boolean }): Promise<ChatView> {
     return this.engine.views.open(projectId, chatId, options);

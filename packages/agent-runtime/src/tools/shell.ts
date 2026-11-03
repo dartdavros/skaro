@@ -1,5 +1,21 @@
 export type CheckShell = 'system' | 'powershell';
 
+/** Exact shell selection; never silently run a Bash script through another shell. */
+export function commandInvocation(command: string, shell: string) {
+  if (process.platform === 'win32') {
+    if (shell === 'powershell') return checkCommand(command, 'powershell');
+    if (shell === 'cmd') return checkCommand(command, 'system');
+  } else if (['linux', 'darwin'].includes(process.platform)) {
+    if (shell === 'sh' || shell === 'bash')
+      return {
+        command: shell === 'sh' ? '/bin/sh' : '/bin/bash',
+        args: ['-c', command],
+        shell: false,
+      };
+  }
+  throw new Error('Selected shell is unavailable on this OS');
+}
+
 /** Pass scripts as data so the platform shell cannot reinterpret PowerShell syntax. */
 export function checkCommand(command: string, shell: CheckShell = 'system') {
   if (shell === 'system') return { command, args: [], shell: true };

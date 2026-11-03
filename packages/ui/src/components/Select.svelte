@@ -16,6 +16,7 @@
     width = 236,
     menuWidth = 264,
     label,
+    placeholder = '',
     variant = 'default',
     disabled = false,
   }: {
@@ -24,6 +25,7 @@
     width?: number | string;
     menuWidth?: number | string;
     label?: string;
+    placeholder?: string;
     variant?: 'default' | 'model';
     disabled?: boolean;
   } = $props();
@@ -56,7 +58,7 @@
         aria-haspopup="listbox"
         onclick={toggle}
       >
-        <span data-select class="value">{current?.label ?? ''}</span>
+        <span data-select class="value">{current?.label ?? placeholder}</span>
         <svg
           data-select
           width="12"

@@ -89,21 +89,24 @@ export function background<M extends keyof BackgroundMethods>(
   method: M,
   ...args: Parameters<BackgroundMethods[M]>
 ): Promise<Awaited<ReturnType<BackgroundMethods[M]>>> {
-  const lane = method.startsWith('tasks.')
-    ? 'tasks'
-    : method.startsWith('chats.')
-      ? 'chats'
-      : method.startsWith('overview.')
-        ? 'overview'
-        : method.startsWith('registry.')
-          ? 'registry'
-          : method.startsWith('read.')
-            ? 'views'
-            : method.startsWith('history.')
-              ? 'history'
-              : method.startsWith('artifacts.') || method.startsWith('catalog.')
-                ? 'artifacts'
-                : 'storage';
+  const lane =
+    method === 'models.usage'
+      ? 'model-usage'
+      : method.startsWith('tasks.')
+        ? 'tasks'
+        : method.startsWith('chats.')
+          ? 'chats'
+          : method.startsWith('overview.')
+            ? 'overview'
+            : method.startsWith('registry.')
+              ? 'registry'
+              : method.startsWith('read.')
+                ? 'views'
+                : method.startsWith('history.')
+                  ? 'history'
+                  : method.startsWith('artifacts.') || method.startsWith('catalog.')
+                    ? 'artifacts'
+                    : 'storage';
   const key = `${dataDir}\0${projectScopes.get(dataDir) ?? ''}\0${lane}`;
   let worker = lanes.get(key);
   if (!worker) lanes.set(key, (worker = new BackgroundLane(dataDir, projectScopes.get(dataDir))));

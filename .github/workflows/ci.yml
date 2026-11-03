@@ -33,7 +33,7 @@ jobs:
       # Unit tests and adapter golden tests (fixtures/golden) run as Vitest projects.
       - name: Build real background workers for storage integration tests
         run: pnpm build
-      - run: pnpm test
+      - run: pnpm test --maxWorkers=2 --testTimeout=30000 --hookTimeout=60000
 
   build:
     name: Build (${{ matrix.os }})

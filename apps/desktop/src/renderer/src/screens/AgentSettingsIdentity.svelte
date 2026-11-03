@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AgentLogo, t } from '@skaro/ui';
+  import AgentDevelopmentBadge from '../AgentDevelopmentBadge.svelte';
   import { agentName } from '../feed/format';
   import { stateOf } from './agent-settings-presentation';
   import type { AgentSettingsCardProps } from './agent-settings-card-props';
@@ -12,7 +13,8 @@
     <AgentLogo agent={a.id} size={24} />
     <div data-agents-settings class="titles">
       <span data-agents-settings class="name-line"
-        ><span data-agents-settings class="name">{agentName(a.id)}</span>{#if a.version}<span
+        ><span data-agents-settings class="name">{agentName(a.id)}</span
+        >{#if a.inDevelopment}<AgentDevelopmentBadge />{/if}{#if a.version}<span
             data-agents-settings
             class="version"
             data-tip={t('settings.agent.version.tip')}>{a.version}</span
@@ -42,6 +44,7 @@
       data-agents-settings
       type="button"
       class="recheck"
+      disabled={a.inDevelopment}
       data-tip={t('settings.agent.recheck')}
       aria-label={t('settings.agent.recheck')}
       onclick={() => {

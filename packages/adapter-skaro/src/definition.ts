@@ -11,7 +11,7 @@ export const skaroDefinition = {
     versioning: 'with-skaro',
     contracts: BUILTIN_CONTRACT_VERSIONS,
   },
-  unavailableReason: 'model-host-not-connected',
+  unavailableReason: 'configured-host-required',
   package: packageManifest,
   adapterVersion: packageManifest.version,
   async loadSessionRuntime() {

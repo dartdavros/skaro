@@ -21,6 +21,10 @@ import {
 } from '../verification/host.ts';
 import { recordCheckPlan } from '../verification/plans.ts';
 import { inspectVerificationAcceptance } from '../verification/acceptance.ts';
+import {
+  prepareEnvironmentReview,
+  recordEnvironmentReview,
+} from '../verification/owner-environment-review.ts';
 
 export class ToolRegistry {
   readonly scope: PathScope;
@@ -68,6 +72,9 @@ export class ToolRegistry {
     if (!result.success) throw new Error(`Invalid arguments for ${name}`);
     return { name, args: result.data };
   }
+  prepareEnvironmentReview(args: unknown, signal: AbortSignal) {
+    return prepareEnvironmentReview(args, this.scope, this.journal, this.verification, signal);
+  }
   async execute(
     id: string,
     name: string,
@@ -80,6 +87,15 @@ export class ToolRegistry {
         ? observeBrowser(id, name, args, this.scope, this.extensions, this.journal, signal)
         : this.extensions.invoke(id, name, args, signal);
     switch (name) {
+      case 'review_check_environment':
+        return recordEnvironmentReview(
+          id,
+          args,
+          this.scope,
+          this.journal,
+          this.verification,
+          signal,
+        );
       case 'inspect_acceptance':
         return inspectVerificationHost(this.journal, this.scope, this.verification, signal);
       case 'plan_checks':

@@ -31,7 +31,8 @@
     ),
   );
   let error = $state('');
-  const incompatible = $derived(unsupportedEffort(metadata, parameters));
+  const connector = $derived(connections.find((entry) => entry.id === connection)?.connector ?? '');
+  const incompatible = $derived(unsupportedEffort(metadata, parameters, connector));
   const message = $derived(
     error || controller.error || (incompatible ? t('models.effortMissing') : ''),
   );
@@ -94,7 +95,7 @@
       {catalog}
       disabled={controller.busy}
     />
-    <RouteEffort {metadata} bind:parameters disabled={controller.busy} />
+    <RouteEffort {metadata} {connector} bind:parameters disabled={controller.busy} />
     <TextField
       label={t('models.parameters')}
       bind:value={parameters}

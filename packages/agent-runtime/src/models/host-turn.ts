@@ -8,6 +8,7 @@ import { executeNativeTurn } from './native-turn.ts';
 import { ModelTextJournal } from './text-journal.ts';
 import { ModelTurnTimeline } from './turn-timeline.ts';
 import { RuntimeCommandRejected } from '../command-error.ts';
+import { ModelNoProgressError } from './tool-progress.ts';
 import type { ModelInputBoundary } from './owner-steering.ts';
 
 export function busyHostModelTurn(session: RuntimeSession, id: string, action: ModelTurnAction) {
@@ -69,10 +70,13 @@ export async function runPreparedHostModelTurn(
       { value: response },
       hash,
     );
-  } catch {
+  } catch (failure) {
     const interrupted = !!host?.signal?.aborted || session.modelAdmissionRevoked;
     await text.fail(interrupted);
-    const error = 'Native model turn did not complete; automatic replay forbidden';
+    const error =
+      failure instanceof ModelNoProgressError
+        ? failure.message
+        : 'Native model turn did not complete; automatic replay forbidden';
     return session.journal.append(
       `cmd:${id}`,
       timeline.terminal(interrupted ? 'interrupted' : 'failed', error),

@@ -1,27 +1,29 @@
 # Встроенный агент: текущий этап и результаты
 
-Актуально на 03.11.2026. Сейчас BA-7: внутренняя интеграция task/chat lifecycle.
-Полная приёмка BA-7 и переход к основному агенту ещё не завершены.
-Последнее уточнение владельца: «post можно, но за рамки 1 доллар не заходить».
-Прежний запрет новых POST отменён; общий $1 включает прежние расходы/удержания.
-Разрешённые 40 дополнительных intents использованы: **129 / $0.460686901**.
-Числовой предел остановил новые POST; отдельное расширение счётчика не разрешено.
-T-006 in_progress и не сдана, T-008 blocked, все runtime owners завершены.
-Получены настоящие чтения/inspect и один verification plan; baseline-команда
-не выполнилась после истечения approval wait. Source baseline сохранился,
-кроме штатного статуса задачи. Полный результат — в
-[живом протоколе 03.11.2026](builtin-agent-workflow-live-2026-11-03.md),
-актуальное состояние — в [передаче BA-7](builtin-agent-next-session.md).
+Актуально на 03.11.2026. По поручению владельца реализован код оставшихся
+BA-3/4/6/7/8/9; полная live-приёмка и выпуск ещё открыты.
+По последнему поручению владельца релиз 2.2.14 оставляет Skaro «В разработке»:
+поля и picker отключены, обычные task/chat hosts и default закрыты.
+UI проверяет сам владелец. Live-продолжение остановлено, новых POST нет.
+Подробные границы: [реализация остатка](builtin-agent-product-continuation.md),
+[выпуск после приёмки](builtin-agent-release-readiness.md).
 
-| Этап | Что реализовано или проверено | Что осталось |
+Владелец подтвердил продолжение с общим бюджетом до $1, включая все прежние
+расходы/holds. Исторические guards 80/85/89/129 не менялись. Новый отдельный
+guard ограничивает продолжение 40 запросами (169 суммарно), технический
+потолок $0.95 оставляет $0.05 резерва до общего $1. До live-запуска
+ledger остаётся **129 / $0.460686901**. Ниже исторические результаты не
+переименовываются в приёмку текущей сборки.
+
+| Этап | Реализовано в коде | Оставшая приёмка / выпуск |
 | --- | --- | --- |
-| BA-1–BA-3 | Контракты, lifecycle, Windows tools и native process ownership | Полная приёмка, ограничения D-28 и другие платформы |
-| BA-4 | Четыре коннектора; живые OpenRouter цепочки, streaming/tools/continuation | Прямые OpenAI/Anthropic/DeepSeek API отложены владельцем |
-| BA-5 | Принят поддерживаемый Windows-контур Cat-pilot: context, compact/restart, MCP/browser/media | Платформенные ограничения сохранены в итоговой таблице |
-| BA-6 | Проверки и происхождение доказательств; живой read-only model-plan Cat-pilot | Полный цикл реального исправления, повторных проверок и сдачи |
-| BA-7 — сейчас | Stop/resume, main restart/history; transactional handoff настоящего run; guards сдачи, task env и MCP preflight | Проверенная задача, замечание/повторная сдача, worktree/environment handoff и capture/merge |
-| BA-8 | Реальные настройки Connection/Route и каталог в существующем UI | Product agent catalog/picker, создание builtin-чата, сквозная UI-приёмка |
-| BA-9 | Локальный Windows x64 payload и packaged settings/catalog | Остальные платформы, полный выпуск, приёмка перед сменой default |
+| BA-1–BA-3 | Lifecycle, Windows tools/process ownership; отдельная POSIX process group, явный sh/bash | Реальные macOS/Linux; ограничения D-28 остаются |
+| BA-4 | Четыре коннектора, прямые каталоги и защищённый metadata credential path; точный effort | Прямой provider inference, не выводимый из каталога |
+| BA-5 | Прежний поддерживаемый Windows Cat-pilot контур принят отдельно | Платформенные ограничения из исходной приёмки |
+| BA-6 | Host evidence/dependencies и явный owner review окружения; no-progress limiter | Положительный цикл исправления, свежих checks и сдачи |
+| BA-7 | Task/chat lifecycle, очередь, handoff, история и общий model host | T-006/T-008, замечание/повторная сдача, worktree/environment и capture/merge |
+| BA-8 | Skaro в существующих picker/modal; task/chat BYOK с необязательным cap; расход primary receipts в background worker | Сквозные живые сценарии, окончательная UI-сверка |
+| BA-9 | Закрытый default gate и release notes/checklist | Платформы/package/update, полная приёмка перед default и публикацией |
 
 `bedaf68` — guards сдачи, task environment и browser/MCP integration.
 `1ae99b0` объединяет operational effects gate и надёжный teardown:
