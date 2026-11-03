@@ -71,7 +71,7 @@ it('rejects scope traversal, metadata writes, linked paths, invalid schemas and 
     'Protected',
   );
   await expect(check.tool('apply_patch', create('.git./config', 'forbidden'))).rejects.toThrow(
-    'aliases',
+    process.platform === 'win32' ? 'aliases' : 'ENOENT',
   );
   await symlink(check.directory, join(check.workspace, 'linked'), 'junction');
   await expect(check.tool('read_file', { path: 'linked/session.jsonl' })).rejects.toThrow(
