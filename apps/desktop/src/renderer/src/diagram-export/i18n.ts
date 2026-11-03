@@ -1,5 +1,6 @@
 import { addMessages, t } from '@skaro/ui';
 addMessages('ru', {
+  'export.c4Failed': 'Не удалось сохранить диаграмму C4 в PNG.',
   'export.png': 'Экспорт PNG',
   'export.allC4': 'Экспорт всех диаграмм в PNG',
   'export.menu': 'Экспорт графа',
@@ -15,6 +16,7 @@ addMessages('ru', {
   'export.batchFailed': 'Экспорт остановлен. Сохранено диаграмм: {n}. {reason}',
 });
 addMessages('en', {
+  'export.c4Failed': 'Could not save the C4 diagram as PNG.',
   'export.png': 'Export PNG',
   'export.allC4': 'Export all diagrams as PNG',
   'export.menu': 'Export graph',
