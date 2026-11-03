@@ -2,6 +2,11 @@ import type { MethodName, EventName } from './ipc';
 
 /** The whitelist the preload exposes; must list every key of `Methods`. */
 export const METHODS = [
+  'diagram.save',
+  'diagram.pickFolder',
+  'diagram.saveInFolder',
+  'diagram.closeFolder',
+  'graph.exportPage',
   'models.settings',
   'models.catalog',
   'models.usage',

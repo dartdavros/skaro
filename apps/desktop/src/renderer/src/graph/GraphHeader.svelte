@@ -3,13 +3,19 @@
   import { ArrowLeft, ArrowRight, Pause, Play, X, Maximize2 } from '@lucide/svelte';
   import type { ProjectGraph } from './data.svelte';
   import GraphSearch from './GraphSearch.svelte';
+  import GraphExportMenu from './GraphExportMenu.svelte';
+  import type { GraphExportSource } from './export-graph';
   let {
     model,
+    live,
+    exportSource,
     motion,
     onpause,
     onfullscreen,
   }: {
     model: ProjectGraph;
+    live?: GraphExportSource | undefined;
+    exportSource?: HTMLElement | undefined;
     motion: boolean;
     onpause: () => void;
     onfullscreen: () => void;
@@ -42,6 +48,7 @@
   <IconButton tip={t(motion ? 'graph.pause' : 'graph.resume')} active={!motion} onclick={onpause}>
     {#if motion}<Pause size={16} />{:else}<Play size={16} />{/if}
   </IconButton>
+  <GraphExportMenu {model} {live} surface={exportSource} />
   <IconButton tip={t('c4.fullscreen')} onclick={onfullscreen}><Maximize2 size={15} /></IconButton>
   {#if model.selected}<IconButton
       tip={t('graph.clear')}

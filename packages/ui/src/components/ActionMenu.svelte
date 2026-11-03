@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { t } from '../i18n.svelte.ts';
   import type { IconName } from '../icons.ts';
   import Icon from './Icon.svelte';
@@ -8,6 +9,7 @@
   let {
     items,
     tip,
+    button,
     align = 'left',
     size = 'md',
     width = 214,
@@ -25,6 +27,7 @@
       | 'separator'
     )[];
     tip?: string;
+    button?: Snippet<[{ toggle: () => void; open: boolean }]>;
     align?: 'left' | 'right';
     /** `sm`: the 26px button of a project card (Projects mockup), `row`: 28px (Plan mockup). */
     size?: 'md' | 'sm' | 'row';
@@ -36,24 +39,26 @@
 
 <Popover bind:open {width} {align} offset={size === 'row' ? 32 : 34}>
   {#snippet trigger({ toggle, open })}
-    <button
-      type="button"
-      class="dots"
-      class:active={open}
-      class:sm={size === 'sm'}
-      class:row={size === 'row'}
-      data-tip={tip ?? t('ui.more')}
-      aria-label={tip ?? t('ui.more')}
-      onclick={toggle}
-    >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"
-        ><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle
-          cx="19"
-          cy="12"
-          r="1.8"
-        /></svg
+    {#if button}{@render button({ toggle, open })}{:else}
+      <button
+        type="button"
+        class="dots"
+        class:active={open}
+        class:sm={size === 'sm'}
+        class:row={size === 'row'}
+        data-tip={tip ?? t('ui.more')}
+        aria-label={tip ?? t('ui.more')}
+        onclick={toggle}
       >
-    </button>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"
+          ><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle
+            cx="19"
+            cy="12"
+            r="1.8"
+          /></svg
+        >
+      </button>
+    {/if}
   {/snippet}
   {#snippet children({ close })}
     {#each items as item, i (i)}

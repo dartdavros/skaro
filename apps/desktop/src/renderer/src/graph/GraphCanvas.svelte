@@ -7,13 +7,21 @@
   import { renderGraph } from './render-data';
   import LoadingView from '../screens/LoadingView.svelte';
   import type { ProjectGraph } from './data.svelte';
+  import type { GraphExportSource } from './export-graph';
   import '../canvas-background.css';
   let {
     page,
     model,
     motion,
     flow,
-  }: { page: GraphPage; model: ProjectGraph; motion: boolean; flow: boolean } = $props();
+    onexportready,
+  }: {
+    page: GraphPage;
+    model: ProjectGraph;
+    motion: boolean;
+    flow: boolean;
+    onexportready: (source?: GraphExportSource) => void;
+  } = $props();
   let host = $state<HTMLDivElement>(),
     effects = $state<HTMLCanvasElement>();
   let live = $state.raw<LiveGraph>(),
@@ -69,6 +77,7 @@
           if (camera) current.renderer.getCamera().setState(camera);
           ready = true;
           layoutReady = true;
+          onexportready({ live: current, page: data });
           model.positions = Object.fromEntries(
             Object.entries({ ...model.positions, ...current.positions() }).slice(-5000),
           );
@@ -120,6 +129,7 @@
       };
       container.addEventListener('webglcontextlost', lost, true);
       return () => {
+        onexportready(undefined);
         container.removeEventListener('webglcontextlost', lost, true);
         renderer?.dispose();
         live = undefined;

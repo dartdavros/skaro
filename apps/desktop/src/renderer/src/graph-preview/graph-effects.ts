@@ -4,7 +4,7 @@ import { drawLoop, edgePoint } from './edge-geometry';
 
 export function paintEffects(
   canvas: HTMLCanvasElement,
-  renderer: Sigma<NodeData, EdgeData>,
+  renderer: Pick<Sigma<NodeData, EdgeData>, 'graphToViewport'>,
   graph: PreviewGraph,
   time: number,
   active: Set<string>,
@@ -12,10 +12,11 @@ export function paintEffects(
   flow: boolean,
   playback?: { edgeId: string; progress: number },
   past = new Set<string>(),
+  pixelRatio = Math.min(devicePixelRatio || 1, 2),
 ): void {
   const context = canvas.getContext('2d')!;
   const rect = canvas.getBoundingClientRect(),
-    ratio = Math.min(devicePixelRatio || 1, 2);
+    ratio = pixelRatio;
   if (
     canvas.width !== Math.round(rect.width * ratio) ||
     canvas.height !== Math.round(rect.height * ratio)

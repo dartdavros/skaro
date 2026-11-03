@@ -5,6 +5,29 @@
   import C4Details from './C4Details.svelte';
   import C4ViewerToolbar from './C4ViewerToolbar.svelte';
   import type { C4ViewerState } from './viewer-state.svelte';
+  import { c4Png } from './export-png';
+  import { exportName } from '../diagram-export/image';
+  import { exportError } from '../diagram-export/i18n';
+  let exporting = $state(false);
+  async function exportPng(): Promise<void> {
+    if (!element || exporting) return;
+    const model = viewer.model,
+      view = viewer.view,
+      source = element;
+    exporting = true;
+    try {
+      const bytes = await c4Png(model, view, source);
+      await window.skaro.invoke('diagram.save', {
+        name: `${exportName(model.title, view.id, view.state, `r${model.revision}`)}.png`,
+        format: 'png',
+        bytes,
+      });
+    } catch (error) {
+      viewer.error = exportError(error);
+    } finally {
+      exporting = false;
+    }
+  }
   let {
     viewer,
     element = $bindable(),
@@ -17,7 +40,7 @@
 </script>
 
 <div class="c4-viewer" bind:this={element}>
-  <C4ViewerToolbar state={viewer} {ongraph} />
+  <C4ViewerToolbar state={viewer} {ongraph} {exporting} onexport={() => void exportPng()} />
   {#if viewer.error}<Banner
       kind="error"
       text={viewer.error}

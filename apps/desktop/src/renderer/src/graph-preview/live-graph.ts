@@ -1,10 +1,9 @@
 import Sigma from 'sigma';
 import type { PreviewGraph, NodeData, EdgeData } from './projection';
-import { drawLabel } from './labels';
+import { graphRendererSettings } from './renderer-settings';
 import { paintEffects } from './graph-effects';
 import { fitGraph } from './viewport';
 import LayoutWorker from './layout.worker?worker';
-import { createEdgeCurveProgram } from '@sigma/edge-curve';
 import { loopAt } from './edge-geometry';
 import { LayoutMotion } from './layout-motion';
 
@@ -49,27 +48,7 @@ export class LiveGraph {
     });
     this.layout = new LayoutMotion(graph);
     this.renderer = new Sigma<NodeData, EdgeData>(graph, container, {
-      labelFont: 'Nunito Sans Variable',
-      labelSize: 11,
-      labelDensity: 0.4,
-      labelGridCellSize: 120,
-      labelRenderedSizeThreshold: 6.5,
-      stagePadding: 32,
-      defaultDrawNodeLabel: drawLabel,
-      edgeProgramClasses: {
-        curved: createEdgeCurveProgram<NodeData, EdgeData>({
-          arrowHead: {
-            extremity: 'target',
-            lengthToThicknessRatio: 2.5,
-            widenessToThicknessRatio: 2,
-          },
-        }),
-      },
-      renderEdgeLabels: false,
-      enableEdgeEvents: true,
-      minCameraRatio: 0.12,
-      maxCameraRatio: 3,
-      zIndex: true,
+      ...graphRendererSettings(),
       nodeReducer: (id, attributes) => {
         const focus = this.hovered || this.selected;
         const neighbor =

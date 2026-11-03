@@ -5,6 +5,7 @@
   import { ProjectGraph } from './data.svelte';
   import { openGraphTarget } from './navigation-target';
   import GraphHeader from './GraphHeader.svelte';
+  import type { GraphExportSource } from './export-graph';
   import GraphPlayback from './GraphPlayback.svelte';
   import GraphLegend from './GraphLegend.svelte';
   import GraphCanvas from './GraphCanvas.svelte';
@@ -32,12 +33,13 @@
   } = $props();
   // svelte-ignore state_referenced_locally
   const model = new ProjectGraph(projectId);
-  let surface: HTMLDivElement,
+  let surface = $state<HTMLDivElement>(),
     motion = $state(true),
     flow = $state(true),
     fullscreen = $state(false);
   let source = $state.raw<{ path: string; text: string; line: number }>();
   let handledTarget = '';
+  let exportLive = $state.raw<GraphExportSource>();
   $effect(() => {
     if (!target || !model.page || !model.snapshot || model.page.snapshotId !== model.snapshot.id)
       return;
@@ -68,6 +70,7 @@
     }
   }
   async function toggleFullscreen(): Promise<void> {
+    if (!surface) return;
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
       else await surface.requestFullscreen();
@@ -80,6 +83,8 @@
 <svelte:document onfullscreenchange={() => (fullscreen = document.fullscreenElement === surface)} />
 <div class="c4-viewer graph-preview graph-workspace" bind:this={surface} data-project-graph>
   <GraphHeader
+    exportSource={surface}
+    live={exportLive}
     {model}
     {motion}
     onpause={() => {
@@ -94,7 +99,13 @@
   <GraphLegend bind:motion bind:flow />
   <GraphStatus {model} />
   {#if model.page}<div class="content">
-      <GraphCanvas page={model.page} {model} {motion} {flow} />
+      <GraphCanvas
+        page={model.page}
+        {model}
+        {motion}
+        {flow}
+        onexportready={(live) => (exportLive = live)}
+      />
       {#if model.selected}<GraphDetails
           {model}
           onsource={(ref) => {
