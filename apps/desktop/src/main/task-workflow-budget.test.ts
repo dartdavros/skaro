@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { requireTaskWorkflowBudget } from './verification/task-workflow-budget';
+import {
+  requireTaskWorkflowBudget,
+  requireTaskWorkflowStep,
+} from './verification/task-workflow-budget';
 
 const proposal = {
   baseline: { requests: 89, committedNanoUsd: 428_414_440 },
@@ -13,6 +16,12 @@ const proposal = {
 };
 
 describe('owner-reviewed workflow budget extension', () => {
+  it('allows dispatch of intent 129 but stops before constructing intent 130', () => {
+    const ledger = { requests: 129, committedNanoUsd: 500_000_000 };
+    expect(() => requireTaskWorkflowBudget(proposal, ledger)).not.toThrow();
+    expect(() => requireTaskWorkflowStep(proposal, ledger)).toThrow();
+    expect(() => requireTaskWorkflowStep(proposal, { ...ledger, requests: 128 })).not.toThrow();
+  });
   it('retains all old charges and bounds the total including the proposed reservation', () => {
     expect(() => requireTaskWorkflowBudget(proposal, proposal.baseline)).not.toThrow();
     const ledger = { requests: 129, committedNanoUsd: 940_000_000 };

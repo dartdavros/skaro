@@ -9,23 +9,13 @@ import { verifyTaskStopReplay } from './task-stop-replay';
 import { verifyTaskStopMainRestart } from './task-stop-main-restart';
 import { verifyTaskHandoffLocal } from './task-handoff-local';
 import { verifyTaskCompletionPreflight } from './task-completion-preflight';
-import { readTaskWorkflowPacket, verifyTaskWorkflowPacket } from './task-workflow-packet';
+import { taskWorkflowMode } from './task-workflow-mode';
 
 /** CLI-only composition. Read/replay modes cannot prepare a model host. */
 export async function taskStopMode(args: string[], data: string, getServices: () => Services) {
   const name = args[2]!;
-  if (name === '--task-workflow-check') {
-    const packet = await readTaskWorkflowPacket(data, args[3]!, args[4]!);
-    return {
-      stage: 'task-workflow-check',
-      options: {
-        async builtinTasks() {
-          throw new Error('Workflow inspection cannot prepare a model host');
-        },
-      },
-      run: (services: Services) => verifyTaskWorkflowPacket(services, data, packet),
-    };
-  }
+  const workflow = await taskWorkflowMode(args, data, getServices);
+  if (workflow) return workflow;
   if (
     ![
       '--task-stop-review',

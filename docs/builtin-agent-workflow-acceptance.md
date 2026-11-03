@@ -1,5 +1,10 @@
 # BA-7: сдача, окружение и локальный handoff
 
+Актуальное дополнение 03.11.2026: [настоящий workflow и итоговый audit](builtin-agent-workflow-live-2026-11-03.md).
+Расширение 40 intents использовано: **129 / $0.460686901**. T-006 не сдана,
+T-008 blocked, все runtime owners завершены. Новые POST требуют нового
+разрешения на счётчик. Ниже сохранена история предыдущих этапов.
+
 Дата: 02.11.2026. Полная BA-7 ещё не принята. Все новые живые проверки —
 на зарегистрированном Cat-pilot; model POST в этом продолжении — 0.
 
@@ -181,3 +186,45 @@ browser measurements, C4 и свежая assessment перед submit_result.
 Main typecheck, lint, format и семь целевых тестов budget guards в трёх файлах
 прошли; production build прошла. Полный suite не запускался. Изменённые code
 files ≤241 строки, UI не менялся, browser acceptance этим не утверждается.
+
+## Workflow binding и внешний admission gate, 03.11.2026
+
+Владелец ответил: «Разрешаю после проверки плана» на штатное выключение
+planFirst T-006 с сохранением ask и пакета. План сверен с десятью критериями
+и 10-секундной раскадровкой. Добавлен отдельный CLI `--task-workflow-live`:
+штатный handoffBuiltin сохраняет checkout/history и публикует successor
+с planFirst=false; далее используются только TaskRunSessions и прежний model host.
+
+Grant ограничен T-006: read_file утверждённых paths, две motion-таблицы и index,
+фиксированные flight/background-команды, реальные C4/submit/blocker operations
+и browser navigate/screenshot/console. SVG-поддеревья index сохраняются побайтно,
+разрешены их порядок и ссылки на motion CSS; motion CSS не меняет palette/layout
+и не импортирует ресурсы. Schemas сверяются с настоящими catalogs.
+Runtime ask approvals не подтверждаются автоматически: driver фиксирует открытое
+решение и завершает наблюдение с подтверждённым teardown. Это первый ограниченный
+live-этап; продолжение после решений, T-008/worktree и merge ещё не приняты.
+
+Перед quote и dispatch сверяются primary input/context/continuation envelope,
+immutable sources/checker hashes, route snapshot, прежние журналы и весь ledger.
+До quote учитывается также новая reservation. Исторические guards не изменены.
+При отказе quote в IPC выдаётся только название локального gate, без payload/key.
+
+**Первый живой запуск был заблокирован до старта.** Automatic approval review отклонил команду до
+CreateProcess: по его оценке, переданного разрешения недостаточно для отправки
+именно этого payload во внешний OpenRouter с платными POST. Обхода/повтора нет.
+Владельцу отправлен отдельный запрос на пакет SHA256
+`600af359e54afa9328a70a418205f04784220a016778f298bb1bbcc3bc969cb1`,
+адресат `https://openrouter.ai/api/v1`, модель `openai/gpt-4.1-nano`,
+VPN `127.0.0.1:10809`, прежние holds и пределы 129 intents / $0.95 / общий $1.
+
+Разрешённая read-only сверка прошла отдельно:
+`verification/extensions-8d013bb3-bf94-4385-8fe1-a1d0ff756941/proof.json`.
+Ledger **89 / 428414440 nanoUSD**, model POST 0, текущий run прежний,
+planFirst=true, ask, execution выключен. Исходники Cat-pilot не менялись.
+Production build, main typecheck, lint и десять целевых тестов в четырёх файлах
+прошли. Полный suite не запускался. Browser/provider acceptance live binding
+отсутствует; BA-7 не закрыта.
+
+Отдельно проверена граница счётчика: intent 129 ещё может получить dispatch,
+но перед следующим modelStep выбор tools проверяет ledger и отказывает до
+создания intent 130. Денежные guards до quote/dispatch остаются независимыми.

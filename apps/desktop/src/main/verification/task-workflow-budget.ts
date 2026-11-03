@@ -36,3 +36,15 @@ export function requireTaskWorkflowBudget(
   // Conservatively retain even that intent's unknown hold until a receipt replaces it.
   assert(ledger.committedNanoUsd + proposedReservationNanoUsd <= proposal.ceilingNanoUsd);
 }
+
+/** Tool selection runs before modelStep persists the next intent. */
+export function requireTaskWorkflowStep(
+  proposal: TaskWorkflowBudget,
+  ledger: TaskWorkflowBudget['baseline'],
+) {
+  requireTaskWorkflowBudget(proposal, ledger);
+  assert(
+    ledger.requests < proposal.requestCeiling,
+    'Stop before creating an intent beyond the reviewed request count',
+  );
+}

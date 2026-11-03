@@ -25,9 +25,15 @@ export interface TaskWorkflowPacket {
   predecessorRunId: string;
   wireComposition: {
     route: RouteSnapshot;
-    tasks: { id: string; criteriaRevision: string }[];
+    tasks: { id: string; criteriaRevision: string; criteria: { id: string; text: string }[] }[];
     sources: { path: string; text: string }[];
+    ownerMessages: string[];
+    tools: Record<
+      'runtime' | 'browser' | 'skaro',
+      { name: string; inputSchema: Record<string, unknown>; description?: string }[]
+    >;
   };
+  actionProposal: { commands: string[]; sourceEdits: string[]; prohibitions: string[] };
   budgetProposal: TaskWorkflowBudget;
   localGuards: {
     sourceRevisions: { path: string; sha256: string }[];
@@ -49,6 +55,7 @@ export async function verifyTaskWorkflowPacket(
   services: Services,
   data: string,
   packet: TaskWorkflowPacket,
+  recovery?: { runId: string; sessionId?: string },
 ) {
   assert.equal(planPayloadHash(packet), TASK_WORKFLOW_HASH);
   const projectId = packet.project.id;
@@ -56,8 +63,12 @@ export async function verifyTaskWorkflowPacket(
   assert.equal(services.db.shell.projectScope, projectId);
   const context = services.projects.get(projectId);
   assert.equal(await realpath(context.root), packet.project.root);
-  for (const expected of packet.wireComposition.sources)
-    assert.deepEqual(await actualWorkflowSource(context.root, expected.path), expected);
+  for (const expected of packet.wireComposition.sources) {
+    const actual = await actualWorkflowSource(context.root, expected.path);
+    if (recovery && expected.path === '.skaro/tasks/T-006-animirovat-prohod-i-pryzhok-kota.md')
+      actual.text = actual.text.replace(/^status: in_progress$/m, 'status: todo');
+    assert.deepEqual(actual, expected);
+  }
   for (const checker of packet.localGuards.checkerRevisions)
     assert.equal(
       createHash('sha256')
@@ -68,16 +79,30 @@ export async function verifyTaskWorkflowPacket(
   const artifacts = await context.load();
   for (const expected of packet.wireComposition.tasks) {
     const task = artifacts.tasks.find((item) => item.id === expected.id);
-    assert(task && task.status === 'todo');
+    assert(task && task.status === (recovery && task.id === 'T-006' ? 'in_progress' : 'todo'));
     assert.equal(criteriaRevision(task), expected.criteriaRevision);
     assert.equal(
-      startBlocker(task, indexTasks(artifacts.tasks)),
+      startBlocker(
+        recovery && task.id === 'T-006' ? { ...task, status: 'todo' } : task,
+        indexTasks(artifacts.tasks),
+      ),
       task.id === 'T-006' ? undefined : 'blocked',
     );
   }
   const run = services.db.listRuns(projectId, 'T-006')[0]!;
-  assert(run && run.id === packet.predecessorRunId && run.agent === 'skaro');
-  assert.equal(run.nativeSessionId, undefined);
+  assert(run && run.id === (recovery?.runId ?? packet.predecessorRunId) && run.agent === 'skaro');
+  if (recovery) {
+    let ancestor = run;
+    const visited = new Set<string>();
+    while (ancestor.id !== packet.predecessorRunId) {
+      assert(!visited.has(ancestor.id) && ancestor.agent === 'skaro');
+      visited.add(ancestor.id);
+      const previous = services.db.getRun(ancestor.previousRunId!);
+      assert(previous && previous.taskId === 'T-006' && previous.projectId === projectId);
+      ancestor = previous;
+    }
+  }
+  assert.equal(run.nativeSessionId, recovery?.sessionId);
   assert.equal(run.retiredAt, undefined);
   assert.equal(run.endedAt, undefined);
   assert.equal(run.worktree, undefined);
@@ -88,6 +113,7 @@ export async function verifyTaskWorkflowPacket(
   );
   assert.equal(selected.model, packet.wireComposition.route.routeId);
   assert.equal(selected.permissionMode, 'ask');
+  assert.equal(selected.planFirst, !recovery);
   assert.equal(selected.isolation, 'in-place');
   const route = packet.wireComposition.route;
   assert.equal(route.connectionId, 'openrouter-owner');
