@@ -8,7 +8,8 @@ Skaro 2.2.15
 Verification: production build, TypeScript/Svelte checks, lint and targeted export tests.
 The real Cat-pilot GEXF (44 nodes, 81 edges) passed the official GEXF 1.3 schema.
 Visual PNG/dialog acceptance remains with the owner; Cat-pilot currently has no accepted C4 model.
-Pinned agent versions are unchanged from 2.2.14. No new model calls or full test suite were run.
+Pinned agent versions are unchanged from 2.2.14. No new model calls are required.
+The owner authorized the mandatory CI suite with its existing fixtures and HTTP test servers.
 
 Installers: Windows, macOS and Linux, each for x64 and arm64.
 The published release includes the verified table of six direct installer links.

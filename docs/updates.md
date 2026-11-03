@@ -141,6 +141,10 @@ suite: `check_scope=diagram-export`, `test_fixtures_allowed=false`. Этот р�
 `check_scope=full`, требующий разрешения на fixtures/HTTP test servers.
 Pins агентов не меняются относительно 2.2.14; сохраняются ранее принятые
 проверки этого комплекта, новые canary/model вызовы не заявляются.
+После отказа защищённой ветки владелец отдельно разрешил обязательный полный
+CI с существующими fixtures/HTTP test servers для PR #44. После его успешного
+прохождения release workflow использует адресный режим без повторного полного
+suite; защита main и четыре обязательных CI-статуса сохраняются.
 
 1. Закоммитить и интегрировать проверенные исходники в `main` репозитория `dartdavros/skaro`.
 2. В Actions открыть Build and publish release → Run workflow и выбрать `main`.
