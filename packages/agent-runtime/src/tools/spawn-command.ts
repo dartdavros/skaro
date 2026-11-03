@@ -1,12 +1,11 @@
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import type { BuiltinToolScope } from '@skaro/timeline';
 import { cleanCommandEnvironment } from './command-env.ts';
 import { WINDOWS_COMMAND_JOB } from './windows-job.ts';
 
-export function spawnCommandSupervisor(config: BuiltinToolScope) {
-  const entry =
-    config.commandEntry ?? fileURLToPath(new URL('./command-worker.ts', import.meta.url));
+export async function spawnCommandSupervisor(config: BuiltinToolScope, signal: AbortSignal) {
+  const entry = config.commandEntry ?? (await import('./command-entry.mts')).sourceCommandEntry;
+  signal.throwIfAborted();
   if (process.platform !== 'win32') {
     if (!['linux', 'darwin'].includes(process.platform))
       throw new Error('Managed commands are unavailable on this OS');

@@ -1,6 +1,5 @@
 import { fork, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
 import {
   EventChannel,
   operationTimeout,
@@ -51,7 +50,7 @@ export class SkaroSession implements AgentSession {
   private failed?: Error;
   private readonly hosts: RuntimeHostServer;
 
-  private constructor(options: SkaroSessionOptions) {
+  private constructor(options: SkaroSessionOptions, entry: string) {
     this.projection = new SessionProjection(options, (event) => this.events.push(event));
     this.ready = new Promise((resolve, reject) => {
       this.resolveReady = resolve;
@@ -64,18 +63,14 @@ export class SkaroSession implements AgentSession {
       (reply) => this.post(reply),
       (signal) => this.requireOwner(signal),
     );
-    this.child = fork(
-      options.entry ?? fileURLToPath(new URL('../../agent-runtime/src/worker.ts', import.meta.url)),
-      [],
-      {
-        execArgv: [],
-        env: runtimeEnvironment(),
-        serialization: 'advanced',
-        stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
-        windowsHide: true,
-        detached: process.platform !== 'win32',
-      },
-    );
+    this.child = fork(entry, [], {
+      execArgv: [],
+      env: runtimeEnvironment(),
+      serialization: 'advanced',
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      windowsHide: true,
+      detached: process.platform !== 'win32',
+    });
     this.processId = this.child.pid ?? 0;
     this.exited = new Promise((resolve) =>
       this.child.once('close', () => {
@@ -109,9 +104,10 @@ export class SkaroSession implements AgentSession {
     requireSameHostScope(options);
     requireModelBinding(options.config, options.model);
     await requireModelBaseline(options.model);
+    const entry = options.entry ?? (await import('./runtime-entry.mts')).sourceRuntimeEntry;
     options.signal?.throwIfAborted();
     if (!options.processStarted) throw new Error('Durable process ownership callback is required');
-    const session = new SkaroSession(options);
+    const session = new SkaroSession(options, entry);
     const abort = () => {
       void session.close().catch(() => undefined);
     };

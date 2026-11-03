@@ -55,7 +55,7 @@ export class ToolProcesses {
       throw new Error('Selected shell is unavailable on this OS');
     signal.throwIfAborted();
     await mkdir(this.config.artifactDir, { recursive: true });
-    const child = spawnCommandSupervisor(this.config);
+    const child = await spawnCommandSupervisor(this.config, signal);
     let resolveReady!: () => void;
     let rejectReady!: (error: Error) => void;
     const ready = new Promise<void>((resolve, reject) => {
