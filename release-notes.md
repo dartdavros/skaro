@@ -1,15 +1,9 @@
-Skaro 2.2.15
+Skaro 2.2.16
 
-- Export a complete C4 view as PNG, or export every C4 view to a selected folder.
-- Export the current project graph or its complete indexed snapshot as PNG or GEXF.
-- Preserve graph attributes, directed relationships, coordinates and evidence in GEXF.
-- Use a download icon for graph export and keep empty C4 messages at the top of the content area.
+- Fixed blank C4 PNG exports and restored the dotted canvas background.
+- Fit large C4 diagrams into the PNG budget while preserving the entire view.
+- Show a C4-specific message when PNG export fails.
+- Scale exported GEXF coordinates to keep graph nodes spread out in Gephi.
 
-Verification: production build, TypeScript/Svelte checks, lint and targeted export tests.
-The real Cat-pilot GEXF (44 nodes, 81 edges) passed the official GEXF 1.3 schema.
-Visual PNG/dialog acceptance remains with the owner; Cat-pilot currently has no accepted C4 model.
-Pinned agent versions are unchanged from 2.2.14. No new model calls are required.
-The owner authorized the mandatory CI suite with its existing fixtures and HTTP test servers.
-
-Installers: Windows, macOS and Linux, each for x64 and arm64.
-The published release includes the verified table of six direct installer links.
+Verified actual C4 PNG output, including a large diagram, and imported the
+project graph into Gephi Toolkit. The owner confirmed the export in Skaro.

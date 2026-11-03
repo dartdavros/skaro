@@ -5,7 +5,7 @@
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import { c4Png } from './export-png';
   import { exportName } from '../diagram-export/image';
-  import { exportError } from '../diagram-export/i18n';
+  import '../diagram-export/i18n';
   let { model, onerror }: { model: C4Model; onerror: (error: string) => void } = $props();
   let busy = $state(false),
     button: HTMLSpanElement;
@@ -25,8 +25,8 @@
         await window.skaro.invoke('diagram.saveInFolder', token, name, bytes);
         saved++;
       }
-    } catch (error) {
-      onerror(t('export.batchFailed', { n: saved, reason: exportError(error) }));
+    } catch {
+      onerror(t('export.batchFailed', { n: saved, reason: t('export.c4Failed') }));
     } finally {
       if (token) await window.skaro.invoke('diagram.closeFolder', token).catch(() => undefined);
       busy = false;

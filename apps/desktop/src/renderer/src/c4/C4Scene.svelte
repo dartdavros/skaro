@@ -1,13 +1,13 @@
 <script lang="ts">
   import { SvelteFlowProvider } from '@xyflow/svelte';
-  import { Banner, TooltipHost } from '@skaro/ui';
+  import { Banner, TooltipHost, t } from '@skaro/ui';
   import C4Canvas from './C4Canvas.svelte';
   import C4Details from './C4Details.svelte';
   import C4ViewerToolbar from './C4ViewerToolbar.svelte';
   import type { C4ViewerState } from './viewer-state.svelte';
   import { c4Png } from './export-png';
   import { exportName } from '../diagram-export/image';
-  import { exportError } from '../diagram-export/i18n';
+  import '../diagram-export/i18n';
   let exporting = $state(false);
   async function exportPng(): Promise<void> {
     if (!element || exporting) return;
@@ -22,8 +22,8 @@
         format: 'png',
         bytes,
       });
-    } catch (error) {
-      viewer.error = exportError(error);
+    } catch {
+      viewer.error = t('export.c4Failed');
     } finally {
       exporting = false;
     }

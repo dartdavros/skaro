@@ -72,6 +72,8 @@ export function gexf(
     '<nodes>',
   ];
   const ids = new Set(page.nodes.map((node) => node.id));
+  // Gephi draws node sizes in graph units. Sigma positions span roughly seven units.
+  const coordinateScale = Math.max(100, 40 * Math.sqrt(page.nodes.length));
   for (const node of page.nodes) {
     const visual = graph.getNodeAttributes(node.id);
     parts.push(
@@ -84,7 +86,7 @@ export function gexf(
         sources: node.sources,
         attributes: node.attributes,
       }),
-      `<viz:position x="${visual.x}" y="${visual.y}" z="0"/><viz:size value="${visual.size}"/>`,
+      `<viz:position x="${visual.x * coordinateScale}" y="${visual.y * coordinateScale}" z="0"/><viz:size value="${visual.size}"/>`,
       color(visual.color),
       '</node>',
     );
