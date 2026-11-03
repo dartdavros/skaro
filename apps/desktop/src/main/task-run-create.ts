@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { taskBranch, indexTasks, pendingDependencies } from '@skaro/core';
+import { taskBranch, indexTasks, pendingDependencies, startBlocker } from '@skaro/core';
 import { Timeline } from '@skaro/timeline';
 import { findTask, key } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
@@ -8,6 +8,9 @@ import type { TaskRunEngine } from './task-run-engine';
 import { updateSubject } from './task-subject';
 import { prepareTaskWorktree } from './task-worktree';
 import { serializeTaskMutation } from './project-task-mutations';
+import { parseBuiltinTaskStart, type BuiltinTaskStart } from './builtin-task-start';
+import { saveBuiltinRunSettings } from './builtin-run-settings';
+import { CommandCancelled } from './owner-commands';
 
 /**
  * A new run of a task (or of a stage acceptance): its checkout, its record and its feed. No
@@ -17,9 +20,11 @@ export async function createTaskRun(
   ctx: TaskRunEngine,
   projectId: string,
   taskId: string,
+  builtin?: BuiltinTaskStart,
+  requireCurrent?: () => void,
 ): Promise<ActiveRun> {
   return serializeTaskMutation(ctx.project(projectId), () =>
-    createLockedTaskRun(ctx, projectId, taskId),
+    createLockedTaskRun(ctx, projectId, taskId, builtin, requireCurrent),
   );
 }
 
@@ -27,11 +32,33 @@ async function createLockedTaskRun(
   ctx: TaskRunEngine,
   projectId: string,
   taskId: string,
+  builtin?: BuiltinTaskStart,
+  requireCurrent?: () => void,
 ): Promise<ActiveRun> {
   const context = ctx.project(projectId);
   const artifacts = await context.load();
   const task = findTask(artifacts, taskId);
-  const settings = ctx.views.settings(projectId, task, artifacts);
+  const currentBuiltin = () => {
+    if (!builtin || !requireCurrent) throw new CommandCancelled();
+    requireCurrent();
+  };
+  if (builtin) {
+    currentBuiltin();
+    if (!ctx.deps.builtinSessions) throw new Error('Builtin task authorization is unavailable');
+    if (ctx.active.has(key(projectId, taskId)) || ctx.deps.db.listRuns(projectId, taskId).length)
+      throw new Error('The task already owns a run');
+    await ctx.deps.builtinSessions.resolveStart(builtin, new AbortController().signal);
+    currentBuiltin();
+    const blocker = startBlocker(task, indexTasks(artifacts.tasks));
+    if (blocker) throw new Error(`The task cannot start: ${blocker}`);
+  }
+  const settings = builtin
+    ? parseBuiltinTaskStart(builtin)
+    : ctx.views.settings(projectId, task, artifacts);
+  const adapterVersion =
+    settings.agent === 'skaro'
+      ? ctx.deps.builtinSessions!.adapterVersion
+      : ctx.deps.agents.adapter(settings.agent).adapterVersion;
 
   let worktree: string | undefined;
   let branch: string | undefined;
@@ -58,11 +85,22 @@ async function createLockedTaskRun(
       base: artifacts.config.baseBranch,
     });
   }
+  if (builtin) currentBuiltin();
   await updateSubject(context, taskId, {
     status: 'in_progress',
     ...(branch ? { branch } : {}),
   });
   context.invalidate();
+  if (builtin) {
+    try {
+      currentBuiltin();
+    } catch (error) {
+      // No run/process exists yet. Keep an interrupted startup from stranding the board.
+      await updateSubject(context, taskId, { status: task.status });
+      context.invalidate();
+      throw error;
+    }
+  }
 
   const logPath = join(
     'runs',
@@ -70,7 +108,6 @@ async function createLockedTaskRun(
     taskId,
     `${Date.now()}-${randomUUID().slice(0, 8)}.jsonl`,
   );
-  const adapter = ctx.deps.agents.adapter(settings.agent);
   const run = ctx.deps.db.createRun({
     projectId,
     taskId,
@@ -79,8 +116,10 @@ async function createLockedTaskRun(
     ...(worktree ? { worktree } : {}),
     ...(branch ? { branch } : {}),
     logPath,
-    adapterVersion: adapter.adapterVersion,
+    adapterVersion,
   });
+  if (settings.agent === 'skaro')
+    saveBuiltinRunSettings(ctx.deps.db, run.id, parseBuiltinTaskStart(settings));
   const active = new ActiveRun(projectId, taskId, run, new Timeline());
   ctx.active.set(key(projectId, taskId), active);
   ctx.continuation.execution(active).start();

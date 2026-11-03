@@ -1,5 +1,6 @@
 // Skaro MCP server: tools agents use to work with the project (architecture.md 6).
 export * from './server.ts';
+export { scopedOperationPort } from './scoped-port.ts';
 export * from './tools.ts';
 export * from './environment-tool.ts';
 export * from './task-blocker-tool.ts';

@@ -124,6 +124,7 @@ export interface ChatSettings {
   agent: AgentId;
   model?: string;
   effort?: string;
+  budgetUsd?: number;
   /** "Спрашивать" by default; "Полный доступ" runs everything without asking (owner, 2026-09-29). */
   permissionMode?: ChatPermissionMode;
 }

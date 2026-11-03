@@ -15,10 +15,12 @@ beforeEach(async () => {
   f = await CompletionFixture.create();
 });
 afterEach(async () => {
-  await engine?.sessions.close();
+  const fixture = f;
+  const current = engine;
   engine = undefined;
-  await f.close();
-});
+  await current?.sessions.close();
+  await fixture.close();
+}, 120_000);
 
 async function waitFor(predicate: () => boolean): Promise<void> {
   const deadline = Date.now() + 30_000;

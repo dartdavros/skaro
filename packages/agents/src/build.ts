@@ -7,7 +7,7 @@ export function adapterVersions(): Record<string, string> {
     const pkg = definition.package;
     if (
       definition.sdkDependency &&
-      pkg.dependencies?.[definition.sdkDependency] !== definition.pin.version
+      pkg.dependencies?.[definition.sdkDependency] !== definition.delivery.pin.version
     )
       throw new Error(
         `${definition.presentation.name} SDK dependency must exactly match the release pin`,

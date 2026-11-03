@@ -26,6 +26,7 @@
     "@sigma/edge-curve": "3.1.0",
     "@skaro/adapter-claude": "workspace:*",
     "@skaro/adapter-codex": "workspace:*",
+    "@skaro/agent-runtime": "workspace:*",
     "@skaro/core": "workspace:*",
     "@skaro/mcp-server": "workspace:*",
     "@skaro/timeline": "workspace:*",

@@ -5,6 +5,9 @@ import { saved, lastOf, settingsKey, lastKey } from './chat-settings-helpers';
 
 import type { ChatEngine } from './chat-engine';
 import { withAgentDefaults } from './agent-model-defaults';
+import { rebindBuiltinChat } from './builtin-chat-rebind';
+import { isDeepStrictEqual } from 'node:util';
+import { builtinChatSettingsKey, parseBuiltinChatSettings } from './builtin-chat-settings';
 
 export class ChatConfiguration {
   private readonly ctx: ChatEngine;
@@ -18,6 +21,19 @@ export class ChatConfiguration {
       throw new Error('The agent of a started chat cannot be changed');
     }
     const before = this.settings(live.chat);
+    if (next.agent === 'skaro') {
+      const parsed = parseBuiltinChatSettings({
+        ...next,
+        permissionMode: next.permissionMode ?? 'ask',
+      });
+      const models = this.ctx.deps.builtinChatSessions;
+      if (!models) throw new Error('Builtin chat authorization is unavailable');
+      await models.resolveStart(parsed, live.operation.signal);
+      if (!isDeepStrictEqual(parsed, before))
+        await rebindBuiltinChat(this.ctx, live, parseBuiltinChatSettings(before), parsed);
+      this.ctx.listChanged(projectId, chatId);
+      return;
+    }
     if (
       live.session &&
       next.model &&
@@ -35,6 +51,10 @@ export class ChatConfiguration {
   // ── plumbing ─────────────────────────────────────────────────────────────
 
   settings(chat: ChatRecord): ChatSettings {
+    if (chat.agent === 'skaro')
+      return parseBuiltinChatSettings(
+        this.ctx.deps.db.getSetting(builtinChatSettingsKey(chat.id), null),
+      );
     const stored = this.ctx.deps.db.getSetting<Omit<ChatSettings, 'agent'> | null>(
       settingsKey(chat.id),
       null,

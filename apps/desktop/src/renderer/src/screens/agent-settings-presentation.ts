@@ -1,4 +1,5 @@
 import { t, tn } from '@skaro/ui';
+import '../settings/models/i18n';
 import type { AgentUserConfig } from '@skaro/timeline';
 import type { AgentInfo } from '../../../shared/ipc';
 
@@ -52,6 +53,8 @@ export function effortLabel(id: string): string {
 }
 
 export function stateOf(a: AgentInfo): { text: string; dot: string; pulse: boolean; tip: string } {
+  if (a.inDevelopment)
+    return { text: t('models.inDevelopment'), dot: 'var(--sk-fill-36)', pulse: false, tip: '' };
   const mb = (n: number) => Math.round(n / 1e6);
   if (a.download) {
     return {
@@ -72,6 +75,13 @@ export function stateOf(a: AgentInfo): { text: string; dot: string; pulse: boole
       dot: 'var(--sk-fill-36)',
       pulse: false,
       tip: t('settings.agent.notLoaded.tip'),
+    };
+  if (a.authenticated === false && a.delivery === 'bundled')
+    return {
+      text: t('models.keyMissing'),
+      dot: 'var(--sk-warn)',
+      pulse: false,
+      tip: t('models.routesNote'),
     };
   if (a.authenticated === false)
     return {

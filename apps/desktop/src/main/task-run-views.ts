@@ -1,4 +1,3 @@
-import { requireAgentId } from '@skaro/agents';
 import { TaskListViews } from './task-list-views';
 import { presentationState } from './timeline-presentation';
 import { historyReads } from './history-read-service';
@@ -15,8 +14,10 @@ import { subjectStage } from './task-subject';
 import { readSubject, updateSubject } from './task-subject';
 import { trackRun } from './task-run-access';
 import { withAgentDefaults } from './agent-model-defaults';
-import { taskAgentPreferences, type TaskAgentPreferences } from './task-agent-preferences';
+import type { TaskAgentPreferences } from './task-agent-preferences';
+import { taskViewSettings } from './task-view-settings';
 import { taskRunDirectory } from './task-run-directory';
+import { validateBuiltinTaskSettings } from './builtin-task-settings-validation';
 import {
   IntegrationFailed,
   IntegrationPending,
@@ -170,36 +171,7 @@ export class TaskRunViews {
   }
 
   settings(projectId: string, task: Task, artifacts: ProjectArtifacts): AgentSettings {
-    const saved = this.ctx.deps.db.getSetting<TaskAgentPreferences | null>(
-      settingsKey(projectId, task.id),
-      null,
-    );
-    const active = this.ctx.active.get(key(projectId, task.id));
-    const preferences = taskAgentPreferences(
-      artifacts.config,
-      task,
-      saved,
-      active
-        ? {
-            agent: active.run.agent,
-            model: active.timeline.state.session?.model || active.run.model,
-          }
-        : undefined,
-    );
-    const configured = preferences.agent;
-    // A started task keeps its agent; a new one goes to a ready agent if its own is absent.
-    const started = this.ctx.active.has(key(projectId, task.id));
-    const agent =
-      saved?.agent || started ? configured : this.ctx.deps.agents.readyAgent(configured);
-    const { model, effort } = preferences;
-    return {
-      agent: requireAgentId(agent),
-      ...(model ? { model } : {}),
-      ...(effort ? { effort } : {}),
-      permissionMode: saved?.permissionMode ?? artifacts.config.permissionMode,
-      planFirst: saved?.planFirst ?? false,
-      isolation: saved?.isolation ?? artifacts.config.isolation,
-    };
+    return taskViewSettings(this.ctx, projectId, task, artifacts);
   }
 
   async assign(projectId: string, taskId: string, assignment: TaskAssignment): Promise<void> {
@@ -225,6 +197,7 @@ export class TaskRunViews {
   }
 
   async setSettings(projectId: string, taskId: string, next: AgentSettings): Promise<void> {
+    await validateBuiltinTaskSettings(this.ctx, next);
     if (integrationWorking(this.ctx.integrations.store.all(projectId), taskId))
       throw new Error('Stop the integration turn before changing its agent settings.');
     const active =
@@ -232,6 +205,11 @@ export class TaskRunViews {
       (await this.ctx.history.restore(projectId, taskId));
     const artifacts = await this.ctx.project(projectId).load();
     const task = findTask(artifacts, taskId);
+    if (active?.run.agent === 'skaro') {
+      // The managed target is explicit; never cast builtin settings to a managed AgentId.
+      await this.ctx.handoff.change(active, next);
+      return;
+    }
     const before = this.settings(projectId, task, artifacts);
     if (active && next.isolation !== before.isolation)
       throw new Error('Keep the existing isolation of a started task.');

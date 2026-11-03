@@ -5,12 +5,13 @@ export function saved(settings: Omit<ChatSettings, 'agent'>): Omit<ChatSettings,
   return {
     ...(settings.model ? { model: settings.model } : {}),
     ...(settings.effort ? { effort: settings.effort } : {}),
+    ...(settings.budgetUsd !== undefined ? { budgetUsd: settings.budgetUsd } : {}),
     ...(settings.permissionMode === 'full' ? { permissionMode: 'full' as const } : {}),
   };
 }
 
 export function lastOf(settings: ChatSettings): ChatSettings {
-  const { permissionMode: _mode, ...rest } = settings;
+  const { permissionMode: _mode, budgetUsd: _budget, ...rest } = settings;
   return rest;
 }
 

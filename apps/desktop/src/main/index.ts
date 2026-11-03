@@ -26,6 +26,8 @@ import { trace } from './trace';
 import { HistoryReads, setHistoryReads } from './history-read-service';
 import { registerProjectLogos } from './app-logo';
 import { graphHandlers } from './graph/handlers';
+import { modelSettingsHandlers } from './model-settings-handlers';
+import { modelCatalogHandlers } from './model-catalog-handlers';
 import { keepLoopbackDirect } from './loopback-proxy';
 trace(`main loaded, pid ${process.pid}`);
 keepLoopbackDirect();
@@ -82,7 +84,10 @@ if (!locked) {
     trace('app ready');
     const dataDir = app.getPath('userData');
     trace('opening app state');
-    const appState = new AppState(join(dataDir, 'skaro.db'));
+    const appState = new AppState(
+      join(dataDir, 'skaro.db'),
+      process.env.SKARO_VERIFICATION_PROJECT,
+    );
     trace('app state ready');
     state = appState;
     registerProjectLogos(appState);
@@ -162,6 +167,10 @@ if (!locked) {
       ...sessionHandlers(services),
       ...fileHandlers(services, mainWindow, picked),
       ...graphHandlers(services.graph),
+      ...modelSettingsHandlers(services.modelSettings, () => {
+        void services.agents.refreshOne('skaro');
+      }),
+      ...modelCatalogHandlers(services.modelCatalog),
     };
     commands.start(handlers);
     const acceptedHandlers = {

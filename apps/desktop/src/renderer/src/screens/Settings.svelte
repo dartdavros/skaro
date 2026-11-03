@@ -12,6 +12,7 @@
   import SettingsNav from '../settings/SettingsNav.svelte';
   import { updates } from '../settings/updates.svelte';
   import AgentsSettings from './AgentsSettings.svelte';
+  import ModelSettings from '../settings/models/ModelSettings.svelte';
 
   /**
    * "Настройки" (Settings mockup): categories on the left, only the chosen one on the right.
@@ -66,6 +67,7 @@
       {/if}
       {#if current === 'agents'}
         <AgentsSettings agents={agents.list} />
+        <ModelSettings disabled />
       {:else if current === 'work'}
         <RunsCard />
         <ProjectDefaultsBlocks part="work" />

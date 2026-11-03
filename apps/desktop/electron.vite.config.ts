@@ -25,6 +25,11 @@ export default defineConfig({
           index: resolve('src/main/index.ts'),
           'background-worker': resolve('src/main/background/worker.ts'),
           'native-worker': resolve('src/main/native/worker.ts'),
+          'agent-runtime-worker': resolve('../../packages/agent-runtime/src/worker.ts'),
+          'agent-credential-worker': resolve('src/main/credentials/worker.ts'),
+          'agent-command-worker': resolve(
+            '../../packages/agent-runtime/src/tools/command-worker.ts',
+          ),
           'graph-worker': resolve('src/main/graph/worker.ts'),
         },
       },

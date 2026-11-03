@@ -30,8 +30,9 @@ export function isRunLogMeta(line: unknown): line is RunLogMeta {
 
 /**
  * Every segment of a run log is a new agent process whose projector numbers turns from the start
- * again ("turn-1" after a restart). Turns of later segments get the segment in their id, so a new
+ * again ("turn-1" after a restart). Managed turns of later segments get the segment in their id, so a new
  * turn never lands in an old, finished one. Live sessions and replays number segments alike.
+ * A builtin primary journal instead keeps its globally stable turn IDs across process generations.
  */
 export function segmentTurns(segment: number, event: TimelineEvent): TimelineEvent {
   if (segment <= 0) return event;
@@ -58,7 +59,8 @@ export function countSegments(lines: Iterable<RawLine>): number {
 
 /**
  * Rebuilds the events of an app run log: `ts` is milliseconds since `startedAt`, every segment
- * gets a new projector, Skaro events go in where they were written.
+ * gets a new managed projector. A builtin primary stream keeps its projector and sequence;
+ * Skaro events go in where they were written.
  */
 export function replayRunLog(
   lines: Iterable<RawLine>,
@@ -71,14 +73,24 @@ export function replayRunLog(
   let now = startedAt;
   const ctx: ProjectionContext = { now: () => now, attachImage };
   let segment = -1;
-  const emit: Emit = (event) => events.push(scopeEvent(segmentTurns(segment, event)));
+  let segmentAgent: string | undefined;
+  let adapterVersion: string | undefined;
+  const emit: Emit = (event) =>
+    events.push(scopeEvent(segmentTurns(segmentAgent === 'skaro' ? 0 : segment, event)));
   let projector: Projector | undefined;
   for (const raw of lines) {
     now = startedAt + raw.ts;
     if (raw.dir === 'meta' && isRunLogMeta(raw.line)) {
       if (raw.line.skaro === 'segment') {
         segment++;
-        projector = createProjector(ctx, emit);
+        const continuous =
+          projector &&
+          segmentAgent === 'skaro' &&
+          raw.line.agent === 'skaro' &&
+          adapterVersion === raw.line.adapterVersion;
+        segmentAgent = raw.line.agent;
+        adapterVersion = raw.line.adapterVersion;
+        if (!continuous) projector = createProjector(ctx, emit);
       } else if (raw.line.skaro === 'event') events.push(raw.line.event);
       continue;
     }

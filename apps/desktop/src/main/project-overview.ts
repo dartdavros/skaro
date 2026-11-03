@@ -28,7 +28,7 @@ export class ProjectOverview {
     await this.ready;
     const result = await background(dirname(this.db.filePath), 'registry.query', query);
     this.refreshCards(result.cards);
-    if (query.remember)
+    if (query.remember && !this.db.shell.projectScope)
       this.db.setSetting(
         'ui.projects.initial',
         result.cards.slice(0, 32).map((card) => card.id),

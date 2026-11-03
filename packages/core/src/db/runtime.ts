@@ -1,6 +1,7 @@
 import { DbTable } from './table.ts';
 import type { TaskRuntime } from '../status.ts';
 import { type Row, opt } from './rows.ts';
+export type StaleTaskRuntime = { projectId: string; taskId: string; state: TaskRuntime };
 
 export class DbRuntime extends DbTable {
   counts(): Record<TaskRuntime, number> {
@@ -45,11 +46,13 @@ export class DbRuntime extends DbTable {
    * After a restart no agent process is alive: running and queued tasks become idle.
    * Waiting tasks keep their state — their open interactions are shown again (agent-output.md, 6).
    */
-  resetStaleRuntime(): { projectId: string; taskId: string; state: TaskRuntime }[] {
+  resetStaleRuntime(projectId?: string): StaleTaskRuntime[] {
+    const condition = `state IN ('running', 'queued')${projectId ? ' AND project_id=?' : ''}`;
+    const args = projectId ? [projectId] : [];
     const rows = this.db
-      .prepare("SELECT * FROM task_runtime WHERE state IN ('running', 'queued')")
-      .all() as Row[];
-    this.db.exec("DELETE FROM task_runtime WHERE state IN ('running', 'queued')");
+      .prepare(`SELECT * FROM task_runtime WHERE ${condition}`)
+      .all(...args) as Row[];
+    this.db.prepare(`DELETE FROM task_runtime WHERE ${condition}`).run(...args);
     return rows.map((r) => ({
       projectId: String(r['project_id']),
       taskId: String(r['task_id']),

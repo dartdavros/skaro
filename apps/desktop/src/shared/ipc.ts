@@ -1,4 +1,7 @@
 import type { AgentMethods } from './agent-methods';
+import type { ModelSettingsMethods } from './model-settings';
+import type { ModelCatalogMethods } from './model-catalog';
+import type { ModelUsageMethods } from './model-usage';
 // Typed IPC between the renderer and the main process (architecture.md 10): the renderer has no
 // Node access and can call only the methods listed here.
 
@@ -52,6 +55,9 @@ export type { UpdateState } from './updates';
 export interface Methods
   extends
     AgentMethods,
+    ModelSettingsMethods,
+    ModelCatalogMethods,
+    ModelUsageMethods,
     HistoryMethods,
     DocumentCatalogMethods,
     ProjectCatalogMethods,

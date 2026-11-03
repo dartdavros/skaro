@@ -13,15 +13,19 @@ export class GraphJobs {
   private cancellation?: Int32Array;
   private readonly worker = new GraphWorkerClient();
   private readonly directory: string;
+  private readonly queueFile: string;
   private readonly changed: (status: GraphStatus) => void;
   private closing = false;
   private readonly recovered = new Map<string, { generation: number; force: boolean }>();
-  constructor(directory: string, changed: (status: GraphStatus) => void) {
+  constructor(directory: string, changed: (status: GraphStatus) => void, projectScope?: string) {
     this.directory = directory;
+    if (projectScope && !/^[a-zA-Z0-9_-]{1,160}$/.test(projectScope))
+      throw new Error('Invalid graph project scope');
+    this.queueFile = projectScope ? `jobs-${projectScope}.json` : 'jobs.json';
     this.changed = changed;
     mkdirSync(directory, { recursive: true });
     try {
-      const saved = JSON.parse(readFileSync(join(directory, 'jobs.json'), 'utf8')) as {
+      const saved = JSON.parse(readFileSync(join(directory, this.queueFile), 'utf8')) as {
         version: number;
         jobs: IndexJob[];
       };
@@ -138,7 +142,7 @@ export class GraphJobs {
     }
   }
   private persist(): void {
-    const destination = join(this.directory, 'jobs.json'),
+    const destination = join(this.directory, this.queueFile),
       temporary = destination + '.tmp';
     writeFileSync(
       temporary,

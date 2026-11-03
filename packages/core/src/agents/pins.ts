@@ -44,6 +44,6 @@ export function agentPackage(
   pin?: AgentPin,
 ): AgentPackage {
   const definition = agentDefinition(agent);
-  const pkg = definition.distribution(platform, pin ?? definition.pin);
+  const pkg = definition.delivery.distribution(platform, pin ?? definition.delivery.pin);
   return { ...pkg, agent: requireAgentId(pkg.agent) };
 }

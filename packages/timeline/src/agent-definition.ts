@@ -1,12 +1,15 @@
 import type { AgentAdapter } from './agent.ts';
 import type { Emit, ProjectionContext } from './projection.ts';
 import type { Projector } from './replay.ts';
+import type { BundledAgentRegistration, ManagedNpmDelivery } from './agent-delivery.ts';
 
 /** Serializable presentation only: no SDKs, Node modules or executable markup in renderer. */
 export interface AgentPresentation {
   id: string;
   name: string;
   logo: {
+    /** Trusted main-supplied existing application asset, never model markup. */
+    image?: string;
     viewBox: string;
     fill?: string;
     color?: string;
@@ -54,8 +57,7 @@ export interface AgentDefinition {
   presentation: AgentPresentation;
   adapterVersion: string;
   package: { name: string; version: string; dependencies: Record<string, string> };
-  pin: AgentPin;
-  downloadSize: number;
+  delivery: ManagedNpmDelivery;
   /** Required Skaro operations must be implemented, never silently emulated by no-ops. */
   capabilities: {
     resume: boolean;
@@ -74,9 +76,10 @@ export interface AgentDefinition {
   /** Preserves public manifest v1 aliases without special cases in the updater. */
   legacyBundlePin?: string;
   sdkDependency?: string;
-  distribution(platform: AgentPlatform, pin: AgentPin): AgentDistribution;
   loadProjector(): Promise<
     (context: ProjectionContext, emit: Emit, adapterVersion?: string) => Projector
   >;
   loadRuntime(): Promise<AgentRuntime>;
 }
+
+export type AgentRegistration = AgentDefinition | BundledAgentRegistration;

@@ -8,6 +8,8 @@ import type { AgentManager } from './agents';
 import type { Projects } from './projects';
 import type { NotifyKind } from './notifier';
 import type { EnvironmentDocker } from './task-environment-docker';
+import type { NativeAdmissions } from './native/admissions';
+import type { BuiltinTaskModels } from './builtin-task-models';
 
 export interface TaskRunDeps {
   db: AppDb;
@@ -23,6 +25,10 @@ export interface TaskRunDeps {
   notify?: (kind: NotifyKind, text: string, title?: string) => void;
   /** Docker operations of task environments; the system Docker unless a test replaces them. */
   docker?: EnvironmentDocker;
+  /** Explicit main-only task model/payload/budget composition; absent means unavailable. */
+  builtinSessions?: BuiltinTaskModels;
+  /** Main-only compiled worker directory; default remains the packaged application. */
+  builtinEntries?: string;
 }
 
 /** A task's latest run, with or without an agent process attached. */
@@ -36,6 +42,16 @@ export class ActiveRun {
   run: RunRecord;
   readonly timeline: Timeline;
   session: AgentSession | undefined;
+  /** Present only for the builtin runtime; managed agents keep their existing lifecycle. */
+  builtinAdmission?: NativeAdmissions;
+  /** Closes configured credential/route leases with the task's process admission. */
+  builtinClose?: () => void | Promise<void>;
+  /** Cancels a prepared host before detach/shutdown waits for attachment. */
+  builtinStartup?: AbortController;
+  /** Invalidates a delivery/attachment already awaiting I/O when the owner stops the task. */
+  deliveryEpoch = 0;
+  stopping?: Promise<void>;
+  stopError?: string;
   grant: Grant | undefined;
   log: WriteStream | undefined;
   /** Events not yet sent to the renderer. */

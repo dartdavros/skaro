@@ -13,6 +13,7 @@ import { importKey, prepFiles } from './chat-import-helpers';
 import { saved, settingsKey, currentTurn } from './chat-settings-helpers';
 
 import type { ChatEngine } from './chat-engine';
+import { parseBuiltinChatSettings, saveBuiltinChatSettings } from './builtin-chat-settings';
 
 export class ChatImportStart {
   private readonly ctx: ChatEngine;
@@ -33,6 +34,18 @@ export class ChatImportStart {
     settings: ChatSettings,
   ): Promise<ChatSummary> {
     this.ctx.project(projectId);
+    if (settings.agent === 'skaro') {
+      const models = this.ctx.deps.builtinChatSessions;
+      if (!models) throw new Error('Builtin chat authorization is unavailable');
+      settings = parseBuiltinChatSettings({
+        ...settings,
+        permissionMode: settings.permissionMode ?? 'ask',
+      });
+      await models.resolveStart(
+        settings as ReturnType<typeof parseBuiltinChatSettings>,
+        new AbortController().signal,
+      );
+    }
     await this.ctx.settings.ensureAgent(settings.agent);
     const sources = await this.scanImport(paths);
     const missing = sources.find((s) => s.missing);
@@ -47,6 +60,8 @@ export class ChatImportStart {
       logPath: join('chats', projectId, `${Date.now()}-${randomUUID().slice(0, 8)}.jsonl`),
     });
     this.ctx.deps.db.setSetting(settingsKey(chat.id), saved(settings));
+    if (settings.agent === 'skaro')
+      saveBuiltinChatSettings(this.ctx.deps.db, chat.id, parseBuiltinChatSettings(settings));
     this.ctx.deps.db.setSetting(importKey(chat.id), { id, dir });
     const state: ImportState = { id, dir, sources, staged: [] };
     await saveState(state);

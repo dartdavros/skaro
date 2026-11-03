@@ -7,6 +7,9 @@ export type { AgentId } from '@skaro/agents';
 
 export interface AgentInfo {
   id: AgentId;
+  delivery?: 'bundled';
+  inDevelopment?: boolean;
+  configurationRevision?: number;
   installed: boolean;
   /** Pinned version (set when installed). */
   version?: string;
@@ -24,7 +27,7 @@ export interface AgentInfo {
 
 /** Downloaded and not signed out: the agent can take work. Without one Skaro does nothing. */
 export function agentReady(agent: AgentInfo): boolean {
-  return agent.installed && agent.authenticated !== false;
+  return !agent.inDevelopment && agent.installed && agent.authenticated !== false;
 }
 
 /** Default model and effort of an agent ("Настройки" → "Агенты"), app setting key. */
@@ -40,6 +43,8 @@ export interface AgentSettings {
   agent: AgentId;
   model?: string;
   effort?: string;
+  /** Optional BYOK cap for this builtin session; omitted means no spending limit. */
+  budgetUsd?: number;
   permissionMode: PermissionMode;
   planFirst: boolean;
   isolation: 'worktree' | 'in-place';

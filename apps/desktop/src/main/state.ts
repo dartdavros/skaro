@@ -12,13 +12,33 @@ import type { BootstrapState, Locale, ProjectInfo, TabsState } from '../shared/i
 
 export class AppState {
   readonly db: AppDb;
+  private readonly sessionSettings = new Map<string, unknown>();
   /** Main services supply current liveness on renderer reload without restoring any history. */
   chatCatalogOverlay?: (page: ChatCatalog) => ChatCatalog;
 
-  constructor(dbPath: string) {
+  constructor(dbPath: string, projectScope?: string) {
     this.db = AppDb.open(dbPath);
+    try {
+      if (projectScope) {
+        this.db.shell.scopeTo(projectScope);
+        if (this.db.shell.get(projectScope)?.name.toLowerCase() !== 'cat-pilot')
+          throw new Error('Live verification is restricted to the registered Cat-pilot');
+      }
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
     // No agent process survives a restart (agent-output.md 6).
-    this.db.resetStaleRuntime();
+    this.db.resetStaleRuntime(projectScope);
+    if (projectScope) {
+      this.sessionSettings.set('ui.workspace', {
+        view: 'settings',
+        sections: {},
+        openTasks: {},
+        openChats: {},
+      });
+      this.sessionSettings.set('settings.section', 'agents');
+    }
   }
 
   listProjects(): ProjectInfo[] {
@@ -33,9 +53,8 @@ export class AppState {
       missing: false,
       ...(logoReference(p) ? { logo: logoReference(p) } : {}),
     }));
-    const workspace = this.db.getSetting<
-      import('../shared/ipc-sessions').WorkspaceState | undefined
-    >('ui.workspace', undefined);
+    const workspace = this.getSetting('ui.workspace') as
+      import('../shared/ipc-sessions').WorkspaceState | undefined;
     const tabs = this.getTabs();
     const catalog = startupChatCatalog(this.db.filePath, workspace, tabs);
     return {
@@ -57,6 +76,7 @@ export class AppState {
 
   /** Registers a folder as a project; returns the existing one if already added. */
   addProject(path: string): ProjectInfo {
+    if (this.db.shell.projectScope) throw new Error('Verification cannot register another project');
     const existing =
       this.db.findProjectByPath(path) ?? this.db.addProject({ name: basename(path) || path, path });
     this.db.touchProject(existing.id);
@@ -65,6 +85,7 @@ export class AppState {
 
   /** "Найти заново": the same project, now in `path`. */
   relocateProject(id: string, path: string): ProjectInfo {
+    this.project(id);
     const project = this.db.getProject(id);
     if (!project) throw new Error('unknown project');
     this.db.moveProject(id, path);
@@ -73,12 +94,14 @@ export class AppState {
 
   /** The name shown in Skaro; an empty one keeps the old name. */
   renameProject(id: string, name: string): ProjectInfo {
+    this.project(id);
     const trimmed = name.trim();
     if (trimmed) this.db.renameProject(id, trimmed);
     return this.project(id);
   }
 
   setProjectLogo(id: string, logo: string | undefined): ProjectInfo {
+    this.project(id);
     this.db.setProjectLogo(id, logo);
     return this.project(id);
   }
@@ -90,6 +113,7 @@ export class AppState {
   }
 
   removeProject(id: string): void {
+    this.project(id);
     this.db.removeProject(id);
   }
 
@@ -100,6 +124,11 @@ export class AppState {
   }
 
   setTabs(state: TabsState): void {
+    if (this.db.shell.projectScope) {
+      if (state.projects.some((id) => id !== this.db.shell.projectScope))
+        throw new Error('Project is outside verification scope');
+      return;
+    }
     this.db.setOpenTabs(state.projects, state.active);
     if (state.active) this.db.touchProject(state.active);
   }
@@ -115,10 +144,20 @@ export class AppState {
   }
 
   getSetting(key: string): unknown {
+    if (this.sessionSettings.has(key)) return this.sessionSettings.get(key);
     return this.db.getSetting<unknown>(key, null);
   }
 
   setSetting(key: string, value: unknown): void {
+    if (key.startsWith('builtin.'))
+      throw new Error('Builtin configuration requires its validated host API');
+    if (
+      this.db.shell.projectScope &&
+      (key.startsWith('ui.') || key.startsWith('settings.') || key.startsWith('window.'))
+    ) {
+      this.sessionSettings.set(key, value);
+      return;
+    }
     this.db.setSetting(key, value);
   }
 

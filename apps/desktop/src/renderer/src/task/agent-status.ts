@@ -1,6 +1,8 @@
 import { t } from '@skaro/ui';
+import '../settings/models/i18n';
 import type { AgentInfo } from '../../../shared/ipc';
 export function agentState(a: AgentInfo): { text: string; color: string; link?: 'login' } {
+  if (a.inDevelopment) return { text: t('models.inDevelopment'), color: 'var(--sk-text-22)' };
   if (a.download) {
     const mb = (n: number) => Math.round(n / 1e6);
     return {
@@ -12,6 +14,8 @@ export function agentState(a: AgentInfo): { text: string; color: string; link?: 
     };
   }
   if (a.checking) return { text: t('agent.state.checking'), color: 'var(--sk-text-22)' };
+  if (a.delivery === 'bundled' && a.authenticated === false)
+    return { text: t('models.keyMissing'), color: 'var(--sk-warn)' };
   if (!a.installed)
     return {
       text: t('agent.state.download', { mb: Math.round(a.sizeBytes / 1e6) }),

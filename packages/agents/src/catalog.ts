@@ -24,7 +24,7 @@ export function agentName(id: string): string {
 }
 
 export function defaultAgent(): AgentId {
-  const first = catalog[0];
+  const first = catalog.find((entry) => entry.newSettingsDefault) ?? catalog[0];
   if (!first) throw new Error('Agent catalog has not been loaded');
   return first.id;
 }

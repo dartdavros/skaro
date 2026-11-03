@@ -19,6 +19,7 @@ import { milestoneWork } from './milestone-work';
 import { saveSessionCache } from './session-cache';
 import { taskCatalogWork } from './task-catalog-work';
 import { ChatCatalogReader } from './chat-catalog';
+import { aggregateModelUsage } from './model-usage-work';
 
 let c4: ReturnType<typeof c4Work> | undefined;
 let store: PayloadStore | undefined;
@@ -28,6 +29,9 @@ let chatCatalog: ChatCatalogReader | undefined;
 let registry: ProjectIndex | undefined;
 let documents: ReturnType<typeof documentCatalog> | undefined;
 let taskCatalog: ReturnType<typeof taskCatalogWork> | undefined;
+const projectScope = (workerData as { projectScope?: string }).projectScope;
+if (projectScope && !/^[a-zA-Z0-9_-]{1,160}$/.test(projectScope))
+  throw new Error('Invalid worker project scope');
 configureC4Locks((workerData as { locks: SharedArrayBuffer }).locks, threadId + 1);
 parentPort!.on(
   'message',
@@ -39,6 +43,12 @@ parentPort!.on(
       return;
     }
     void (async () => {
+      if (request.method === 'models.usage') {
+        const projectId = request.args[0];
+        if (typeof projectId !== 'string' || (projectScope && projectScope !== projectId))
+          throw new Error('Model usage is outside the worker project scope');
+        return aggregateModelUsage((workerData as { dataDir: string }).dataDir, request.args[1]);
+      }
       if (request.method.startsWith('chats.')) {
         chatCatalog ??= new ChatCatalogReader((workerData as { dataDir: string }).dataDir);
         const args = request.args;
@@ -57,7 +67,9 @@ parentPort!.on(
       store ??= new PayloadStore(
         (workerData as { dataDir: string }).dataDir,
         request.method.startsWith('registry.')
-          ? 'registry.db'
+          ? projectScope
+            ? `registry-${projectScope}.db`
+            : 'registry.db'
           : request.method.startsWith('tasks.')
             ? 'tasks.db'
             : 'workspace.db',
@@ -82,11 +94,11 @@ parentPort!.on(
           ...(request.args as Parameters<BackgroundMethods['registry.session']>),
         );
       if (request.method === 'registry.migrate') {
-        registry ??= new ProjectIndex(store);
+        registry ??= new ProjectIndex(store, projectScope);
         return;
       }
       if (request.method.startsWith('registry.')) {
-        registry ??= new ProjectIndex(store);
+        registry ??= new ProjectIndex(store, projectScope);
         const args = request.args;
         if (request.method === 'registry.query')
           return registry.query(args[0] as import('../../shared/project-catalog').ProjectQuery);

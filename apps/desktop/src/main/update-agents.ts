@@ -1,4 +1,5 @@
-import type { AgentId, AgentInstaller, Platform } from '@skaro/core';
+import type { AgentInstaller, Platform } from '@skaro/core';
+import type { ManagedAgentId as AgentId } from '@skaro/agents';
 import { releasePlatform, type ReleaseManifest } from './update-release';
 import type { PendingUpdate } from './update-journal';
 

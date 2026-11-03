@@ -1,0 +1,44 @@
+.model-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+.model-progress {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  min-height: 28px;
+}
+.model-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 240px;
+}
+.model-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.model-note {
+  color: var(--sk-text-21);
+  font-size: var(--sk-fs-4);
+  line-height: 1.45;
+}
+.model-error {
+  min-height: 36px;
+  color: var(--sk-red-2);
+  font-size: var(--sk-fs-4);
+  line-height: 1.45;
+}
+.model-catalog-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+}
+.model-catalog-status .model-note {
+  flex: 1;
+}

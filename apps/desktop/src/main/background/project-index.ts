@@ -8,9 +8,11 @@ import type { ProjectQuery, ProjectRange } from '../../shared/project-catalog';
 
 /** Query results are addressed by indexed positions; UI pages never sort or clone the registry. */
 export class ProjectIndex {
+  private readonly projectScope?: string;
   private readonly store: PayloadStore;
   private initialized = false;
-  constructor(store: PayloadStore) {
+  constructor(store: PayloadStore, projectScope?: string) {
+    this.projectScope = projectScope;
     this.store = store;
     store.db.exec(`CREATE TABLE IF NOT EXISTS project_cards (
       id TEXT PRIMARY KEY,search TEXT NOT NULL,score INTEGER NOT NULL,active REAL NOT NULL,
@@ -29,6 +31,7 @@ export class ProjectIndex {
     if (this.initialized) return;
     const db = AppDb.readOnly(join(this.store.dataDir, 'skaro.db'));
     try {
+      if (this.projectScope) db.shell.scopeTo(this.projectScope);
       const version = db.shell.version();
       const previous = this.store.db
         .prepare('SELECT source_revision FROM project_index_meta WHERE id=1')
@@ -95,6 +98,8 @@ export class ProjectIndex {
       );
   }
   update(card: ProjectCard): void {
+    if (this.projectScope && card.id !== this.projectScope)
+      throw new Error('Project card is outside verification scope');
     this.initialize();
     const old = this.store.db
       .prepare('SELECT name_rank,value FROM project_cards WHERE id=?')

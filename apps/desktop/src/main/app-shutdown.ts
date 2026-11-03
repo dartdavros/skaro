@@ -21,6 +21,8 @@ export async function shutdownApp(
   trace('before quit');
   updates.stop();
   await settle([closeNativeSessions]);
+  await settle([() => services.modelCatalog.close()]);
+  await settle([() => services.modelSettings.close()]);
   await settle([() => commands.close()]);
   await settle([() => services.ci.close()]);
   await settle([

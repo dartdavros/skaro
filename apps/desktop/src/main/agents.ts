@@ -38,7 +38,9 @@ export class AgentManager {
   private readonly store: Store;
   private readonly onChange: (agents: AgentInfo[]) => void;
   private readonly attachmentsDir?: string;
-  private readonly authRevisions = new Map(AGENT_IDS.map((id) => [id, new SharedArrayBuffer(4)]));
+  private readonly authRevisions = new Map<AgentId, SharedArrayBuffer>(
+    AGENT_IDS.map((id) => [id, new SharedArrayBuffer(4)]),
+  );
 
   constructor(options: {
     agentsDir: string;
@@ -70,7 +72,7 @@ export class AgentManager {
       this.info.set(id, {
         id,
         installed: false,
-        sizeBytes: agentDefinition(id).downloadSize,
+        sizeBytes: agentDefinition(id).delivery.downloadSize,
         checking: true,
       });
     }
@@ -168,14 +170,14 @@ export class AgentManager {
         version: status.installed ? agentPackage(id).shownVersion : undefined,
         authenticated: status.authenticated,
         account: status.account,
-        sizeBytes: agentDefinition(id).downloadSize,
+        sizeBytes: agentDefinition(id).delivery.downloadSize,
         ...(previous.download ? { download: previous.download } : {}),
       };
     } catch (error) {
       next = {
         id,
         installed: (await this.installer.installed(id)) !== undefined,
-        sizeBytes: agentDefinition(id).downloadSize,
+        sizeBytes: agentDefinition(id).delivery.downloadSize,
         error: error instanceof Error ? error.message : String(error),
       };
     }

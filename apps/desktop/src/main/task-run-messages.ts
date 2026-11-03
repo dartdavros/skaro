@@ -1,6 +1,6 @@
 import { QuestionAnswers } from './question-answers';
 import { cancelOwnerMessages, CommandCancelled } from './owner-commands';
-import { withSkaroNote, assertQuestionsAnswered, validateQuestionAnswer } from '@skaro/timeline';
+import { assertQuestionsAnswered, validateQuestionAnswer } from '@skaro/timeline';
 import { isAsyncQuestion, type Interaction, type InteractionAnswer } from '@skaro/timeline';
 import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
 import { readSubject, updateSubject } from './task-subject';
@@ -10,6 +10,8 @@ import { key } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import { trackRun } from './task-run-access';
 import type { TaskRunEngine } from './task-run-engine';
+import { stopBuiltinTask, requireTaskNotStopping } from './builtin-task-stop';
+import { taskAgentInput } from './task-agent-input';
 
 /** messages: a focused part of the task-run controller. */
 export class TaskRunMessages {
@@ -19,12 +21,23 @@ export class TaskRunMessages {
   }
 
   async send(projectId: string, taskId: string, input: MessageInput): Promise<void> {
+    const epoch = this.ctx.startup.cancellationEpoch(projectId, taskId);
+    const requireCurrent = () => {
+      if (this.ctx.closing || epoch !== this.ctx.startup.cancellationEpoch(projectId, taskId))
+        throw new CommandCancelled();
+    };
     if (await this.ctx.integrations.controls.send(projectId, taskId, input)) return;
+    requireCurrent();
     let active = await this.ctx.history.restore(projectId, taskId);
-    if (!active) return this.ctx.scheduling.start(projectId, taskId, input);
+    requireCurrent();
+    if (!active) return this.ctx.scheduling.start(projectId, taskId, input, requireCurrent);
     active = await this.ctx.handoff.recover(active);
+    requireCurrent();
+    requireTaskNotStopping(active);
     if (!input.internal) {
       const task = await readSubject(this.ctx.project(projectId), taskId);
+      requireCurrent();
+      requireTaskNotStopping(active);
       if (task.status === 'in_progress') this.ctx.continuation.execution(active).start();
     }
     await this.turn(active, input);
@@ -32,13 +45,19 @@ export class TaskRunMessages {
 
   /** Joins the running turn, or starts a new one when a slot is free (it waits in the queue). */
   async turn(active: ActiveRun, input: MessageInput): Promise<void> {
+    const epoch = active.deliveryEpoch;
+    const requireCurrent = () => {
+      requireTaskNotStopping(active);
+      if (this.ctx.closing || epoch !== active.deliveryEpoch) throw new CommandCancelled();
+    };
+    requireCurrent();
     if (active.switching) throw new Error('The agent is being changed. Retry after the handoff.');
     const { projectId, taskId } = active;
     const working = active.timeline.state.status !== 'idle';
     if (working || this.ctx.scheduling.holdsSlot(projectId, taskId)) {
       await this.deliver(active, input);
     } else {
-      await this.ctx.scheduling.enqueue(projectId, taskId, input);
+      await this.ctx.scheduling.enqueue(projectId, taskId, input, requireCurrent);
     }
   }
 
@@ -59,23 +78,21 @@ export class TaskRunMessages {
 
   /** Straight to the agent: only for a turn that holds its slot. */
   async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
+    requireTaskNotStopping(active);
+    const epoch = active.deliveryEpoch;
     if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
     input = active.secrets.input(input);
     assertQuestionsAnswered(active.timeline.state);
     const session = await this.ctx.sessions.attach(active);
+    requireTaskNotStopping(active);
+    if (active.deliveryEpoch !== epoch) throw new CommandCancelled();
     if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
     assertQuestionsAnswered(active.timeline.state);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
       throw new CommandCancelled();
-    const note = [
-      input.commandId && `command_id: ${input.commandId}`,
-      input.internal && 'orchestration: task',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    const message = { ...input, text: withSkaroNote(note, input.text) };
-    if (active.timeline.state.status === 'idle') await session.send(message);
-    else await session.steer(message);
+    const message = taskAgentInput(input);
+    if (active.timeline.state.status === 'idle') await session.send(message, input.commandId);
+    else await session.steer(message, input.commandId);
   }
 
   async respond(
@@ -167,13 +184,20 @@ export class TaskRunMessages {
   }
 
   async interrupt(projectId: string, taskId: string): Promise<void> {
+    if (this.ctx.handoff.changing(this.ctx.active.get(key(projectId, taskId))))
+      throw new Error('Wait for the agent handoff to finish before stopping the task.');
     this.ctx.continuation.stop(projectId, taskId);
     cancelOwnerMessages(projectId, taskId);
-    this.ctx.startup.delivered(projectId, taskId);
-    await this.ctx.integrations.controls.interrupt(projectId, taskId);
+    this.ctx.startup.cancel(projectId, taskId);
     const k = key(projectId, taskId);
-    if (this.ctx.handoff.changing(this.ctx.active.get(k)))
-      throw new Error('Wait for the agent handoff to finish before stopping the task.');
+    this.ctx.queuedInputs.delete(k);
+    const current = this.ctx.active.get(k);
+    if (current) {
+      current.deliveryEpoch++;
+      current.builtinStartup?.abort(new CommandCancelled());
+    }
+    if (current?.run.agent === 'skaro') return stopBuiltinTask(this.ctx, current);
+    await this.ctx.integrations.controls.interrupt(projectId, taskId);
     if (this.ctx.queue.cancel(k)) {
       this.ctx.queuedInputs.delete(k);
       // A started task goes back to what its feed says; a new one was never running.

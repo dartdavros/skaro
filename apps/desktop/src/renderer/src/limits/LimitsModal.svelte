@@ -6,6 +6,8 @@
   import '../task/agent-modal.css';
   import './i18n';
   import LimitRow from './LimitRow.svelte';
+  import BuiltinUsage from './BuiltinUsage.svelte';
+  import '../settings/models/i18n';
   import { LimitsController } from './controller.svelte';
   let {
     projectId,
@@ -34,20 +36,32 @@
     };
   });
   const checked = $derived(
-    controller.snapshot
+    (controller.snapshot ?? controller.usage)
       ? new Intl.DateTimeFormat(i18n.locale, { hour: '2-digit', minute: '2-digit' }).format(
-          new Date(controller.snapshot.checkedAt),
+          new Date((controller.snapshot ?? controller.usage)!.checkedAt),
         )
       : undefined,
   );
 </script>
 
-<Modal bind:open title={t('limits.title')} subtitle={t('limits.account')} width={440} flush>
+<Modal
+  bind:open
+  title={t(controller.draft.agent === 'skaro' ? 'models.usage' : 'limits.title')}
+  subtitle={t(controller.draft.agent === 'skaro' ? 'models.projectUsage' : 'limits.account')}
+  width={440}
+  flush
+>
   <div class="agent-settings limits-body" aria-busy={controller.loading}>
     {#if controller.initialized}
       <AgentPicker {agents} draft={controller.draft} locked={false} />
     {/if}
-    {#if controller.loading}
+    {#if controller.draft.agent === 'skaro'}
+      <BuiltinUsage
+        usage={controller.usage}
+        loading={controller.loading}
+        failed={controller.failed}
+      />
+    {:else if controller.loading}
       <div class="models-loading" aria-label={t('limits.refresh')}>
         {#each [1, 2] as row (row)}
           <div class="skeleton"><span class="bar"></span><span class="bar thin"></span></div>

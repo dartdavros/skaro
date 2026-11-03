@@ -15,7 +15,11 @@ export function taskAgentPreferences(
     return {
       agent: requireAgentId(started.agent),
       ...(model ? { model } : {}),
-      effort: saved?.effort ?? 'high',
+      ...(started.agent === 'skaro'
+        ? saved?.effort
+          ? { effort: saved.effort }
+          : {}
+        : { effort: saved?.effort ?? 'high' }),
     };
   }
   const own = saved?.followProject ? undefined : saved;
@@ -32,7 +36,7 @@ export function taskAgentPreferences(
   return {
     agent: requireAgentId(configured),
     ...(model ? { model } : {}),
-    effort,
+    ...(configured === 'skaro' ? (own?.effort ? { effort: own.effort } : {}) : { effort }),
   };
 }
 

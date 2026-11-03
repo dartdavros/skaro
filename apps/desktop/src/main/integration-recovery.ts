@@ -1,6 +1,7 @@
 import { projectRecords } from './project-records';
 import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
+import { settingsKey } from './task-run-helpers';
 
 /** Resume preserved startup requests, including the known pre-session dependency failure. */
 export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void> {
@@ -19,6 +20,10 @@ export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void
             .some((op) => op.taskId === task.id && op.state !== 'stale')
         )
           continue;
+        if (ctx.deps.db.getSetting(`${settingsKey(project.id, task.id)}.handoff`, null)) {
+          const active = await ctx.history.restore(project.id, task.id);
+          if (active) await ctx.handoff.recover(active);
+        }
         const startup = ctx.startup.read(project.id, task.id);
         if (startup?.inputs.length && !startup.error) {
           ctx.queue.enqueue([`${project.id}\n${task.id}`]);

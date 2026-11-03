@@ -35,7 +35,7 @@ export class GraphService {
   constructor(state: AppState, dataDir: string, changed: (status: GraphStatus) => void) {
     this.state = state;
     this.directory = join(dataDir, 'graph');
-    this.jobs = new GraphJobs(this.directory, changed);
+    this.jobs = new GraphJobs(this.directory, changed, state.db.shell.projectScope);
     this.watch = new GraphWatch(
       (id) => {
         void this.rebuild(id).catch(() => undefined);

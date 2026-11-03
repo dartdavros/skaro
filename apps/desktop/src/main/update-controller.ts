@@ -1,4 +1,5 @@
-import { AgentInstaller, type AgentId, type Platform } from '@skaro/core';
+import { AgentInstaller, type Platform } from '@skaro/core';
+import type { ManagedAgentId as AgentId } from '@skaro/agents';
 import type { UpdateComponent, UpdateState } from '../shared/updates';
 import { changedComponents, newer, releasePlatform, type ReleaseManifest } from './update-release';
 import { fetchRelease } from './update-feed';

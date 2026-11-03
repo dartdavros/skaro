@@ -21,8 +21,27 @@ export const claudeDefinition = {
   },
   package: packageManifest,
   adapterVersion: CLAUDE_ADAPTER_VERSION,
-  pin: { version: '0.3.285', shownVersion: '2.1.285' },
-  downloadSize: 230e6,
+  delivery: {
+    kind: 'managed-npm',
+    pin: { version: '0.3.285', shownVersion: '2.1.285' },
+    downloadSize: 230e6,
+    distribution(platform, pin) {
+      const key = `${platform.os}-${platform.arch}`;
+      if (
+        !['win32', 'darwin', 'linux'].includes(platform.os) ||
+        !['x64', 'arm64'].includes(platform.arch)
+      )
+        throw new Error(`Claude Code is not available for ${key}`);
+      return {
+        agent: 'claude-code',
+        ...pin,
+        name: `@anthropic-ai/claude-agent-sdk-${key}${platform.musl ? '-musl' : ''}`,
+        npmVersion: pin.version,
+        binary: `claude${platform.os === 'win32' ? '.exe' : ''}`,
+        pathDirs: [],
+      };
+    },
+  },
   capabilities: {
     resume: true,
     images: true,
@@ -39,22 +58,6 @@ export const claudeDefinition = {
   diagnosticVersionKey: 'claude' as const,
   legacyBundlePin: 'claudeSdk' as const,
   sdkDependency: '@anthropic-ai/claude-agent-sdk',
-  distribution(platform, pin) {
-    const key = `${platform.os}-${platform.arch}`;
-    if (
-      !['win32', 'darwin', 'linux'].includes(platform.os) ||
-      !['x64', 'arm64'].includes(platform.arch)
-    )
-      throw new Error(`Claude Code is not available for ${key}`);
-    return {
-      agent: 'claude-code',
-      ...pin,
-      name: `@anthropic-ai/claude-agent-sdk-${key}${platform.musl ? '-musl' : ''}`,
-      npmVersion: pin.version,
-      binary: `claude${platform.os === 'win32' ? '.exe' : ''}`,
-      pathDirs: [],
-    };
-  },
   async loadProjector() {
     const { ClaudeProjector } = await import('./projector.ts');
     return (context, emit) => new ClaudeProjector(context, emit);

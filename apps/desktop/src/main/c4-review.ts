@@ -23,6 +23,29 @@ export async function assertC4TaskReview(
   checkout: string,
   runId?: string,
 ): Promise<C4TaskReview> {
+  const inspected = await inspectC4TaskReviewData(db, context, taskId, checkout, runId);
+  if (inspected.artifactOnly) db.setSetting(c4ReviewKey(context.id, taskId), inspected.review);
+  return inspected.review;
+}
+
+/** Same validation as submission, without recording an artifact-only review. */
+export async function inspectC4TaskReview(
+  db: AppDb,
+  context: ProjectContext,
+  taskId: string,
+  checkout: string,
+  runId?: string,
+): Promise<C4TaskReview> {
+  return (await inspectC4TaskReviewData(db, context, taskId, checkout, runId)).review;
+}
+
+async function inspectC4TaskReviewData(
+  db: AppDb,
+  context: ProjectContext,
+  taskId: string,
+  checkout: string,
+  runId?: string,
+): Promise<{ review: C4TaskReview; artifactOnly: boolean }> {
   context.invalidate();
   const artifacts = await context.load();
   const baseHead = (await git(checkout, ['rev-parse', artifacts.config.baseBranch])).stdout.trim();
@@ -48,8 +71,7 @@ export async function assertC4TaskReview(
       runId: runId ?? 'artifacts',
       modelHash: c4ArchitectureHash(artifacts, actualScope),
     };
-    db.setSetting(c4ReviewKey(context.id, taskId), review);
-    return review;
+    return { review, artifactOnly: true };
   }
   const review = db.getSetting<C4TaskReview | null>(c4ReviewKey(context.id, taskId), null);
   if (!review || (runId && review.runId !== runId))
@@ -84,5 +106,5 @@ export async function assertC4TaskReview(
     );
   }
   if (problems.length) throw new Error(problems.join('\n'));
-  return review;
+  return { review, artifactOnly: false };
 }

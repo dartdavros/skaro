@@ -28,7 +28,9 @@ import { removeCompose } from './task-compose';
 import { refreshEnvironmentPorts } from './task-environment-ports';
 import { startEnvironmentServices, type EnvironmentStartOptions } from './task-environment-start';
 import { environmentLink, environmentLinkAddress } from './task-environment-link';
-import { backgroundWork, environmentJob, freedResult } from './background-work';
+import { backgroundWork, environmentJob } from './background-work';
+import { EnvironmentProjectScope } from './task-environment-scope';
+import { EnvironmentPruning } from './task-environment-prune';
 
 export interface EnvironmentDeps {
   db: Pick<AppDb, 'getSetting' | 'setSetting' | 'getProject'>;
@@ -40,6 +42,7 @@ export interface EnvironmentDeps {
   /** The task is merged, cancelled or gone: its environment has no reason to exist. */
   finished: (key: TaskKey) => Promise<boolean>;
   docker?: EnvironmentDocker;
+  projectScope?: string;
 }
 
 export interface EnvironmentInfo {
@@ -59,7 +62,8 @@ export class TaskEnvironments {
   private readonly deps: EnvironmentDeps;
   private readonly registry: EnvironmentRegistry;
   private readonly docker: EnvironmentDocker;
-  private pruned = 0;
+  private readonly scope: EnvironmentProjectScope;
+  private readonly pruning = new EnvironmentPruning();
   /** Docker work runs one at a time: parallel builds and starts are what made tasks hang. */
   private work: Promise<unknown> = Promise.resolve();
   private allocation: Promise<unknown> = Promise.resolve();
@@ -68,6 +72,7 @@ export class TaskEnvironments {
     this.deps = deps;
     this.registry = new EnvironmentRegistry(deps.db);
     this.docker = deps.docker ?? systemDocker;
+    this.scope = new EnvironmentProjectScope(deps.projectScope);
   }
 
   /** Shutdown must drain scheduled cleanup before the application's database is closed. */
@@ -78,7 +83,11 @@ export class TaskEnvironments {
   /** Once agent processes have stopped, no task services may outlive the application. */
   close(): Promise<void> {
     return this.serial('work', async () => {
-      const all = await this.docker.inspect();
+      const all = this.scope.containers(
+        await this.docker.inspect(),
+        this.worktrees(),
+        this.names(),
+      );
       const owned = all.filter(
         (container) => !!containerTask(container, this.worktrees(), this.names()),
       );
@@ -102,6 +111,7 @@ export class TaskEnvironments {
 
   /** Name and ports of the task's environment, promised on first use and kept until it is removed. */
   describe(key: TaskKey): Promise<EnvironmentDescription> {
+    this.scope.require(key);
     return this.serial('allocation', () =>
       describeTaskEnvironment(
         {
@@ -123,11 +133,13 @@ export class TaskEnvironments {
 
   /** The agent's turn began: the task counts as recently used. */
   touch(key: TaskKey): void {
+    this.scope.require(key);
     this.registry.update(key, { usedAt: Date.now() });
   }
 
   /** Only Skaro's integration executor can bind an environment to its private candidate. */
   bindIntegration(key: TaskKey, worktree: string): void {
+    this.scope.require(key);
     const suffix = relative(join(this.deps.dataDir, 'integrations', key.projectId), worktree);
     if (!key.taskId.startsWith('integration-') || suffix.startsWith('..') || isAbsolute(suffix))
       throw new Error('Integration environment must belong to its project data directory.');
@@ -137,11 +149,13 @@ export class TaskEnvironments {
 
   /** Resolve only this environment's allocated host addresses; other links stay ordinary links. */
   link(key: TaskKey, url: string): string | undefined {
+    this.scope.require(key);
     const record = this.registry.find(key);
     return record && environmentLink(record, url);
   }
 
   linkAddress(key: TaskKey, url: string, portName: string): string {
+    this.scope.require(key);
     const port = this.registry.find(key)?.ports[portName];
     if (!port) throw new EnvironmentUnavailable('The environment no longer exposes this address.');
     return environmentLinkAddress(url, port);
@@ -162,6 +176,7 @@ export class TaskEnvironments {
 
   /** Creates the copy on first use, starts the services and waits until they are ready. */
   start(key: TaskKey, options: EnvironmentStartOptions = {}): Promise<EnvironmentInfo> {
+    this.scope.require(key);
     const requestedAt = Date.now();
     return this.serial('work', async () => {
       const startedAt = Date.now();
@@ -194,6 +209,7 @@ export class TaskEnvironments {
 
   /** Stops the task's containers; the copy of the data stays for the next start. */
   stop(key: TaskKey): Promise<void> {
+    this.scope.require(key);
     return this.serial('work', async () => {
       const all = await this.docker.inspect();
       await this.docker.stop(taskContainers(all, key, this.worktrees(), this.names()));
@@ -202,6 +218,7 @@ export class TaskEnvironments {
 
   /** Removes the environment for good: the task is merged, cancelled or deleted. */
   destroy(key: TaskKey): Promise<string[]> {
+    this.scope.require(key);
     return this.serial('work', async () => {
       if (
         this.deps
@@ -225,6 +242,7 @@ export class TaskEnvironments {
   }
 
   private async remove(key: TaskKey, scope: 'task' | 'named' = 'task'): Promise<string[]> {
+    this.scope.require(key);
     const all = await this.docker.inspect();
     const project = this.deps.db.getProject(key.projectId)?.name ?? '';
     const name = this.registry.find(key)?.name ?? environmentName(project, key.taskId);
@@ -239,7 +257,7 @@ export class TaskEnvironments {
   private async reconcile(starting?: TaskKey): Promise<void> {
     let all: DockerContainer[];
     try {
-      all = await this.docker.inspect();
+      all = this.scope.containers(await this.docker.inspect(), this.worktrees(), this.names());
     } catch {
       return; // No Docker, nothing to limit.
     }
@@ -248,7 +266,7 @@ export class TaskEnvironments {
       containers: all,
       worktrees: this.worktrees(),
       names: this.names(),
-      records: this.registry.all(),
+      records: this.scope.records(this.registry.all()),
       busy,
       ...(starting ? { starting } : {}),
       finished: this.deps.finished,
@@ -272,13 +290,6 @@ export class TaskEnvironments {
     }
     // Removed and recreated containers leave anonymous volumes, untagged images and cache behind:
     // they go with every removal and at least hourly, not on each frequent limit pass.
-    if (!stale.length && Date.now() - this.pruned < 60 * 60_000) return;
-    this.pruned = Date.now();
-    const job = backgroundWork.start('docker.prune');
-    const { failures, reclaimed } = await this.docker.prune();
-    if (failures.length) {
-      console.error('Docker cleanup:', failures.join('; '));
-      backgroundWork.fail(job, failures.join('; '));
-    } else backgroundWork.finish(job, freedResult(reclaimed));
+    await this.pruning.run(this.docker, stale.length, this.deps.projectScope);
   }
 }

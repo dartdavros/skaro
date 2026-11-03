@@ -14,6 +14,7 @@
   "dependencies": {
     "@skaro/adapter-claude": "workspace:*",
     "@skaro/adapter-codex": "workspace:*",
+    "@skaro/adapter-skaro": "workspace:*",
     "@skaro/timeline": "workspace:*"
   }
 }

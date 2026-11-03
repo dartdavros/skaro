@@ -7,17 +7,8 @@ import {
   type IntegrationCheck,
 } from './verification-plan.ts';
 
-/** Who is calling: the token of each agent session maps to one scope. */
-export interface SkaroScope {
-  kind: 'task' | 'project_chat' | 'integration';
-  integrationId?: string;
-  projectId: string;
-  taskId?: string;
-  runId?: string;
-  chatId?: string;
-  /** The chat imports documentation (architecture.md 12): it stages artifacts, nothing else. */
-  importId?: string;
-}
+import type { SkaroScope } from '@skaro/timeline';
+export type { SkaroScope } from '@skaro/timeline';
 
 export interface MergeTaskArgs {
   taskId?: string;

@@ -1,8 +1,8 @@
-import { isAgentId } from '@skaro/agents';
+import { isManagedAgentId, type ManagedAgentId as AgentId } from '@skaro/agents';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { AgentId, Platform } from '@skaro/core';
+import type { Platform } from '@skaro/core';
 import { parseRelease, type ReleaseManifest } from './update-release';
 import { backupApplication, removeOlderBackups } from './update-backup';
 
@@ -32,7 +32,7 @@ export class UpdateJournal {
     parseRelease(pending.manifest);
     if (
       !Array.isArray(pending.agents) ||
-      pending.agents.some((id) => !isAgentId(id)) ||
+      pending.agents.some((id) => !isManagedAgentId(id)) ||
       !Array.isArray(pending.files) ||
       pending.files.some((file) => typeof file !== 'string' || !isAbsolute(file)) ||
       typeof pending.applying !== 'boolean'
