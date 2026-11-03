@@ -3,7 +3,7 @@ import type { PreviewGraph, NodeData, EdgeData } from './projection';
 type Point = { x: number; y: number };
 
 export function edgePoint(
-  renderer: Sigma<NodeData, EdgeData>,
+  renderer: Pick<Sigma<NodeData, EdgeData>, 'graphToViewport'>,
   graph: PreviewGraph,
   id: string,
   progress: number,
@@ -42,7 +42,7 @@ export function edgePoint(
 }
 export function drawLoop(
   context: CanvasRenderingContext2D,
-  renderer: Sigma<NodeData, EdgeData>,
+  renderer: Pick<Sigma<NodeData, EdgeData>, 'graphToViewport'>,
   graph: PreviewGraph,
   id: string,
   color: string,

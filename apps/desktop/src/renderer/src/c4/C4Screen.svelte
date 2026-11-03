@@ -48,7 +48,7 @@
   });
 </script>
 
-{#if error}<Banner kind="error" text={error} />
+{#if error}<div class="notice"><Banner kind="error" text={error} /></div>
 {:else if model?.views.length}
   {#if target}
     <C4Workspace {model} {projectId} {target} onclose={() => (target = undefined)} {ongraph} />
@@ -56,4 +56,12 @@
     <C4Gallery {model} onopen={(viewId) => (target = { viewId })} />
   {/if}
 {:else if model === undefined}<LoadingView />
-{:else}<Banner kind="info" text={t('graph.noC4')} />{/if}
+{:else}<div class="notice"><Banner kind="info" text={t('graph.noC4')} /></div>{/if}
+
+<style>
+  .notice {
+    flex: 1;
+    min-width: 0;
+    padding: 18px;
+  }
+</style>

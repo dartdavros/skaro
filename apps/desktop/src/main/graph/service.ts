@@ -160,6 +160,14 @@ export class GraphService {
     const root = await this.scoped(query);
     return this.queryWorker.call('query', { ...root, query });
   }
+  async exportPage(
+    scope: GraphScope,
+    kind: 'nodes' | 'edges',
+    after?: string,
+  ): Promise<import('../../shared/diagram-export').GraphExportPage> {
+    const root = await this.scoped(scope);
+    return this.queryWorker.call('export', { ...root, scope, kind, after });
+  }
   async scenarios(scope: GraphScope): Promise<GraphScenario[]> {
     const root = await this.scoped(scope);
     return this.queryWorker.call('scenarios', { ...root, scope });

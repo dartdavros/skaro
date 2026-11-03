@@ -19,6 +19,14 @@ on:
         required: true
         default: false
         type: boolean
+      check_scope:
+        description: Verification scope explicitly selected by the owner
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - diagram-export
       publish_release:
         description: Publish the complete unsigned bundle to GitHub Releases
         required: true
@@ -40,10 +48,19 @@ jobs:
         env:
           AGENTS_VERIFIED: ${{ inputs.agents_verified }}
           TEST_FIXTURES_ALLOWED: ${{ inputs.test_fixtures_allowed }}
+          CHECK_SCOPE: ${{ inputs.check_scope }}
           PUBLISH_RELEASE: ${{ inputs.publish_release }}
         run: |
-          if [ "$AGENTS_VERIFIED" != 'true' ] || [ "$TEST_FIXTURES_ALLOWED" != 'true' ]; then
-            echo 'Real agent verification and explicit permission for fixture/HTTP tests are required.' >&2
+          if [ "$AGENTS_VERIFIED" != 'true' ]; then
+            echo 'Accepted verification of the pinned agents is required.' >&2
+            exit 1
+          fi
+          if [ "$CHECK_SCOPE" != 'full' ] && [ "$CHECK_SCOPE" != 'diagram-export' ]; then
+            echo 'Unknown verification scope.' >&2
+            exit 1
+          fi
+          if [ "$CHECK_SCOPE" = 'full' ] && [ "$TEST_FIXTURES_ALLOWED" != 'true' ]; then
+            echo 'Full tests require explicit permission for fixtures and HTTP test servers.' >&2
             exit 1
           fi
           if [ "$PUBLISH_RELEASE" = 'true' ] && [ "$GITHUB_REF" != 'refs/heads/main' ]; then
@@ -59,13 +76,18 @@ jobs:
       - run: pnpm install --frozen-lockfile --filter '!@skaro/agent-probe'
       - name: Install pinned Electron runtime before parallel tests
         run: pnpm --filter @skaro/desktop exec node -e "require('electron')"
-      # This is a release preparation run; the owner permits full checks before a release.
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm -r --parallel --filter '!@skaro/agent-probe' typecheck
       - name: Build real background workers for storage integration tests
+        if: inputs.check_scope == 'full'
         run: pnpm build
-      - run: pnpm test --maxWorkers=2 --testTimeout=30000 --hookTimeout=60000
+      - name: Full release tests
+        if: inputs.check_scope == 'full'
+        run: pnpm test --maxWorkers=2 --testTimeout=30000 --hookTimeout=60000
+      - name: Diagram export tests only (no fixtures or HTTP servers)
+        if: inputs.check_scope == 'diagram-export'
+        run: pnpm exec vitest run --project @skaro/desktop apps/desktop/src/main/graph/export-live.test.ts apps/desktop/src/renderer/src/diagram-export/image.test.ts
   build:
     needs: check
     strategy:

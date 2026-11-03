@@ -46,6 +46,7 @@ import type { ChatMethods } from './chat-methods';
 import type { ProjectCatalogMethods } from './project-catalog';
 import type { DocumentCatalogMethods } from './document-catalog';
 import type { GraphMethods, GraphEvents } from './graph';
+import type { DiagramExportMethods } from './diagram-export';
 import type { C4ReviewMethods } from './c4-review';
 export * from './ipc-entities';
 export * from './ipc-sessions';
@@ -64,6 +65,7 @@ export interface Methods
     TaskCatalogMethods,
     ChatMethods,
     GraphMethods,
+    DiagramExportMethods,
     C4ReviewMethods {
   'c4.files': (projectId: string, itemId: string) => string[];
   'c4.file': (projectId: string, itemId: string, path: string, side: 'before' | 'after') => string;

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { C4State, C4View, C4ViewKind } from '@skaro/core/c4-view';
+  import type { C4Model, C4State, C4View, C4ViewKind } from '@skaro/core/c4-view';
+  import C4ExportAll from './C4ExportAll.svelte';
   import { Icon, ViewSwitch, t } from '@skaro/ui';
   import FilterDrop from '../tasks/FilterDrop.svelte';
   import { viewKinds, viewKindIcons } from './view-kinds';
@@ -7,12 +8,16 @@
   import '../tasks/i18n';
   let {
     views,
+    model,
+    onexporterror,
     kinds = $bindable([]),
     states = $bindable([]),
     view,
     onviewchange,
   }: {
     views: C4View[];
+    model: C4Model;
+    onexporterror: (error: string) => void;
     kinds: C4ViewKind[];
     states: C4State[];
     view: string;
@@ -58,6 +63,7 @@
     >
   {/if}
   <div data-task-toolbar class="spacer"></div>
+  <C4ExportAll {model} onerror={onexporterror} />
   <ViewSwitch
     value={view}
     options={[

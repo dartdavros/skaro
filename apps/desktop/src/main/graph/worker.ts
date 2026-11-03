@@ -10,6 +10,7 @@ import {
 } from '@skaro/core/graph-view';
 import { GraphStore } from './store';
 import { queryGraph } from './query';
+import { exportGraphPage } from './export-page';
 import { assertScope } from './query-validation';
 import { hash } from './facts';
 import { safeSource } from './source-policy';
@@ -26,6 +27,8 @@ parentPort!.on(
       scope?: GraphScope;
       query?: GraphQuery;
       ref?: SourceRef;
+      kind?: 'nodes' | 'edges';
+      after?: string;
     } & Partial<IndexJob>;
   }) => {
     void (async () => {
@@ -70,6 +73,8 @@ parentPort!.on(
         store.db.exec('BEGIN');
         if (operation === 'status') return store.current() ?? null;
         if (operation === 'query') return queryGraph(store, args.query!);
+        if (operation === 'export')
+          return exportGraphPage(store, args.scope!, args.kind!, args.after);
         const snapshot = assertScope(store, args.scope!);
         if (operation === 'scenarios') {
           const model = store.meta<import('@skaro/core/c4-view').C4Model | null>(

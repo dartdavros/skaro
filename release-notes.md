@@ -1,17 +1,15 @@
-Skaro 2.2.12
+Skaro 2.2.15
 
-- Authorized tasks continue across model turns through verification and submission,
-  then merge automatically when automatic merging is enabled.
-- Execution intent survives restarts and respects explicit stops, real questions,
-  architecture decisions and concrete external blockers.
-- Removed invented reply questions after an agent turn and retired legacy cards.
-- Architecture package decisions resume existing tasks without another owner message.
-- Task environments can start declared existing source services and wait for readiness
-  before copying data, without recreating the source containers or replacing data.
-- Repeated turns without progress stop instead of looping indefinitely.
+- Export a complete C4 view as PNG, or export every C4 view to a selected folder.
+- Export the current project graph or its complete indexed snapshot as PNG or GEXF.
+- Preserve graph attributes, directed relationships, coordinates and evidence in GEXF.
+- Use a download icon for graph export and keep empty C4 messages at the top of the content area.
 
-Verified with real Codex execution through a Git merge and native Electron checks.
-See docs/release-2.2.12.md for verification details and limits.
+Verification: production build, TypeScript/Svelte checks, lint and targeted export tests.
+The real Cat-pilot GEXF (44 nodes, 81 edges) passed the official GEXF 1.3 schema.
+Visual PNG/dialog acceptance remains with the owner; Cat-pilot currently has no accepted C4 model.
+Pinned agent versions are unchanged from 2.2.14. No new model calls are required.
+The owner authorized the mandatory CI suite with its existing fixtures and HTTP test servers.
 
-Installers are published for Windows, macOS and Linux, for x64 and arm64.
-The published GitHub release includes the verified table of six direct installer links.
+Installers: Windows, macOS and Linux, each for x64 and arm64.
+The published release includes the verified table of six direct installer links.

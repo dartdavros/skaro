@@ -20,6 +20,7 @@ import { registerMedia } from './app-media';
 import { appHandlers } from './app-handlers';
 import { sessionHandlers } from './session-handlers';
 import { fileHandlers } from './file-handlers';
+import { diagramExportHandlers } from './diagram-export-handlers';
 import { createUpdates } from './update-service';
 import type { UpdateActivity } from './update-activity';
 import { trace } from './trace';
@@ -166,6 +167,7 @@ if (!locked) {
       ...appHandlers(services, updates, mainWindow, emit, () => tray?.refresh()),
       ...sessionHandlers(services),
       ...fileHandlers(services, mainWindow, picked),
+      ...diagramExportHandlers(mainWindow),
       ...graphHandlers(services.graph),
       ...modelSettingsHandlers(services.modelSettings, () => {
         void services.agents.refreshOne('skaro');

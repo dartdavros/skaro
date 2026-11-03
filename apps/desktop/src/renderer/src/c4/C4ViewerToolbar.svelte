@@ -3,11 +3,18 @@
   import { Icon, IconButton, Select, t } from '@skaro/ui';
   import C4Search from './C4Search.svelte';
   import type { C4ViewerState } from './viewer-state.svelte';
+  import ExportButton from '../diagram-export/ExportButton.svelte';
   let {
     state,
     ongraph,
-  }: { state: C4ViewerState; ongraph?: ((id: string, viewId: string) => void) | undefined } =
-    $props();
+    exporting,
+    onexport,
+  }: {
+    state: C4ViewerState;
+    ongraph?: ((id: string, viewId: string) => void) | undefined;
+    exporting: boolean;
+    onexport: () => void;
+  } = $props();
   const options = $derived(
     state.model.views.map((view) => ({
       value: view.id,
@@ -26,6 +33,7 @@
       >C4 · {t('c4.revision', { n: state.model.revision })}</span
     >
   </div>
+  <ExportButton busy={exporting} onclick={onexport} />
   <IconButton
     tip={t(state.fullscreen ? 'c4.exitFullscreen' : 'c4.fullscreen')}
     onclick={() => void state.toggleFullscreen()}

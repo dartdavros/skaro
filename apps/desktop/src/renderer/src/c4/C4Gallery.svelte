@@ -3,11 +3,13 @@
   import C4Preview from './C4Preview.svelte';
   import C4List from './C4List.svelte';
   import C4GalleryToolbar from './C4GalleryToolbar.svelte';
+  import { Banner } from '@skaro/ui';
   import './i18n';
   let { model, onopen }: { model: C4Model; onopen: (viewId: string) => void } = $props();
   let view = $state(localStorage.getItem('skaro.c4.gallery') === 'list' ? 'list' : 'grid');
   let kinds = $state<C4ViewKind[]>([]);
   let states = $state<C4State[]>([]);
+  let exportError = $state('');
   const views = $derived(
     model.views.filter(
       (item) =>
@@ -19,6 +21,8 @@
 
 <div class="c4-gallery" data-c4-gallery>
   <C4GalleryToolbar
+    {model}
+    onexporterror={(error) => (exportError = error)}
     views={model.views}
     bind:kinds
     bind:states
@@ -28,6 +32,11 @@
       localStorage.setItem('skaro.c4.gallery', next);
     }}
   />
+  {#if exportError}<Banner
+      kind="error"
+      text={exportError}
+      onclose={() => (exportError = '')}
+    />{/if}
   {#if view === 'list'}
     <C4List {views} {onopen} />
   {:else}
