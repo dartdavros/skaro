@@ -79,6 +79,7 @@ export class ProjectDocs {
   async open(path: string): Promise<void> {
     const revision = ++this.reading;
     this.loading = true;
+    if (path !== this.selected) this.attachment = undefined;
     this.selected = path;
     try {
       localStorage.setItem(`skaro.doc.${this.projectId}`, path);

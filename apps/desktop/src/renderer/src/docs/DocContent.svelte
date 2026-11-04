@@ -42,7 +42,7 @@
       onlink={model.link}
     >
       {#snippet attachment()}
-        {#if doc.kind !== 'architecture' && model.docs.attachment}
+        {#if model.docs.attachment}
           <C4DocumentSection attachment={model.docs.attachment} />
         {/if}
       {/snippet}
