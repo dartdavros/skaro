@@ -42,7 +42,9 @@
       onlink={model.link}
     >
       {#snippet attachment()}
-        {#if model.docs.attachment}<C4DocumentSection attachment={model.docs.attachment} />{/if}
+        {#if doc.kind !== 'architecture' && model.docs.attachment}
+          <C4DocumentSection attachment={model.docs.attachment} />
+        {/if}
       {/snippet}
       {#snippet header()}
         <DocHeader
