@@ -15,6 +15,8 @@ const CONTINUE =
   'Read the actual remaining criteria and tool results, complete implementation and affected ' +
   'verification, then call submit_result. Resolve routine setup with Skaro tools. ' +
   'For a genuinely missing owner decision, invoke the blocking question tool and act on its answer. ' +
+  'For required owner credentials, call Skaro request_secret and wait for its protected answer; ' +
+  'do not report the missing key as an external blocker before offering that input. ' +
   'If an external prerequisite really cannot be recovered within the authorized project setup, ' +
   'call report_task_blocker with the exact evidence; do not invent a question or claim completion. ' +
   'Explicit owner restrictions and stop requests still apply. Never waive unmet criteria.';

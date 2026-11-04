@@ -16,7 +16,7 @@ import { provideFeed } from '../feed/context.svelte';
 import { modelEffort, modelName } from '../feed/format';
 import { ChatSession } from './session.svelte';
 import { historyActions } from '../feed/history-actions';
-import { watchChatCommands } from './chat-command-events';
+import { watchOwnerCommands } from '../feed/command-events';
 export function createChatController(
   projectId: string,
   projectPath: string,
@@ -35,7 +35,7 @@ export function createChatController(
   if (!chatId) void chatDefaults(projectId).then((settings) => (draft = settings));
 
   const ownerMessages = new OwnerMessages();
-  const stopCommands = watchChatCommands(
+  const stopCommands = watchOwnerCommands(
     projectId,
     chatId,
     ownerMessages,

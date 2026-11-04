@@ -5,6 +5,7 @@ import {
   type OwnerCommand,
 } from '@skaro/timeline';
 import type { MessageInput } from '../../../shared/ipc';
+import { pendingOwnerCommand } from './owner-command-state';
 
 type Pending = { input: MessageInput; at: number; error?: string };
 /** Immediate owner echo, reconciled with the native message instead of showing duplicates. */
@@ -12,6 +13,7 @@ export class OwnerMessages {
   pending = $state.raw<Pending[]>([]);
   restore(commands: OwnerCommand[]): void {
     const pending = commands
+      .filter(pendingOwnerCommand)
       .filter((command) => !this.pending.some((p) => p.input.commandId === command.id))
       .map((command) => ({
         input: command.args[2] as MessageInput,

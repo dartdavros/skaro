@@ -9,6 +9,7 @@ import { historyActions } from '../feed/history-actions';
 import { modelEffort, modelName } from '../feed/format';
 import { TaskSession } from './session.svelte';
 import { TaskStartState } from './task-start-state';
+import { watchOwnerCommands } from '../feed/command-events';
 
 export function createTaskController(
   projectId: string,
@@ -24,19 +25,8 @@ export function createTaskController(
   onDestroy(() => session.dispose());
 
   const ownerMessages = new OwnerMessages();
-  void window.skaro.invoke('commands.list', projectId, taskId).then((commands) => {
-    ownerMessages.restore(commands);
-    actionError = commands.find((command) => command.error)?.error;
-  });
-  const stopCommands = window.skaro.on('command.changed', (command) => {
-    if (command.owner !== `${projectId}:${taskId}`) return;
-    if (command.state === 'accepted' || command.state === 'delivering')
-      ownerMessages.restore([command]);
-    if (command.state === 'cancelled') ownerMessages.cancel(command.id);
-    if (command.error) {
-      ownerMessages.failed(command.id, command.error);
-      actionError = command.error;
-    }
+  const stopCommands = watchOwnerCommands(projectId, taskId, ownerMessages, (error) => {
+    actionError = error;
   });
   onDestroy(stopCommands);
   $effect(() => ownerMessages.reconcile(session.timeline));

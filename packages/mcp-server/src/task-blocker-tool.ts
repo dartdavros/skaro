@@ -12,6 +12,7 @@ export function taskBlockerTool(
       'Include the exact failed prerequisite and what must change. First use the documented setup and Skaro tools ' +
       'to resolve routine configuration and stopped source services yourself. This does not accept criteria, ' +
       'complete or merge the task. Missing owner decisions use the blocking question tool instead. ' +
+      'Missing owner API keys/passwords use request_secret; its protected question is the waiting state. ' +
       'For a read-only follow-up or explicit owner request not to implement, record that limitation here.',
     inputSchema: {
       type: 'object',
