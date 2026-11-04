@@ -94,6 +94,13 @@ export function taskInstructions(options: {
         '- Skaro supplies a task-local Playwright MCP server. Use its browser tools for UI ' +
           'verification; a Codex desktop browser or personal Chrome connection is not required. ' +
           'The browser uses an isolated profile. If Chrome is missing, report the blocker.',
+        '- If required verification needs an API key, password or other credential from the owner, ' +
+          'call Skaro request_secret with the necessary protected fields as soon as that input is ' +
+          'needed. Do not ask for a secret in ordinary chat, claim a field was shown without a ' +
+          'successful call, submit an incomplete result, or report missing owner credentials as ' +
+          'an external blocker before offering the protected input. After request_secret succeeds, ' +
+          'end the turn and wait; the answer resumes this task. If a real project settings form is ' +
+          'the required destination, identify its actual URL and use the provided credential there.',
         '- Keep the user informed while you work: before each step write one short sentence ' +
           'about what you are doing now. Work in small steps; do not think the whole task ' +
           'through in one long silent pass.',

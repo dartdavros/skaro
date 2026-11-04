@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readGraphFile as readFile } from '../read-file';
 import { Parser, Language } from 'web-tree-sitter';
 import runtimeWasm from 'web-tree-sitter/tree-sitter.wasm?asset';
 import pythonWasm from 'tree-sitter-wasms/out/tree-sitter-python.wasm?asset';

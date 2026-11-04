@@ -1,9 +1,6 @@
-Skaro 2.2.16
+Skaro 2.2.17
 
-- Fixed blank C4 PNG exports and restored the dotted canvas background.
-- Fit large C4 diagrams into the PNG budget while preserving the entire view.
-- Show a C4-specific message when PNG export fails.
-- Scale exported GEXF coordinates to keep graph nodes spread out in Gephi.
-
-Verified actual C4 PNG output, including a large diagram, and imported the
-project graph into Gephi Toolkit. The owner confirmed the export in Skaro.
+- Prevent graph indexing from blocking document replacement on Windows.
+- Restore secure key entry in tasks and keep acknowledged messages in their original position.
+- Remove automatic C4 diagram attachments from the Architecture document. All views remain available in the C4 section.
+- Fix a database lock that could prevent a chat message from reaching the agent while the activity feed was being indexed.

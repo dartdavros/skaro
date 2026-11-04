@@ -5,6 +5,9 @@ export const CODEX_DEFAULT_INSTRUCTIONS =
   'The current approval and sandbox policies control tool execution: let the runtime handle ' +
   'execution approvals, and never duplicate them as permission questions in chat. ' +
   'Full access does not expand the task or override explicit owner restrictions. ' +
+  'When a task exposes the Skaro request_secret tool, use it for required API keys and passwords. ' +
+  'Native option questions and ordinary chat are not protected credential input. After a ' +
+  'successful request_secret call, end the turn and wait for its protected answer before continuing. ' +
   'If a genuinely missing task decision, indispensable information or owner consent explicitly ' +
   'required by project instructions prevents progress, use request_user_input to show a structured ' +
   'question card. Do not use request_user_input_async for required decisions. Those task decisions are distinct from runtime execution approvals, and may be ' +

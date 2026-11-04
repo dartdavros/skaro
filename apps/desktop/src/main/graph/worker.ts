@@ -1,5 +1,5 @@
 import { parentPort } from 'node:worker_threads';
-import { readFile } from 'node:fs/promises';
+import { readGraphFile as readFile } from './read-file';
 import { existsSync } from 'node:fs';
 import { readC4Model, validateC4Model } from '@skaro/core/c4-view';
 import {

@@ -29,6 +29,7 @@ import { builtinAcceptancePort } from './builtin-acceptance';
 import { builtinTaskAdmission } from './builtin-task-admission';
 import { submitTaskResult } from './task-submit';
 import { taskArchitectureEvent } from './task-architecture-events';
+import { requestTaskSecret } from './task-secret-input';
 import { prepareBuiltinTaskReview } from './builtin-task-review';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
@@ -209,6 +210,9 @@ export class TaskRuns {
         text: 'The external blocker is recorded. The task remains incomplete; automatic continuation is suspended. Report the precise blocker without asking for a generic continue message.',
       };
     });
+  }
+  requestSecret(questions: import('@skaro/mcp-server').SecretQuestion[], scope: SkaroScope) {
+    return requestTaskSecret(this.engine, questions, scope);
   }
   startEnvironment(scope: SkaroScope): Promise<ToolResult> {
     if (scope.kind === 'integration') return this.engine.integrations.environment(scope);

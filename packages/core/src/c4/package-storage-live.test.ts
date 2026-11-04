@@ -28,8 +28,7 @@ it.skipIf(!root)(
     expect(pkg.files.map((f) => f.path)).toEqual(['c4/model.json']);
     const snapshot = await readC4DocumentSnapshot(root!, 'architecture.md');
     expect(snapshot.body).not.toContain('```skaro-c4');
-    expect(snapshot.attachment?.model).toEqual(model);
-    expect(snapshot.attachment?.views).toEqual(model.views.map((v) => v.id));
+    expect(snapshot.attachment).toBeUndefined();
     const migration = await prepareC4DocumentMigration(root!, 'ru');
     if ([...before.values()].some((text) => text.includes('<!-- skaro:c4:start -->'))) {
       expect(migration).toBeDefined();

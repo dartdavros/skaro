@@ -1,4 +1,5 @@
-import { realpath, readFile, readdir, stat } from 'node:fs/promises';
+import { realpath, readdir, stat } from 'node:fs/promises';
+import { readGraphFile as readFile } from './read-file';
 import { relative, resolve, isAbsolute } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';

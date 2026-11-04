@@ -66,13 +66,7 @@ parentPort!.on(
       }
       store ??= new PayloadStore(
         (workerData as { dataDir: string }).dataDir,
-        request.method.startsWith('registry.')
-          ? projectScope
-            ? `registry-${projectScope}.db`
-            : 'registry.db'
-          : request.method.startsWith('tasks.')
-            ? 'tasks.db'
-            : 'workspace.db',
+        backgroundStoreFile(request.method, projectScope),
       );
       if (request.method === 'artifacts.milestones')
         return milestoneWork(store, request.args[0] as string);
@@ -185,3 +179,12 @@ parentPort!.on(
     );
   },
 );
+
+function backgroundStoreFile(method: keyof BackgroundMethods, scope?: string): string {
+  if (method.startsWith('registry.')) return scope ? `registry-${scope}.db` : 'registry.db';
+  if (method.startsWith('tasks.')) return 'tasks.db';
+  // Restoring a chat and loading its instructions must not wait for the feed index writer.
+  if (method.startsWith('history.')) return 'history-replay.db';
+  if (method.startsWith('artifacts.') || method.startsWith('catalog.')) return 'artifacts.db';
+  return 'workspace.db';
+}
