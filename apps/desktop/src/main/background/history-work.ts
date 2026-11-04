@@ -1,4 +1,6 @@
 import { stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { AttachmentStore } from '@skaro/core';
 import {
@@ -42,6 +44,9 @@ export function historyWork(store: PayloadStore) {
     let seq = 0;
     const timeline = new Timeline();
     const compact = new Map<string, ProposalItem>();
+    let proposals: DatabaseSync | undefined;
+    let metadata: StatementSync | undefined;
+    const workspace = join(store.dataDir, 'workspace.db');
     const emit = (event: TimelineEvent) => {
       if (
         event.t === 'item.upsert' &&
@@ -49,10 +54,14 @@ export function historyWork(store: PayloadStore) {
         event.item.proposal.type === 'architecture'
       ) {
         let item = compact.get(event.item.id);
-        if (!item) {
-          const row = store.db
-            .prepare('SELECT metadata FROM records WHERE id=?')
-            .get(event.item.id);
+        if (!item && (proposals || existsSync(workspace))) {
+          if (!proposals) {
+            proposals = new DatabaseSync(workspace, { readOnly: true });
+            proposals.exec('PRAGMA busy_timeout=5000');
+            if (proposals.prepare("SELECT 1 FROM sqlite_schema WHERE name='records'").get())
+              metadata = proposals.prepare('SELECT metadata FROM records WHERE id=?');
+          }
+          const row = metadata?.get(event.item.id);
           if (row) {
             item = (JSON.parse(String(row['metadata'])) as { item: ProposalItem }).item;
             compact.set(event.item.id, item);
@@ -67,7 +76,12 @@ export function historyWork(store: PayloadStore) {
       timeline.apply(event);
       seq++;
     };
-    const segments = await replayHistory(path, startedAt, agent, attachments.context(), emit);
+    let segments: number;
+    try {
+      segments = await replayHistory(path, startedAt, agent, attachments.context(), emit);
+    } finally {
+      proposals?.close();
+    }
     const snapshot = { timeline: timeline.state, seq, segments };
     const after = await stat(path);
     if (`v3:${agent}:${after.size}:${after.mtimeMs}:${after.ctimeMs}` === fingerprint)
