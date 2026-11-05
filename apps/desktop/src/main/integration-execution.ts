@@ -8,6 +8,7 @@ import { runIntegrationWorker } from './integration-worker';
 import { errorText } from './session-log';
 import { showEnvironmentStart } from './integration-check-feed';
 import { IntegrationAgentUnavailable, integrationFailure } from './integration-failure';
+import { C4PublicationError } from './c4-candidate';
 
 /** Execute one queue lease; continuation is emitted only after the candidate is verified. */
 export async function executeIntegration(
@@ -91,7 +92,8 @@ export async function executeIntegration(
     integration.assertExecuting(op);
     op.executor = undefined;
     integration.service.save(op);
-    await integration.history.notice(op, 'Интеграция проверена. Skaro продолжает выполнение.');
+    if (!op.publish)
+      await integration.history.notice(op, 'Интеграция проверена. Skaro продолжает выполнение.');
     integration.setRuntime(op, 'idle');
     await ctx.environments
       .stop(integrationEnvironmentKey(op))
@@ -101,6 +103,7 @@ export async function executeIntegration(
     else if (op.publish) {
       publishing = true;
       await ctx.merges.coordinator.publishCandidate(op);
+      await integration.history.notice(op, 'Интеграция проверена. Skaro продолжает выполнение.');
     } else {
       const active = await ctx.history.restore(op.projectId, op.taskId);
       if (active) await ctx.merges.showCard(active, ctx.project(op.projectId));
@@ -120,7 +123,12 @@ export async function executeIntegration(
     }
     // A verified candidate that failed to go into the base (a locked file, Git busy) is published
     // again as it is: its resolution and checks are not what failed.
-    if (publishing && op.state === 'ready' && (op.publishFailures ?? 0) < 2) {
+    if (
+      !(error instanceof C4PublicationError) &&
+      publishing &&
+      op.state === 'ready' &&
+      (op.publishFailures ?? 0) < 2
+    ) {
       op.publishFailures = (op.publishFailures ?? 0) + 1;
       op.error = errorText(error);
       integration.service.save(op);
@@ -133,6 +141,10 @@ export async function executeIntegration(
       return;
     }
     op.error = errorText(error);
+    if (error instanceof C4PublicationError) {
+      op.verification = undefined;
+      op.needsVerification = true;
+    }
     op.state = 'failed';
     integration.service.save(op);
     // The agent's own notice and the end of its turn already show a limit or sign-in failure.
@@ -141,7 +153,12 @@ export async function executeIntegration(
     integration.setRuntime(op, 'failed');
     ctx.startup.fail(op.projectId, op.taskId, op.error);
     // Only a crashed agent is retried unattended; a finished turn waits for the owner instead.
-    if (!(error instanceof IntegrationAgentUnavailable) && op.attempts > 0 && op.attempts < 3) {
+    if (
+      !(error instanceof IntegrationAgentUnavailable) &&
+      !(error instanceof C4PublicationError) &&
+      op.attempts > 0 &&
+      op.attempts < 3
+    ) {
       op.state = 'resolving';
       integration.service.save(op);
       setImmediate(() => integration.enqueue(op));

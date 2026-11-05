@@ -1,6 +1,7 @@
 import { dirname } from 'node:path';
 import { background } from './background/client';
-import { realizeC4, validateC4Model, git, type AppDb } from '@skaro/core';
+import { validateC4Model, git, type AppDb } from '@skaro/core';
+import { candidateC4Model } from './c4-candidate';
 import { validateC4TaskCode } from './c4-task-code';
 import type { ReviewC4Args } from '@skaro/mcp-server';
 import type { ProjectContext } from './projects';
@@ -97,7 +98,10 @@ async function inspectC4TaskReviewData(
   if (review.changeHash !== (await c4ChangeHash(checkout, review.baseHead)))
     problems.push('Code changed after C4 review; review it again.');
   if (artifacts.c4) {
-    const realized = realizeC4(artifacts.c4, review.realized);
+    const realized = await candidateC4Model(artifacts.c4, review.realized, {
+      root: checkout,
+      base: baseHead,
+    });
     if (review.realized.length) problems.push(...validateC4Model(realized));
     problems.push(
       ...(await validateC4TaskCode(

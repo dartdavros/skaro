@@ -56,7 +56,16 @@ export async function readTaskC4Scope(
 ): Promise<C4TaskScope> {
   const ancestor = (await git(root, ['merge-base', baseHead, 'HEAD'])).stdout.trim();
   const [changed, untracked] = await Promise.all([
-    git(root, ['diff', '--name-only', '-z', ancestor, '--', '.', ':(exclude).skaro']),
+    git(root, [
+      'diff',
+      '--name-only',
+      '--no-renames',
+      '-z',
+      ancestor,
+      '--',
+      '.',
+      ':(exclude).skaro',
+    ]),
     git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--', '.', ':(exclude).skaro']),
   ]);
   return taskC4Scope(

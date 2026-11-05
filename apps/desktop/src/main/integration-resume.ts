@@ -7,6 +7,7 @@ import { recoverLegacyCheckShell } from './integration-shell-recovery';
 import { dropInheritedMergeChecks } from './integration-merge-checks';
 import { retireIntegration } from './integration-retire';
 import { missingLocalScope } from './integration-local-changes';
+import { recoverVerifiedC4Candidate } from './integration-c4-recovery';
 
 export async function recoverIntegrations(ctx: TaskRunEngine): Promise<void> {
   const integration = ctx.integrations;
@@ -55,6 +56,7 @@ export async function recoverIntegrations(ctx: TaskRunEngine): Promise<void> {
         }
         await integration.history.recover(op);
         await integration.controls.recover(op);
+        await recoverVerifiedC4Candidate(integration.service, op);
         if (recoverLegacyCheckShell(op)) {
           integration.service.save(op);
           await integration.history.notice(
