@@ -22,6 +22,7 @@ export async function recoverVerifiedC4Candidate(
   }
   op.state = 'ready';
   op.error = undefined;
+  op.failureKind = undefined;
   op.publishFailures = 0;
   service.save(op);
   return true;

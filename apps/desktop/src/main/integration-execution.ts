@@ -61,6 +61,7 @@ export async function executeIntegration(
         );
       } catch (error) {
         integration.assertExecuting(op);
+        if (error instanceof C4PublicationError) throw error;
         op.error = errorText(error);
         op.needsVerification = true;
         op.state = 'resolving';
@@ -121,14 +122,10 @@ export async function executeIntegration(
       integration.service.save(op);
       return;
     }
+    const c4Failure = error instanceof C4PublicationError || op.failureKind === 'c4';
     // A verified candidate that failed to go into the base (a locked file, Git busy) is published
     // again as it is: its resolution and checks are not what failed.
-    if (
-      !(error instanceof C4PublicationError) &&
-      publishing &&
-      op.state === 'ready' &&
-      (op.publishFailures ?? 0) < 2
-    ) {
+    if (!c4Failure && publishing && op.state === 'ready' && (op.publishFailures ?? 0) < 2) {
       op.publishFailures = (op.publishFailures ?? 0) + 1;
       op.error = errorText(error);
       integration.service.save(op);
@@ -141,7 +138,8 @@ export async function executeIntegration(
       return;
     }
     op.error = errorText(error);
-    if (error instanceof C4PublicationError) {
+    if (c4Failure) {
+      op.failureKind = 'c4';
       op.verification = undefined;
       op.needsVerification = true;
     }
@@ -155,7 +153,7 @@ export async function executeIntegration(
     // Only a crashed agent is retried unattended; a finished turn waits for the owner instead.
     if (
       !(error instanceof IntegrationAgentUnavailable) &&
-      !(error instanceof C4PublicationError) &&
+      !c4Failure &&
       op.attempts > 0 &&
       op.attempts < 3
     ) {

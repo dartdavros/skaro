@@ -84,6 +84,9 @@ it('rejects deletion without a proven rename before running checks or marking re
   expect(op.verification).toBeUndefined();
   expect(op.checkRuns ?? []).toHaveLength(0);
   expect(op.error).toContain('missing code path README.md');
+  // The MCP/agent may serialize the error: its deterministic category must survive restart.
+  await f.restart();
+  expect(f.integrations.deps.store.find(f.projectId, op.id)?.failureKind).toBe('c4');
   expect(await recoverVerifiedC4Candidate(f.integrations, op)).toBe(false);
 }, 60_000);
 
