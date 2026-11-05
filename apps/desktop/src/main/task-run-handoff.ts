@@ -20,6 +20,7 @@ import { saveBuiltinRunSettings } from './builtin-run-settings';
 import { TaskExecution } from './task-execution';
 import { CommandCancelled } from './owner-commands';
 import { requireTaskNotStopping } from './builtin-task-stop';
+import { restoreCleanedWorktree } from './task-worktree-retention';
 
 interface Intent {
   from: string;
@@ -141,6 +142,7 @@ export class TaskRunHandoff {
       next = intent.next;
       // Await actual shutdown. No swallowed close error and no replacement writer on timeout.
       await this.ctx.sessions.stopForHandoff(active);
+      await restoreCleanedWorktree(this.ctx, active.run);
       await this.ctx.history.drain(active);
       const recorded = await loadTaskHistory(this.ctx.deps, active.run);
       const context = await handoffContext(this.ctx, active, {

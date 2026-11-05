@@ -9,6 +9,7 @@ import { subjectOf, updateSubject } from './task-subject';
 import { CompletionStore } from './completion-store';
 import { stageIdOf } from './task-stage';
 import { IntegrationPending } from './integration-model';
+import { accessTaskWorktree } from './task-worktree-retention';
 
 /** A task is merged on its own by Git; a conflict goes back to its agent, checkout and environment. */
 export class TaskRunMergeActions {
@@ -22,6 +23,7 @@ export class TaskRunMergeActions {
       this.ctx.active.get(key(projectId, taskId)) ??
       (await this.ctx.history.restore(projectId, taskId));
     if (!active) throw new Error('The task has no run');
+    await accessTaskWorktree(this.ctx, active.run);
     await this.ctx.merges.revert(active, this.ctx.project(projectId), commit);
   }
 
@@ -69,6 +71,7 @@ export class TaskRunMergeActions {
         'A legacy shared branch must be updated by its task agent and resubmitted; Skaro preserves the other accepted results',
       );
     const base = (await context.load()).config.baseBranch;
+    await accessTaskWorktree(this.ctx, active.run);
     const result = await this.ctx.merges.coordinator.serialized(projectId, async () => {
       if ((await git(worktree, ['status', '--porcelain'])).stdout.trim())
         throw new Error('Preserve uncommitted edits before updating the accepted branch');

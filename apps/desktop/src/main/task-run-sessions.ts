@@ -228,6 +228,7 @@ export class TaskRunSessions {
 
   async close(): Promise<void> {
     this.ctx.closing = true;
+    await this.ctx.cleanup.close();
     // Releasing a review slot during shutdown must not launch a queued agent turn.
     for (const queued of this.ctx.queue.state().queued) this.ctx.queue.cancel(queued);
     await this.ctx.reviews.close();

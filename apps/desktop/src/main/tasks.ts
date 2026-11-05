@@ -121,7 +121,7 @@ export class TaskRuns {
   stopEnvironmentReview(projectId: string, taskId: string): Promise<void> {
     return this.engine.reviews.stop(projectId, taskId);
   }
-  workdir(projectId: string, taskId: string): string {
+  workdir(projectId: string, taskId: string): Promise<string> {
     return this.engine.views.workdir(projectId, taskId);
   }
   toggleCriterion(projectId: string, taskId: string, index: number): Promise<void> {

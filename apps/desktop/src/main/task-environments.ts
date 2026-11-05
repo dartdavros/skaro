@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join, relative, isAbsolute } from 'node:path';
 import {
-  environmentName,
   containerTask,
   ownProjects,
   type AppDb,
@@ -244,8 +243,8 @@ export class TaskEnvironments {
   private async remove(key: TaskKey, scope: 'task' | 'named' = 'task'): Promise<string[]> {
     this.scope.require(key);
     const all = await this.docker.inspect();
-    const project = this.deps.db.getProject(key.projectId)?.name ?? '';
-    const name = this.registry.find(key)?.name ?? environmentName(project, key.taskId);
+    const name = this.registry.find(key)?.name;
+    if (!name) return []; // A guessed name or a bind mount never authorizes deletion.
     const owned =
       scope === 'named'
         ? namedContainers(all, name)
@@ -288,8 +287,12 @@ export class TaskEnvironments {
         backgroundWork.finish(job);
       } else backgroundWork.fail(job, failures.join('; '));
     }
-    // Removed and recreated containers leave anonymous volumes, untagged images and cache behind:
-    // they go with every removal and at least hourly, not on each frequent limit pass.
-    await this.pruning.run(this.docker, stale.length, this.deps.projectScope);
+    await this.pruning.run(
+      this.docker,
+      this.registry,
+      this.deps.finished,
+      this.deps.busy,
+      this.deps.projectScope,
+    );
   }
 }

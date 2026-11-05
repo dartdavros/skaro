@@ -26,15 +26,18 @@ export function fileHandlers(
       runs.openExternal(projectId, taskId, url, (address) => shell.openExternal(address)),
     'task.stopEnvironmentReview': (projectId, taskId) =>
       runs.stopEnvironmentReview(projectId, taskId),
-    'files.suggest': (projectId, taskId, query) =>
-      suggestPaths(runs.workdir(projectId, taskId), query),
-    'files.exist': (projectId, taskId, paths) =>
-      existingPaths(runs.workdir(projectId, taskId), paths),
+    'files.suggest': async (projectId, taskId, query) =>
+      suggestPaths(await runs.workdir(projectId, taskId), query),
+    'files.exist': async (projectId, taskId, paths) =>
+      existingPaths(await runs.workdir(projectId, taskId), paths),
     'files.open': async (projectId, taskId, path) => {
-      const error = await shell.openPath(resolveInside(runs.workdir(projectId, taskId), path));
+      const error = await shell.openPath(
+        resolveInside(await runs.workdir(projectId, taskId), path),
+      );
       if (error) throw new Error(error);
     },
-    'files.diff': (projectId, taskId, path) => fileDiff(runs.workdir(projectId, taskId), path),
+    'files.diff': async (projectId, taskId, path) =>
+      fileDiff(await runs.workdir(projectId, taskId), path),
     'files.pasteImage': async () => {
       const items = await clipboard.read();
       const item = items.find((entry) => entry.types.includes('image/png'));
