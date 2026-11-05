@@ -1,4 +1,5 @@
 import { RunQueue, type TaskKey, type TaskRuntime } from '@skaro/core';
+import { updateTaskRuntime } from './task-runtime-state';
 import type { MessageInput } from '../shared/ipc';
 import type { ProjectContext } from './projects';
 import type { NotifyKind } from './notifier';
@@ -187,9 +188,7 @@ export class TaskRunEngine {
   }
 
   setRuntime(projectId: string, taskId: string, state: TaskRuntime, runId?: string): void {
-    const current = this.deps.db.getTaskRuntime(projectId).get(taskId);
-    if (current?.state === state && current.runId === runId) return;
-    this.deps.db.setTaskRuntime(projectId, taskId, state, runId);
+    if (!updateTaskRuntime(this.deps.db, projectId, taskId, state, runId)) return;
     this.changed(projectId, taskId);
     this.deps.emit('project.changed', { projectId });
   }
