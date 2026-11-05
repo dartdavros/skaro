@@ -23,7 +23,7 @@ function container(
 }
 
 describe('containers of a task', () => {
-  it('finds the task by the environment name and by its checkout, never the main copy', () => {
+  it('requires a recorded name, never inferring ownership from checkout paths', () => {
     const checkout = join(worktrees, 'p1', 'T-026');
     expect(
       containerTask(container('a', { [COMPOSE_PROJECT]: 'skaro-shop-t-026' }), worktrees, names),
@@ -35,10 +35,10 @@ describe('containers of a task', () => {
         worktrees,
         names,
       ),
-    ).toEqual(task);
+    ).toBeUndefined();
     expect(
       containerTask(container('d', {}, [join(checkout, 'apps', 'backend')]), worktrees, names),
-    ).toEqual(task);
+    ).toBeUndefined();
     expect(
       containerTask(
         container('e', {
@@ -62,5 +62,27 @@ describe('containers of a task', () => {
     expect(ownProjects('skaro-shop-t-026', [own, stray], [own, stray, main])).toEqual([
       'skaro-shop-t-026',
     ]);
+    expect(ownProjects('skaro-shop-t-026', [own, stray], [own, stray])).toEqual([
+      'skaro-shop-t-026',
+    ]);
+    expect(
+      ownProjects(
+        'skaro-shop-t-026',
+        [own],
+        [
+          own,
+          container('foreign', {
+            [COMPOSE_PROJECT]: 'skaro-shop-t-026',
+          }),
+        ],
+      ),
+    ).toEqual([]);
+    expect(
+      containerTask(
+        container('guess', { [COMPOSE_PROJECT]: 'skaro-unknown-t-001' }),
+        worktrees,
+        names,
+      ),
+    ).toBeUndefined();
   });
 });

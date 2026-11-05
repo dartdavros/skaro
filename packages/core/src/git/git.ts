@@ -155,9 +155,25 @@ export class GitService {
   }
 
   /** Never force or swallow a failed removal: ignored data is not recoverable from Git. */
-  async removeWorktree(path: string, options: { deleteBranch?: string } = {}): Promise<void> {
+  async removeWorktree(
+    path: string,
+    options: {
+      deleteBranch?: string;
+      preserve?: { branch: string; head: string };
+    } = {},
+  ): Promise<void> {
     return serializedWorktree(this.repo, async () => {
       await this.assertRemovableWorktree(path);
+      if (options.preserve && existsSync(path)) {
+        const { branch, head } = options.preserve;
+        if (
+          options.deleteBranch ||
+          (await this.currentBranch(path)) !== branch ||
+          (await git(path, ['rev-parse', 'HEAD'])).stdout.trim() !== head ||
+          (await git(this.repo, ['rev-parse', `refs/heads/${branch}`])).stdout.trim() !== head
+        )
+          throw new Error('Worktree or its preserved branch changed during cleanup');
+      }
       if (existsSync(path)) await git(this.repo, ['worktree', 'remove', path]);
       await git(this.repo, ['worktree', 'prune']);
       if (options.deleteBranch) await this.deleteBranch(options.deleteBranch);

@@ -35,6 +35,7 @@ export * from './feed-action-summary.ts';
 export * from './diff.ts';
 export { architecturePresentation } from './architecture-proposal.ts';
 export * from './async-question.ts';
+export * from './question-message.ts';
 export * from './unknown-shape.ts';
 export { assertQuestionsAnswered, validateQuestionAnswer } from './question-barrier.ts';
 export type { OwnerCommand } from './owner-command.ts';

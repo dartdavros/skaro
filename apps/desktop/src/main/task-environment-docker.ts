@@ -1,11 +1,9 @@
 import {
   allocatePorts,
   COMPOSE_PROJECT,
-  containerTask,
   environmentHasData,
   inspectContainers,
   labelsOf,
-  pruneUnusedDocker,
   removeEnvironment,
   stopContainers,
   type DockerContainer,
@@ -19,8 +17,6 @@ export interface EnvironmentDocker {
   remove: (containers: DockerContainer[], projects: string[]) => Promise<string[]>;
   hasData: (name: string) => Promise<boolean>;
   ports: (count: number, taken: ReadonlySet<number>) => Promise<number[]>;
-  /** Removes what Docker keeps after containers are gone; failures come back, never thrown. */
-  prune: () => Promise<{ failures: string[]; reclaimed: number }>;
 }
 
 export const systemDocker: EnvironmentDocker = {
@@ -29,21 +25,22 @@ export const systemDocker: EnvironmentDocker = {
   remove: removeEnvironment,
   hasData: environmentHasData,
   ports: allocatePorts,
-  prune: pruneUnusedDocker,
 };
 
 export function sameTask(a: TaskKey | undefined, b: TaskKey): boolean {
   return a?.projectId === b.projectId && a.taskId === b.taskId;
 }
 
-/** Every container of the task: its environment and whatever was started from its checkout. */
+/** Only the recorded task environment; a checkout mount never grants deletion authority. */
 export function taskContainers(
   all: DockerContainer[],
   key: TaskKey,
-  worktrees: string,
+  _worktrees: string,
   names: ReadonlyMap<string, TaskKey>,
 ): DockerContainer[] {
-  return all.filter((container) => sameTask(containerTask(container, worktrees, names), key));
+  return all.filter((container) =>
+    sameTask(names.get(labelsOf(container)[COMPOSE_PROJECT] ?? ''), key),
+  );
 }
 
 /** Only what carries the environment's own name: a retried copy must not touch anything else. */

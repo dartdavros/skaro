@@ -16,7 +16,7 @@ import { trackRun } from './task-run-access';
 import { withAgentDefaults } from './agent-model-defaults';
 import type { TaskAgentPreferences } from './task-agent-preferences';
 import { taskViewSettings } from './task-view-settings';
-import { taskRunDirectory } from './task-run-directory';
+import { accessTaskWorktree } from './task-worktree-retention';
 import { validateBuiltinTaskSettings } from './builtin-task-settings-validation';
 import {
   IntegrationFailed,
@@ -158,7 +158,7 @@ export class TaskRunViews {
     };
   }
 
-  workdir(projectId: string, taskId: string): string {
+  async workdir(projectId: string, taskId: string): Promise<string> {
     const integration = integrationCandidate(this.ctx.integrations.store.all(projectId), taskId);
     if (integration) return integration.worktree;
     const active = this.ctx.active.get(key(projectId, taskId));
@@ -167,7 +167,7 @@ export class TaskRunViews {
       : this.ctx.deps.db.listRuns(projectId, taskId)[0];
     const root = this.ctx.project(projectId).root;
     if (run?.retiredAt !== undefined) throw new Error('The run belongs to a deleted task.');
-    return run ? taskRunDirectory(root, run) : root;
+    return run ? accessTaskWorktree(this.ctx, run) : root;
   }
 
   settings(projectId: string, task: Task, artifacts: ProjectArtifacts): AgentSettings {

@@ -17,6 +17,7 @@ import type { BuiltinTaskLaunchRequest } from './builtin-task-start';
 import { capturePendingBuiltinStart } from './builtin-task-pending';
 import { cancelTaskRun } from './task-run-cancel';
 import { requireTaskNotStopping } from './builtin-task-stop';
+import { restoreCleanedWorktree } from './task-worktree-retention';
 
 /** scheduling: a focused part of the task-run controller. */
 export class TaskRunScheduling {
@@ -223,6 +224,9 @@ export class TaskRunScheduling {
     if (existing && builtin && existing.run.agent !== 'skaro')
       throw new Error('Pending builtin launch conflicts with the existing task run');
     if (existing) {
+      await serializeTaskMutation(this.ctx.project(projectId), () =>
+        restoreCleanedWorktree(this.ctx, existing.run),
+      );
       if (!existing.run.nativeSessionId && !(await this.prepare(existing))) return;
       requireCurrent?.();
       this.ctx.setRuntime(projectId, taskId, 'running', existing.run.id);

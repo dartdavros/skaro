@@ -1,6 +1,7 @@
 import { OwnerMessages } from '../feed/owner-messages.svelte';
 import { cleanError } from '../feed/action-error';
 import type { AgentModel, InteractionAnswer, PermissionMode } from '@skaro/timeline';
+import { questionAcceptsMessage } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 import { onDestroy } from 'svelte';
 import type { AgentInfo, AgentSettings, MergeAction, MessageInput } from '../../../shared/ipc';
@@ -109,8 +110,8 @@ export function createTaskController(
   }
 
   async function send(input: MessageInput): Promise<void> {
-    // Text typed while a question or a permission is open answers it in the user's own words.
-    if (openQuestion?.kind === 'question') {
+    // One ordinary question accepts a composer answer; other async forms allow clarification.
+    if (openQuestion?.kind === 'question' && !questionAcceptsMessage(openQuestion)) {
       if (openQuestion.questions.length !== 1) {
         actionError = t('card.question.notReady');
         throw new Error(actionError);
@@ -121,7 +122,7 @@ export function createTaskController(
       };
       return respond(openQuestion.id, answer);
     }
-    if (openApproval?.kind === 'approval') {
+    if (!openQuestion && openApproval?.kind === 'approval') {
       return respond(openApproval.id, { kind: 'approval', choice: 'deny', message: input.text });
     }
     await guard(() =>

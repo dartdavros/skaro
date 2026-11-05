@@ -9,6 +9,7 @@ import { planSpecProblem } from './chat-plan-specs';
 import { adrId } from './chat-proposal-helpers';
 import { reconcilePlanIdentity } from './chat-plan-identity';
 import { serializePlanCreation } from './chat-plan-mutations';
+import { pendingC4PlanProblem } from './chat-plan-c4';
 
 /** One durable decision covers the validated graph; creation resumes without another approval. */
 export class ChatPlanDecisions {
@@ -37,7 +38,7 @@ export class ChatPlanDecisions {
     if (new Set(item.proposal.tasks.map((t) => t.ref)).size !== item.proposal.tasks.length)
       throw new Error('Duplicate task refs');
     const chosen = item.proposal.tasks.filter((t) => selected.includes(t.ref));
-    this.validate(live, chosen, artifacts, item);
+    await this.validate(live, chosen, artifacts, item);
     for (const task of chosen) {
       const milestone = task.milestone ?? item.proposal.milestone;
       if (milestone && !milestone.isNew && !artifacts.milestones.some((m) => m.id === milestone.id))
@@ -148,7 +149,7 @@ export class ChatPlanDecisions {
     const remaining = proposal.tasks.filter(
       (t) => result.selected!.includes(t.ref) && !result.tasks?.some((done) => done.ref === t.ref),
     );
-    this.validate(live, remaining, artifacts);
+    await this.validate(live, remaining, artifacts);
     const task = decision.creating
       ? remaining.find((t) => t.ref === decision.creating!.ref)
       : remaining.find(
@@ -247,12 +248,14 @@ export class ChatPlanDecisions {
     return id;
   }
 
-  private validate(
+  private async validate(
     live: LiveChat,
     tasks: ProposedTask[],
     artifacts: ProjectArtifacts,
     item?: ProposalItem,
   ) {
+    const architecture = await pendingC4PlanProblem(this.ctx.deps.db, live.projectId, tasks);
+    if (architecture) throw new Error(architecture);
     const problem = planSpecProblem(tasks, artifacts.specs, artifacts);
     if (problem) throw new Error(problem);
     checkedPlanDependencies(

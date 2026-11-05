@@ -142,6 +142,9 @@ it('controls a candidate still in flight from the chat of any of its tasks', asy
   const question = `integration-${saved.id}:question`;
   const chat = () => integrations.history.project(f.projectId, second.id);
   expect((await chat()).timeline.interactions.map((item) => item.id)).toEqual([question]);
+  await engine!.messages.send(f.projectId, second.id, { text: 'Which behaviors do you mean?' });
+  expect(integrations.store.inputs(saved.id).at(-1)?.text).toBe('Which behaviors do you mean?');
+  expect((await chat()).timeline.interactions.map((item) => item.id)).toEqual([question]);
   await engine!.messages.respond(f.projectId, second.id, question, {
     kind: 'question',
     answers: { order: ['the first one'] },

@@ -26,6 +26,7 @@ import { TaskStartup } from './task-startup';
 import { TaskEnvironmentReviews, isReviewQueueKey } from './task-environment-reviews';
 import { taskEnvironmentFinished } from './task-environment-finished';
 import { TaskRunContinuation } from './task-run-continuation';
+import { TaskResourceCleanup } from './task-resource-cleanup';
 
 function taskKey(k: string): TaskKey {
   const [projectId, taskId] = k.split('\n') as [string, string];
@@ -36,6 +37,7 @@ function taskKey(k: string): TaskKey {
 export class TaskRunEngine {
   closing = false;
   readonly continuation = new TaskRunContinuation(this);
+  readonly cleanup = new TaskResourceCleanup(this);
   readonly deps: TaskRunDeps;
   readonly active = new Map<string, ActiveRun>();
   /** Messages that wait for a queue slot, in the order they were sent. */
@@ -176,11 +178,12 @@ export class TaskRunEngine {
       .destroy(task)
       .catch((error: unknown) => [String(error)]);
     if (failures.length) console.error(`environment of ${task.taskId}: ${failures.join('; ')}`);
+    if (!this.closing) setImmediate(() => this.limitEnvironments());
   }
 
   /** Finished tasks lose their environments; idle services always stop. */
   limitEnvironments(): void {
-    void this.environments.enforce().catch((error) => console.error('Environment cleanup:', error));
+    void this.cleanup.run();
   }
 
   setRuntime(projectId: string, taskId: string, state: TaskRuntime, runId?: string): void {

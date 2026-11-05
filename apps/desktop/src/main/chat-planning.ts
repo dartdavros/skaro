@@ -13,6 +13,7 @@ import { savedPlanStatus, planStatusText } from './chat-planning-status';
 import { planningReadiness } from './chat-planning-readiness';
 import type { LiveChat } from './chat-model';
 import { serializeChatMutation } from './chat-mutations';
+import { pendingC4PlanProblem } from './chat-plan-c4';
 
 export class ChatPlanning implements ProjectPlanningHandlers {
   private readonly ctx: ChatEngine;
@@ -89,6 +90,13 @@ export class ChatPlanning implements ProjectPlanningHandlers {
     const problem = preparedPlanProblem(plan, artifacts);
     if (problem) return { text: problem, isError: true };
     const all = plan.milestones.flatMap((m) => m.tasks);
+    const architecture = await pendingC4PlanProblem(this.ctx.deps.db, live.projectId, all);
+    if (architecture) {
+      store.put({ ...plan, state: 'waiting', reason: architecture });
+      return {
+        text: `The complete plan is saved but is not ready for confirmation. ${architecture}`,
+      };
+    }
     const readiness = planningReadiness(all, artifacts, live.timeline.state.items);
     if (readiness.waiting.length || readiness.blockers.length) {
       const reason = [...readiness.waiting, ...readiness.blockers].join('\n');

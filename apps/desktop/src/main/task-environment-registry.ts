@@ -24,6 +24,8 @@ export interface EnvironmentRecord extends TaskKey {
 }
 
 const KEY = 'environments';
+const RETIRED = 'environments.retired';
+export type RetiredEnvironment = TaskKey & { name: string };
 
 /** Environment records in the app database; they outlive restarts and stopped containers. */
 export class EnvironmentRegistry {
@@ -44,10 +46,18 @@ export class EnvironmentRegistry {
   ensure(key: TaskKey, project: string): EnvironmentRecord {
     const existing = this.find(key);
     if (existing) return existing;
-    const taken = new Set(this.all().map((r) => r.name));
+    const taken = new Set([...this.all(), ...this.retired()].map((r) => r.name));
     const base = environmentName(project, key.taskId);
     // Two projects may share a folder name: the project id tells them apart.
-    const name = taken.has(base) ? `${base}-${key.projectId.slice(0, 6).toLowerCase()}` : base;
+    const previous = this.retired().find(
+      (r) => r.projectId === key.projectId && r.taskId === key.taskId,
+    );
+    let name = previous?.name ?? base;
+    if (!previous) {
+      let suffix = 0;
+      while (taken.has(name))
+        name = `${base}-${key.projectId.slice(0, 6).toLowerCase()}-${++suffix}`;
+    }
     const record = { ...key, name, ports: {}, created: false, usedAt: Date.now() };
     this.db.setSetting(KEY, [...this.all(), record]);
     return record;
@@ -65,10 +75,20 @@ export class EnvironmentRegistry {
   }
 
   remove(key: TaskKey): void {
+    const record = this.find(key);
+    if (record) {
+      const retired = this.retired().filter((item) => item.name !== record.name);
+      this.db.setSetting(RETIRED, [...retired, { ...key, name: record.name }]);
+    }
     this.db.setSetting(
       KEY,
       this.all().filter((r) => r.projectId !== key.projectId || r.taskId !== key.taskId),
     );
+  }
+
+  /** Durable ownership survives container removal, including later orphan sweeps. */
+  retired(): RetiredEnvironment[] {
+    return this.db.getSetting<RetiredEnvironment[]>(RETIRED, []);
   }
 
   /** Ports promised to any environment: its services may be stopped, the ports stay theirs. */

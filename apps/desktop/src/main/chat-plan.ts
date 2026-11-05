@@ -7,6 +7,7 @@ import { type PlanProposal, LiveChat } from './chat-model';
 import { adrId, findCycle } from './chat-proposal-helpers';
 import { applyChatPlan } from './chat-plan-apply';
 import { planSpecProblem } from './chat-plan-specs';
+import { pendingC4PlanProblem } from './chat-plan-c4';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -78,11 +79,13 @@ export class ChatPlan {
   }
 
   /** Refs tasks of this chat may depend on: this call, earlier cards, existing tasks. */
-  checkTasks(
+  async checkTasks(
     live: LiveChat,
     artifacts: ProjectArtifacts,
     tasks: ProposedTaskArgs[],
-  ): string | undefined {
+  ): Promise<string | undefined> {
+    const architecture = await pendingC4PlanProblem(this.ctx.deps.db, live.projectId, tasks);
+    if (architecture) return architecture;
     const earlier = this.earlierRefs(live);
     const refs = new Set(tasks.map((t) => t.ref));
     const ids = new Set(artifacts.tasks.map((t) => t.id));

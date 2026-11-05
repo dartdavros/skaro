@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { withoutSkaroNote } from '@skaro/timeline';
+import { emptyTimeline, withoutSkaroNote } from '@skaro/timeline';
 import { taskAgentInput } from './task-agent-input';
+import { secretInteraction } from './task-secret-input';
 
 describe('task delivery adapter input boundary', () => {
+  it('keeps a clarification as owner text and never turns it into protected form answers', () => {
+    const interaction = secretInteraction([
+      { id: 'service', header: 'Service', question: 'Service URL?' },
+      { id: 'access', header: 'Access', question: 'Access key?' },
+    ]);
+    const state = { ...emptyTimeline(), interactions: [interaction] };
+    const delivered = taskAgentInput({ text: 'О каком сервисе речь?' }, state);
+    expect(withoutSkaroNote(delivered.text)).toBe('О каком сервисе речь?');
+    expect(delivered.text).toContain('without treating it as completed form fields');
+    expect(state.interactions).toEqual([interaction]);
+    expect(Object.keys(delivered)).toEqual(['text']);
+  });
   it('keeps owner text and the command note without copying private inbox or scheduler fields', () => {
     const input = {
       text: 'owner message',

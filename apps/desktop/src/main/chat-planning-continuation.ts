@@ -3,6 +3,7 @@ import type { ChatEngine } from './chat-engine';
 import type { LiveChat } from './chat-model';
 import { planStatusText } from './chat-planning-status';
 import { planningNextStep } from './chat-planning-next';
+import { pendingC4PlanProblem } from './chat-plan-c4';
 
 /** Continuations are bounded, serialized with user messages, and scoped to a saved plan. */
 export class ChatPlanningContinuation {
@@ -86,6 +87,11 @@ export class ChatPlanningContinuation {
     let plan = store.current();
     if (!plan || !['active', 'waiting'].includes(plan.state)) return;
     const artifacts = await this.ctx.project(live.projectId).load();
+    const architecture = await pendingC4PlanProblem(
+      this.ctx.deps.db,
+      live.projectId,
+      plan.milestones.flatMap((m) => m.tasks),
+    );
     if (
       revision !== live.planningRevision ||
       live.chat.archived ||
@@ -95,6 +101,10 @@ export class ChatPlanningContinuation {
     // A tool may have finished or paused the operation while artifacts were loading.
     plan = store.get(plan.key);
     if (!plan || !['active', 'waiting'].includes(plan.state)) return;
+    if (architecture) {
+      store.put({ ...plan, state: 'waiting', reason: architecture });
+      return;
+    }
     const next = planningNextStep(
       plan,
       live.timeline.state.items,

@@ -1,11 +1,5 @@
 import { isAbsolute, relative, resolve, sep } from 'node:path';
-import {
-  COMPOSE_PROJECT,
-  hostFolders,
-  hostPath,
-  labelsOf,
-  type DockerContainer,
-} from './containers.ts';
+import { COMPOSE_PROJECT, hostPath, labelsOf, type DockerContainer } from './containers.ts';
 
 export interface TaskKey {
   projectId: string;
@@ -21,20 +15,13 @@ export function taskOfFolder(worktrees: string, folder: string): TaskKey | undef
 }
 
 /**
- * The task a container belongs to: by the environment name Skaro gave its compose project, else
- * by the task checkout it was started from or mounts. Containers of the main
- * working copy and of other software belong to no task.
+ * A recorded Compose project is ownership. A checkout mount, working directory or name prefix
+ * alone is not: another application can legitimately use any of those.
  */
 export function containerTask(
   container: DockerContainer,
-  worktrees: string,
+  _worktrees: string,
   names: ReadonlyMap<string, TaskKey>,
 ): TaskKey | undefined {
-  const named = names.get(labelsOf(container)[COMPOSE_PROJECT] ?? '');
-  if (named) return named;
-  for (const folder of hostFolders(container)) {
-    const task = taskOfFolder(worktrees, folder);
-    if (task) return task;
-  }
-  return undefined;
+  return names.get(labelsOf(container)[COMPOSE_PROJECT] ?? '');
 }

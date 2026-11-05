@@ -1,6 +1,8 @@
-Skaro 2.2.17
+Skaro 2.2.18
 
-- Prevent graph indexing from blocking document replacement on Windows.
-- Restore secure key entry in tasks and keep acknowledged messages in their original position.
-- Remove automatic C4 diagram attachments from the Architecture document. All views remain available in the C4 section.
-- Fix a database lock that could prevent a chat message from reaching the agent while the activity feed was being indexed.
+- Fix C4 validation for tasks created before newer changes reached the base branch.
+- Block implementation plans while required C4 amendments remain unapplied, including confirmation and recovery; plan approval never accepts architecture on the owner's behalf.
+- Automatically clean completed tasks' unused worktrees while preserving tasks, conversation history, branches and commits. Local changes and ignored data prevent removal.
+- Restore cleaned worktrees when continuing work, accessing files, changing agents or reverting a merge.
+- Limit Docker cleanup to recorded Skaro environments. Remove global pruning and preserve unrelated resources and shared build caches.
+- Allow clarification messages while a protected or multi-question async form is pending, without treating the message as credentials or completed answers.

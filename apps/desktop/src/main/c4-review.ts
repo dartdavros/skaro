@@ -1,6 +1,7 @@
 import { dirname } from 'node:path';
 import { background } from './background/client';
-import { validateC4Code, realizeC4, validateC4Model, git, type AppDb } from '@skaro/core';
+import { realizeC4, validateC4Model, git, type AppDb } from '@skaro/core';
+import { validateC4TaskCode } from './c4-task-code';
 import type { ReviewC4Args } from '@skaro/mcp-server';
 import type { ProjectContext } from './projects';
 import { c4CoverageProblems } from './c4-coverage';
@@ -99,10 +100,16 @@ async function inspectC4TaskReviewData(
     const realized = realizeC4(artifacts.c4, review.realized);
     if (review.realized.length) problems.push(...validateC4Model(realized));
     problems.push(
-      ...(await validateC4Code(checkout, {
-        ...realized,
-        elements: realized.elements.filter((item) => scope.elements.includes(item.id)),
-      })),
+      ...(await validateC4TaskCode(
+        checkout,
+        baseHead,
+        {
+          ...realized,
+          elements: realized.elements.filter((item) => scope.elements.includes(item.id)),
+        },
+        actualScope.files,
+        review.realized,
+      )),
     );
   }
   if (problems.length) throw new Error(problems.join('\n'));
