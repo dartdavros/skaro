@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AgentSession } from '@skaro/timeline';
-import { runEvent, withSkaroNote } from '@skaro/timeline';
+import { questionMessageNote, runEvent, withSkaroNote } from '@skaro/timeline';
 import { hasOwnerCommand } from './owner-command-history';
 import type { TaskRunEngine } from './task-run-engine';
 import { integrationInstructions } from './integration-prompt';
@@ -110,7 +110,11 @@ export async function runIntegrationWorker(
       ? 'Continue the saved integration.'
       : withSkaroNote(
           inputs
-            .flatMap((input) => (input.commandId ? [`command_id: ${input.commandId}`] : []))
+            .flatMap((input) => [
+              input.commandId ? `command_id: ${input.commandId}` : '',
+              questionMessageNote(timeline, input.internal),
+            ])
+            .filter(Boolean)
             .join('\n'),
           inputs.map((input) => input.text).join('\n'),
         );

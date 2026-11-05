@@ -1,7 +1,11 @@
 import { QuestionAnswers } from './question-answers';
 import { hasOwnerCommand } from './owner-command-history';
 import { cancelOwnerMessages, CommandCancelled } from './owner-commands';
-import { assertQuestionsAnswered, validateQuestionAnswer } from '@skaro/timeline';
+import {
+  assertQuestionMessageAllowed,
+  questionMessageNote,
+  validateQuestionAnswer,
+} from '@skaro/timeline';
 // Project chats (architecture.md 9, agent-output.md 5.4): an agent session per chat in the
 // project's main working copy, in the "ask" mode (the user confirms edits and commands in cards)
 // or with full access, with Skaro's tools for documents, ADRs, milestones and
@@ -130,7 +134,7 @@ export class ChatConversation {
 
   /** Sends a message; decisions on proposals since the last message go in front of it. */
   async deliver(live: LiveChat, input: MessageInput): Promise<void> {
-    assertQuestionsAnswered(live.timeline.state);
+    assertQuestionMessageAllowed(live.timeline.state, input.internal);
     this.ctx.planningContinuation.userMessage(live);
     return this.queueDelivery(live, input);
   }
@@ -164,7 +168,7 @@ export class ChatConversation {
     const deliveryRevision = live.operation.capture();
     const session = await this.ctx.sessions.attach(live);
     live.operation.assert(deliveryRevision);
-    assertQuestionsAnswered(live.timeline.state);
+    assertQuestionMessageAllowed(live.timeline.state, input.internal);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
       throw new CommandCancelled();
     if (
@@ -177,7 +181,12 @@ export class ChatConversation {
     const message = {
       ...input,
       text: withSkaroNote(
-        [input.commandId ? `command_id: ${input.commandId}` : '', workflow, ...notes]
+        [
+          input.commandId ? `command_id: ${input.commandId}` : '',
+          questionMessageNote(live.timeline.state, input.internal),
+          workflow,
+          ...notes,
+        ]
           .filter(Boolean)
           .join('\n'),
         input.text,
@@ -185,7 +194,8 @@ export class ChatConversation {
     };
     try {
       if (revision !== undefined) live.planningSent = true;
-      if (live.timeline.state.status === 'idle') await session.send(message, input.commandId);
+      if (!live.timeline.state.turns.at(-1) || live.timeline.state.turns.at(-1)?.outcome)
+        await session.send(message, input.commandId);
       else await session.steer(message, input.commandId);
     } catch (error) {
       if (revision !== undefined) live.planningSent = false;

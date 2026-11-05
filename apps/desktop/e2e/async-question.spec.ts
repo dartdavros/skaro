@@ -123,6 +123,7 @@ test('keeps an actual async question after the turn and restart, and resumes the
         const commandId = crypto.randomUUID();
         await api.invoke('chat.send', projectId, chatId, {
           commandId,
+          internal: true,
           text: 'Проверка барьера вопросов: это сообщение не должно попасть агенту до ответа на карточку.',
         });
         return commandId;

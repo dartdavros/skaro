@@ -1,7 +1,8 @@
 import {
   isAsyncQuestion,
   validateQuestionAnswer,
-  assertQuestionsAnswered,
+  assertQuestionMessageAllowed,
+  questionMessageNote,
   withSkaroNote,
   type InteractionAnswer,
 } from '@skaro/timeline';
@@ -64,14 +65,22 @@ export class IntegrationControls {
 
   private async deliver(op: IntegrationOperation, input: MessageInput): Promise<void> {
     const timeline = (await this.ctx.integrations.history.state(op)).state;
-    assertQuestionsAnswered(timeline);
+    assertQuestionMessageAllowed(timeline, input.internal);
     if (hasOwnerCommand(timeline, input.commandId)) return;
     const live = this.sessions.get(op.id);
     if (live) {
       const decoded = this.ctx.integrations.history.secrets(op).input(input);
       await live.session.steer({
         ...decoded,
-        text: withSkaroNote(input.commandId ? `command_id: ${input.commandId}` : '', decoded.text),
+        text: withSkaroNote(
+          [
+            input.commandId ? `command_id: ${input.commandId}` : '',
+            questionMessageNote(timeline, input.internal),
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          decoded.text,
+        ),
       });
     } else {
       this.ctx.integrations.store.appendInput(op.id, input);

@@ -1,6 +1,6 @@
 import { QuestionAnswers } from './question-answers';
 import { cancelOwnerMessages, CommandCancelled } from './owner-commands';
-import { assertQuestionsAnswered, validateQuestionAnswer } from '@skaro/timeline';
+import { assertQuestionMessageAllowed, validateQuestionAnswer } from '@skaro/timeline';
 import { isAsyncQuestion, type Interaction, type InteractionAnswer } from '@skaro/timeline';
 import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
 import { readSubject, updateSubject } from './task-subject';
@@ -53,7 +53,7 @@ export class TaskRunMessages {
     requireCurrent();
     if (active.switching) throw new Error('The agent is being changed. Retry after the handoff.');
     const { projectId, taskId } = active;
-    const working = active.timeline.state.status !== 'idle';
+    const working = active.timeline.state.status === 'working';
     if (working || this.ctx.scheduling.holdsSlot(projectId, taskId)) {
       await this.deliver(active, input);
     } else {
@@ -82,16 +82,17 @@ export class TaskRunMessages {
     const epoch = active.deliveryEpoch;
     if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
     input = active.secrets.input(input);
-    assertQuestionsAnswered(active.timeline.state);
+    assertQuestionMessageAllowed(active.timeline.state, input.internal);
     const session = await this.ctx.sessions.attach(active);
     requireTaskNotStopping(active);
     if (active.deliveryEpoch !== epoch) throw new CommandCancelled();
     if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
-    assertQuestionsAnswered(active.timeline.state);
+    assertQuestionMessageAllowed(active.timeline.state, input.internal);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
       throw new CommandCancelled();
-    const message = taskAgentInput(input);
-    if (active.timeline.state.status === 'idle') await session.send(message, input.commandId);
+    const message = taskAgentInput(input, active.timeline.state);
+    if (!active.timeline.state.turns.at(-1) || active.timeline.state.turns.at(-1)?.outcome)
+      await session.send(message, input.commandId);
     else await session.steer(message, input.commandId);
   }
 
