@@ -59,6 +59,8 @@ export interface IntegrationOperation extends IntegrationRequest {
    */
   mergeChecks?: true | 2 | typeof MERGE_CHECKS;
   error?: string;
+  /** Survives the agent/MCP boundary, where an Error loses its concrete class. */
+  failureKind?: 'c4';
   verification?: { head: string; checks: ProjectCheck[]; completedAt: number };
   checkRuns?: {
     name: string;

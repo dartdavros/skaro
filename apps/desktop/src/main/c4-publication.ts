@@ -1,29 +1,28 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import {
-  prepareC4Package,
-  realizeC4,
-  c4Hash,
-  type C4Package,
-  type ProjectArtifacts,
-} from '@skaro/core';
+import { prepareC4Package, c4Hash, type C4Package, type ProjectArtifacts } from '@skaro/core';
 import type { ProjectContext } from './projects';
+import { candidateC4Model, type C4Candidate } from './c4-candidate';
 
 /** Architecture realization is committed and published by the same Git transaction as its code. */
 export async function prepareC4Publication(
   context: ProjectContext,
   artifacts: ProjectArtifacts,
   realizedIds: string[],
+  candidate?: C4Candidate,
 ): Promise<C4Package | undefined> {
   const realized = [...new Set(realizedIds)];
-  if (!realized.length) return undefined;
+  if (!realized.length && !artifacts.c4) return undefined;
   if (!artifacts.c4) throw new Error('Cannot publish architecture realization without a C4 model');
-  const model = realizeC4(artifacts.c4, realized);
+  const model = await candidateC4Model(artifacts.c4, realized, candidate);
+  if (!realized.length && JSON.stringify(model) === JSON.stringify(artifacts.c4)) return undefined;
   model.revision++;
   // Current code paths are checked in the merged candidate, where all task results coexist.
   return prepareC4Package(context.root, {
     title: artifacts.c4.title,
-    summary: `Published implementation of ${realized.join(', ')}`,
+    summary: realized.length
+      ? `Published implementation of ${realized.join(', ')}`
+      : 'Preserved C4 code references across Git renames',
     baseRevision: artifacts.c4.revision,
     model,
     documents: [],

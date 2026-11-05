@@ -10,8 +10,8 @@ import type { IntegrationOperation } from './integration-model';
 import { assertPublicationDependencies } from './completion-dependencies';
 import { withCompletionCheckout } from './completion-checkout';
 import { runChecks } from './check-runner';
-import { prepareC4Publication, c4PublicationPaths, writeC4Publication } from './c4-publication';
-import { validateC4Code } from '@skaro/core';
+import { prepareC4Publication, writeC4Publication } from './c4-publication';
+import { assertCandidateC4 } from './c4-candidate';
 
 /** What every publication does besides Git: task metadata, guards and the durable record. */
 async function publication(
@@ -26,11 +26,13 @@ async function publication(
     if (!task) throw new Error(`Task ${result.taskId} was removed`);
     return task;
   });
-  const architecture = await prepareC4Publication(
-    context,
-    artifacts,
-    operation.results.flatMap((result) => result.c4?.realized ?? []),
-  );
+  const architecturePaths = artifacts.c4
+    ? [
+        '.skaro/c4/model.json',
+        '.skaro/architecture.md',
+        `.skaro/c4/history/${artifacts.c4.revision + 1}.json`,
+      ]
+    : [];
   return {
     base: operation.base,
     strategy: operation.strategy,
@@ -38,7 +40,7 @@ async function publication(
       operation.results.length > 1
         ? `${message.split('\n\n')[0]}\n\n${operation.results.map((result) => result.message).join('\n')}`
         : message,
-    managedPaths: [...tasks.map((task) => task.path), ...c4PublicationPaths(architecture)],
+    managedPaths: [...tasks.map((task) => task.path), ...architecturePaths],
     guardPaths: [
       '.skaro/c4/model.json',
       '.skaro/architecture.md',
@@ -52,13 +54,19 @@ async function publication(
       context.invalidate();
       assertPublicationDependencies(await context.load(), operation.results, store);
       const target = new ArtifactStore(candidate);
+      const codeCandidate = { root: candidate, base: operation.base, staged: true };
+      const architecture = await prepareC4Publication(
+        context,
+        artifacts,
+        operation.results.flatMap((result) => result.c4?.realized ?? []),
+        codeCandidate,
+      );
       const c4Files = await writeC4Publication(candidate, architecture);
       const c4Model = architecture
         ? JSON.parse(architecture.files.find((f) => f.path === 'c4/model.json')!.after)
         : artifacts.c4;
       if (c4Model) {
-        const problems = await validateC4Code(candidate, c4Model);
-        if (problems.length) throw new Error(problems.join('\n'));
+        await assertCandidateC4(c4Model, codeCandidate);
       }
       for (const task of tasks) {
         const path = join(candidate, task.path);
