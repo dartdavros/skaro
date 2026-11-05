@@ -4,6 +4,7 @@ import type { PlanProposal } from './chat-model';
 import { adrId } from './chat-proposal-helpers';
 import { planSpecProblem } from './chat-plan-specs';
 import { checkedPlanDependencies } from './chat-plan-dependencies';
+import { pendingC4PlanProblem } from './chat-plan-c4';
 
 export async function applyChatPlan(options: {
   store: ArtifactStore;
@@ -18,6 +19,8 @@ export async function applyChatPlan(options: {
   const chosen = proposal.tasks.filter((t) => !picked || picked.includes(t.ref));
   const milestoneOnly = proposal.milestone?.isNew === true && proposal.tasks.length === 0;
   if (!chosen.length && !milestoneOnly) throw new Error('No tasks are selected');
+  const architecture = await pendingC4PlanProblem(db, projectId, chosen);
+  if (architecture) throw new Error(architecture);
   const specProblem = planSpecProblem(chosen, artifacts.specs, artifacts);
   if (specProblem) throw new Error(specProblem);
   const known = checkedPlanDependencies(chosen, items, artifacts);

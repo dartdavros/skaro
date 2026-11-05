@@ -36,7 +36,7 @@ export class ChatPlans {
       tasks: m.tasks.map((t) => withRefs(t, renames)),
     }));
     const all = milestones.flatMap((m) => m.tasks);
-    const problem = this.ctx.plan.checkTasks(live, artifacts, all);
+    const problem = await this.ctx.plan.checkTasks(live, artifacts, all);
     if (problem) return { text: problem, isError: true };
     const titles = this.ctx.plan.titlesByRef(live, artifacts, all);
     const pending = this.ctx.proposals
@@ -89,7 +89,7 @@ export class ChatPlans {
     }
     const renames = this.ctx.plan.freshRefs(live, args.tasks);
     const tasks = args.tasks.map((t) => withRefs(t, renames));
-    const problem = this.ctx.plan.checkTasks(live, artifacts, tasks);
+    const problem = await this.ctx.plan.checkTasks(live, artifacts, tasks);
     if (problem) return { text: problem, isError: true };
     const titles = this.ctx.plan.titlesByRef(live, artifacts, tasks);
     this.ctx.proposals.addProposal(

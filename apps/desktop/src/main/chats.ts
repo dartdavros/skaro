@@ -58,6 +58,10 @@ export class ChatSessions implements ProjectToolHandlers {
       t: 'item.upsert',
       item: { ...item, turnId: previous?.turnId ?? live.timeline.state.turns.at(-1)?.id ?? '' },
     });
+    if (item.state === 'applied' || item.state === 'rejected') {
+      await this.engine.planDecisions.drain(live);
+      this.engine.planningContinuation.schedule(live);
+    }
   }
   async stageC4(
     args: import('@skaro/mcp-server').ProposeC4Args,

@@ -75,7 +75,7 @@ beforeEach(async () => {
   await mkdir(join(root, '.skaro'), { recursive: true });
   const store = new ArtifactStore(root);
   await store.createTask({ title: 'Схема БД' });
-  db = AppDb.open(':memory:');
+  db = AppDb.open(join(dataDir, 'skaro.db'));
   projectId = db.addProject({ name: 'Shop', path: root }).id;
   projects = new Projects(db, () => undefined);
   mcp = new McpHttpServer<SkaroScope>({ name: 'skaro', version: '0', tools: [] });

@@ -8,6 +8,7 @@ import type { PlanProposal } from './chat-model';
 import { applyChatPlan } from './chat-plan-apply';
 import { planSpecProblem } from './chat-plan-specs';
 import { prepareFixtureArchitecture } from './c4-test-support';
+import { closeBackground } from './background/client';
 
 let root: string;
 let store: ArtifactStore;
@@ -30,10 +31,11 @@ const roadmap: PlanProposal = {
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'skaro-plan-regression-'));
   store = new ArtifactStore(root);
-  db = AppDb.open(':memory:');
+  db = AppDb.open(join(root, 'skaro.db'));
   projectId = db.addProject({ name: 'Plan regression', path: root }).id;
 });
 afterEach(async () => {
+  await closeBackground();
   db.close();
   await rm(root, { recursive: true, force: true });
 });
