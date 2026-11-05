@@ -65,10 +65,12 @@ describe('task instructions', () => {
     expect(text).not.toContain('merges after the user confirms');
   });
 
-  it('keeps a task that brings up its own services inside its own compose project', () => {
-    expect(text).toContain("COMPOSE_PROJECT_NAME set to this task's own project name");
-    expect(text).toContain('Skaro stops the containers of an idle task');
-    expect(text).not.toContain('start_environment');
+  it('requires initial setup and a real launch before dependent implementation', () => {
+    expect(text).toContain('read setup_environment');
+    expect(text).toContain('environment and expected_revision');
+    expect(text).toContain('Call the start_environment tool');
+    expect(text).toContain('Do not start, recreate or re-point services yourself');
+    expect(text).not.toContain('Take free ports');
     expect(text).toContain('Do not stop, restart, reconfigure or replace services of another task');
     expect(text).toContain('Never replace missing APIs with mock responses');
   });

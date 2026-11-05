@@ -7,6 +7,7 @@ import {
   submitResultTool,
   startEnvironmentTool,
   configureEnvironmentTool,
+  setupEnvironmentTool,
   taskBlockerTool,
   secretInputTool,
   verifyIntegrationTool,
@@ -43,6 +44,7 @@ import type { BuiltinTaskAuthorization } from './builtin-task-models';
 import type { BuiltinChatAuthorization } from './builtin-chat-models';
 import { builtinServiceModels } from './builtin-service-models';
 import { setBackgroundProjectScope } from './background/client';
+import { setupProjectEnvironment } from './project-environment-setup';
 
 export async function createServices(
   appState: AppState,
@@ -97,12 +99,14 @@ export async function createServices(
       ...c4Tools({
         migrate: (scope) => c4.migrate(scope),
         context: (scope) =>
-          scope.kind === 'task' ? runs.c4Tool(scope, () => c4.context(scope)) : c4.context(scope),
+          scope.kind === 'task'
+            ? runs.scopedTool(scope, () => c4.context(scope))
+            : c4.context(scope),
         propose: (args, scope) =>
           scope.kind === 'task'
-            ? runs.c4Tool(scope, () => c4.propose(args, scope))
+            ? runs.scopedTool(scope, () => c4.propose(args, scope))
             : c4.propose(args, scope),
-        review: (args, scope) => runs.c4Tool(scope, () => c4.review(args, scope)),
+        review: (args, scope) => runs.scopedTool(scope, () => c4.review(args, scope)),
       }),
       // Tools are called only after the app is up, when `runs` exists.
       mergeTaskTool((args, scope): Promise<ToolResult> => runs.mergeTask(args, scope)),
@@ -111,6 +115,15 @@ export async function createServices(
       secretInputTool((questions, scope) => runs.requestSecret(questions, scope)),
       startEnvironmentTool((scope): Promise<ToolResult> => runs.startEnvironment(scope)),
       configureEnvironmentTool((args, scope) => runs.configureEnvironment(args, scope)),
+      setupEnvironmentTool((args, scope) => {
+        const action = () => setupProjectEnvironment(projects, args, scope);
+        if (scope.kind === 'task') return runs.scopedTool(scope, action);
+        const chat = scope.chatId ? db.getChat(scope.chatId) : undefined;
+        if (!chat || chat.projectId !== scope.projectId)
+          return Promise.resolve({ text: 'Invalid project chat scope.', isError: true });
+        chats.assertMayWork(chat.id);
+        return action();
+      }),
       verifyIntegrationTool((checks, scope) => runs.verifyIntegration(checks, scope)),
       taskHistoryTool((args, scope) => runs.readHistory(args, scope)),
       chatHistoryTool((args, scope) => chats.readHistory(args, scope)),

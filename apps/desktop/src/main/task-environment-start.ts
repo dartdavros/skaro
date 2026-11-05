@@ -4,6 +4,7 @@ import { admitCompose } from './task-compose';
 import type { EnvironmentDescription } from './task-environment-description';
 import type { EnvironmentRegistry } from './task-environment-registry';
 import type { EnvironmentDocker } from './task-environment-docker';
+import { environmentReadinessProblems } from './task-environment-readiness';
 
 export interface EnvironmentStartOptions {
   signal?: AbortSignal;
@@ -107,6 +108,13 @@ export async function startEnvironmentServices(
         }),
       );
     options.signal?.throwIfAborted();
+    if (compose) {
+      const problems = await timed('readyMs', async () =>
+        environmentReadinessProblems(await deps.docker.inspect(), identity.name),
+      );
+      if (problems.length)
+        throw new Error(`Environment services are not ready: ${problems.join('; ')}`);
+    }
     return {
       name: identity.name,
       urls: Object.fromEntries(

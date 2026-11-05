@@ -27,6 +27,11 @@ export async function configureTaskEnvironment(
             'by this call. Call start_environment now, then verify the required services and tests.'),
     };
   } catch (error) {
-    return { text: `Cannot configure this task environment: ${errorText(error)}`, isError: true };
+    return {
+      text:
+        `Cannot configure this task environment: ${errorText(error)}\n` +
+        'If the declaration is absent, read setup_environment and register the real documented setup first.',
+      isError: true,
+    };
   }
 }

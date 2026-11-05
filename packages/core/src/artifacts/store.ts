@@ -23,6 +23,8 @@ import type {
 import type { NewTask, TaskPatch, NewAdr, NewSpec } from './inputs.ts';
 import { slugify } from './slug.ts';
 import { restoreTaskSnapshot } from './task-snapshot.ts';
+import { setupEnvironment } from './environment-setup.ts';
+import { serializeConfig } from './config-queue.ts';
 
 /** Public artifact API; persistence operations are composed by responsibility. */
 export class ArtifactStore {
@@ -123,7 +125,21 @@ export class ArtifactStore {
     return documents.deleteDoc(this.files, path);
   }
   writeConfig(config: ProjectConfig, inherited: InheritableSetting[] = []): Promise<void> {
-    return configOps.writeConfig(this.files, config, inherited);
+    return serializeConfig(this.files, () => configOps.writeConfig(this.files, config, inherited));
+  }
+  setupEnvironment(input?: { environment: unknown; expectedRevision: string }) {
+    return setupEnvironment(this.files, input);
+  }
+  updateConfig(
+    update: (current: ProjectConfig) => ProjectConfig,
+    inherited: InheritableSetting[] = [],
+  ): Promise<void> {
+    return serializeConfig(this.files, async () => {
+      const problems: import('./model.ts').ArtifactProblem[] = [];
+      const current = await configOps.readConfig(this.files, this.defaults, problems);
+      if (problems.length) throw new Error(problems.map((p) => p.message).join('\n'));
+      await configOps.writeConfig(this.files, update(current), inherited);
+    });
   }
   load(summary = false): Promise<ProjectArtifacts> {
     return load.load(this.files, this.defaults, summary);

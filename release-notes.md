@@ -1,8 +1,7 @@
-Skaro 2.2.18
+Skaro 2.2.19
 
-- Fix C4 validation for tasks created before newer changes reached the base branch.
-- Block implementation plans while required C4 amendments remain unapplied, including confirmation and recovery; plan approval never accepts architecture on the owner's behalf.
-- Automatically clean completed tasks' unused worktrees while preserving tasks, conversation history, branches and commits. Local changes and ignored data prevent removal.
-- Restore cleaned worktrees when continuing work, accessing files, changing agents or reverting a merge.
-- Limit Docker cleanup to recorded Skaro environments. Remove global pruning and preserve unrelated resources and shared build caches.
-- Allow clarification messages while a protected or multi-question async form is pending, without treating the message as credentials or completed answers.
+- Let project chats and current tasks register a missing project environment through `setup_environment`, without manually editing `.skaro/config.yaml`.
+- Preserve existing configuration and reject stale writes or replacement of an existing environment. Task-specific adjustments remain available through `configure_environment`.
+- Guide agents to configure and verify real services before dependent implementation, instead of getting stuck between unavailable setup tools and forbidden direct edits.
+- Return current shell variables after environment startup so verification uses the correct Compose configuration and allocated ports.
+- Check actual Compose container states before reporting readiness, including services that crash after `docker compose up --wait` returns.

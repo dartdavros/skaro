@@ -18,6 +18,7 @@ export async function startTaskEnvironment(
   }
   try {
     const info = await ctx.environments.start(checkoutKey(active));
+    const { variables } = await ctx.environments.describe(checkoutKey(active));
     ctx.continuation.execution(active).clearBlock();
     const urls = Object.entries(info.urls).map(([name, url]) => `- ${name}: ${url}`);
     return {
@@ -29,9 +30,11 @@ export async function startTaskEnvironment(
             'Other services are internal; use docker compose exec for tests.\n'
           : '') +
         'It is a disposable copy of the main environment: sign in with the existing accounts ' +
-        'the project documents, and change its data freely. COMPOSE_PROJECT_NAME and the ' +
-        "environment's variables are set in your shell, so `docker compose ps`, `logs` and " +
-        '`exec` address it. Use the addresses returned by this call for host access; a port ' +
+        'the project documents, and change its data freely. Apply the following current environment ' +
+        'variables to every shell command used for verification (compose ps/logs/exec). An already ' +
+        'attached shell may predate initial setup or port changes. Do not reuse stale bindings.\n' +
+        `shell_environment: ${JSON.stringify(variables)}\n` +
+        'Use the addresses returned by this call for host access; a port ' +
         'may have been replaced since the shell was attached. Name these addresses in your verification result.',
     };
   } catch (error) {
@@ -39,7 +42,8 @@ export async function startTaskEnvironment(
       return {
         text:
           `Skaro cannot start an environment for this task: ${error.message} ` +
-          'Report this to the user as a blocker; do not start substitute services.',
+          'If the project environment is absent, read setup_environment and register the documented real setup, ' +
+          'then retry start_environment. Report an actual missing prerequisite as a blocker; do not start substitute services.',
         isError: true,
       };
     }

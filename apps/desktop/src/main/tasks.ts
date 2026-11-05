@@ -57,7 +57,7 @@ export class TaskRuns {
     this.engine.merges.coordinator.changed(projectId);
     this.catalog.invalidate(projectId);
   }
-  c4Tool(scope: SkaroScope, action: () => Promise<ToolResult>): Promise<ToolResult> {
+  scopedTool(scope: SkaroScope, action: () => Promise<ToolResult>): Promise<ToolResult> {
     return taskTool(this.engine, scope, action);
   }
   async architectureEvent(
