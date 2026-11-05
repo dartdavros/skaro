@@ -51,11 +51,12 @@ export function taskC4Scope(
 export async function readTaskC4Scope(
   root: string,
   baseHead: string,
-  artifacts: ProjectArtifacts,
+  artifacts: Pick<ProjectArtifacts, 'c4' | 'tasks'>,
   taskId: string,
 ): Promise<C4TaskScope> {
+  const ancestor = (await git(root, ['merge-base', baseHead, 'HEAD'])).stdout.trim();
   const [changed, untracked] = await Promise.all([
-    git(root, ['diff', '--name-only', '-z', baseHead, '--', '.', ':(exclude).skaro']),
+    git(root, ['diff', '--name-only', '-z', ancestor, '--', '.', ':(exclude).skaro']),
     git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--', '.', ':(exclude).skaro']),
   ]);
   return taskC4Scope(
