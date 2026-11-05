@@ -3,6 +3,7 @@ export * from './server.ts';
 export { scopedOperationPort } from './scoped-port.ts';
 export * from './tools.ts';
 export * from './environment-tool.ts';
+export * from './environment-setup-tool.ts';
 export * from './task-blocker-tool.ts';
 export * from './secret-input-tool.ts';
 export * from './integration-tool.ts';

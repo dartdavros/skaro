@@ -79,8 +79,12 @@ export async function saveProjectSettings(
   const inherited = INHERITABLE.filter((key) => settings[key] === defaults[key]);
   // The screen does not edit checks and the task environment: they stay as the file has them.
   const next = toConfig(settings, before.checks);
-  await context.store.writeConfig(
-    { ...next, ...(before.environment ? { environment: before.environment } : {}) },
+  await context.store.updateConfig(
+    (current) => ({
+      ...next,
+      checks: current.checks,
+      ...(current.environment ? { environment: current.environment } : {}),
+    }),
     inherited,
   );
   context.invalidate();

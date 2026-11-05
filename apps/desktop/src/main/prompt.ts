@@ -68,6 +68,11 @@ export function chatInstructions(options: {
           'Skaro persists monitoring independently of this chat turn. Inspect failed logs; fix code failures ' +
           'instead of repeatedly rerunning them. Verify published artifacts before reporting a release as delivered.',
         '- Do not edit files in .skaro/ directly: only Skaro writes there, through the tools.',
+        '- For authorized environment setup, read setup_environment. If absent, inspect the real project ' +
+          'Compose/dev, data-copy and migration scripts and register the complete declaration with ' +
+          'environment and expected_revision. Do not ask the owner to edit config by hand. This saves ' +
+          'configuration only: the task must call start_environment and verify its services before dependent ' +
+          'implementation. Never claim a saved configuration is a verified environment or invent missing setup.',
         '- Proposals appear to the user as cards and the tools return at once. Do not wait for ' +
           'decisions and do not ask the user to confirm in text what the card already asks.',
         "- The user's decisions on cards arrive at the start of their next message inside " +

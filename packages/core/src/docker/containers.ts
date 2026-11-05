@@ -5,7 +5,13 @@ import { docker, ids } from './cli.ts';
 export interface DockerContainer {
   Id: string;
   Name: string;
-  State?: { Running?: boolean };
+  State?: {
+    Running?: boolean;
+    Restarting?: boolean;
+    ExitCode?: number;
+    Status?: string;
+    Health?: { Status: string };
+  };
   Config?: { Labels?: Record<string, string> | null };
   NetworkSettings?: { Ports?: Record<string, { HostIp: string; HostPort: string }[] | null> };
   Mounts: { Type: string; Source: string }[];

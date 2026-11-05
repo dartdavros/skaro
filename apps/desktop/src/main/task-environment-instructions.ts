@@ -41,14 +41,13 @@ const MANAGED =
   'and never keep there anything that must survive the task.';
 
 const UNMANAGED =
-  "- Use the project's documented compose/dev setup and real services. Your shell has " +
-  "COMPOSE_PROJECT_NAME set to this task's own project name: keep it, so that everything you " +
-  'start belongs to this task. Take free ports and keep persistent state outside the ' +
-  'worktree; never take over a port or attach a database of another task or of the main ' +
-  'working copy.\n' +
-  '- Skaro stops the containers of an idle task when its agent turn ends, and ' +
-  'removes them when the task is merged. Start them again with the same commands when you need ' +
-  'them, and never keep there anything that must survive the task.';
+  '- No managed environment was configured when this session began. Before implementing work ' +
+  'that depends on running services, read setup_environment. If absent, inspect the real project ' +
+  'documentation, Compose/dev scripts, migrations and data-copy mechanism, then register the complete ' +
+  'initial declaration with environment and expected_revision. This is authorized routine setup, ' +
+  'subject to owner restrictions; do not ask the owner to edit settings by hand. Missing scripts, ' +
+  'source data or design decisions are real blockers: never invent substitutes.\n' +
+  MANAGED;
 
 const IN_PLACE =
   "- You work in the project's main working copy: use its documented compose/dev setup and " +
@@ -64,6 +63,9 @@ export function taskEnvironmentInstructions(kind: TaskEnvironmentKind): string {
     '## Task environment\n\n' +
     [
       kind === 'managed' ? MANAGED : kind === 'own' ? UNMANAGED : IN_PLACE,
+      '- Before dependent implementation, establish how its required checks run and verify the real ' +
+        'environment, required services and documented migration/check commands. Saving configuration ' +
+        'is not a successful launch. Do not wait until implementation is finished to discover missing prerequisites.',
       '- Before browser verification make sure the frontend talks to the backend of this ' +
         "task's environment and that readiness includes the database and cache. A responding " +
         'localhost port, frontend HTTP 200 or backend liveness alone prove nothing.',
