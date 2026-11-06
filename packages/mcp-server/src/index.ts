@@ -14,3 +14,4 @@ export type * from './project-planning-model.ts';
 export { TASK_DECOMPOSITION_RULES } from './task-decomposition.ts';
 export * from './task-replan-tool.ts';
 export * from './c4-tools.ts';
+export { operationFailure } from './tool-failure.ts';

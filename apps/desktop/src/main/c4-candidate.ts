@@ -1,7 +1,20 @@
-import { git, realizeC4, validateC4Code, validateC4Model, type C4Model } from '@skaro/core';
+import {
+  git,
+  realizeC4,
+  inspectC4Code,
+  inspectC4Model,
+  C4ValidationError,
+  c4Issue,
+  type C4Model,
+  type C4Issue,
+} from '@skaro/core';
 
 /** A deterministic architecture failure needs a changed candidate, never a publication retry. */
-export class C4PublicationError extends Error {}
+export class C4PublicationError extends C4ValidationError {
+  constructor(issues: C4Issue[]) {
+    super(issues, 'publication');
+  }
+}
 
 export interface C4Candidate {
   root: string;
@@ -21,7 +34,8 @@ export async function candidateC4Model(
   try {
     next = realized.length ? realizeC4(model, realized) : structuredClone(model);
   } catch (error) {
-    throw new C4PublicationError(String(error));
+    if (error instanceof C4ValidationError) throw new C4PublicationError(error.diagnostic.issues);
+    throw error;
   }
   if (!candidate) return next;
   const diff = await git(candidate.root, [
@@ -58,14 +72,20 @@ export async function candidateC4Model(
 }
 
 export async function assertCandidateC4(model: C4Model, candidate: C4Candidate): Promise<void> {
-  const problems = [...validateC4Model(model), ...(await validateC4Code(candidate.root, model))];
+  const problems = [...inspectC4Model(model), ...(await inspectC4Code(candidate.root, model))];
   // Local unstaged/staged layers cannot supply a file missing from the published code tree.
   if (candidate.head) {
     const tree = await git(candidate.root, ['ls-tree', '-r', '--name-only', '-z', candidate.head]);
     const files = new Set(tree.stdout.split('\0'));
     for (const element of model.elements.filter((item) => item.state === 'current'))
       for (const path of element.code)
-        if (!files.has(path)) problems.push(`${element.id}: missing published code path ${path}`);
+        if (!files.has(path))
+          problems.push({
+            ...c4Issue(`${element.id}: missing published code path ${path}`, 'missing_code_path', [
+              element.id,
+            ]),
+            path,
+          });
   }
-  if (problems.length) throw new C4PublicationError([...new Set(problems)].join('\n'));
+  if (problems.length) throw new C4PublicationError(problems);
 }

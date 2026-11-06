@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { C4Model, C4Package } from './model.ts';
 import { C4_MODEL_PATH } from './model.ts';
 import { readC4Model } from './shape.ts';
-import { validateC4Model } from './validate.ts';
+import { inspectC4Model } from './validate.ts';
+import { C4Problems, C4ValidationError, c4Issue } from './diagnostics.ts';
 import { C4_DOCUMENT_PATH, c4BodyHash, validateC4Documents } from './documents.ts';
 import { authoredBody } from './render.ts';
-import { readC4Documents, validateC4Code } from './project.ts';
+import { readC4Documents, inspectC4Code } from './project.ts';
 import { readC4File, withC4Lock } from './io.ts';
 import { recoverC4Transaction } from './transaction.ts';
 import { applyC4Replacements } from './replacements.ts';
@@ -33,34 +34,37 @@ export async function prepareC4Package(root: string, args: PrepareC4Package): Pr
       throw new Error('C4: model changed; read context and prepare the package again');
     const model: C4Model = structuredClone(readC4Model(args.model));
     if (model.revision !== args.baseRevision + 1)
-      throw new Error('C4: revision must be baseRevision + 1');
+      throw new C4ValidationError([c4Issue('C4: revision must be baseRevision + 1')]);
     if (!args.title.trim() || !args.summary.trim())
-      throw new Error('C4: title and summary are required');
+      throw new C4ValidationError([c4Issue('C4: title and summary are required')]);
     const before = await readC4Documents(root);
     const after = new Map(before);
     const changed = new Set<string>();
     for (const doc of args.documents) {
       if (!C4_DOCUMENT_PATH.test(doc.path))
-        throw new Error(`C4: invalid document path ${doc.path}`);
-      if (changed.has(doc.path)) throw new Error(`C4: duplicate document ${doc.path}`);
+        throw new C4ValidationError([c4Issue(`C4: invalid document path ${doc.path}`)]);
+      if (changed.has(doc.path))
+        throw new C4ValidationError([c4Issue(`C4: duplicate document ${doc.path}`)]);
       changed.add(doc.path);
       after.set(doc.path, authoredBody(doc.content) + '\n');
     }
     if (!after.has('architecture.md'))
-      throw new Error('C4: architecture.md is required in the first package');
+      throw new C4ValidationError([
+        c4Issue('C4: architecture.md is required in the first package'),
+      ]);
     applyC4Replacements(after, changed);
     for (const spec of model.specifications) {
       const text = after.get(spec.path);
       // The service binds the submitted content, never a hash guessed by the model.
       if (text && changed.has(spec.path)) spec.bodyHash = c4BodyHash(text);
     }
-    const problems = [
-      ...validateC4Model(model),
-      ...validateC4Documents(model, after),
-      ...(args.deferCodeValidation
-        ? []
-        : await validateC4Code(args.task ? root : (args.codeRoot ?? root), model)),
-    ];
+    const problems = new C4Problems();
+    problems.issues.push(...inspectC4Model(model));
+    problems.push(...validateC4Documents(model, after));
+    if (!args.deferCodeValidation)
+      problems.issues.push(
+        ...(await inspectC4Code(args.task ? root : (args.codeRoot ?? root), model)),
+      );
     // Moving an element preserves identity; reusing its ID for another kind does not.
     for (const element of previous?.elements ?? []) {
       const next = model.elements.find((e) => e.id === element.id);
@@ -100,7 +104,7 @@ export async function prepareC4Package(root: string, args: PrepareC4Package): Pr
             `${relationship.id}: new task relationship must be planned until publication`,
           );
     }
-    if (problems.length) throw new Error(problems.join('\n'));
+    if (problems.issues.length) throw new C4ValidationError(problems.issues);
     const files = [...after]
       .filter(([path, content]) => before.get(path) !== content)
       .map(([path, content]) => ({ path, before: before.get(path) ?? null, after: content }));

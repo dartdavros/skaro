@@ -16,6 +16,7 @@ import { trackRun } from './task-run-access';
 import { withAgentDefaults } from './agent-model-defaults';
 import type { TaskAgentPreferences } from './task-agent-preferences';
 import { taskViewSettings } from './task-view-settings';
+import { c4DiagnosticKey } from './c4-tool-diagnostic';
 import { accessTaskWorktree } from './task-worktree-retention';
 import { validateBuiltinTaskSettings } from './builtin-task-settings-validation';
 import {
@@ -111,6 +112,10 @@ export class TaskRunViews {
       : undefined;
     return {
       projectId,
+      c4Diagnostic:
+        active && !['done', 'cancelled'].includes(task.status)
+          ? this.ctx.deps.db.getSetting(c4DiagnosticKey(active.run.id), undefined)
+          : undefined,
       environmentReview: this.ctx.reviews.state(projectId, taskId),
       task: shown,
       ...(stage

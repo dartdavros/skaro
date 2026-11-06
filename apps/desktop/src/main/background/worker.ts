@@ -1,5 +1,11 @@
 import { parentPort, workerData, threadId } from 'node:worker_threads';
-import { configureC4Locks, ArtifactStore, authoredBody, readC4DocumentSnapshot } from '@skaro/core';
+import {
+  configureC4Locks,
+  ArtifactStore,
+  authoredBody,
+  readC4DocumentSnapshot,
+  C4ValidationError,
+} from '@skaro/core';
 import { c4Work } from './c4-work';
 import { PayloadStore } from './payload-store';
 import type { BackgroundMethods } from './protocol';
@@ -175,6 +181,7 @@ parentPort!.on(
         parentPort!.postMessage({
           id: request.id,
           error: error instanceof Error ? error.message : String(error),
+          ...(error instanceof C4ValidationError ? { diagnostic: error.diagnostic } : {}),
         }),
     );
   },

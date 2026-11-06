@@ -1,6 +1,6 @@
 import { dirname } from 'node:path';
 import { background } from './background/client';
-import { git, type C4Package, type AppDb } from '@skaro/core';
+import { C4ValidationError, type C4Package, type AppDb } from '@skaro/core';
 import type {
   C4Handlers,
   ProposeC4Args,
@@ -10,14 +10,8 @@ import type {
 } from '@skaro/mcp-server';
 import type { Item } from '@skaro/timeline';
 import type { Projects } from './projects';
-import {
-  c4ArchitectureHash,
-  c4ChangeHash,
-  c4CoverageProblems,
-  c4ReviewKey,
-  type C4TaskReview,
-} from './c4-review';
-import { readTaskC4Scope, reviewedC4Ids } from './c4-task-scope';
+import { writeC4TaskReview } from './c4-review-write';
+import { c4ToolFailure, recordC4Diagnostic } from './c4-tool-diagnostic';
 
 type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 export interface C4ProposalRecord {
@@ -104,6 +98,23 @@ export class C4Service implements C4Handlers {
   }
   async propose(args: ProposeC4Args, scope: SkaroScope): Promise<ToolResult> {
     const checkout = this.caller(scope);
+    try {
+      return await this.proposeOnce(args, scope, checkout);
+    } catch (error) {
+      recordC4Diagnostic(
+        this.deps.db,
+        scope,
+        error instanceof C4ValidationError ? error.diagnostic : null,
+      );
+      this.deps.changed(scope.projectId);
+      return c4ToolFailure(error);
+    }
+  }
+  private async proposeOnce(
+    args: ProposeC4Args,
+    scope: SkaroScope,
+    checkout: string,
+  ): Promise<ToolResult> {
     if (scope.importId) return this.deps.stageImport(args, scope);
     const context = this.deps.projects.get(scope.projectId);
     const record = await background(
@@ -228,45 +239,33 @@ export class C4Service implements C4Handlers {
     const checkout = this.caller(scope);
     if (scope.kind !== 'task' || !scope.taskId || !scope.runId)
       throw new Error('C4 code review requires a current task run');
-    const context = this.deps.projects.get(scope.projectId);
-    this.deps.db.setSetting(c4ReviewKey(scope.projectId, scope.taskId), null);
-    context.invalidate();
-    const artifacts = await context.load();
-    const baseHead = (
-      await git(checkout, ['rev-parse', artifacts.config.baseBranch])
-    ).stdout.trim();
-    const taskScope = await readTaskC4Scope(checkout, baseHead, artifacts, scope.taskId);
-    const ids = reviewedC4Ids(taskScope, args, artifacts.c4);
-    const reviewedScope = {
-      ...taskScope,
-      elements: [...ids].filter((id) => artifacts.c4?.elements.some((item) => item.id === id)),
-      relationships: [...ids].filter((id) =>
-        artifacts.c4?.relationships.some((item) => item.id === id),
-      ),
-    };
-    const problems = c4CoverageProblems(artifacts, scope.taskId, args, taskScope);
-    if (args.changeHash !== (await c4ChangeHash(checkout, baseHead)))
-      problems.push('Code changed since context was read.');
-    if (
-      (await this.records(scope.projectId, scope.taskId)).some(
-        (r) =>
-          r.package.task?.id === scope.taskId && ['pending', 'accepted'].includes(r.item.state),
-      )
-    )
-      problems.push('A required task architecture package is still pending.');
-    if (problems.length) return { text: problems.join('\n'), isError: true };
-    const review: C4TaskReview = {
-      ...args,
-      baseHead,
-      modelHash: c4ArchitectureHash(artifacts, reviewedScope),
-      scope: reviewedScope,
-      runId: scope.runId,
-    };
-    this.deps.db.setSetting(c4ReviewKey(scope.projectId, scope.taskId), review);
-    return {
-      text: 'C4 code review saved for this exact model revision and code change fingerprint. submit_result rechecks both.',
-    };
+    try {
+      const result = await writeC4TaskReview(
+        this.deps.db,
+        this.deps.projects.get(scope.projectId),
+        checkout,
+        args,
+        scope,
+        async () =>
+          (await this.records(scope.projectId, scope.taskId)).some(
+            (r) =>
+              r.package.task?.id === scope.taskId && ['pending', 'accepted'].includes(r.item.state),
+          ),
+      );
+      recordC4Diagnostic(this.deps.db, scope, null);
+      this.deps.changed(scope.projectId);
+      return result;
+    } catch (error) {
+      recordC4Diagnostic(
+        this.deps.db,
+        scope,
+        error instanceof C4ValidationError ? error.diagnostic : null,
+      );
+      this.deps.changed(scope.projectId);
+      return c4ToolFailure(error);
+    }
   }
+
   async restore(scope: SkaroScope): Promise<void> {
     for (const record of await this.records(scope.projectId, scope.taskId ?? scope.chatId)) {
       if (record.item.state === 'accepted') {

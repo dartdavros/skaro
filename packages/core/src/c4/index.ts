@@ -1,4 +1,5 @@
 export * from './model.ts';
+export * from './diagnostics.ts';
 export * from './state.ts';
 export * from './shape.ts';
 export * from './validate.ts';

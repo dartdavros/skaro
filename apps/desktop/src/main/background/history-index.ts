@@ -1,4 +1,5 @@
 import type { TimelineState, TimelineEvent } from '@skaro/timeline';
+import { pendingProposals } from '../../shared/feed-actions';
 import type { HistorySource, HistoryView, HistoryPage } from '../../shared/history';
 import type { PayloadStore } from './payload-store';
 import { historyRows } from './history-rows';
@@ -165,11 +166,14 @@ export class HistoryIndex {
       const header: TimelineState = {
         ...state,
         turns: state.turns.slice(-8),
-        items: state.items.filter(
-          (item) =>
-            item.kind !== 'proposal' &&
-            (tail.has(item.id) || item.status === 'running' || item.status === 'queued'),
-        ),
+        items: [
+          ...state.items.filter(
+            (item) =>
+              item.kind !== 'proposal' &&
+              (tail.has(item.id) || item.status === 'running' || item.status === 'queued'),
+          ),
+          ...pendingProposals(state.items),
+        ],
       };
       this.store.db
         .prepare(

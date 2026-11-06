@@ -5,6 +5,9 @@ import type { TaskRunEngine } from './task-run-engine';
 import { readSubject, updateSubject } from './task-subject';
 import { assertC4TaskReview } from './c4-review';
 import { completedTaskReply } from './task-merge-result';
+import { C4ValidationError } from '@skaro/core';
+import { c4ToolFailure, recordC4Diagnostic } from './c4-tool-diagnostic';
+import { operationFailure } from '@skaro/mcp-server';
 
 /** Only validation and criterion mutation belong under the project gate; scheduling runs afterward. */
 export async function writeTaskResult(
@@ -46,8 +49,29 @@ export async function writeTaskResult(
         active.run.id,
       );
   } catch (error) {
-    return reply({ text: String(error instanceof Error ? error.message : error), isError: true });
+    if (error instanceof C4ValidationError) {
+      recordC4Diagnostic(
+        ctx.deps.db,
+        { kind: 'task', projectId: active.projectId, taskId: active.taskId, runId: active.run.id },
+        error.diagnostic,
+      );
+      ctx.changed(active.projectId, active.taskId);
+      return reply(c4ToolFailure(error));
+    }
+    recordC4Diagnostic(
+      ctx.deps.db,
+      { kind: 'task', projectId: active.projectId, taskId: active.taskId, runId: active.run.id },
+      null,
+    );
+    ctx.changed(active.projectId, active.taskId);
+    return reply(operationFailure(error, 'submit_result'));
   }
+  if (met.every(Boolean))
+    recordC4Diagnostic(
+      ctx.deps.db,
+      { kind: 'task', projectId: active.projectId, taskId: active.taskId, runId: active.run.id },
+      null,
+    );
   await updateSubject(context, task.id, { body: setCriteria(task.body, met) });
   return { kind: 'written' as const, task, met };
 }

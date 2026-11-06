@@ -1,2 +1,2 @@
 import type { TimelineState } from '@skaro/timeline';
-export type PinnedZoneProps = { timeline: TimelineState };
+export type PinnedZoneProps = { timeline: TimelineState; mergeMessage?: string | undefined };

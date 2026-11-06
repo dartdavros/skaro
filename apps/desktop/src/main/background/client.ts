@@ -1,6 +1,6 @@
 import { Worker } from 'node:worker_threads';
 import type { BackgroundMethods } from './protocol';
-import { configureC4Locks } from '@skaro/core';
+import { configureC4Locks, C4ValidationError, type C4Diagnostic } from '@skaro/core';
 import { backgroundWorkerEntry } from './worker-entry';
 
 const locks = new SharedArrayBuffer(1024);
@@ -36,23 +36,31 @@ class BackgroundLane {
       this.worker = worker;
       const owner = worker.threadId + 1;
       worker.unref();
-      worker.on('message', (reply: { id: number; value?: unknown; error?: string }) => {
-        const request = this.pending.get(reply.id);
-        if (!request) return;
-        this.pending.delete(reply.id);
-        if (!this.pending.size) {
-          worker.unref();
-          this.idleTimer = setTimeout(() => {
-            if (this.worker === worker && !this.pending.size) {
-              this.worker = undefined;
-              worker.postMessage({ method: 'worker.close' });
-            }
-          }, 15_000);
-          this.idleTimer.unref();
-        }
-        if (reply.error) request.reject(new Error(reply.error));
-        else request.resolve(reply.value);
-      });
+      worker.on(
+        'message',
+        (reply: { id: number; value?: unknown; error?: string; diagnostic?: C4Diagnostic }) => {
+          const request = this.pending.get(reply.id);
+          if (!request) return;
+          this.pending.delete(reply.id);
+          if (!this.pending.size) {
+            worker.unref();
+            this.idleTimer = setTimeout(() => {
+              if (this.worker === worker && !this.pending.size) {
+                this.worker = undefined;
+                worker.postMessage({ method: 'worker.close' });
+              }
+            }, 15_000);
+            this.idleTimer.unref();
+          }
+          if (reply.error)
+            request.reject(
+              reply.diagnostic
+                ? new C4ValidationError(reply.diagnostic.issues, reply.diagnostic.stage)
+                : new Error(reply.error),
+            );
+          else request.resolve(reply.value);
+        },
+      );
       const failed = (error: Error) => {
         if (this.worker !== worker) return;
         this.worker = undefined;

@@ -1,3 +1,4 @@
+import { C4ValidationError, c4Issue } from './diagnostics.ts';
 import type { C4Model, C4State } from './model.ts';
 
 /** View state selects descriptions as well as membership; planned edits never replace current facts. */
@@ -30,8 +31,13 @@ export function realizeC4(model: C4Model, ids: string[]): C4Model {
         ...spec.requirements.flatMap((r) => [...r.elements, ...r.relationships]),
       ].some((id) => removed.has(id))
     )
-      throw new Error(
-        `SPEC-${spec.id}: rebind requirements before publishing removal of referenced C4 elements`,
+      throw new C4ValidationError(
+        [
+          c4Issue(
+            `SPEC-${spec.id}: rebind requirements before publishing removal of referenced C4 elements`,
+          ),
+        ],
+        'publication',
       );
   result.elements = result.elements.filter((e) => !removed.has(e.id));
   result.relationships = result.relationships.filter((r) => !removed.has(r.id));
@@ -64,7 +70,17 @@ export function realizeC4(model: C4Model, ids: string[]): C4Model {
       result.elements.find((e) => e.id === candidate.source)?.state !== 'current' ||
       result.elements.find((e) => e.id === candidate.target)?.state !== 'current'
     )
-      throw new Error(`${relation.id}: cannot publish a current relationship before its endpoints`);
+      throw new C4ValidationError(
+        [
+          c4Issue(
+            `${relation.id}: cannot publish a current relationship before its endpoints`,
+            'planned_parent',
+            [relation.id, candidate.source, candidate.target],
+            'Review the relationship endpoints. Publish only implemented, verified endpoint IDs together with the relationship, or keep the relationship planned.',
+          ),
+        ],
+        'publication',
+      );
     Object.assign(relation, candidate);
     delete relation.planned;
     relation.state = 'current';

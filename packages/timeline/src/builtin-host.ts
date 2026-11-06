@@ -45,7 +45,7 @@ export interface ScopedOperationPort {
     name: string;
     args: Readonly<Record<string, unknown>>;
     signal: AbortSignal;
-  }): Promise<{ text: string; isError?: boolean }>;
+  }): Promise<{ text: string; isError?: boolean; structuredContent?: Record<string, unknown> }>;
 }
 
 export interface RuntimeEventEnvelope {

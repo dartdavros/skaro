@@ -8,10 +8,12 @@ import type { AddressInfo } from 'node:net';
 import type { ProcessAdmissionPort, ScopedOperationPort } from '@skaro/timeline';
 import { scopedOperationPort } from './scoped-port.ts';
 import { operationCatalogue } from './catalogue.ts';
+import { operationFailure } from './tool-failure.ts';
 
 export interface ToolResult {
   text: string;
   isError?: boolean;
+  structuredContent?: Record<string, unknown>;
 }
 
 export interface Tool<S> {
@@ -172,10 +174,11 @@ export class McpHttpServer<S> {
             scope,
           );
         } catch (error) {
-          result = { text: error instanceof Error ? error.message : String(error), isError: true };
+          result = operationFailure(error, tool.name);
         }
         return rpcResult(id, {
           content: [{ type: 'text', text: result.text }],
+          ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
           ...(result.isError ? { isError: true } : {}),
         });
       }

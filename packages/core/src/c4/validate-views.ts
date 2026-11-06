@@ -1,6 +1,7 @@
 import type { C4Model, C4ViewKind } from './model.ts';
 import { ancestors, uniqueIds } from './validate.ts';
 import { c4AtState } from './state.ts';
+import { C4Problems, c4Issue, type C4Issue } from './diagnostics.ts';
 
 /** A leaf relationship may be projected onto an ancestor shown at a coarser level. */
 export function projectedEndpoint(
@@ -14,6 +15,10 @@ export function projectedEndpoint(
 }
 
 export function validateViews(model: C4Model, errors: string[]): void {
+  errors.push(...inspectC4Views(model).map((issue) => issue.message));
+}
+
+export function inspectC4Views(model: C4Model, errors = new C4Problems()): C4Issue[] {
   const elements = new Map(model.elements.map((e) => [e.id, e]));
   const scopeKinds = {
     context: ['system'],
@@ -39,7 +44,14 @@ export function validateViews(model: C4Model, errors: string[]): void {
     if (!scope || !scopeKinds[view.kind].includes(scope.kind))
       errors.push(`${view.id}: invalid view scope`);
     if (view.state === 'current' && scope?.state === 'planned')
-      errors.push(`${view.id}: a current view cannot have a planned scope`);
+      errors.add(
+        c4Issue(
+          `${view.id}: a current view cannot have a planned scope`,
+          'planned_view_member',
+          [view.id, view.scope],
+          PLANNED_VIEW_STEP,
+        ),
+      );
     if (!view.elements.length) errors.push(`${view.id}: empty view`);
     if (
       new Set(view.elements).size !== view.elements.length ||
@@ -51,7 +63,14 @@ export function validateViews(model: C4Model, errors: string[]): void {
       if (!element || !kinds[view.kind].includes(element.kind))
         errors.push(`${view.id}: invalid element ${id}`);
       if (view.state === 'current' && element?.state === 'planned')
-        errors.push(`${view.id}: current view includes planned ${id}`);
+        errors.add(
+          c4Issue(
+            `${view.id}: current view includes planned ${id}`,
+            'planned_view_member',
+            [view.id, id],
+            PLANNED_VIEW_STEP,
+          ),
+        );
       const detailKind = { container: 'container', component: 'component', code: 'code' }[
         view.kind as string
       ];
@@ -65,7 +84,14 @@ export function validateViews(model: C4Model, errors: string[]): void {
         continue;
       }
       if (view.state === 'current' && rel.state === 'planned')
-        errors.push(`${view.id}: current view includes planned ${id}`);
+        errors.add(
+          c4Issue(
+            `${view.id}: current view includes planned ${id}`,
+            'planned_view_member',
+            [view.id, id],
+            PLANNED_VIEW_STEP,
+          ),
+        );
       const from = projectedEndpoint(viewModel, view.elements, rel.source);
       const to = projectedEndpoint(viewModel, view.elements, rel.target);
       if (!from || !to || from === to)
@@ -155,8 +181,15 @@ export function validateViews(model: C4Model, errors: string[]): void {
       (v) => v.kind === need.kind && v.scope === need.scope && v.state === need.state,
     );
     if (!present && !exclusion)
-      errors.push(
-        `${need.scope}: missing ${need.state} ${need.kind} view or evidenced applicability decision`,
+      errors.add(
+        c4Issue(
+          `${need.scope}: missing ${need.state} ${need.kind} view or evidenced applicability decision`,
+          need.state === 'current' ? 'missing_current_view' : 'invalid_data',
+          [need.scope],
+          need.state === 'current'
+            ? 'Inspect the existing planned views. If they include future work, propose a separate planned view containing only the implemented and verified subset, with a valid scope. realizeC4 automatically promotes it when all its members are current. Keep broader future views planned. Use an applicability exclusion only when evidenced and actually applicable.'
+            : undefined,
+        ),
       );
     if (present && exclusion)
       errors.push(`${need.scope}: ${need.kind} view contradicts its exclusion`);
@@ -170,4 +203,8 @@ export function validateViews(model: C4Model, errors: string[]): void {
     else if (!scopeKinds[exclusion.kind].includes(elements.get(exclusion.scope)!.kind))
       errors.push(`${key}: invalid exclusion scope`);
   }
+  return errors.issues;
 }
+
+const PLANNED_VIEW_STEP =
+  'Keep views over planned scope or members planned before publication. For partial implementation, propose a narrow planned view of only the verified subset; publication automatically promotes eligible views. Do not mark future members current to satisfy a view.';

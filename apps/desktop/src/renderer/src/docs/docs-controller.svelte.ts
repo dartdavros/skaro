@@ -52,21 +52,25 @@ export function createDocsController(p: DocsProps) {
 
   // A document asked for from outside (a task's specification) is shown once it is listed.
   let opened: string | undefined;
+  let initialSelectionPending = true;
   $effect(() => {
     if (!docs.loaded || !p.open || opened === p.open) return;
+    initialSelectionPending = false;
     opened = p.open;
     void docs.open(p.open);
   });
 
   // The first document shown is the architecture, or the brief when there is none.
   $effect(() => {
-    if (!docs.loaded || docs.loading || (p.open && p.open !== opened)) return;
+    if (!initialSelectionPending || !docs.loaded || docs.loading || (p.open && p.open !== opened)) return;
+    initialSelectionPending = false;
     if (!docs.exists(docs.selected) && docs.exists(BRIEF) && docs.selected !== BRIEF) {
       void docs.open(BRIEF);
     }
   });
 
   function select(path: string): void {
+    initialSelectionPending = false;
     pendingAction = undefined;
     if (docs.dirty) {
       pending = path;

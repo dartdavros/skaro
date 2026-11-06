@@ -93,3 +93,18 @@ export function reviewedC4Ids(
   }
   return ids;
 }
+
+export function reviewedTaskScope(
+  scope: C4TaskScope,
+  review: ReviewScope,
+  model?: C4Model,
+): C4TaskScope {
+  const ids = reviewedC4Ids(scope, review, model);
+  return {
+    ...scope,
+    elements: [...ids].filter((id) => model?.elements.some((item) => item.id === id)),
+    relationships: [...ids].filter((id) => model?.relationships.some((item) => item.id === id)),
+  };
+}
+
+type ReviewScope = NonNullable<Parameters<typeof reviewedC4Ids>[1]>;
