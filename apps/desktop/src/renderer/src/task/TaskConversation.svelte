@@ -7,6 +7,7 @@
   import SessionBanners from './SessionBanners.svelte';
   import TaskCollapsedHeader from './TaskCollapsedHeader.svelte';
   import TaskStarting from './TaskStarting.svelte';
+  import TaskC4Diagnostic from './TaskC4Diagnostic.svelte';
   import LoadingView from '../screens/LoadingView.svelte';
   import TaskChatClear from './TaskChatClear.svelte';
   import type { TaskController } from './task-controller.svelte';
@@ -133,6 +134,7 @@
       <!-- Before the acceptance the field of a stage is dimmed and takes no text. -->
       <div class="bottom">
         {#if timeline}<PinnedZone {timeline} {mergeMessage} />{/if}
+        <TaskC4Diagnostic {controller} />
         {#if settings}
           <div class:locked={!!stage && left > 0} inert={!!stage && left > 0}>
             <Composer

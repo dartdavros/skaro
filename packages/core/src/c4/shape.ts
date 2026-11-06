@@ -1,3 +1,4 @@
+import { C4ValidationError, c4Issue } from './diagnostics.ts';
 import type { C4Model } from './model.ts';
 
 type Shape =
@@ -131,9 +132,9 @@ function inspect(value: unknown, shape: Shape, path: string, errors: string[]): 
 export function readC4Model(value: unknown): C4Model {
   const errors: string[] = [];
   inspect(value, schema, 'C4', errors);
-  if (errors.length) throw new Error(errors.join('\n'));
+  if (errors.length) throw new C4ValidationError(errors.map((message) => c4Issue(message)));
   const model = value as C4Model;
-  if (model.version !== 1) throw new Error('C4: unsupported model version');
+  if (model.version !== 1) throw new C4ValidationError([c4Issue('C4: unsupported model version')]);
   return model;
 }
 

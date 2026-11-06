@@ -1,5 +1,6 @@
 import type { Tool, ToolResult } from './server.ts';
 import type { SkaroScope } from './tools.ts';
+import { operationFailure } from './tool-failure.ts';
 
 export interface ProposeC4Args {
   title: string;
@@ -28,14 +29,21 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
   const available = (scope: SkaroScope) => scope.kind === 'task' || scope.kind === 'project_chat';
   const call =
     <T>(
+      operation: string,
       parse: (args: Record<string, unknown>) => T,
       handler: (args: T, scope: SkaroScope) => Promise<ToolResult>,
     ) =>
     async (args: Record<string, unknown>, scope: SkaroScope) => {
+      let parsed: T;
       try {
-        return await handler(parse(args), scope);
+        parsed = parse(args);
       } catch (error) {
-        return { text: error instanceof Error ? error.message : String(error), isError: true };
+        return operationFailure(error, operation, 'invalid_arguments');
+      }
+      try {
+        return await handler(parsed, scope);
+      } catch (error) {
+        return operationFailure(error, operation);
       }
     };
   const text = (args: Record<string, unknown>, key: string) => {
@@ -64,6 +72,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
         'Prepare an owner-reviewed format-only package removing legacy embedded C4 copies from Markdown documents. Preserves authored content, architecture and requirement coverage. No files change before acceptance. Resolve all pending architecture packages first. Run only when the owner requests this migration.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       call: call(
+        'migrate_c4_documents',
         () => undefined,
         (_args, scope) => handlers.migrate!(scope),
       ),
@@ -74,7 +83,11 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
       description:
         'Read the shared C4 model, its exact JSON schema, document sources, coverage problems, pending architecture packages and the current task change fingerprint. Call before preparing architecture/specifications or reviewing implementation. Absence of C4 is an explicit documentation gap, not verified coverage.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-      call: (_args, scope) => handlers.context(scope),
+      call: call(
+        'get_c4_context',
+        () => undefined,
+        (_args, scope) => handlers.context(scope),
+      ),
     },
     {
       name: 'propose_c4',
@@ -105,6 +118,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
         additionalProperties: false,
       },
       call: call(
+        'propose_c4',
         (args): ProposeC4Args => {
           if (!Array.isArray(args.documents)) throw new Error('documents must be an array');
           const documents = args.documents.map((raw: Record<string, unknown>) => ({
@@ -126,7 +140,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
       name: 'review_c4',
       available: (scope) => scope.kind === 'task',
       description:
-        'Before submitting implementation, inspect actual changed code against the task requirements and accepted C4. get_c4_context returns task.reviewScope derived from Git and task requirement IDs. Cover that scope, not the entire specification or unrelated parents. Report revision, changeHash, affected IDs, evidence and aligned. Only applicable open questions and stale affected documents block acceptance. Design/document-only Git changes do not require implementation review and cannot realize planned architecture. Required architecture changes still need an accepted propose_c4 package. A review does not itself publish planned architecture.',
+        'Before submitting implementation, inspect actual changed code against the task requirements and accepted C4. get_c4_context returns task.reviewScope derived from Git and task requirement IDs. Cover that scope, not the entire specification or unrelated parents. Report revision, changeHash, affected IDs, evidence and aligned. Only applicable open questions and stale affected documents block acceptance. Design/document-only Git changes do not require implementation review and cannot realize planned architecture. Required architecture changes still need an accepted propose_c4 package. review_c4 preflights the future publication model and task code files before saving success, using the same candidate checks as submit_result. It does not publish planned architecture. Structured c4_validation diagnostics are data rejections: follow issue.nextStep, preserve planned future work, and re-review. A narrow planned view can describe only the implemented subset; publication automatically promotes eligible views. Code paths must be concrete files. Do not claim a Skaro defect from a validation rejection alone.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -155,6 +169,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
         additionalProperties: false,
       },
       call: call(
+        'review_c4',
         (args): ReviewC4Args => {
           if (typeof args.aligned !== 'boolean') throw new Error('aligned must be boolean');
           return {

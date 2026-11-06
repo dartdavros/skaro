@@ -1,13 +1,12 @@
 import { dirname } from 'node:path';
 import { background } from './background/client';
-import { validateC4Model, git, type AppDb } from '@skaro/core';
-import { candidateC4Model } from './c4-candidate';
-import { validateC4TaskCode } from './c4-task-code';
+import { C4ValidationError, c4Issue, git, type AppDb } from '@skaro/core';
+import { inspectC4ReviewCandidate } from './c4-review-candidate';
 import type { ReviewC4Args } from '@skaro/mcp-server';
 import type { ProjectContext } from './projects';
 import { c4CoverageProblems } from './c4-coverage';
 export { c4CoverageProblems } from './c4-coverage';
-import { readTaskC4Scope, reviewedC4Ids, type C4TaskScope } from './c4-task-scope';
+import { readTaskC4Scope, reviewedTaskScope, type C4TaskScope } from './c4-task-scope';
 
 export interface C4TaskReview extends ReviewC4Args {
   runId: string;
@@ -58,7 +57,10 @@ async function inspectC4TaskReviewData(
       (p) => p.package.task?.id === taskId && ['pending', 'accepted'].includes(p.item.state),
     )
   )
-    throw new Error('A task architecture package is still pending.');
+    throw new C4ValidationError(
+      [c4Issue('A task architecture package is still pending.', 'pending_package')],
+      'submission',
+    );
   if (actualScope.kind === 'artifacts') {
     const review: C4TaskReview = {
       revision: artifacts.c4?.revision ?? 0,
@@ -77,45 +79,29 @@ async function inspectC4TaskReviewData(
   }
   const review = db.getSetting<C4TaskReview | null>(c4ReviewKey(context.id, taskId), null);
   if (!review || (runId && review.runId !== runId))
-    throw new Error(`${taskId}: call review_c4 with code evidence before submitting the result`);
-  const scope = {
-    ...actualScope,
-    elements: [...reviewedC4Ids(actualScope, review, artifacts.c4)].filter((id) =>
-      artifacts.c4?.elements.some((item) => item.id === id),
-    ),
-    relationships: [...reviewedC4Ids(actualScope, review, artifacts.c4)].filter((id) =>
-      artifacts.c4?.relationships.some((item) => item.id === id),
-    ),
-  };
-  const problems = c4CoverageProblems(
+    throw new C4ValidationError(
+      [
+        c4Issue(
+          `${taskId}: call review_c4 with code evidence before submitting the result`,
+          'review_required',
+        ),
+      ],
+      'submission',
+    );
+  const scope = reviewedTaskScope(actualScope, review, artifacts.c4);
+  const issues = c4CoverageProblems(
     artifacts,
     taskId,
     review.scope ? { ...review, revision: artifacts.c4?.revision ?? review.revision } : review,
     actualScope,
-  );
+  ).map((message) => c4Issue(message));
   if (review.modelHash !== c4ArchitectureHash(artifacts, review.scope ? scope : undefined))
-    problems.push('Architecture or its documents changed after review.');
+    issues.push(c4Issue('Architecture or its documents changed after review.', 'stale_review'));
   if (review.changeHash !== (await c4ChangeHash(checkout, review.baseHead)))
-    problems.push('Code changed after C4 review; review it again.');
-  if (artifacts.c4) {
-    const realized = await candidateC4Model(artifacts.c4, review.realized, {
-      root: checkout,
-      base: baseHead,
-    });
-    if (review.realized.length) problems.push(...validateC4Model(realized));
-    problems.push(
-      ...(await validateC4TaskCode(
-        checkout,
-        baseHead,
-        {
-          ...realized,
-          elements: realized.elements.filter((item) => scope.elements.includes(item.id)),
-        },
-        actualScope.files,
-        review.realized,
-      )),
-    );
-  }
-  if (problems.length) throw new Error(problems.join('\n'));
+    issues.push(c4Issue('Code changed after C4 review; review it again.', 'stale_review'));
+  issues.push(
+    ...(await inspectC4ReviewCandidate(artifacts.c4, review.realized, checkout, baseHead, scope)),
+  );
+  if (issues.length) throw new C4ValidationError(issues, 'submission');
   return { review, artifactOnly: false };
 }

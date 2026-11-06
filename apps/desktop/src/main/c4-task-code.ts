@@ -1,4 +1,4 @@
-import { git, validateC4Code, type C4Model } from '@skaro/core';
+import { git, inspectC4Code, type C4Model, type C4Issue } from '@skaro/core';
 
 /** Only facts introduced on the base after branching can wait for candidate validation. */
 export function deferBaseOnlyPath(
@@ -19,6 +19,18 @@ export async function validateC4TaskCode(
   changedFiles: string[],
   realizedIds: string[],
 ): Promise<string[]> {
+  return (await inspectC4TaskCode(root, baseHead, model, changedFiles, realizedIds)).map(
+    (issue) => issue.message,
+  );
+}
+
+export async function inspectC4TaskCode(
+  root: string,
+  baseHead: string,
+  model: C4Model,
+  changedFiles: string[],
+  realizedIds: string[],
+): Promise<C4Issue[]> {
   const ancestor = (await git(root, ['merge-base', baseHead, 'HEAD'])).stdout.trim();
   const trees = await Promise.all(
     [baseHead, ancestor, 'HEAD'].map(async (ref) => {
@@ -27,7 +39,7 @@ export async function validateC4TaskCode(
     }),
   );
   const changed = new Set(changedFiles);
-  return validateC4Code(root, {
+  return inspectC4Code(root, {
     ...model,
     elements: model.elements.map((element) => ({
       ...element,

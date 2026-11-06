@@ -1,5 +1,6 @@
 import type { C4Element, C4Model } from './model.ts';
-import { validateViews } from './validate-views.ts';
+import { inspectC4Views } from './validate-views.ts';
+import { C4Problems, c4Issue, type C4Issue } from './diagnostics.ts';
 import { c4AtState } from './state.ts';
 
 const PARENT: Record<C4Element['kind'], C4Element['kind'][]> = {
@@ -11,7 +12,11 @@ const PARENT: Record<C4Element['kind'], C4Element['kind'][]> = {
   'deployment-node': ['deployment-node'],
 };
 
-export function uniqueIds(entries: { id: string }[], errors: string[], label: string): void {
+export function uniqueIds(
+  entries: { id: string }[],
+  errors: Pick<C4Problems, 'push'>,
+  label: string,
+): void {
   const seen = new Set<string>();
   for (const { id } of entries) {
     if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(id)) errors.push(`${label}: invalid identifier ${id}`);
@@ -32,7 +37,11 @@ export function ancestors(id: string, elements: Map<string, C4Element>): string[
 
 /** Structural consistency is executable; factual correctness still requires code evidence. */
 export function validateC4Model(model: C4Model, checkViews = true): string[] {
-  const errors: string[] = [];
+  return inspectC4Model(model, checkViews).map((issue) => issue.message);
+}
+
+export function inspectC4Model(model: C4Model, checkViews = true): C4Issue[] {
+  const errors = new C4Problems();
   uniqueIds(
     [...model.elements, ...model.relationships, ...model.views, ...model.questions],
     errors,
@@ -54,7 +63,14 @@ export function validateC4Model(model: C4Model, checkViews = true): string[] {
     if (element.parent && ancestors(element.parent, elements).includes(element.id))
       errors.push(`${element.id}: cyclic hierarchy`);
     if (element.state === 'current' && parent?.state === 'planned')
-      errors.push(`${element.id}: current element inside planned parent`);
+      errors.add(
+        c4Issue(
+          `${element.id}: current element inside planned parent`,
+          'planned_parent',
+          [element.id, parent.id],
+          'Verify the parent implementation. Include its ID in review_c4.realized only if fully implemented and verified; otherwise keep the child planned. Never promote an unimplemented parent.',
+        ),
+      );
     if (
       ['container', 'component', 'code', 'deployment-node'].includes(element.kind) &&
       !element.technology
@@ -90,15 +106,16 @@ export function validateC4Model(model: C4Model, checkViews = true): string[] {
     for (const id of question.affects)
       if (!all.has(id)) errors.push(`${question.id}: unknown affected ${id}`);
   }
-  if (checkViews) validateViews(model, errors);
+  if (checkViews) inspectC4Views(model, errors);
   if (
     model.elements.some((e) => e.planned) ||
     model.relationships.some((r) => r.planned) ||
     model.removals?.length
   ) {
     const planned = c4AtState(model, 'planned');
-    const plannedErrors = validateC4Model(planned, false);
-    errors.push(...plannedErrors.map((message) => `planned: ${message}`));
+    const plannedErrors = inspectC4Model(planned, false);
+    for (const issue of plannedErrors)
+      errors.add({ ...issue, message: `planned: ${issue.message}` });
   }
-  return errors;
+  return errors.issues;
 }

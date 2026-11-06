@@ -4,6 +4,7 @@ import type { C4Model } from './model.ts';
 import { C4_MODEL_PATH } from './model.ts';
 import { readC4Model } from './shape.ts';
 import { validateC4Model } from './validate.ts';
+import { C4Problems, c4Issue, type C4Issue } from './diagnostics.ts';
 import { validateC4Documents } from './documents.ts';
 import { readC4File } from './io.ts';
 
@@ -29,7 +30,15 @@ export async function validateC4Code(
   model: C4Model,
   taskCheckout = false,
 ): Promise<string[]> {
-  const errors: string[] = [];
+  return (await inspectC4Code(root, model, taskCheckout)).map((issue) => issue.message);
+}
+
+export async function inspectC4Code(
+  root: string,
+  model: C4Model,
+  taskCheckout = false,
+): Promise<C4Issue[]> {
+  const errors = new C4Problems();
   const actualRoot = await realpath(root);
   for (const element of model.elements.filter((e) => e.state === 'current')) {
     if (taskCheckout && model.removals?.some((r) => r.id === element.id)) continue;
@@ -42,14 +51,30 @@ export async function validateC4Code(
         const actual = await realpath(join(actualRoot, path));
         const rel = relative(actualRoot, actual);
         if (rel.startsWith('..') || isAbsolute(rel) || !(await stat(actual)).isFile())
-          errors.push(`${element.id}: code path must be a project file: ${path}`);
+          errors.add({
+            ...c4Issue(
+              `${element.id}: code path must be a project file: ${path}`,
+              'code_path_not_file',
+              [element.id],
+              'Replace this directory or invalid reference with concrete existing project files that implement the element. Propose the corrected binding while the element remains planned, then review publication again.',
+            ),
+            path,
+          });
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-        errors.push(`${element.id}: missing code path ${path}`);
+        errors.add({
+          ...c4Issue(
+            `${element.id}: missing code path ${path}`,
+            'missing_code_path',
+            [element.id],
+            'Check the real task checkout and the accepted code binding. Reference existing implementation files through a reviewed C4 package; do not create placeholder files or waive validation.',
+          ),
+          path,
+        });
       }
     }
   }
-  return errors;
+  return errors.issues;
 }
 
 export interface C4ProjectState {

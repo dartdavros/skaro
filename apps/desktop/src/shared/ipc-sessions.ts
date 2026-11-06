@@ -40,6 +40,8 @@ export interface StageView {
 }
 
 export interface TaskView {
+  /** Latest host-validated data rejection; separate from agent/service failures. */
+  c4Diagnostic?: import('@skaro/core/c4-view').C4Diagnostic;
   history?: import('./history').HistorySource;
   historyPage?: import('./history').HistoryPage;
   /** Diagnostic of preparation, including failures before an agent run was created. */

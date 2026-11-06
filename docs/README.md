@@ -22,6 +22,8 @@
 | [project-graph-verification.md](project-graph-verification.md) | Проведённые проверки графа, реальные данные, артефакты и непроверенные сценарии         |
 | [agent-output.md](agent-output.md)                             | Протоколы агентов, каноническая модель, отображение и результаты прототипа              |
 | [ADR-0047](adr/0047-builtin-agent.md)                          | Целевая архитектура основного встроенного агента, BYOK и самостоятельные проверки       |
+| [ADR-0048](adr/0048-codex-multi-account.md)                    | Несколько аккаунтов Codex, общие настройки и автоматическое продолжение при исчерпании квоты; техническая проверка открыта |
+| [codex-multi-account-plan.md](codex-multi-account-plan.md)     | Этапы реализации нескольких аккаунтов Codex, зависимости, UI-решения и критерии приёмки |
 | [builtin-agent-plan.md](builtin-agent-plan.md)                 | План встроенного runtime, OpenAI/Anthropic/DeepSeek/OpenRouter, design gates и приёмка    |
 | [builtin-agent-contracts.md](builtin-agent-contracts.md)       | Фактические контракты BA-1, регистрация, поставка, маршруты, host-порты и версии |
 | [builtin-agent-runtime.md](builtin-agent-runtime.md)           | Ядро lifecycle BA-2: процесс, журнал, восстановление и незакрытая приёмка |

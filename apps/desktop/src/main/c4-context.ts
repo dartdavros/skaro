@@ -13,6 +13,7 @@ import type { C4ProposalRecord } from './c4-service';
 import { c4ChangeHash, c4ReviewKey } from './c4-fingerprint';
 import { readTaskC4Scope } from './c4-task-scope';
 import { c4CoverageProblems } from './c4-coverage';
+import { c4DiagnosticKey } from './c4-tool-diagnostic';
 
 /** Send the model once, authored document text and durable proposal facts, without repeated preview payloads. */
 export async function c4Context(
@@ -90,6 +91,7 @@ export async function c4Context(
         ...(baseHead
           ? {
               task: {
+                diagnostic: scope.runId ? db.getSetting(c4DiagnosticKey(scope.runId), null) : null,
                 id: scope.taskId,
                 checkout,
                 baseHead,
