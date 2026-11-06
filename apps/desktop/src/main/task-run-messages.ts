@@ -12,6 +12,7 @@ import { trackRun } from './task-run-access';
 import type { TaskRunEngine } from './task-run-engine';
 import { stopBuiltinTask, requireTaskNotStopping } from './builtin-task-stop';
 import { taskAgentInput } from './task-agent-input';
+import { prepareTaskFollowUp } from './task-follow-up';
 
 /** messages: a focused part of the task-run controller. */
 export class TaskRunMessages {
@@ -34,11 +35,17 @@ export class TaskRunMessages {
     active = await this.ctx.handoff.recover(active);
     requireCurrent();
     requireTaskNotStopping(active);
+    assertQuestionMessageAllowed(active.timeline.state, input.internal);
     if (!input.internal) {
-      const task = await readSubject(this.ctx.project(projectId), taskId);
-      requireCurrent();
-      requireTaskNotStopping(active);
-      if (task.status === 'in_progress') this.ctx.continuation.execution(active).start();
+      const answer = new QuestionAnswers(this.ctx.deps.db, `active.${active.run.id}`).pending(
+        active.timeline.state,
+      );
+      input = prepareTaskFollowUp(
+        this.ctx.continuation.execution(active),
+        input,
+        active.timeline.state,
+        answer,
+      );
     }
     await this.turn(active, input);
   }
@@ -90,7 +97,12 @@ export class TaskRunMessages {
     assertQuestionMessageAllowed(active.timeline.state, input.internal);
     if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
       throw new CommandCancelled();
-    const message = taskAgentInput(input, active.timeline.state);
+    const followUp = this.ctx.continuation.execution(active).read().followUp;
+    const message = taskAgentInput(
+      input,
+      active.timeline.state,
+      !!followUp && followUp.commandId === input.commandId,
+    );
     if (!active.timeline.state.turns.at(-1) || active.timeline.state.turns.at(-1)?.outcome)
       await session.send(message, input.commandId);
     else await session.steer(message, input.commandId);

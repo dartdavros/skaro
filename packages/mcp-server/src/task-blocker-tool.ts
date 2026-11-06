@@ -13,7 +13,8 @@ export function taskBlockerTool(
       'to resolve routine configuration and stopped source services yourself. This does not accept criteria, ' +
       'complete or merge the task. Missing owner decisions use the blocking question tool instead. ' +
       'Missing owner API keys/passwords use request_secret; its protected question is the waiting state. ' +
-      'For a read-only follow-up or explicit owner request not to implement, record that limitation here.',
+      'Ordinary chat follow-ups already suspend automatic continuation; answer a question and end ' +
+      'the turn without inventing a task blocker. An explicit owner pause may be recorded here.',
     inputSchema: {
       type: 'object',
       properties: { reason: { type: 'string', minLength: 1 } },

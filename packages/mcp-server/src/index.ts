@@ -5,6 +5,7 @@ export * from './tools.ts';
 export * from './environment-tool.ts';
 export * from './environment-setup-tool.ts';
 export * from './task-blocker-tool.ts';
+export * from './task-resume-tool.ts';
 export * from './secret-input-tool.ts';
 export * from './integration-tool.ts';
 export * from './history-tool.ts';
