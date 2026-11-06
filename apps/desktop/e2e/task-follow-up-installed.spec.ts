@@ -19,6 +19,9 @@ test('opens the installed build with matching code, metadata and restored task a
   const expected = createHash('sha256')
     .update(readFileSync(join(__dirname, '../out/main/index.js')))
     .digest('hex');
+  const expectedMetadata = JSON.parse(
+    readFileSync(join(__dirname, '../build/skaro-bundle.json'), 'utf8'),
+  );
   const app = await launchApp(profile!, { openSavedProject: false });
   try {
     const actual = await app.evaluate(({ app }) => {
@@ -29,6 +32,9 @@ test('opens the installed build with matching code, metadata and restored task a
         executable: app.getPath('exe'),
         packaged: app.isPackaged,
         version: app.getVersion(),
+        metadata: JSON.parse(
+          fs.readFileSync(path.join(process.resourcesPath, 'skaro-bundle.json'), 'utf8'),
+        ),
         scope: process.env['SKARO_VERIFICATION_PROJECT'],
         hash: crypto
           .createHash('sha256')
@@ -37,7 +43,8 @@ test('opens the installed build with matching code, metadata and restored task a
       };
     });
     expect(actual.packaged).toBe(true);
-    expect(actual.version).toBe('2.2.22');
+    expect(actual.version).toBe(expectedMetadata.bundleVersion);
+    expect(actual.metadata).toEqual(expectedMetadata);
     expect(actual.scope).toBe(project);
     expect(actual.executable.toLowerCase().replaceAll('\\', '/')).toBe(
       process.env['SKARO_E2E_EXECUTABLE']!.toLowerCase().replaceAll('\\', '/'),
