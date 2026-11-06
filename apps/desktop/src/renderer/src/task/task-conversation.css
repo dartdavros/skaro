@@ -75,7 +75,7 @@
   font-family: var(--sk-mono);
 }
 
-.task-conversation > .bottom.locked {
+.task-conversation > .bottom > .locked {
   opacity: 0.45;
 }
 

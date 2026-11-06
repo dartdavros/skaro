@@ -99,7 +99,6 @@
       history={controller.view?.history}
       historyPage={controller.view?.historyPage}
       cwd={projectPath}
-      mergeMessage=""
     />
   {:else if controller.running}
     <!-- The first message is on its way: the agent is starting. -->

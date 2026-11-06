@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { FeedRow } from '@skaro/timeline';
+  import { isPendingProposal } from '../../../shared/feed-actions';
   import type { HistoryRow } from '../../../shared/history';
   import AgentMessage from './AgentMessage.svelte';
   import CommandRow from './CommandRow.svelte';
@@ -48,5 +49,6 @@
 {:else if row.type === 'turn_end'}
   <TurnEnd {row} {last} reply={typeof reply === 'string' ? reply : reply?.item.text} />
 {:else if row.type === 'decision'}<DecisionRow {row} />
-{:else if row.type === 'proposal'}<ProposalCard {row} />
+{:else if row.type === 'proposal'}
+  {#if !isPendingProposal(row.item)}<ProposalCard {row} />{/if}
 {:else if row.type === 'import_prep'}<ImportPrepRow {row} />{/if}

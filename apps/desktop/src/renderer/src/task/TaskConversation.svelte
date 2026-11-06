@@ -74,7 +74,7 @@
     </div>
 
     {#if timeline && hasFeed}
-      <Feed {timeline} history={view.history} historyPage={view.historyPage} {cwd} {mergeMessage} />
+      <Feed {timeline} history={view.history} historyPage={view.historyPage} {cwd} />
     {:else if stage && left > 0}
       <div class="empty">
         <Icon name="tasks" size={30} stroke={1.5} color="var(--sk-text-29)" />
@@ -131,28 +131,30 @@
     <!-- The chat stays after the task is done: follow-up questions go on in it. -->
     {#if view}
       <!-- Before the acceptance the field of a stage is dimmed and takes no text. -->
-      <div class="bottom" class:locked={!!stage && left > 0} inert={!!stage && left > 0}>
-        {#if timeline}<PinnedZone {timeline} />{/if}
+      <div class="bottom">
+        {#if timeline}<PinnedZone {timeline} {mergeMessage} />{/if}
         {#if settings}
-          <Composer
-            placeholder={controller.placeholder}
-            running={controller.running}
-            agent={agentInfo?.id ?? settings.agent}
-            model={controller.modelLabel}
-            effort={controller.effort.effort}
-            efforts={controller.effort.efforts}
-            {...timeline?.usage?.contextUsedPct !== undefined
-              ? { contextPct: timeline.usage.contextUsedPct }
-              : {}}
-            permissionMode={settings.permissionMode}
-            planFirst={settings.planFirst}
-            commands={() => window.skaro.invoke('agents.commands', settings.agent, projectId)}
-            suggest={(q) => window.skaro.invoke('files.suggest', projectId, taskId, q)}
-            onsend={controller.send}
-            onstop={() => void window.skaro.invoke('task.interrupt', projectId, taskId)}
-            onmodel={() => (controller.modal = true)}
-            onpermission={controller.setPermission}
-          />
+          <div class:locked={!!stage && left > 0} inert={!!stage && left > 0}>
+            <Composer
+              placeholder={controller.placeholder}
+              running={controller.running}
+              agent={agentInfo?.id ?? settings.agent}
+              model={controller.modelLabel}
+              effort={controller.effort.effort}
+              efforts={controller.effort.efforts}
+              {...timeline?.usage?.contextUsedPct !== undefined
+                ? { contextPct: timeline.usage.contextUsedPct }
+                : {}}
+              permissionMode={settings.permissionMode}
+              planFirst={settings.planFirst}
+              commands={() => window.skaro.invoke('agents.commands', settings.agent, projectId)}
+              suggest={(q) => window.skaro.invoke('files.suggest', projectId, taskId, q)}
+              onsend={controller.send}
+              onstop={() => void window.skaro.invoke('task.interrupt', projectId, taskId)}
+              onmodel={() => (controller.modal = true)}
+              onpermission={controller.setPermission}
+            />
+          </div>
         {/if}
       </div>
     {/if}

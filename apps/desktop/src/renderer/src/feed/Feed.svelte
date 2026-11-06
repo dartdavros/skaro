@@ -13,31 +13,24 @@
   import FeedRows from './FeedRows.svelte';
   import PagedFeedRows from './PagedFeedRows.svelte';
   import type { HistorySource } from '../../../shared/history';
-  import FormCard from './FormCard.svelte';
   import LiveLine from './LiveLine.svelte';
-  import LoginCard from './LoginCard.svelte';
-  import MergeCard from './MergeCard.svelte';
-  import PermissionCard from './PermissionCard.svelte';
-  import PlanCard from './PlanCard.svelte';
   import { installHistoryCopy } from './history-copy.svelte';
   import { useFeed } from './context.svelte';
   import { provideFeedLoading } from './feed-loading.svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
 
   /**
-   * The agent feed: rows, the live line and unanchored cards. Sticks to the bottom while the
+   * The agent history and live line. Pending actions live above the composer. Sticks to the bottom while the
    * user is there; otherwise shows "К концу диалога".
    */
   let {
     timeline,
     cwd,
-    mergeMessage,
     history,
     historyPage,
   }: {
     timeline: TimelineState;
     cwd?: string;
-    mergeMessage: string;
     history?: HistorySource;
     historyPage?: import('../../../shared/history').HistoryPage;
   } = $props();
@@ -65,12 +58,6 @@
         .filter((id): id is string => id !== undefined),
     ),
   );
-  const approvals = $derived(
-    timeline.interactions.filter(
-      (i): i is Extract<Interaction, { kind: 'approval' }> => i.kind === 'approval',
-    ),
-  );
-  const firstApproval = $derived(approvals[0]?.id);
   // Skaro's start_environment runs for minutes: the agent waits for it, not for the model.
   const startingEnvironment = $derived(hasStartingEnvironment(timeline));
   const activity = $derived(liveActivity(timeline));
@@ -120,24 +107,6 @@
       {#if showLive}
         <LiveLine {activity} environment={startingEnvironment} since={activitySince} {cwd} />
       {/if}
-      {#if approvals.length}
-        <div class="fd-block" style="gap: 8px">
-          {#each approvals as interaction (interaction.id)}
-            <PermissionCard {interaction} primary={interaction.id === firstApproval} />
-          {/each}
-        </div>
-      {/if}
-      {#each timeline.interactions as interaction (interaction.id)}
-        {#if interaction.kind === 'plan_approval'}
-          <PlanCard {interaction} />
-        {:else if interaction.kind === 'form'}
-          <FormCard {interaction} />
-        {:else if interaction.kind === 'login'}
-          <LoginCard {interaction} />
-        {:else if interaction.kind === 'merge'}
-          <MergeCard {interaction} defaultMessage={interaction.message ?? mergeMessage} />
-        {/if}
-      {/each}
     </div>
   </div>
   {#if !scroll.atBottom}
