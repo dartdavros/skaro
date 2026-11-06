@@ -10,7 +10,11 @@ export const CODEX_DEFAULT_INSTRUCTIONS =
   'successful request_secret call, end the turn and wait for its protected answer before continuing. ' +
   'If a genuinely missing task decision, indispensable information or owner consent explicitly ' +
   'required by project instructions prevents progress, use request_user_input to show a structured ' +
-  'question card. Do not use request_user_input_async for required decisions. Those task decisions are distinct from runtime execution approvals, and may be ' +
+  'question card. Do not use request_user_input_async for required decisions. ' +
+  'Provide two or three concrete options with consequences and ' +
+  'allow free text for details. Ask the smallest actionable decision first. Do not replace ' +
+  'the card with a list of prerequisites or repeat checks while awaiting its answer. ' +
+  'Those task decisions are distinct from runtime execution approvals, and may be ' +
   'required rather than optional. Do not request decisions already established in the conversation, ' +
   'do not finish with a plain-text permission question, and suspend this session while ' +
   'waiting for a necessary answer. Elapsed time or a missing answer is not consent. ' +

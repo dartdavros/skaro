@@ -30,6 +30,7 @@ import { builtinTaskAdmission } from './builtin-task-admission';
 import { submitTaskResult } from './task-submit';
 import { taskArchitectureEvent } from './task-architecture-events';
 import { requestTaskSecret } from './task-secret-input';
+import { resumeTaskExecution } from './task-resume';
 import { prepareBuiltinTaskReview } from './builtin-task-review';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
@@ -209,6 +210,20 @@ export class TaskRuns {
       return {
         text: 'The external blocker is recorded. The task remains incomplete; automatic continuation is suspended. Report the precise blocker without asking for a generic continue message.',
       };
+    });
+  }
+  resumeTask(commandId: string, instruction: string, scope: SkaroScope): Promise<ToolResult> {
+    return taskTool(this.engine, scope, async () => {
+      const active = this.engine.requireActive(scope.projectId, scope.taskId!);
+      const task = await this.engine.project(scope.projectId).load();
+      if (!task.tasks.some((task) => task.id === scope.taskId && task.status === 'in_progress'))
+        return { text: 'Only an in-progress task can resume execution.', isError: true };
+      return resumeTaskExecution(
+        this.engine.continuation.execution(active),
+        active.timeline.state,
+        commandId,
+        instruction,
+      );
     });
   }
   requestSecret(questions: import('@skaro/mcp-server').SecretQuestion[], scope: SkaroScope) {

@@ -17,6 +17,10 @@ export function agentInteractionInstructions(): string {
       '- Ask only for a missing product decision, indispensable information that cannot be ' +
         'discovered, or explicit owner consent required by project instructions. Explain the ' +
         'specific unresolved choice and its consequences; suspend this session until every question has been answered.',
+      '- For each required decision, show two or three concrete options with their consequences ' +
+        'through the structured question tool. Ask the smallest actionable question first ' +
+        'instead of listing unexplained requirements in chat. Keep free text available for details. ' +
+        'After opening the card, wait: do not recheck unchanged prerequisites or submit the same result again.',
       "- Use the agent's blocking structured question tool for those decisions (" +
         RELEASE_AGENT_IDS.map((id) => {
           const agent = agentDefinition(id);

@@ -9,6 +9,7 @@ import {
   configureEnvironmentTool,
   setupEnvironmentTool,
   taskBlockerTool,
+  taskResumeTool,
   secretInputTool,
   verifyIntegrationTool,
   taskHistoryTool,
@@ -112,6 +113,9 @@ export async function createServices(
       mergeTaskTool((args, scope): Promise<ToolResult> => runs.mergeTask(args, scope)),
       submitResultTool((args, scope): Promise<ToolResult> => runs.submitResult(args, scope)),
       taskBlockerTool((reason, scope) => runs.reportBlocker(reason, scope)),
+      taskResumeTool((commandId, instruction, scope) =>
+        runs.resumeTask(commandId, instruction, scope),
+      ),
       secretInputTool((questions, scope) => runs.requestSecret(questions, scope)),
       startEnvironmentTool((scope): Promise<ToolResult> => runs.startEnvironment(scope)),
       configureEnvironmentTool((args, scope) => runs.configureEnvironment(args, scope)),
