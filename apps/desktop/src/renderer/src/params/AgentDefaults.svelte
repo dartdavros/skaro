@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { modelEffortDefault } from '@skaro/timeline';
-  import { AgentLogo, EffortSlider, Select, t } from '@skaro/ui';
+  import { AgentLogo, Select, t } from '@skaro/ui';
   import { agentCatalog, agentName } from '@skaro/agents/catalog';
   import type { AgentDefaultsProps } from './agent-defaults-props';
   import { createAgentDefaultsController } from './agent-defaults-controller.svelte';
@@ -70,12 +69,14 @@
   {#if state.levels.length}
     <div data-agent-defaults class="field effort">
       <span data-agent-defaults class="key">{t('params.effort')}</span>
-      <EffortSlider
-        levels={state.levels}
+      <Select
+        width="100%"
+        menuWidth="100%"
+        label={t('params.effort')}
+        options={state.levels.map((e) => ({ value: e.id, label: e.label }))}
         bind:value={
           () => state.effort, (e) => onchange({ defaultModel: state.model?.id, defaultEffort: e })
         }
-        defaultValue={modelEffortDefault(state.model)}
       />
     </div>
   {/if}

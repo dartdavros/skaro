@@ -1,6 +1,6 @@
 <script lang="ts">
   import { modelEffortDefault } from '@skaro/timeline';
-  import { EffortSlider, Select, t } from '@skaro/ui';
+  import { Select, t } from '@skaro/ui';
   import Row from '../settings/Row.svelte';
   import { effortLabel } from './agent-settings-presentation';
   import type { AgentSettingsCardProps } from './agent-settings-card-props';
@@ -63,8 +63,13 @@
   {#if efforts.length > 1}
     {@const effortDefault = modelEffortDefault(model) ?? ''}
     <div data-agents-settings class="field-width" inert={a.inDevelopment}>
-      <EffortSlider
-        levels={efforts}
+      <Select
+        variant="model"
+        width={280}
+        menuWidth={280}
+        label={t('settings.agent.effort')}
+        disabled={a.inDevelopment}
+        options={efforts.map((e) => ({ value: e.id, label: e.label }))}
         bind:value={
           () =>
             efforts.some((e) => e.id === state.defaults[a.id]?.effort)
@@ -76,7 +81,6 @@
               effort: v,
             })
         }
-        defaultValue={effortDefault}
       />
     </div>
   {:else}
