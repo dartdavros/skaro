@@ -2,14 +2,9 @@
   import { onMount } from 'svelte';
   import { Banner, t } from '@skaro/ui';
   import { readC4Model, validateC4Model, type C4Model } from '@skaro/core/c4-view';
-  import C4Viewer from '../c4/C4Viewer.svelte';
   import GraphPreview from './GraphPreview.svelte';
   import '../c4/i18n';
-  let {
-    projectId,
-    destination,
-    onclose,
-  }: { projectId: string; destination: string; onclose: () => void } = $props();
+  let { projectId }: { projectId: string } = $props();
   let model = $state.raw<C4Model>();
   let error = $state('');
   onMount(() => {
@@ -29,11 +24,4 @@
 {#if error}<Banner kind="error" text={t('graph.error', { error })} />
 {:else if model}
   <GraphPreview {model} />
-  {#if destination === 'c4'}
-    <C4Viewer
-      {model}
-      initialView={model.views.find((v) => v.kind === 'container' && v.state === 'current')!.id}
-      {onclose}
-    />
-  {/if}
 {/if}

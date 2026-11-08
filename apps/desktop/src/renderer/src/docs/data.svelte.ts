@@ -17,7 +17,6 @@ export class ProjectDocs {
   selected = $state(ARCHITECTURE);
   /** Text of the open document as it is on disk. */
   text = $state('');
-  attachment = $state.raw<import('@skaro/core/c4-view').C4Attachment>();
   editing = $state(false);
   draft = $state('');
   /** The file changed on disk while it was edited (text there now). */
@@ -79,7 +78,6 @@ export class ProjectDocs {
   async open(path: string): Promise<void> {
     const revision = ++this.reading;
     this.loading = true;
-    if (path !== this.selected) this.attachment = undefined;
     this.selected = path;
     try {
       localStorage.setItem(`skaro.doc.${this.projectId}`, path);
@@ -130,9 +128,8 @@ export class ProjectDocs {
       ...this.catalog.fixed,
       ...(entry && !this.catalog.fixed.some((fixed) => fixed.path === path) ? [entry] : []),
     ];
-    if (!entry) { this.attachment = undefined; return ''; }
+    if (!entry) return '';
     const snapshot = await window.skaro.invoke('docs.document', this.projectId, path);
-    if (revision === this.reading) this.attachment = snapshot.attachment;
     return snapshot.body;
   }
   lookup(key: { path: string } | { kind: DocumentKind; id: string }) {
