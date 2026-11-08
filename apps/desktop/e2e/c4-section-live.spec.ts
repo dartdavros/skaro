@@ -39,7 +39,9 @@ test('shows C4 diagrams only in the C4 section on the real project', async ({
       );
       expect(docs.length).toBeGreaterThan(0);
       const doc = docs[0]!;
-      const group = tree.locator('.group').filter({ hasText: kind === 'adr' ? 'ADR' : 'Спецификации' });
+      const group = tree
+        .locator('.group')
+        .filter({ hasText: kind === 'adr' ? 'ADR' : 'Спецификации' });
       if (!(await group.locator('.chev.open').count())) await group.click();
       const code = kind === 'adr' ? doc.adr!.id : doc.spec!.id;
       await tree.getByRole('treeitem').filter({ hasText: code }).first().click();
