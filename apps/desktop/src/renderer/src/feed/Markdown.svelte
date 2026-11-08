@@ -2,7 +2,6 @@
   import { useFeed } from './context.svelte';
   import { drawMermaid } from './markdown';
   import { agentMarkdown } from './markdown-work';
-  import { mountC4 } from '../c4/markdown';
   import { MarkdownDom } from './markdown-dom';
   import { markdownInteractions } from './markdown-interactions';
   import { useFeedLoading } from './feed-loading.svelte';
@@ -66,7 +65,7 @@
       (fragment) => {
         void drawMermaid(fragment);
         void interactions.decorate(fragment);
-        return mountC4(fragment);
+        return () => {};
       },
       () => {
         painted = true;

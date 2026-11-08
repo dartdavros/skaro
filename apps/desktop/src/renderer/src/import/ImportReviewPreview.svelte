@@ -2,7 +2,6 @@
   import { Icon, t } from '@skaro/ui';
   import type { ImportReviewState } from './import-review-state.svelte';
   import { blocks, sourceLabel } from './import-review-format';
-  import C4DocumentSection from '../c4/C4DocumentSection.svelte';
   import '../feed/architecture-review-i18n';
   let { state }: { state: ImportReviewState } = $props();
   const current = $derived(state.current);
@@ -71,7 +70,6 @@
         {/each}
       </div>
     {/if}
-    {#if state.attachment}<C4DocumentSection attachment={state.attachment} />{/if}
     <div class="sources">
       <span class="sk-label">{t('import.review.sources')}</span>
       {#each current.sources as source (source)}
