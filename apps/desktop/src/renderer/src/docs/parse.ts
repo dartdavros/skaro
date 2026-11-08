@@ -2,13 +2,13 @@
 // "Правила и ограничения" card, code with a copy button, Mermaid, the rest as safe HTML.
 
 import { Marked, type Token, type Tokens } from 'marked';
+import { isC4Diagram } from '../c4/markdown-policy';
 
 export type Block =
   | { kind: 'html'; html: string; hid?: string }
   | { kind: 'rules'; hid: string; title: string; items: string[] }
   | { kind: 'code'; lang: string; text: string }
-  | { kind: 'mermaid'; source: string }
-  | { kind: 'c4'; source: string };
+  | { kind: 'mermaid'; source: string };
 
 export interface Heading {
   hid: string;
@@ -25,6 +25,10 @@ function escape(text: string): string {
 
 marked.use({
   renderer: {
+    code(token: Tokens.Code): string | false {
+      const language = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
+      return isC4Diagram(language, token.text) ? '' : false;
+    },
     link(token: Tokens.Link): string {
       const label = this.parser.parseInline(token.tokens);
       return `<a href="#" data-href="${escape(token.href)}">${label}</a>`;
@@ -70,12 +74,11 @@ export function parseDoc(src: string): { blocks: Block[]; headings: Heading[] } 
     }
     if (token.type === 'code') {
       const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
+      if (isC4Diagram(lang, token.text)) continue;
       blocks.push(
-        lang === 'skaro-c4'
-          ? { kind: 'c4', source: token.text }
-          : lang === 'mermaid'
-            ? { kind: 'mermaid', source: token.text }
-            : { kind: 'code', lang: lang || 'text', text: token.text },
+        lang === 'mermaid'
+          ? { kind: 'mermaid', source: token.text }
+          : { kind: 'code', lang: lang || 'text', text: token.text },
       );
       continue;
     }

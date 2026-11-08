@@ -2,7 +2,6 @@
   import { Icon, t } from '@skaro/ui';
   import { drawMermaid } from '../feed/markdown';
   import { sanitizeBlock, type Block } from './render';
-  import C4Attachments from '../c4/C4Attachments.svelte';
   let { value }: { value: Block } = $props();
   const block = $derived(sanitizeBlock(value));
   let copied = $state(false);
@@ -57,8 +56,6 @@
       </div>
       <pre data-doc-article>{block.text}</pre>
     </div>
-  {:else if block.kind === 'c4'}
-    <C4Attachments source={block.source} />
   {:else}
     {#key block.source}
       <div data-doc-article class="diagram">
