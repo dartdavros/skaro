@@ -12,6 +12,7 @@ import { withoutSecrets } from './session-log';
 import { queueOwnerMessage } from './owner-commands';
 import { openPrivate, sealPrivate } from './private-input';
 import type { MessageInput } from '../shared/ipc';
+import { TaskExecution } from './task-execution';
 
 type Question = Extract<Interaction, { kind: 'question' }>;
 interface SavedAnswer {
@@ -21,6 +22,7 @@ interface SavedAnswer {
   deliveryId?: string;
   requestEpoch?: string;
   acceptedAt?: number;
+  executionGuard?: { runId: string; intent: number };
 }
 /** Decisions and all answers precede continuation. Several cards become one complete delivery. */
 export class QuestionAnswers {
@@ -35,6 +37,7 @@ export class QuestionAnswers {
     answer: InteractionAnswer,
     emit: (event: TimelineEvent) => void,
     requestEpoch?: string,
+    executionGuard?: SavedAnswer['executionGuard'],
   ): void {
     validateQuestionAnswer(question, answer);
     const previous = this.pending({ items: [], turns: [], interactions: [], status: 'idle' });
@@ -75,6 +78,7 @@ export class QuestionAnswers {
       deliveryId: existing?.deliveryId ?? randomUUID(),
       requestEpoch,
       acceptedAt: existing?.acceptedAt ?? Date.now(),
+      ...(executionGuard ? { executionGuard } : {}),
       ...(encrypted ? { encrypted } : {}),
     };
     const entries = [...saved.filter((entry) => entry.interaction.id !== question.id), entry];
@@ -110,7 +114,21 @@ export class QuestionAnswers {
   }
   pending(state: TimelineState): (MessageInput & { commandId: string }) | undefined {
     if (state.interactions.some((i) => i.kind === 'question')) return undefined;
-    const entries = this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? [];
+    const entries = (this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? []).filter(
+      (entry) => {
+        if (!entry.executionGuard) return true;
+        const { runId, intent } = entry.executionGuard;
+        const run = this.db.getRun(runId);
+        const execution = new TaskExecution(this.db, runId);
+        return (
+          !!run &&
+          !run.retiredAt &&
+          this.db.latestRun(run.projectId, run.taskId)?.id === runId &&
+          execution.read().enabled &&
+          execution.intentVersion() === intent
+        );
+      },
+    );
     if (!entries.length) return undefined;
     const textOf = (values: SavedAnswer[]) =>
       values

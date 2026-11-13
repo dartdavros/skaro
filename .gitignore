@@ -13,6 +13,9 @@ coverage/
 test-results/
 playwright-report/
 
+# Local backups contain private Skaro state and must never be staged.
+.tmp-resource-admission-backup-*/
+
 # ── IDE / OS ───────────────────────────────────────────
 .idea/
 .vscode/

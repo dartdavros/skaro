@@ -18,6 +18,7 @@ import { EnvironmentResourceLifecycle } from './environment-resource-lifecycle';
 import { reportEnvironmentRegistryFailure } from './environment-resource-diagnostics';
 import { EnvironmentAdmission } from './resource-environment';
 import type { HeldResource } from './resource-execution';
+import { EnvironmentNotDispatched } from './environment-dispatch-error';
 
 export interface EnvironmentDeps {
   db: Pick<
@@ -142,6 +143,13 @@ export class TaskEnvironments {
 
   /** Read/save configuration in the same queue as starts; no services run during this call. */
   configure(key: TaskKey, args: ConfigureEnvironmentArgs): Promise<EnvironmentConfig> {
+    const read = async () => {
+      const { config } = await this.describe(key);
+      if (!config)
+        throw new EnvironmentUnavailable('The project describes no valid task environment.');
+      return config;
+    };
+    if (!Object.keys(args).length) return read();
     return this.serial('work', async () => {
       const { identity, config } = await this.describe(key);
       if (!config)
@@ -153,11 +161,32 @@ export class TaskEnvironments {
     });
   }
 
+  /** Resolve a blocker to the actual scoped resource, without starting or adopting unknown data. */
+  async incidentResource(key: TaskKey) {
+    this.scope.require(key);
+    const { identity } = await this.describe(key);
+    try {
+      await this.lifecycle.resources.observe(await this.docker.inspect());
+    } catch {
+      // Existing identity remains useful for diagnosis; absence of Docker never grants authority.
+    }
+    return this.deps.db.resources
+      .list(key.projectId)
+      .find(
+        (r) =>
+          r.kind === 'environment' &&
+          r.identity.composeProject === identity.name &&
+          r.owner.id === key.taskId,
+      );
+  }
+
   /** Creates the copy on first use, starts the services and waits until they are ready. */
   async start(key: TaskKey, options: EnvironmentStartOptions = {}): Promise<EnvironmentInfo> {
     this.scope.require(key);
     const requestedAt = Date.now();
-    const description = await this.describe(key);
+    const description = await this.describe(key).catch((error: unknown) => {
+      throw new EnvironmentNotDispatched(error);
+    });
     return this.admission.start(
       key,
       options,

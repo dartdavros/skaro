@@ -9,23 +9,29 @@ import type { TaskRunEngine } from './task-run-engine';
 import type { TaskIncidents } from './task-incidents';
 import { checkIncident, currentIncidentSubscriber, incidentAction } from './incident-condition';
 import { resourceExecution, resourcesFor } from './resource-execution';
+import { hasEnvironmentWait } from './incident-environment-wait';
+import { EnvironmentNotDispatched, EnvironmentCommandFailed } from './environment-dispatch-error';
+import { incidentOperationId } from './incident-operation';
 export async function executeIncident(
   ctx: TaskRunEngine,
   incidents: TaskIncidents,
   row: CoordinationBlocker,
   action: RemedyAction,
 ): Promise<void> {
-  const id = `remedy:${row.id}:${row.protocol!.attempts}`;
+  const id = incidentOperationId(row);
   const validate = async () => {
     const current = incidents.store.get(row.projectId, row.id);
     const fresh = await incidentAction(ctx, current);
-    requireRemedyDispatch(
-      action,
-      fresh,
-      incidents.policy.read(row.projectId),
-      incidents.policy.approval(action),
-      Date.now(),
-    );
+    if (!fresh || remedyKey(action) !== remedyKey(fresh))
+      throw new Error('Remedy action changed before dispatch');
+    if (!hasEnvironmentWait(ctx, current, action, true))
+      requireRemedyDispatch(
+        action,
+        fresh,
+        incidents.policy.read(row.projectId),
+        incidents.policy.approval(action),
+        Date.now(),
+      );
     if (ctx.closing || current.state !== 'open' || !fresh)
       throw new Error('Remedy authority changed before dispatch');
     let active = false;
@@ -38,6 +44,7 @@ export async function executeIncident(
     attempts: row.protocol!.attempts + 1,
     operationId: id,
   });
+  let environmentEntered = false;
   try {
     await ctx.deps.coordinators!.execute(
       {
@@ -62,10 +69,14 @@ export async function executeIncident(
               const resource = ctx.deps.db.resources.get(action.target)!;
               if (resource.kind !== 'environment' || resource.owner.kind !== 'task')
                 throw new Error('Only registered task environments can be started');
-              await ctx.environments.start({
-                projectId: row.projectId,
-                taskId: resource.owner.id,
-              });
+              environmentEntered = true;
+              await ctx.environments.start(
+                {
+                  projectId: row.projectId,
+                  taskId: resource.owner.id,
+                },
+                { assertActive: validate },
+              );
             }
             row = incidents.store.update(incidents.store.get(row.projectId, row.id), {
               phase: 'verifying',
@@ -89,6 +100,25 @@ export async function executeIncident(
     );
     await incidents.resolved(incidents.store.get(row.projectId, row.id));
   } catch (error) {
+    const operation = ctx.deps.db.coordination.getOperation(row.projectId, id);
+    if (
+      (error instanceof EnvironmentNotDispatched ||
+        (action.kind === 'environment.start' && !environmentEntered)) &&
+      operation?.state === 'uncertain'
+    )
+      ctx.deps.coordinators!.reconcile(
+        row.projectId,
+        id,
+        { code: 'environment_not_dispatched_before_admission', refs: [row.subject] },
+        'failed',
+      );
+    else if (error instanceof EnvironmentCommandFailed && operation?.state === 'uncertain')
+      ctx.deps.coordinators!.reconcile(
+        row.projectId,
+        id,
+        { code: 'environment_start_failed_partial_effects_possible', refs: [row.subject] },
+        'failed',
+      );
     const current = incidents.store.get(row.projectId, row.id);
     if (current.state !== 'open') return; // Owner cancellation/resolution wins a concurrent dispatch.
     incidents.store.update(current, {

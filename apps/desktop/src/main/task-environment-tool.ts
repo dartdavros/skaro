@@ -4,6 +4,8 @@ import { EnvironmentUnavailable } from './task-environments';
 import { key } from './task-run-helpers';
 import { checkoutKey } from './task-stage';
 import type { TaskRunEngine } from './task-run-engine';
+import { ResourceAdmissionUnavailable } from './resource-manager';
+import { EnvironmentNotDispatched } from './environment-dispatch-error';
 
 /** `start_environment`: the agent of a task asks Skaro for running services. */
 export async function startTaskEnvironment(
@@ -17,7 +19,7 @@ export async function startTaskEnvironment(
     return { text: 'This session is no longer the current run of the task.', isError: true };
   }
   try {
-    const info = await ctx.environments.start(checkoutKey(active));
+    const info = await ctx.environments.start(checkoutKey(active), { waitForResources: false });
     const { variables } = await ctx.environments.describe(checkoutKey(active));
     ctx.continuation.execution(active).clearBlock();
     const urls = Object.entries(info.urls).map(([name, url]) => `- ${name}: ${url}`);
@@ -37,27 +39,33 @@ export async function startTaskEnvironment(
         'Use the addresses returned by this call for host access; a port ' +
         'may have been replaced since the shell was attached. Name these addresses in your verification result.',
     };
-  } catch (error) {
+  } catch (failure) {
+    const error = failure instanceof EnvironmentNotDispatched ? failure.cause : failure;
     if (ctx.deps.coordinators) {
-      const resource = ctx.deps.db.resources
-        .list(scope.projectId)
-        .find(
-          (r) =>
-            r.kind === 'environment' &&
-            r.owner.kind === 'task' &&
-            r.owner.id === checkoutKey(active).taskId,
-        );
-      await ctx.incidents.report(
-        active,
-        errorText(error),
-        {
-          cause: 'environment',
-          code: 'environment_start_failed',
-          ...(resource ? { resourceId: resource.id, condition: 'environment-ready' as const } : {}),
-        },
-        'controller',
-      );
+      await ctx.incidents
+        .report(
+          active,
+          errorText(error),
+          {
+            cause: 'environment',
+            code:
+              error instanceof ResourceAdmissionUnavailable
+                ? 'environment_waiting_resource'
+                : 'environment_start_failed',
+            condition: 'environment-ready',
+          },
+          'controller',
+        )
+        .catch((reportError: unknown) => {
+          // A secondary diagnostic failure must not turn a known start failure into an unknown effect.
+          ctx.history.notice(active, 'other', 'error', errorText(reportError));
+        });
     }
+    if (error instanceof ResourceAdmissionUnavailable)
+      return {
+        text: `Environment is waiting for measured resources: ${error.reason}. Skaro recorded the checkpoint and will recheck admission after releasing the worker. Do not retry in a loop or start substitute services.`,
+        isError: true,
+      };
     if (error instanceof EnvironmentUnavailable) {
       return {
         text:

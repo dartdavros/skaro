@@ -1,4 +1,5 @@
 import type { AppDb } from '@skaro/core';
+import { observedEnvironmentUsage } from './resource-environment-usage';
 import { applicationResourcePolicy } from './resource-policy';
 import { measureResourceBudget, resourceVolume } from './resource-budget';
 import { dockerResourceBudget } from './resource-docker-budget';
@@ -25,7 +26,6 @@ export async function applicationResourceMeasurements(
       policy.accounts[account].blocked = true;
     }
   }
-  const measuredAt = Date.now();
   const docker = useDocker
     ? await dockerResourceBudget(
         db.getSetting<string | undefined>('resources.dockerDataPath', undefined),
@@ -35,8 +35,9 @@ export async function applicationResourceMeasurements(
     ...paths,
     ...(docker?.storage ? [docker.storage] : []),
   ]);
-  budget.measuredAt = measuredAt;
+  if (docker) budget.measuredAt = Math.min(budget.measuredAt, docker.measuredAt);
   if (docker) budget.pools = docker.pools;
+  if (docker) budget.observedUsage = observedEnvironmentUsage(db, docker.usage);
   if (docker?.storage)
     budget.poolVolumes = { dockerDiskBytes: await resourceVolume(docker.storage) };
   return budget;

@@ -16,16 +16,21 @@ export async function localVersionBudget(
   if (!resources || !scope) throw new Error('Local environment requires resource scope');
   const ownerId = `local-environment:${target.id}`;
   if (resources.holdings(target.projectId, ownerId).length) return;
-  const cost = await environmentResourceCost(db, dataDir, {
-    identity: {
-      root: observed.root,
-      worktree: observed.root,
-      name: observed.resource.identity.composeProject!,
-      ports: {},
+  const cost = await environmentResourceCost(
+    db,
+    dataDir,
+    {
+      identity: {
+        root: observed.root,
+        worktree: observed.root,
+        name: observed.resource.identity.composeProject!,
+        ports: {},
+      },
+      variables: observed.variables,
+      compose: { variables: observed.variables, baseVariables: observed.variables, override: '' },
     },
-    variables: observed.variables,
-    compose: { variables: observed.variables, baseVariables: observed.variables, override: '' },
-  });
+    target.projectId,
+  );
   await resources.acquire(
     'environment',
     { ...scope, ownerId },

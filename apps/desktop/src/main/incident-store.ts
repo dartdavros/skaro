@@ -44,7 +44,25 @@ export class IncidentStore {
     );
     if (open) {
       const subscriptions = incidentSubscribers(open.protocol!.subscriptions, subscription);
-      return this.update(open, { subscriptions });
+      const prior = open.protocol!.subscriptions.find((s) => s.taskId === subscription.taskId);
+      const operation =
+        open.protocol!.operationId &&
+        this.db.coordination.getOperation(projectId, open.protocol!.operationId);
+      const renewedWait =
+        source === 'controller' &&
+        protocol.code === 'environment_waiting_resource' &&
+        prior &&
+        prior.intent !== subscription.intent &&
+        operation &&
+        operation.state === 'failed' &&
+        [
+          'environment_not_dispatched_before_admission',
+          'environment_start_failed_partial_effects_possible',
+        ].includes(operation.evidence?.code ?? '');
+      return this.update(open, {
+        subscriptions,
+        ...(renewedWait ? { phase: 'diagnosing', attempts: 0, operationId: undefined } : {}),
+      });
     }
     const id = randomUUID();
     return this.coordinators.execute(

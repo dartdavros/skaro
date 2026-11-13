@@ -4,6 +4,7 @@ import type { EnvironmentStartOptions } from './task-environment-start';
 import { resourcesFor, resourceExecution, type HeldResource } from './resource-execution';
 import { environmentResourceCost } from './resource-environment-cost';
 import type { EnvironmentDescription } from './task-environment-description';
+import { EnvironmentNotDispatched } from './environment-dispatch-error';
 
 /** Runtime capacity outlives a build or model turn and is freed only by verified Docker teardown. */
 export class EnvironmentAdmission {
@@ -26,21 +27,26 @@ export class EnvironmentAdmission {
     const inherited = resourceExecution.getStore();
     const execute = async () => {
       const scope = resourceExecution.getStore()!;
-      await scope.requireCurrent();
       const newlyReserved = !this.held.has(identity);
-      const cost = await environmentResourceCost(this.deps.db, this.deps.dataDir, description);
-      if (!this.held.has(identity))
-        this.held.set(
-          identity,
-          await resources.acquire(
-            'environment',
-            { ...scope, ownerId: owner },
-            { checkpoint: owner, cost },
-          ),
-        );
-      const signal = AbortSignal.any([scope.signal, ...(options.signal ? [options.signal] : [])]);
       let entered = false;
       try {
+        await scope.requireCurrent();
+        const cost = await environmentResourceCost(
+          this.deps.db,
+          this.deps.dataDir,
+          description,
+          key.projectId,
+        );
+        if (!this.held.has(identity))
+          this.held.set(
+            identity,
+            await resources.acquire(
+              'environment',
+              { ...scope, ownerId: owner },
+              { checkpoint: owner, cost, wait: options.waitForResources },
+            ),
+          );
+        const signal = AbortSignal.any([scope.signal, ...(options.signal ? [options.signal] : [])]);
         return await resources.phase('build', () => {
           entered = true;
           return action({ ...options, signal });
@@ -50,6 +56,7 @@ export class EnvironmentAdmission {
           this.held.get(identity)?.release('environment_start_cancelled_before_dispatch');
           this.held.delete(identity);
         }
+        if (!entered) throw new EnvironmentNotDispatched(error);
         throw error;
       }
     };
