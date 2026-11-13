@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { emptyTimeline, withoutSkaroNote } from '@skaro/timeline';
+import { emptyTimeline, withoutSkaroNote, withSkaroNote } from '@skaro/timeline';
 import { taskAgentInput } from './task-agent-input';
 import { secretInteraction } from './task-secret-input';
 
 describe('task delivery adapter input boundary', () => {
+  it('keeps a preflight-wrapped follow-up readable while retaining both service contexts for the agent', () => {
+    const input = {
+      text: withSkaroNote('Input snapshot and project memory', 'продолжи'),
+      commandId: 'current-owner-command',
+    };
+    const delivered = taskAgentInput(input, emptyTimeline(), true);
+    expect(withoutSkaroNote(delivered.text)).toBe('продолжи');
+    expect(delivered.text).toContain('Input snapshot and project memory');
+    expect(delivered.text).toContain('command_id: current-owner-command');
+    expect(delivered.text).toContain('call resume_task');
+    expect(input.text).toContain('Input snapshot and project memory');
+  });
   it('keeps a clarification as owner text and never turns it into protected form answers', () => {
     const interaction = secretInteraction([
       { id: 'service', header: 'Service', question: 'Service URL?' },
