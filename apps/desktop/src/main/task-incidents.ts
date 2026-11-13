@@ -21,6 +21,9 @@ import { incidentFailure } from './incident-failure';
 import { cancelIncidentApproval } from './incident-feed';
 import { continueResolvedIncident } from './incident-continuation';
 import { requireCoordinationDispatch } from './coordination-dispatch';
+import { checkoutKey } from './task-stage';
+import { rememberEnvironmentWait, hasEnvironmentWait } from './incident-environment-wait';
+import { escalateIncident } from './incident-escalation';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -62,7 +65,11 @@ export class TaskIncidents {
     );
     const execution = this.ctx.continuation.execution(active);
     const failure = details ?? incidentFailure(reason);
-    const resource = details?.resourceId && this.ctx.deps.db.resources.get(details.resourceId);
+    const resource = details?.resourceId
+      ? this.ctx.deps.db.resources.get(details.resourceId)
+      : failure.cause === 'environment'
+        ? await this.ctx.environments.incidentResource(checkoutKey(active)).catch(() => undefined)
+        : undefined;
     if (details?.resourceId && (!resource || resource.projectId !== active.projectId))
       throw new Error('Blocker resource is outside this project');
     const subject = resource
@@ -74,12 +81,14 @@ export class TaskIncidents {
       code: failure.code,
       resourceVersion: await incidentResourceVersion(this.ctx, active.projectId, subject.id),
       condition:
-        details?.condition ??
-        (resource && resource.kind === 'environment'
-          ? 'environment-ready'
-          : ['quota', 'rate-limit', 'authentication'].includes(failure.cause)
-            ? 'provider-evidence'
-            : 'owner-evidence'),
+        failure.cause === 'environment' && !resource
+          ? 'owner-evidence'
+          : (details?.condition ??
+            (resource && resource.kind === 'environment'
+              ? 'environment-ready'
+              : ['quota', 'rate-limit', 'authentication'].includes(failure.cause)
+                ? 'provider-evidence'
+                : 'owner-evidence')),
       phase: 'diagnosing',
       attempts: 0,
       subscriptions: [],
@@ -92,6 +101,8 @@ export class TaskIncidents {
       reason,
       source,
     );
+    if (source === 'controller' && failure.code === 'environment_waiting_resource')
+      await rememberEnvironmentWait(this.ctx, row);
     execution.block(reason, row.id);
     this.ctx.history.notice(active, 'other', 'error', reason);
     this.ctx.setRuntime(active.projectId, active.taskId, 'waiting', active.run.id);
@@ -136,20 +147,80 @@ export class TaskIncidents {
       )
     )
       return;
-    if (await checkIncident(this.ctx, row)) return this.resolved(row);
-    requireCoordinationDispatch(this.ctx.deps.db, projectId);
-    // An interrupted dispatch is not permission to repeat an unknown external effect.
-    if (row.protocol!.phase === 'executing' || row.protocol!.phase === 'verifying') return;
-    if (row.protocol!.attempts >= 2) {
-      this.store.update(row, { phase: 'exhausted' });
+    // Old workers reported an environment against their run when resource_id was unknown.
+    // Preserve that incident as history and bind a new exact condition before any repair.
+    if (row.subject.kind === 'run' && row.protocol!.cause === 'environment') {
+      const subscription = subscribers[0]!;
+      const active = await this.ctx.history.restore(projectId, subscription.taskId);
+      if (
+        active &&
+        subscribers.every((s) => s.runId === row.subject.id && s.taskId === subscription.taskId)
+      ) {
+        const resource = await this.ctx.environments.incidentResource(checkoutKey(active));
+        if (resource) {
+          const next = await this.report(
+            active,
+            this.ctx.continuation.execution(active).read().blocked ?? row.protocol!.code,
+            {
+              cause: 'environment',
+              code: row.protocol!.code,
+              resourceId: resource.id,
+              condition: 'environment-ready',
+            },
+            'controller',
+          );
+          const current = this.store.get(projectId, row.id);
+          this.ctx.deps.db.coordination.blockers.transition(projectId, row.id, {
+            expectedRevision: current.revision,
+            state: 'cancelled',
+            evidence: {
+              code: 'incident_resource_identified',
+              refs: [next.subject, { kind: 'blocker', id: next.id }],
+            },
+          });
+          if (current.protocol!.decisionId)
+            await cancelIncidentApproval(
+              this.ctx,
+              current,
+              current.protocol!.decisionId,
+              'incident_resource_identified',
+            );
+          return this.reconcile(projectId, next.id);
+        }
+      }
+    }
+    try {
+      if (await checkIncident(this.ctx, row)) return this.resolved(row);
+    } catch {
+      await escalateIncident(this.ctx, row);
       return;
     }
-    const action = await incidentAction(this.ctx, row);
+    requireCoordinationDispatch(this.ctx.deps.db, projectId);
+    // An interrupted dispatch is not permission to repeat an unknown external effect.
+    if (row.protocol!.phase === 'executing' || row.protocol!.phase === 'verifying') {
+      await escalateIncident(this.ctx, row);
+      return;
+    }
+    if (row.protocol!.attempts >= 2) {
+      this.store.update(row, { phase: 'exhausted' });
+      await escalateIncident(this.ctx, row);
+      return;
+    }
+    const action = await incidentAction(this.ctx, row).catch((error: unknown) => {
+      this.ctx.deps.db.addEvent(projectId, 'incident_diagnosis_deferred', {
+        incident: row.id,
+        reason: incidentHash(String(error)),
+      });
+      return undefined;
+    });
     if (!action) {
       this.store.update(row, { phase: 'waiting' });
+      if (['environment-ready', 'owner-evidence'].includes(row.protocol!.condition))
+        await escalateIncident(this.ctx, row);
       return;
     }
     let authority = this.policy.authority(action);
+    const transferred = hasEnvironmentWait(this.ctx, row, action);
     if (authority === 'delegation') {
       // Deterministic coordinator decision for the two bounded, mechanically verifiable remedies.
       // No model call, credential change or additional spend is authorized by delegation.
@@ -162,7 +233,7 @@ export class TaskIncidents {
       );
       authority = this.policy.authority(action);
     }
-    if (authority !== 'allowed') {
+    if (authority !== 'allowed' && !transferred) {
       row = this.store.update(row, { phase: 'waiting' });
       if (authority === 'confirmation') await this.decisions.request(row, action);
       return;

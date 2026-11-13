@@ -13,8 +13,11 @@ import type { EnvironmentDescription } from './task-environment-description';
 import type { EnvironmentRegistry } from './task-environment-registry';
 import type { EnvironmentDocker } from './task-environment-docker';
 import { environmentReadinessProblems } from './task-environment-readiness';
+import { EnvironmentCommandFailed } from './environment-dispatch-error';
 
 export interface EnvironmentStartOptions {
+  /** Worker tools checkpoint instead of retaining a model while waiting for physical capacity. */
+  waitForResources?: boolean;
   signal?: AbortSignal;
   processStarted?: (pid: number) => void | Promise<void>;
   assertActive?: () => void;
@@ -86,14 +89,19 @@ export async function startEnvironmentServices(
     const portBindings = compose
       ? await timed('prepareMs', () => admitCompose(identity, compose))
       : undefined;
-    const run = (label: string, command: string) =>
-      runShell(expand(command, identity), {
-        cwd: identity.worktree,
-        env: variables,
-        label,
-        timeoutMs: 30 * 60_000,
-        ...options,
-      });
+    const run = async (label: string, command: string) => {
+      try {
+        await runShell(expand(command, identity), {
+          cwd: identity.worktree,
+          env: variables,
+          label,
+          timeoutMs: 30 * 60_000,
+          ...options,
+        });
+      } catch (error) {
+        throw new EnvironmentCommandFailed(error);
+      }
+    };
     if (config!.create) {
       timing.reusedData =
         !!deps.registry.find(key)?.created && (await deps.docker.hasData(identity.name));

@@ -2,45 +2,61 @@ import type { AppDb, ResourceCost } from '@skaro/core';
 import type { EnvironmentDescription } from './task-environment-description';
 import { resourceVolume } from './resource-budget';
 import { resourceWorkCost } from './resource-policy';
-import { readCompose } from './task-compose';
+import { observeDockerResources, type DockerUsage } from './resource-docker-observation';
 
-/** Canonical Compose limits bound known services; every unlimited service gets its own fallback. */
-export async function environmentResourceCost(
-  db: Pick<AppDb, 'getSetting'>,
-  dataDir: string,
-  description: EnvironmentDescription,
-): Promise<ResourceCost> {
-  const cost = resourceWorkCost(db, 'environment', await resourceVolume(dataDir));
-  if (!description.compose) return cost;
-  const model = await readCompose(description.identity.worktree, description.compose.baseVariables);
-  const baseline = { ...cost };
-  let ram = 0,
-    cpu = 0;
-  for (const service of Object.values(model.services)) {
-    const deploy = service.deploy as
-      | {
-          replicas?: number;
-          resources?: { limits?: { memory?: string | number; cpus?: string | number } };
-        }
-      | undefined;
-    const scale = Number(service.scale ?? deploy?.replicas ?? 1);
-    if (!Number.isSafeInteger(scale) || scale < 0) throw new Error('Unknown Compose replica cost');
-    const memory = Number(service.mem_limit ?? deploy?.resources?.limits?.memory);
-    const cores = Number(service.cpus ?? deploy?.resources?.limits?.cpus);
-    ram += scale * (Number.isSafeInteger(memory) && memory > 0 ? memory : baseline.ramBytes);
-    cpu +=
-      scale * (Number.isFinite(cores) && cores > 0 ? Math.ceil(cores * 1000) : baseline.cpuMillis);
+/** One environment estimate, with growth headroom over observed consumption, never limits. */
+export function measuredEnvironmentCost(
+  baseline: ResourceCost,
+  usage: readonly DockerUsage[],
+): ResourceCost {
+  const cost = structuredClone(baseline);
+  if (usage.length) {
+    cost.ramBytes = Math.max(
+      cost.ramBytes,
+      Math.ceil(usage.reduce((n, u) => n + u.ramBytes, 0) * 1.25),
+    );
+    cost.cpuMillis = Math.max(
+      cost.cpuMillis,
+      Math.ceil(usage.reduce((n, u) => n + u.cpuMillis, 0) * 1.25),
+    );
   }
-  const configured = db.getSetting<{ environment?: Partial<ResourceCost> }>(
-    'resources.costs.v1',
-    {},
-  ).environment;
-  cost.ramBytes = configured?.ramBytes ?? ram;
-  cost.cpuMillis = configured?.cpuMillis ?? cpu;
   cost.pools = {
     dockerRamBytes: cost.ramBytes,
     dockerCpuMillis: cost.cpuMillis,
     dockerDiskBytes: Math.max(0, ...Object.values(cost.diskBytes)),
   };
   return cost;
+}
+
+export async function environmentResourceCost(
+  db: Pick<AppDb, 'getSetting' | 'resources'>,
+  dataDir: string,
+  description: EnvironmentDescription,
+  projectId: string,
+): Promise<ResourceCost> {
+  const baseline = resourceWorkCost(db, 'environment', await resourceVolume(dataDir));
+  if (!description.compose) return baseline;
+  const source = description.config?.source;
+  const registered = db.resources.list(projectId);
+  const candidates = new Set([
+    description.identity.name,
+    ...(source ? [source.project] : []),
+    ...registered
+      .filter(
+        (r) =>
+          r.kind === 'environment' && r.purpose === 'project-dev' && r.ownership === 'registered',
+      )
+      .map((r) => r.identity.composeProject),
+  ]);
+  const { usage } = await observeDockerResources();
+  for (const project of candidates) {
+    const observed = usage.filter(
+      (u) =>
+        u.project === project &&
+        (project !== source?.project || !source || source.services.includes(u.service ?? '')),
+    );
+    if (observed.length) return measuredEnvironmentCost(baseline, observed);
+  }
+  // Cold starts reserve the configured envelope once. Unknown services do not multiply it.
+  return measuredEnvironmentCost(baseline, []);
 }

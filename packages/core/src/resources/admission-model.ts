@@ -13,6 +13,11 @@ export interface ResourceCost extends Record<ResourceCapacity, number> {
   pools?: Record<string, number>;
 }
 export interface ResourceBudget extends Record<ResourceCapacity, number | null> {
+  /** Consumption already included in free host/VM metrics, keyed by the exact live lease. */
+  observedUsage?: Record<
+    string,
+    { ramBytes: number; cpuMillis: number; pools?: Record<string, number> }
+  >;
   /** Free capacity after OS reserves, keyed by actual filesystem identity. Unknown is null. */
   diskBytes: Record<string, number | null>;
   pools?: Record<string, number | null>;

@@ -52,6 +52,18 @@ export function validateResourceBudget(budget: ResourceBudget): void {
       ([key, value]) => id(key) && (value === null || amount(value)),
     ) ||
     !budget.accounts ||
+    (budget.observedUsage !== undefined &&
+      (!budget.observedUsage ||
+        !Object.entries(budget.observedUsage).every(
+          ([key, usage]) =>
+            id(key) &&
+            usage &&
+            amount(usage.ramBytes) &&
+            amount(usage.cpuMillis) &&
+            (usage.pools === undefined ||
+              (!!usage.pools &&
+                Object.entries(usage.pools).every(([pool, used]) => id(pool) && amount(used)))),
+        ))) ||
     (budget.poolVolumes !== undefined &&
       (!budget.poolVolumes ||
         !Object.entries(budget.poolVolumes).every(([pool, volume]) => id(pool) && id(volume)))) ||
@@ -80,6 +92,11 @@ export function resourceAdmissionReason(
   if (!amount(now) || now < budget.measuredAt || now - budget.measuredAt > budget.maxAgeMs)
     return 'metrics_stale';
   const holders = leases.filter((lease) => lease.id !== request.id && ownsResourceCapacity(lease));
+  const remaining = (lease: ResourceLease, key: (typeof RESOURCE_CAPACITIES)[number]) => {
+    const observed = budget.observedUsage?.[lease.id];
+    const used = key === 'ramBytes' || key === 'cpuMillis' ? (observed?.[key] ?? 0) : 0;
+    return Math.max(0, lease.cost[key] - used);
+  };
   const accountAvailable = (other: ResourceLease): boolean => {
     if (!other.account || !other.cost.model) return true;
     const account = Object.hasOwn(budget.accounts, other.account)
@@ -119,7 +136,7 @@ export function resourceAdmissionReason(
     if (!request.cost[key]) continue;
     const available = budget[key];
     if (available === null) return `unknown_${key}`;
-    if (holders.reduce((sum, lease) => sum + lease.cost[key], request.cost[key]) > available)
+    if (holders.reduce((sum, lease) => sum + remaining(lease, key), request.cost[key]) > available)
       return `budget_${key}`;
   }
   const diskCost = (lease: ResourceLease, volume: string) =>
@@ -148,8 +165,16 @@ export function resourceAdmissionReason(
     const available = poolValue(budget.pools, pool);
     if (available === undefined || available === null) return `unknown_pool:${pool}`;
     if (
-      holders.reduce((sum, lease) => sum + (poolValue(lease.cost.pools, pool) ?? 0), needed) >
-      available
+      holders.reduce(
+        (sum, lease) =>
+          sum +
+          Math.max(
+            0,
+            (poolValue(lease.cost.pools, pool) ?? 0) -
+              (budget.observedUsage?.[lease.id]?.pools?.[pool] ?? 0),
+          ),
+        needed,
+      ) > available
     )
       return `budget_pool:${pool}`;
   }
