@@ -1,9 +1,11 @@
 import { expect, it } from 'vitest';
 import { git } from './command.ts';
 import { assertExpectedCheckout, createWorktree } from './worktree-create.ts';
+import { repo, commit } from './git-test-support.ts';
 
 it('checks the real preserved branch and checkout against the exact expected commit without materializing anything', async () => {
-  const root = (await git(process.cwd(), ['rev-parse', '--show-toplevel'])).stdout.trim();
+  const root = repo;
+  await commit(root, 'preserved result', { 'README.md': '# Preserved calc\n' });
   const branch = (await git(root, ['symbolic-ref', '--short', 'HEAD'])).stdout.trim();
   const head = (await git(root, ['rev-parse', 'HEAD'])).stdout.trim();
   const before = (await git(root, ['worktree', 'list', '--porcelain'])).stdout;

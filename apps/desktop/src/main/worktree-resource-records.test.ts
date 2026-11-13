@@ -1,13 +1,15 @@
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import { expect, it } from 'vitest';
-import { AppDb, git, resourceId, type ResourceRecord } from '@skaro/core';
+import { git, resourceId, type ResourceRecord } from '@skaro/core';
+import { CompletionFixture } from './completion-test-support';
 import {
   protectedWorktreeResource,
   worktreeRegistrationConflict,
   recordWorktreeObservation,
 } from './worktree-resource-records';
 
-// Pure ownership metadata: no checkout, fixture files, Docker or substituted runtime.
+// Pure record construction; the cleanup-fence test uses the existing real Git/SQLite fixture.
 function resource(path: string, projectId: string): ResourceRecord {
   const identity = { path };
   return {
@@ -65,19 +67,21 @@ it('retains unexpected reappearance and cannot promote an already unknown checko
 });
 
 it('reobserves identical source under a real cleanup fence and retains a changed source', async () => {
-  const root = resolve(process.cwd()),
-    db = AppDb.open(':memory:');
-  const project = db.addProject({ name: 'Current Skaro repository', path: root });
-  const head = (await git(root, ['rev-parse', 'HEAD'])).stdout.trim();
-  const previous = (await git(root, ['rev-parse', 'HEAD^'])).stdout.trim();
+  const fixture = await CompletionFixture.create();
+  const { repo: root, db, projectId } = fixture;
   try {
+    await fixture.commit();
+    const previous = (await git(root, ['rev-parse', 'HEAD'])).stdout.trim();
+    await writeFile(join(root, 'README.md'), 'changed observed source\n');
+    await fixture.commit();
+    const head = (await git(root, ['rev-parse', 'HEAD'])).stdout.trim();
     const {
       id: _id,
       revision: _revision,
       createdAt: _created,
       updatedAt: _updated,
       ...registration
-    } = resource(root, project.id);
+    } = resource(root, projectId);
     registration.source = { commit: head, recovery: 'HEAD' };
     const row = db.resources.register(registration);
     await db.resources.cleanup.run(row, 'metadata-reobservation', async () => {
@@ -100,6 +104,6 @@ it('reobserves identical source under a real cleanup fence and retains a changed
       expect(db.resources.get(row.id)?.lastOutcome?.reason).toBe('cleanup-source-changed');
     });
   } finally {
-    db.close();
+    await fixture.close();
   }
 });

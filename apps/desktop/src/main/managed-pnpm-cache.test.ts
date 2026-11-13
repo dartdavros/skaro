@@ -117,14 +117,31 @@ it('preserves legacy default npm identity and distinguishes canonical selected s
     expect(() => dependencyConfiguration('policy', 'digest', context)).toThrow('context_invalid');
 });
 it('validates generated shim references without executing them and rejects external normalized targets', async () => {
-  const root = resolve('node_modules'),
-    shim = join(root, '.bin', process.platform === 'win32' ? 'vitest.cmd' : 'vitest');
-  const bytes = (await readCacheFile(resolve('.'), shim, 64 * 1024)).data;
-  expect(pnpmShimTargets(root, shim, bytes.toString()).length).toBeGreaterThan(0);
+  const root = resolve('node_modules');
+  const wrappers =
+    process.platform === 'win32' ? ['vitest', 'vitest.cmd', 'vitest.ps1'] : ['vitest'];
+  for (const name of wrappers) {
+    const shim = join(root, '.bin', name);
+    const bytes = (await readCacheFile(resolve('.'), shim, 64 * 1024)).data;
+    expect(pnpmShimTargets(root, shim, bytes.toString()).length).toBeGreaterThan(0);
+  }
+  const shim = join(root, '.bin', wrappers[0]!);
   expect(() => pnpmPrivatePath(root, resolve('package.json'))).toThrow('external_target');
   expect(() => pnpmShimTargets(root, shim, 'node "$basedir/../../outside.js"')).toThrow(
     'external_target',
   );
+  for (const value of ['/outside', `${root}${process.platform === 'win32' ? ';' : ':'}/outside`])
+    expect(() =>
+      pnpmShimTargets(
+        root,
+        shim,
+        `export NODE_PATH="${value}"\nnode "$basedir/../vitest/vitest.mjs"`,
+      ),
+    ).toThrow('external_target');
+  if (process.platform === 'win32')
+    expect(() =>
+      pnpmShimTargets(root, shim, 'node "$basedir/../vitest/vitest.mjs"\n"C:\\outside.js"'),
+    ).toThrow('external_target');
 });
 it.skipIf(!process.env.SKARO_PNPM_SOURCE_CONTEXT)(
   'reads explicitly authorized actual source only; no install or cache mutations',

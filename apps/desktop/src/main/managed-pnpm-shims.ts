@@ -1,6 +1,7 @@
 import { realpath } from 'node:fs/promises';
 import { basename, dirname, resolve, sep } from 'node:path';
 import { pnpmPrivatePath } from './managed-pnpm-layout';
+import { assertPnpmNodePaths } from './managed-pnpm-node-paths';
 
 /** Known pnpm cmd-shim relative references, not a shell evaluator. Unknown layouts fail closed. */
 export function pnpmShimTargets(root: string, shim: string, text: string) {
@@ -19,8 +20,11 @@ export function pnpmShimTargets(root: string, shim: string, text: string) {
         ),
       ),
   );
-  // NODE_PATH can contain nonexistent search dirs, but must never name source/shared paths.
-  for (const match of text.matchAll(/[A-Za-z]:[\\/][^";\r\n]+/g)) pnpmPrivatePath(root, match[0]);
+  assertPnpmNodePaths(root, shim, text);
+  // Keep the existing absolute Windows reference fence, without mistaking NODE_PATH's
+  // POSIX colon separator ("modules:/next") for a drive beginning at its final letter.
+  for (const match of text.matchAll(/(?<![\w/\\.-])[A-Za-z]:[\\/][^";\r\n]+/g))
+    pnpmPrivatePath(root, match[0]);
   const targets = [...new Set(refs.filter((path) => !/^node(?:\.exe)?$/i.test(basename(path))))];
   if (!targets.length) throw new Error('managed_pnpm_shim_private_target_missing');
   return targets;
