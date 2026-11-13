@@ -2,6 +2,7 @@ import { AjvJsonSchemaValidator } from '@modelcontextprotocol/sdk/validation/ajv
 import type { ScopedOperationPort, ProcessAdmissionPort, SkaroScope } from '@skaro/timeline';
 import type { Tool } from './server.ts';
 import { operationCatalogue } from './catalogue.ts';
+import { internalToolCallIdentity } from './tool-call-identity.ts';
 
 /** Internal transport over the exact existing handlers/availability, never a second workflow. */
 export function scopedOperationPort<S extends SkaroScope>(input: {
@@ -25,19 +26,25 @@ export function scopedOperationPort<S extends SkaroScope>(input: {
       return operationCatalogue(input.tools, scope);
     },
     execute: async (request) => {
-      request.signal.throwIfAborted();
-      await input.admissions.requireActive(request.admission, request.signal);
-      request.signal.throwIfAborted();
+      const admission = structuredClone(request.admission);
+      const signal = request.signal;
+      const requireActive = async () => {
+        signal.throwIfAborted();
+        await input.admissions.requireActive(admission, signal);
+        signal.throwIfAborted();
+      };
+      await requireActive();
       const entry = tools.find(
         ({ tool }) => tool.name === request.name && (!tool.available || tool.available(scope)),
       );
       if (!entry) throw new Error('Operation is outside the bound Skaro scope');
       const args = entry.validate(structuredClone(request.args));
       if (!args.valid) throw new Error('Invalid scoped operation arguments');
-      const result = await entry.tool.call(args.data, structuredClone(scope));
-      request.signal.throwIfAborted();
-      await input.admissions.requireActive(request.admission, request.signal);
-      request.signal.throwIfAborted();
+      const result = await entry.tool.call(args.data, structuredClone(scope), {
+        ...internalToolCallIdentity(admission, request.callId),
+        requireActive,
+      });
+      await requireActive();
       return result;
     },
   };

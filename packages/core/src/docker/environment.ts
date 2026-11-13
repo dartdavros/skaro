@@ -10,7 +10,8 @@ export async function stopContainers(containers: DockerContainer[]): Promise<voi
 }
 
 async function listed(kind: 'network' | 'volume' | 'image', label: string): Promise<string[]> {
-  const args = kind === 'image' ? ['images', '-q'] : [kind, 'ls', '-q'];
+  // Rebuilds leave untagged intermediate images hidden by the default image listing.
+  const args = kind === 'image' ? ['images', '-a', '-q'] : [kind, 'ls', '-q'];
   return [...new Set(ids(await docker([...args, '--filter', `label=${label}`])))];
 }
 
@@ -20,40 +21,15 @@ export async function environmentHasData(name: string): Promise<boolean> {
 }
 
 /**
- * Removes a disposable task environment: its containers with their anonymous volumes, then the
- * networks, volumes and locally built images of its compose projects. Every step is tried;
- * the failures come back together.
+ * Ordered exact-object removal. Ancillary objects require independent disposable provenance;
+ * neither anonymous attachment nor a Compose label grants deletion authority.
  */
-export async function removeEnvironment(
-  containers: DockerContainer[],
-  projects: string[],
-): Promise<string[]> {
-  const failures: string[] = [];
-  const attempt = async (what: string, action: () => Promise<unknown>) => {
-    try {
-      await action();
-    } catch (error) {
-      failures.push(`${what}: ${error instanceof Error ? error.message.trim() : String(error)}`);
-    }
-  };
-  if (containers.length) {
-    await attempt('containers', () =>
-      docker(['rm', '-f', '-v', ...containers.map((c) => c.Id)], SLOW),
-    );
-  }
-  const labels = projects.map((p) => `${COMPOSE_PROJECT}=${p}`);
-  for (const kind of ['network', 'volume', 'image'] as const) {
-    for (const label of labels) {
-      await attempt(`${kind}s of ${label}`, async () => {
-        const found = await listed(kind, label);
-        if (!found.length) return;
-        // An image another container still uses stays: only unused tags are removed.
-        await docker(kind === 'image' ? ['rmi', ...found] : [kind, 'rm', ...found], SLOW);
-      });
-    }
-  }
-  return failures;
-}
+export { removeOwnedEnvironment as removeEnvironment } from './removal.ts';
+export type {
+  DockerRemovalAuthorization,
+  DockerRemovalExecutor,
+  DockerRemovalStep,
+} from './removal.ts';
 
 /**
  * Only the recorded environment's own project can authorize removal. A project shared with anything
@@ -81,3 +57,5 @@ export function reclaimedBytes(output: string): number {
   const match = /Total(?: reclaimed space)?:\s*([\d.]+)\s*([KMGT]?B)/i.exec(output);
   return match ? Number(match[1]) * (UNITS[match[2]!.toUpperCase()] ?? 0) : 0;
 }
+
+export * from './objects.ts';

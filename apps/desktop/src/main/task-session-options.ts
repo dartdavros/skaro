@@ -11,6 +11,10 @@ import { checkoutKey, stageIdOf } from './task-stage';
 import { handoffRecord } from './task-handoff-record';
 import { taskRunDirectory } from './task-run-directory';
 import { taskBrowserServer } from './task-browser';
+import { resourceSessionAdmission } from './resource-session';
+import { requireTaskInputsCurrent } from './task-preflight';
+import { taskC4Protocol } from './c4-protocol';
+import { C4_IMPACT_INSTRUCTIONS } from './c4-impact-instructions';
 
 export type TaskSessionSettings = Pick<
   AgentSettings,
@@ -37,7 +41,21 @@ export async function taskSessionOptions(
   const acceptance = subjectStage(artifacts, taskId);
   const stageId = stageIdOf(run);
   const stage = stageId ? artifacts.milestones.find((m) => m.id === stageId) : undefined;
+  const epoch = active.deliveryEpoch;
   return {
+    resourceAdmission: resourceSessionAdmission(
+      ctx.deps.db,
+      projectId,
+      `task:${taskId}`,
+      `managed:${run.agent}`,
+      async () => {
+        if (ctx.closing || active.deliveryEpoch !== epoch || active.stopping || active.switching)
+          throw new Error('Task resource authority changed');
+        await requireTaskInputsCurrent(ctx, active);
+      },
+      cwd,
+      run.id,
+    ),
     cwd,
     processStarted: (pid, identity) => ctx.processes.started(run.id, pid, false, identity),
     ...(settings.model ? { model: settings.model } : {}),
@@ -68,6 +86,9 @@ export async function taskSessionOptions(
           })) +
       (handoff
         ? `\n\n${handoff.context}\n\nUser messages queued before handoff: ${JSON.stringify(handoff.inputs)}`
+        : '') +
+      (taskC4Protocol(ctx.deps.db, projectId, run.id) === 'impact-v1'
+        ? C4_IMPACT_INSTRUCTIONS
         : ''),
     ...(environment ? { env: environment.variables } : {}),
     mcpServers: {

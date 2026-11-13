@@ -3,6 +3,11 @@
  * copies, cleaning Docker, indexing code. The title bar shows it while it runs and for a while after.
  */
 export interface BackgroundJob {
+  audit?: import('./c4-audit').C4Audit;
+  projectId?: string;
+  taskId?: string;
+  resourceId?: string;
+  decisionId?: string;
   id: string;
   /** Message key under `background.job.` with its parameters. */
   what: string;

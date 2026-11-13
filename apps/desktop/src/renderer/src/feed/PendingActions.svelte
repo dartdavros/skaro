@@ -1,13 +1,8 @@
 <script lang="ts">
   import type { TimelineState } from '@skaro/timeline';
   import { pendingProposals } from '../../../shared/feed-actions';
-  import FormCard from './FormCard.svelte';
-  import LoginCard from './LoginCard.svelte';
-  import MergeCard from './MergeCard.svelte';
-  import PermissionCard from './PermissionCard.svelte';
-  import PlanCard from './PlanCard.svelte';
+  import InteractionCard from './InteractionCard.svelte';
   import ProposalCard from './ProposalCard.svelte';
-  import QuestionCard from './QuestionCard.svelte';
 
   let {
     timeline,
@@ -23,15 +18,7 @@
       <ProposalCard row={{ type: 'proposal', id: item.id, item }} />
     {/each}
     {#each timeline.interactions as interaction (interaction.id)}
-      {#if interaction.kind === 'question'}<QuestionCard {interaction} />
-      {:else if interaction.kind === 'approval'}
-        <PermissionCard {interaction} primary={interaction.id === firstApproval} />
-      {:else if interaction.kind === 'plan_approval'}<PlanCard {interaction} />
-      {:else if interaction.kind === 'form'}<FormCard {interaction} />
-      {:else if interaction.kind === 'login'}<LoginCard {interaction} />
-      {:else if interaction.kind === 'merge'}
-        <MergeCard {interaction} defaultMessage={interaction.message ?? mergeMessage} />
-      {/if}
+      <InteractionCard {interaction} primary={interaction.id === firstApproval} {mergeMessage} />
     {/each}
   </div>
 {/if}

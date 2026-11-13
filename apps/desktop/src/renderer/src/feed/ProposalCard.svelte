@@ -9,6 +9,7 @@
   import ProposalImport from './ProposalImport.svelte';
   import ProposalPlan from './ProposalPlan.svelte';
   import ProposalDialogs from './ProposalDialogs.svelte';
+  import './proposal-i18n';
   import './proposal-card.css';
   import './proposal-plan.css';
   let { row }: { row: Extract<FeedRow, { type: 'proposal' }> } = $props();

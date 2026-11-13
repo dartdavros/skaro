@@ -21,5 +21,9 @@ export function asyncQuestionInput(question: AsyncQuestion, answer: InteractionA
 }
 
 export function persistsAfterTurn(interaction: Interaction): boolean {
-  return interaction.kind === 'merge' || interaction.kind === 'question';
+  return (
+    interaction.kind === 'merge' ||
+    interaction.kind === 'question' ||
+    (interaction.kind === 'approval' && interaction.delivery === 'async')
+  );
 }

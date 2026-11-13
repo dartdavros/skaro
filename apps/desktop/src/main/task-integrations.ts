@@ -23,6 +23,7 @@ import { errorText } from './session-log';
 import { IntegrationControls } from './integration-controls';
 import { recoverIntegrations } from './integration-resume';
 import { randomUUID } from 'node:crypto';
+import { integrationRetirementEligible } from './integration-retirement-policy';
 
 /** Connects the integration protocol to task scheduling, permissions, environments and recovery. */
 export class TaskIntegrations {
@@ -36,6 +37,10 @@ export class TaskIntegrations {
   private readonly operations = new Map<string, IntegrationOperation>();
   private readonly interrupted = new Set<string>();
   private readonly ctx: TaskRunEngine;
+  liveWorker(projectId: string, id: string): string | undefined {
+    const live = this.sessions.get(id);
+    return live?.operation.projectId === projectId ? live.worker : undefined;
+  }
   constructor(ctx: TaskRunEngine) {
     this.ctx = ctx;
     this.controls = new IntegrationControls(ctx, this.sessions);
@@ -49,8 +54,12 @@ export class TaskIntegrations {
       store: this.store,
       project: (id) => ctx.project(id),
       pending: (op) => this.enqueue(op),
+      verified: async (op) => {
+        if (op.purpose === 'local') await ctx.localCandidates.record(op);
+      },
       changed: (op) => {
         for (const taskId of integrationParticipants(op)) ctx.changed(op.projectId, taskId);
+        if (integrationRetirementEligible(op)) setImmediate(() => ctx.limitEnvironments());
       },
       processStarted: async (op, pid) => {
         await ctx.processes.startedAsync(`verification-${op.id}`, pid, true);
@@ -171,6 +180,7 @@ export class TaskIntegrations {
       this.operations.delete(op.id);
       this.interrupted.delete(op.id);
       this.executions.delete(execution);
+      if (integrationRetirementEligible(op)) this.ctx.limitEnvironments();
       this.ctx.queue.poke();
     });
     this.executions.add(execution);

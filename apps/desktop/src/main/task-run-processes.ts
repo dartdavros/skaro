@@ -46,8 +46,22 @@ export class TaskRunProcesses {
     while (this.admissions.get(runId)?.size) await Promise.all([...this.admissions.get(runId)!]);
     const setting = this.key(runId);
     const records = this.db.getSetting<OwnedProcess[] | null>(setting, []) ?? [];
-    for (const record of records) await stopOwnedProcess(record);
-    this.db.setSetting(setting, []);
+    if (!records.length) return;
+    const checkpoint = `${setting}.stop`;
+    const save = (state: 'running' | 'verified' | 'failed') => {
+      this.db.setSetting(checkpoint, { state, identities: records, at: Date.now() });
+      const run = this.db.getRun(runId);
+      if (run) this.db.addEvent(run.projectId, 'resource_process_stop', { run: runId, state });
+    };
+    save('running');
+    try {
+      for (const record of records) await stopOwnedProcess(record);
+      this.db.setSetting(setting, []);
+      save('verified');
+    } catch (error) {
+      save('failed');
+      throw error;
+    }
   }
   startedAsync(runId: string, pid: number, allowExited = false): Promise<void> {
     const work = (async () => {

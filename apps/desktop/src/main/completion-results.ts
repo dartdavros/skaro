@@ -7,6 +7,8 @@ import { readLedger } from './task-stage';
 import { stageIdOf } from './task-stage';
 import { dependencySnapshot, preparedDependencies } from './completion-dependencies';
 import { c4ArchitectureHash, c4ChangeHash } from './c4-review';
+import { c4SemanticContext, c4SemanticContextHash } from './c4-semantic-context';
+import { c4RecordProtocol } from './c4-record-protocol';
 
 /** Import an accepted legacy result once. Never include unsubmitted work at a shared tip. */
 export async function acceptedResult(
@@ -95,9 +97,21 @@ export async function assertResultUnchanged(
       : false);
   if (!shared && (await context.git.head(task.branch ?? result.branch)) !== result.head)
     throw new Error(`${result.taskId}: branch changed after submission; submit the result again`);
+  const review = result.c4;
+  const impact =
+    review && c4RecordProtocol(review) === 'impact-v1' && review.scope?.kind !== 'artifacts';
+  const currentModel = impact
+    ? !!review.semanticReceipt &&
+      !!review.scope &&
+      review.semanticContextHash ===
+        c4SemanticContextHash({
+          ...c4SemanticContext(artifacts, result.taskId, review.scope),
+          preservation: review.preservation,
+        })
+    : review?.modelHash === c4ArchitectureHash(artifacts, review?.scope);
   if (
     !result.c4 ||
-    result.c4.modelHash !== c4ArchitectureHash(artifacts, result.c4.scope) ||
+    !currentModel ||
     (result.worktree &&
       result.c4.changeHash !==
         (await c4ChangeHash(

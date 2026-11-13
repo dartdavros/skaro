@@ -1,3 +1,4 @@
+import './activity-i18n';
 import { addMessages } from '@skaro/ui';
 addMessages('ru', {
   'background.title': 'Фоновая работа',

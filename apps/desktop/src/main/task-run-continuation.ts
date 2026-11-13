@@ -122,6 +122,13 @@ export class TaskRunContinuation {
     const next = execution.next(turn.id, fingerprint);
     if (next === 'duplicate') return true;
     if (next === 'stalled') {
+      if (this.ctx.deps.coordinators)
+        await this.ctx.incidents.report(
+          active,
+          'Repeated completion without progress',
+          { cause: 'no-progress', code: 'no_progress', condition: 'owner-evidence' },
+          'controller',
+        );
       this.block(
         active,
         'Агент повторно завершил работу без результата и без изменений. Автопродолжение остановлено, чтобы не расходовать лимит впустую.',

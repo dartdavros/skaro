@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { checkCommand, type CheckShell } from './check-command.ts';
+import { shellLifetime } from './shell-lifetime.ts';
 
 const OUTPUT_LIMIT = 16_384;
 
@@ -20,17 +21,17 @@ export function runShell(
 ): Promise<void> {
   const label = options.label ? `${options.label}: ` : '';
   return new Promise<void>((resolve, reject) => {
+    options.signal?.throwIfAborted();
     const invocation = checkCommand(command, options.shell);
     const child = spawn(invocation.command, invocation.args, {
       cwd: options.cwd,
       shell: invocation.shell,
       windowsHide: true,
-      detached: !!options.processStarted && process.platform !== 'win32',
+      detached: process.platform !== 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
       ...(options.env ? { env: { ...process.env, ...options.env } } : {}),
-      ...(options.timeoutMs ? { timeout: options.timeoutMs } : {}),
-      ...(options.signal ? { signal: options.signal } : {}),
     });
+    const lifetime = shellLifetime(child, options.signal, options.timeoutMs);
     let output = '';
     let admitted = Promise.resolve();
     const append = (chunk: Buffer) => {
@@ -39,9 +40,9 @@ export function runShell(
     };
     child.stdout.on('data', append);
     child.stderr.on('data', append);
-    child.once('error', (error) => reject(new Error(`${label}${error.message}`)));
+    child.once('error', (error) => lifetime.failed(new Error(`${label}${error.message}`)));
     child.once('close', (code, signal) => {
-      void admitted.then(() => {
+      void Promise.all([admitted, lifetime.ended()]).then(() => {
         if (code === 0) resolve();
         else reject(new Error(`${label}${signal ?? `exit ${code}`}\n${output.trim()}`));
       }, reject);
@@ -49,12 +50,12 @@ export function runShell(
     try {
       if (child.pid) admitted = Promise.resolve(options.processStarted?.(child.pid));
       void admitted.catch((error: unknown) => {
-        child.kill();
-        reject(error);
+        lifetime.failed(error instanceof Error ? error : new Error(String(error)));
+        lifetime.stop();
       });
     } catch (error) {
-      child.kill();
-      reject(error);
+      lifetime.failed(error instanceof Error ? error : new Error(String(error)));
+      lifetime.stop();
     }
   });
 }

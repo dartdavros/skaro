@@ -3,6 +3,38 @@ import type { EventRecord } from './model.ts';
 import { type Row } from './rows.ts';
 
 export class DbEvents extends DbTable {
+  page(
+    projectId: string,
+    before?: number,
+    limit = 50,
+  ): { events: EventRecord[]; nextCursor?: number } {
+    if (
+      !projectId ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 100 ||
+      (before !== undefined && (!Number.isSafeInteger(before) || before < 1))
+    )
+      throw new Error('Invalid event page');
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM events WHERE project_id=? ${before === undefined ? '' : 'AND id<?'} ORDER BY id DESC LIMIT ?`,
+      )
+      .all(
+        ...(before === undefined ? [projectId, limit + 1] : [projectId, before, limit + 1]),
+      ) as Row[];
+    const page = rows.slice(0, limit);
+    return {
+      events: page.map((r) => ({
+        id: Number(r.id),
+        projectId: String(r.project_id),
+        kind: String(r.kind),
+        data: JSON.parse(String(r.data)) as Record<string, unknown>,
+        at: Number(r.at),
+      })),
+      ...(rows.length > limit ? { nextCursor: Number(page.at(-1)!.id) } : {}),
+    };
+  }
   // ── events ───────────────────────────────────────────────────────────────
 
   addEvent(projectId: string, kind: string, data: Record<string, unknown> = {}): void {

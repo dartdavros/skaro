@@ -2,13 +2,14 @@
 // JSON responses, a bearer token per agent session. The token decides the scope (project, task)
 // and which tools the session sees.
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { ProcessAdmissionPort, ScopedOperationPort } from '@skaro/timeline';
 import { scopedOperationPort } from './scoped-port.ts';
 import { operationCatalogue } from './catalogue.ts';
 import { operationFailure } from './tool-failure.ts';
+import { httpToolCallIdentity, type ToolCallContext } from './tool-call-identity.ts';
 
 export interface ToolResult {
   text: string;
@@ -23,7 +24,7 @@ export interface Tool<S> {
   inputSchema: Record<string, unknown>;
   /** Tools a session sees depend on its scope (task run, project chat…). */
   available?: (scope: S) => boolean;
-  call(args: Record<string, unknown>, scope: S): Promise<ToolResult>;
+  call(args: Record<string, unknown>, scope: S, context?: ToolCallContext): Promise<ToolResult>;
 }
 
 export interface Grant {
@@ -43,11 +44,16 @@ interface RpcRequest {
   params?: Record<string, unknown>;
 }
 
+interface ScopedGrant<S> {
+  id: string;
+  scope: S;
+}
+
 export class McpHttpServer<S> {
   private readonly name: string;
   private readonly version: string;
   private readonly tools: Tool<S>[];
-  private readonly scopes = new Map<string, S>();
+  private readonly scopes = new Map<string, ScopedGrant<S>>();
   private server: Server | undefined;
   private port = 0;
 
@@ -89,7 +95,7 @@ export class McpHttpServer<S> {
   /** Access for one agent session. */
   grant(scope: S): Grant {
     const token = randomBytes(24).toString('base64url');
-    this.scopes.set(token, scope);
+    this.scopes.set(token, { id: randomUUID(), scope: structuredClone(scope) });
     return {
       url: this.url,
       headers: { Authorization: `Bearer ${token}` },
@@ -113,8 +119,12 @@ export class McpHttpServer<S> {
       // Browsers cannot reach us: no CORS, and a page's Origin is refused outright.
       if (req.headers.origin) return send(res, 403);
       const token = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')?.[1];
-      const scope = token === undefined ? undefined : this.scopes.get(token);
-      if (scope === undefined) return send(res, 401);
+      const grant = token === undefined ? undefined : this.scopes.get(token);
+      if (grant === undefined) return send(res, 401);
+      const requireActive = () => {
+        if (token === undefined || this.scopes.get(token) !== grant)
+          throw new Error('MCP session grant is no longer active');
+      };
       // Stateless: no server-to-client stream, no sessions to delete.
       if (req.method !== 'POST') return send(res, 405, undefined, { Allow: 'POST' });
 
@@ -127,7 +137,7 @@ export class McpHttpServer<S> {
       const messages = Array.isArray(body) ? body : [body];
       const replies: unknown[] = [];
       for (const message of messages) {
-        const reply = await this.dispatch(message as RpcRequest, scope);
+        const reply = await this.dispatch(message as RpcRequest, grant, requireActive);
         if (reply !== undefined) replies.push(reply);
       }
       if (!replies.length) return send(res, 202);
@@ -138,12 +148,19 @@ export class McpHttpServer<S> {
   }
 
   /** Handles one JSON-RPC message; notifications get no reply. */
-  private async dispatch(msg: RpcRequest, scope: S): Promise<unknown> {
+  private async dispatch(
+    msg: RpcRequest,
+    grant: ScopedGrant<S>,
+    requireActive: () => void,
+  ): Promise<unknown> {
     if (typeof msg !== 'object' || msg === null || typeof msg.method !== 'string') {
       return rpcError(msg?.id ?? null, -32600, 'Invalid request');
     }
     if (msg.id === undefined || msg.id === null) return undefined;
+    if (typeof msg.id !== 'string' && (typeof msg.id !== 'number' || !Number.isFinite(msg.id)))
+      return rpcError(null, -32600, 'Invalid request');
     const id = msg.id;
+    const scope = structuredClone(grant.scope);
     switch (msg.method) {
       case 'initialize': {
         const asked = msg.params?.['protocolVersion'];
@@ -169,10 +186,18 @@ export class McpHttpServer<S> {
         const args = msg.params?.['arguments'];
         let result: ToolResult;
         try {
+          requireActive();
           result = await tool.call(
             typeof args === 'object' && args !== null ? (args as Record<string, unknown>) : {},
             scope,
+            { ...httpToolCallIdentity(grant.id, id), requireActive },
           );
+        } catch (error) {
+          result = operationFailure(error, tool.name);
+        }
+        // An error response can also contain private handler output. Revocation hides either.
+        try {
+          requireActive();
         } catch (error) {
           result = operationFailure(error, tool.name);
         }

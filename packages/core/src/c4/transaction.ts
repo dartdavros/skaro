@@ -17,11 +17,17 @@ export async function c4PackageStatus(
   pkg: C4Package,
 ): Promise<'applied' | 'writing' | 'unwritten'> {
   const history = await readC4File(root, `c4/history/${pkg.baseRevision + 1}.json`);
-  if (history && readTransaction(JSON.parse(history)).package.id === pkg.id) return 'applied';
+  const expected = c4Hash(JSON.stringify(pkg));
+  const matches = (raw: string) => {
+    const tx = readTransaction(JSON.parse(raw));
+    if (tx.package.id !== pkg.id) return false;
+    if (tx.hash !== expected)
+      throw new Error('C4: persisted package identity has different contents');
+    return true;
+  };
+  if (history && matches(history)) return 'applied';
   const journal = await readC4File(root, JOURNAL);
-  return journal && readTransaction(JSON.parse(journal)).package.id === pkg.id
-    ? 'writing'
-    : 'unwritten';
+  return journal && matches(journal) ? 'writing' : 'unwritten';
 }
 
 function readTransaction(value: unknown): Transaction {

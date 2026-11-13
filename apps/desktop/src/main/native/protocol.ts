@@ -34,7 +34,13 @@ export type NativeConfig =
     };
 export type NativeOptions = Omit<
   SessionOptions,
-  'raw' | 'rawSerialized' | 'secretValues' | 'context' | 'processStarted' | 'signal'
+  | 'raw'
+  | 'rawSerialized'
+  | 'secretValues'
+  | 'context'
+  | 'processStarted'
+  | 'signal'
+  | 'resourceAdmission'
 >;
 export interface Request {
   id: number;

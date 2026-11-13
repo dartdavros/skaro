@@ -1,4 +1,5 @@
 import { indexTasks, isBlocked, startBlocker } from '@skaro/core';
+import { projectC4Protocol } from './c4-protocol';
 import { randomUUID } from 'node:crypto';
 import { CommandCancelled } from './owner-commands';
 import { hasOwnerCommand } from './owner-command-history';
@@ -9,8 +10,7 @@ import { key, awaitingKey, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
-import { IntegrationPending } from './integration-model';
-import { prepareTaskDependencies } from './task-dependency-checkout';
+import { prepareQueuedTask } from './prepare-task-run';
 import { serializeTaskMutation } from './project-task-mutations';
 import { queueBuiltinTask } from './builtin-task-launch';
 import type { BuiltinTaskLaunchRequest } from './builtin-task-start';
@@ -18,6 +18,9 @@ import { capturePendingBuiltinStart } from './builtin-task-pending';
 import { cancelTaskRun } from './task-run-cancel';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { restoreCleanedWorktree } from './task-worktree-retention';
+import { resourcesFor } from './resource-execution';
+import { resourceQueueSlots } from './resource-task-queue';
+import { requireCoordinationDispatch } from './coordination-dispatch';
 
 /** scheduling: a focused part of the task-run controller. */
 export class TaskRunScheduling {
@@ -32,12 +35,12 @@ export class TaskRunScheduling {
   }
 
   slots(): RunSlots {
-    const { slots, running } = this.ctx.queue.state();
-    return { total: slots, free: Math.max(0, slots - running.length) };
+    return resourceQueueSlots(this.ctx);
   }
 
   setSlots(slots: number): void {
     this.ctx.queue.setSlots(slots);
+    resourcesFor(this.ctx.deps.db)?.manager.poke();
     this.ctx.limitEnvironments();
   }
 
@@ -174,6 +177,7 @@ export class TaskRunScheduling {
     input: MessageInput,
     requireCurrent?: () => void,
   ): Promise<void> {
+    const revision = requireCoordinationDispatch(this.ctx.deps.db, projectId).revision;
     // The task can have been replaced while agent setup was awaiting I/O.
     const task = findTask(await this.ctx.project(projectId).store.load(), taskId);
     requireCurrent?.();
@@ -185,8 +189,15 @@ export class TaskRunScheduling {
     if (input.internal && input.commandId?.startsWith('continue-') && task.status !== 'in_progress')
       return;
     if (active && !this.ctx.continuation.canDeliver(active, input)) return;
+    requireCoordinationDispatch(this.ctx.deps.db, projectId, revision);
     const accepted = { ...input, commandId: input.commandId ?? randomUUID() };
-    this.ctx.startup.begin(projectId, taskId, [accepted]);
+    this.ctx.startup.begin(
+      projectId,
+      taskId,
+      [accepted],
+      revision,
+      projectC4Protocol(this.ctx.deps.db, projectId),
+    );
     this.ctx.queuedInputs.set(k, [...(this.ctx.queuedInputs.get(k) ?? []), accepted]);
     this.ctx.queue.enqueue([k]);
     this.ctx.changed(projectId, taskId);
@@ -208,6 +219,7 @@ export class TaskRunScheduling {
       this.ctx.setRuntime(projectId, taskId, 'idle');
       return;
     }
+    requireStartupGeneration(this.ctx.deps.db, projectId, pending?.dispatchRevision);
     const requireCurrent = pending?.builtin
       ? capturePendingBuiltinStart(this.ctx.startup, projectId, taskId, () => this.ctx.closing)
       : undefined;
@@ -227,7 +239,7 @@ export class TaskRunScheduling {
       await serializeTaskMutation(this.ctx.project(projectId), () =>
         restoreCleanedWorktree(this.ctx, existing.run),
       );
-      if (!existing.run.nativeSessionId && !(await this.prepare(existing))) return;
+      if (!(await prepareQueuedTask(this.ctx, existing))) return;
       requireCurrent?.();
       this.ctx.setRuntime(projectId, taskId, 'running', existing.run.id);
       await this.ctx.stages.opened(existing);
@@ -235,7 +247,7 @@ export class TaskRunScheduling {
       return this.runTurn(existing, inputs);
     }
     const active = await createTaskRun(this.ctx, projectId, taskId, builtin, requireCurrent);
-    if (!(await this.prepare(active))) return;
+    if (!(await prepareQueuedTask(this.ctx, active))) return;
     requireCurrent?.();
     this.ctx.setRuntime(projectId, taskId, 'running', active.run.id);
     this.ctx.deps.emit('project.changed', { projectId });
@@ -243,24 +255,6 @@ export class TaskRunScheduling {
     await this.ctx.stages.sync(projectId, taskId);
     requireCurrent?.();
     return this.runTurn(active, inputs);
-  }
-
-  private async prepare(active: ActiveRun): Promise<boolean> {
-    if (!active.run.worktree) return true;
-    const artifacts = await this.ctx.project(active.projectId).load();
-    try {
-      await prepareTaskDependencies(
-        this.ctx,
-        active.projectId,
-        findTask(artifacts, active.taskId),
-        artifacts,
-        active.run.worktree,
-      );
-      return true;
-    } catch (error) {
-      if (error instanceof IntegrationPending) return false;
-      throw error;
-    }
   }
 
   /** Holds the slot until the turn ends; later messages of the batch join the running turn. */
@@ -295,3 +289,4 @@ export class TaskRunScheduling {
     await done;
   }
 }
+import { requireStartupGeneration } from './task-startup-generation';

@@ -2,7 +2,7 @@
 // The wire format has no "jsonrpc" field; one JSON message per line.
 
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { delimiter } from 'node:path';
+import { appServerEnvironment } from './process-environment.ts';
 
 export interface CodexBinary {
   binary: string;
@@ -68,9 +68,7 @@ export class AppServer {
   private constructor(options: AppServerOptions) {
     this.options = options;
     const env: NodeJS.ProcessEnv = {
-      ...process.env,
-      ...options.env,
-      PATH: [...options.pathDirs, process.env['PATH'] ?? ''].join(delimiter),
+      ...appServerEnvironment(process.env, options.env ?? {}, options.pathDirs),
       ...(options.codexHome ? { CODEX_HOME: options.codexHome } : {}),
     };
     const args = ['app-server', ...(options.config ?? []).flatMap((kv) => ['-c', kv])];

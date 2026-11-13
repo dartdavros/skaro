@@ -194,6 +194,8 @@ export async function verifyPreparedModelPlan(input: {
     await session.journal.append(`proof:${id}`, [], { value: proof });
     return proof;
   } finally {
+    services?.coordinators.stopAccepting();
+    services?.resources.stopAccepting();
     const closed = await Promise.allSettled([
       session?.dispose(),
       ...(services
@@ -208,6 +210,12 @@ export async function verifyPreparedModelPlan(input: {
           ]
         : []),
     ]);
+    if (services) {
+      closed.push(...(await Promise.allSettled([services.managedCaches.close()])));
+      closed.push(
+        ...(await Promise.allSettled([services.coordinators.close(), services.resources.close()])),
+      );
+    }
     services?.projects.close();
     await closeBackground();
     state.db.close();

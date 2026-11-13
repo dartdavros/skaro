@@ -8,13 +8,20 @@ import {
   stopContainers,
   type DockerContainer,
   type TaskKey,
+  type DockerRemovalExecutor,
+  type DockerRemovalAuthorization,
 } from '@skaro/core';
 
 /** Docker and host operations of task environments; tests replace them. */
 export interface EnvironmentDocker {
   inspect: () => Promise<DockerContainer[]>;
   stop: (containers: DockerContainer[]) => Promise<void>;
-  remove: (containers: DockerContainer[], projects: string[]) => Promise<string[]>;
+  remove: (
+    containers: DockerContainer[],
+    projects: string[],
+    step?: DockerRemovalExecutor,
+    authorization?: DockerRemovalAuthorization,
+  ) => Promise<string[]>;
   hasData: (name: string) => Promise<boolean>;
   ports: (count: number, taken: ReadonlySet<number>) => Promise<number[]>;
 }

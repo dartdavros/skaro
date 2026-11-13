@@ -1,4 +1,6 @@
 import { dirname } from 'node:path';
+import { c4Coordination, bindC4Packages } from './c4-coordination-binding';
+import { taskC4Protocol } from './c4-protocol';
 import { background } from './background/client';
 import { C4ValidationError, type C4Package, type AppDb } from '@skaro/core';
 import type {
@@ -10,17 +12,21 @@ import type {
 } from '@skaro/mcp-server';
 import type { Item } from '@skaro/timeline';
 import type { Projects } from './projects';
-import { writeC4TaskReview } from './c4-review-write';
+import { legacyC4ServiceReview } from './c4-service-review';
+import { c4RecordProtocol } from './c4-record-protocol';
+import { classifiedC4Package } from './c4-package-review';
+import { decideC4Package } from './c4-package-decision';
 import { c4ToolFailure, recordC4Diagnostic } from './c4-tool-diagnostic';
 
 type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 export interface C4ProposalRecord {
+  protocol?: import('@skaro/core').C4Protocol;
   scope: SkaroScope;
   package: C4Package;
   item: ProposalItem;
   fileIndex?: { path: string; beforeHash: string | null; afterHash: string }[];
 }
-interface Deps {
+export interface C4ServiceDeps {
   db: AppDb;
   projects: Projects;
   locale(): string;
@@ -31,10 +37,14 @@ interface Deps {
 }
 
 export class C4Service implements C4Handlers {
-  private readonly deps: Deps;
+  private readonly deps: C4ServiceDeps;
   private readonly deciding = new Map<string, Promise<void>>();
-  constructor(deps: Deps) {
+  constructor(deps: C4ServiceDeps) {
     this.deps = deps;
+    bindC4Packages(deps.db, {
+      read: (id, project) => background(this.dataDir, 'c4.package', project, id),
+      publish: (record) => deps.publish(record.scope, record.item),
+    });
   }
   private get dataDir(): string {
     return dirname(this.deps.db.filePath);
@@ -116,7 +126,28 @@ export class C4Service implements C4Handlers {
     checkout: string,
   ): Promise<ToolResult> {
     if (scope.importId) return this.deps.stageImport(args, scope);
+    if (scope.chatId && this.deps.db.getSetting(`c4.audit.chat.${scope.chatId}`, undefined)) {
+      const audit = this.deps.db.getSetting<import('../shared/c4-audit').C4Audit | undefined>(
+        `c4.audit.${scope.projectId}`,
+        undefined,
+      );
+      if (
+        audit?.chatId !== scope.chatId ||
+        !['preparing', 'running', 'decision'].includes(audit.state)
+      )
+        throw new Error('Audit no longer has proposal authority');
+      if (
+        (await this.records(scope.projectId, scope.chatId)).some((r) =>
+          ['pending', 'accepted'].includes(r.item.state),
+        )
+      )
+        throw new Error('The audit already has one saved package awaiting its original decision');
+    }
     const context = this.deps.projects.get(scope.projectId);
+    const protocol =
+      scope.kind === 'task' && scope.runId
+        ? taskC4Protocol(this.deps.db, scope.projectId, scope.runId)
+        : 'package-v1';
     const record = await background(
       this.dataDir,
       'c4.prepare',
@@ -125,10 +156,12 @@ export class C4Service implements C4Handlers {
         ...args,
         locale: this.deps.locale(),
         codeRoot: checkout,
+        protocol,
       },
       scope,
     );
     const item = record.item;
+    if (protocol === 'impact-v1') return c4Coordination(this.deps.db)!.requestScope(scope, item.id);
     await this.deps.publish(scope, item);
     const facts = await this.reviewPackage(scope.projectId, item.id);
     return {
@@ -182,92 +215,45 @@ export class C4Service implements C4Handlers {
     const previous = this.deciding.get(projectId) ?? Promise.resolve();
     const operation = previous
       .catch(() => undefined)
-      .then(() => this.decideOnce(projectId, id, action, fingerprint));
+      .then(() =>
+        decideC4Package(
+          this.deps,
+          {
+            records: (p) => this.records(p),
+            save: (r) => this.save(r),
+            review: (p, id) => this.reviewPackage(p, id),
+          },
+          projectId,
+          id,
+          action,
+          fingerprint,
+        ),
+      );
     this.deciding.set(projectId, operation);
     return operation.finally(() => {
       if (this.deciding.get(projectId) === operation) this.deciding.delete(projectId);
     });
   }
-  private async decideOnce(
-    projectId: string,
-    id: string,
-    action: 'apply' | 'reject',
-    fingerprint?: string,
-  ): Promise<void> {
-    const record = (await this.records(projectId)).find((r) => r.item.id === id);
-    if (!record) throw new Error('Unknown C4 package');
-    if (record.item.state === 'applied' && action === 'apply') return;
-    if (record.item.state !== 'pending' && record.item.state !== 'accepted')
-      throw new Error('This C4 package is already decided');
-    if (action === 'apply' && record.item.state === 'pending') {
-      const review = await this.reviewPackage(projectId, id);
-      if (!fingerprint || fingerprint !== review.fingerprint)
-        throw new Error('Open the current architecture package before accepting it.');
-    }
-    if (action === 'reject' && record.item.state === 'accepted')
-      throw new Error(
-        'A confirmed package must finish recovery; it cannot be rejected after writing starts.',
-      );
-    const context = this.deps.projects.get(projectId);
-    if (action === 'reject') record.item = { ...record.item, state: 'rejected' };
-    else {
-      record.item = { ...record.item, state: 'accepted', result: {} };
-      await this.save(record);
-      await this.deps.publish(record.scope, record.item);
-      try {
-        await background(this.dataDir, 'c4.apply', context.root, projectId, id);
-        record.item = { ...record.item, state: 'applied', result: {} };
-      } catch (error) {
-        const status = await background(this.dataDir, 'c4.status', context.root, projectId, id);
-        record.item = {
-          ...record.item,
-          state: status === 'applied' ? 'applied' : status === 'writing' ? 'accepted' : 'pending',
-          result: { error: String(error) },
-        };
-        await this.save(record);
-        context.invalidate();
-        await this.deps.publish(record.scope, record.item);
-        throw error;
-      }
-    }
-    await this.save(record);
-    context.invalidate();
-    this.deps.changed(projectId);
-    await this.deps.publish(record.scope, record.item);
-  }
   async review(args: ReviewC4Args, scope: SkaroScope): Promise<ToolResult> {
     const checkout = this.caller(scope);
     if (scope.kind !== 'task' || !scope.taskId || !scope.runId)
       throw new Error('C4 code review requires a current task run');
-    try {
-      const result = await writeC4TaskReview(
-        this.deps.db,
-        this.deps.projects.get(scope.projectId),
-        checkout,
-        args,
-        scope,
-        async () =>
-          (await this.records(scope.projectId, scope.taskId)).some(
-            (r) =>
-              r.package.task?.id === scope.taskId && ['pending', 'accepted'].includes(r.item.state),
-          ),
-      );
-      recordC4Diagnostic(this.deps.db, scope, null);
-      this.deps.changed(scope.projectId);
-      return result;
-    } catch (error) {
-      recordC4Diagnostic(
-        this.deps.db,
-        scope,
-        error instanceof C4ValidationError ? error.diagnostic : null,
-      );
-      this.deps.changed(scope.projectId);
-      return c4ToolFailure(error);
-    }
+    if (taskC4Protocol(this.deps.db, scope.projectId, scope.runId) === 'impact-v1')
+      return c4Coordination(this.deps.db)!.requestScope(scope);
+    return legacyC4ServiceReview(this.deps, args, scope, checkout, () =>
+      this.records(scope.projectId, scope.taskId),
+    );
   }
 
   async restore(scope: SkaroScope): Promise<void> {
     for (const record of await this.records(scope.projectId, scope.taskId ?? scope.chatId)) {
+      const protocol = c4RecordProtocol(record);
+      if (
+        protocol === 'impact-v1' &&
+        record.item.state === 'pending' &&
+        !classifiedC4Package(this.deps.db, record)
+      )
+        continue;
       if (record.item.state === 'accepted') {
         try {
           await this.decide(scope.projectId, record.item.id, 'apply');

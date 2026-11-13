@@ -1,11 +1,19 @@
 import { operationTimeout } from '@skaro/timeline';
-import { blockOwnerMessages, CommandCancelled } from './owner-commands';
+import {
+  blockOwnerMessages,
+  CommandCancelled,
+  confirmOwnerMessagesStopped,
+} from './owner-commands';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
 import { key } from './task-run-helpers';
 
 /** Stop retires the transport and its grants; a later input must obtain a fresh admission. */
-export function stopBuiltinTask(ctx: TaskRunEngine, active: ActiveRun): Promise<void> {
+export function stopBuiltinTask(
+  ctx: TaskRunEngine,
+  active: ActiveRun,
+  commands: string[] = [],
+): Promise<void> {
   if (active.stopping) return active.stopping;
   const { projectId, taskId } = active;
   const unblock = blockOwnerMessages(projectId, taskId, 'Task is stopping. Wait for confirmation.');
@@ -24,6 +32,15 @@ export function stopBuiltinTask(ctx: TaskRunEngine, active: ActiveRun): Promise<
       }
       await ctx.sessions.detach(active);
       await active.pumping;
+      await operationTimeout(
+        confirmOwnerMessagesStopped(projectId, taskId, commands, {
+          kind: 'run',
+          id: active.run.id,
+          version: active.deliveryEpoch,
+        }),
+        15_000,
+        'Interrupted message delivery has not settled',
+      );
       for (const interaction of [...active.timeline.state.interactions])
         if (['approval', 'question', 'form', 'login'].includes(interaction.kind))
           ctx.history.skaroEvent(active, {

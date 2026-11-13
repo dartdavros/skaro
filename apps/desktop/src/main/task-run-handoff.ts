@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { bindC4Protocol } from './c4-protocol';
 import { join } from 'node:path';
 import { continuationTimeline } from '@skaro/timeline';
 import type { MessageInput } from '../shared/ipc';
@@ -21,11 +22,13 @@ import { TaskExecution } from './task-execution';
 import { CommandCancelled } from './owner-commands';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { restoreCleanedWorktree } from './task-worktree-retention';
+import { requireStartupGeneration } from './task-startup-generation';
 
 interface Intent {
   from: string;
   next: TaskHandoffSettings;
   inputs: MessageInput[];
+  dispatchRevision?: number;
   interactions: TimelineState['interactions'];
   plan?: TimelineState['plan'];
 }
@@ -129,6 +132,7 @@ export class TaskRunHandoff {
             this.ctx.startup.read(projectId, taskId)?.inputs ?? [],
             this.ctx.queuedInputs.get(k) ?? [],
           ),
+          dispatchRevision: this.ctx.startup.read(projectId, taskId)?.dispatchRevision,
           interactions: structuredClone(active.timeline.state.interactions),
           ...(active.timeline.state.plan
             ? { plan: structuredClone(active.timeline.state.plan) }
@@ -140,6 +144,7 @@ export class TaskRunHandoff {
         db.setSetting(intentKey, intent);
       }
       next = intent.next;
+      if (intent.inputs.length) requireStartupGeneration(db, projectId, intent.dispatchRevision);
       // Await actual shutdown. No swallowed close error and no replacement writer on timeout.
       await this.ctx.sessions.stopForHandoff(active);
       await restoreCleanedWorktree(this.ctx, active.run);
@@ -181,6 +186,7 @@ export class TaskRunHandoff {
         setting,
         saved.agent === 'skaro' ? db.getSetting(setting, null) : saved,
         (run) => {
+          bindC4Protocol(db, projectId, run.id, active.run.id);
           if (saved.agent === 'skaro')
             saveBuiltinRunSettings(db, run.id, parseBuiltinTaskStart(saved));
           new TaskExecution(db, run.id).inherit(execution);
@@ -188,7 +194,7 @@ export class TaskRunHandoff {
           if (intent!.inputs.length) {
             if (saved.agent === 'skaro')
               this.ctx.startup.selectBuiltin(projectId, taskId, parseBuiltinTaskStart(saved));
-            this.ctx.startup.begin(projectId, taskId, intent!.inputs);
+            this.ctx.startup.begin(projectId, taskId, intent!.inputs, intent!.dispatchRevision);
           }
         },
       );

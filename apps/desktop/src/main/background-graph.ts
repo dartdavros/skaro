@@ -9,7 +9,7 @@ export function reportGraph(status: GraphStatus, project: string): void {
   let job = indexing.get(status.projectId);
   if (status.phase === 'indexing') {
     if (!job) {
-      job = backgroundWork.start('graph.index', { project });
+      job = backgroundWork.start('graph.index', { projectId: status.projectId, project });
       indexing.set(status.projectId, job);
     }
     if (status.progress?.total)

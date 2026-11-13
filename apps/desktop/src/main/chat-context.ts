@@ -8,6 +8,7 @@ import { CompletionStore } from './completion-store';
 import type { TrackedCiRun } from './ci-runs';
 import { planStatusText } from './chat-planning-status';
 import { taskReplanContext } from './task-replan-context';
+import { projectMemory } from './project-memory-binding';
 
 export class ChatContext {
   private readonly ctx: ChatEngine;
@@ -24,6 +25,8 @@ export class ChatContext {
     const plans = live ? this.ctx.planning.store(live).list() : [];
     return {
       text:
+        ((await projectMemory(this.ctx.deps.db)?.note(scope.projectId)) ?? '') +
+        '\n\n' +
         projectContextText(name, artifacts, this.ctx.deps.db.getTaskRuntime(scope.projectId)) +
         taskReplanContext(this.ctx, scope.projectId, artifacts) +
         (live && plans.length

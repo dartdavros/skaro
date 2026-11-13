@@ -4,6 +4,7 @@
   import type { C4Model } from '@skaro/core/c4-view';
   import C4Workspace from './C4Workspace.svelte';
   import C4Gallery from './C4Gallery.svelte';
+  import C4AuditButton from './C4AuditButton.svelte';
   import LoadingView from '../screens/LoadingView.svelte';
   import './i18n';
   import '../graph/i18n';
@@ -56,9 +57,17 @@
     <C4Gallery {model} onopen={(viewId) => (target = { viewId })} />
   {/if}
 {:else if model === undefined}<LoadingView />
-{:else}<div class="notice"><Banner kind="info" text={t('graph.noC4')} /></div>{/if}
+{:else}<div class="notice">
+    <div class="audit-start"><C4AuditButton /></div>
+    <Banner kind="info" text={t('graph.noC4')} />
+  </div>{/if}
 
 <style>
+  .audit-start {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 18px;
+  }
   .notice {
     flex: 1;
     min-width: 0;

@@ -6,6 +6,9 @@ import type { LiveChat } from './chat-model';
 import { hasCode } from './new-project';
 import { chatInstructions, importInstructions } from './prompt';
 import { chatContinuationKey } from './builtin-chat-rebind';
+import { resourceSessionAdmission } from './resource-session';
+import { projectMemory } from './project-memory-binding';
+import { auditAdmission } from './c4-audit-admission';
 
 /** Existing chat/import instructions and history sinks shared by managed and bundled sessions. */
 export async function chatSessionOptions(
@@ -35,7 +38,22 @@ export async function chatSessionOptions(
     if (continuation && continuation.sessionId === chat.nativeSessionId)
       instructions += '\n\n' + continuation.context;
   }
+  instructions += '\n\n' + ((await projectMemory(ctx.deps.db)?.note(projectId)) ?? '');
   return {
+    resourceAdmission: resourceSessionAdmission(
+      ctx.deps.db,
+      projectId,
+      `chat:${chat.id}`,
+      `managed:${chat.agent}`,
+      () => {
+        live.operation.signal.throwIfAborted();
+        if (ctx.closing || live.stopping || live.chat.archived)
+          throw new Error('Chat resource authority changed');
+      },
+      context.root,
+      `chat.${chat.id}`,
+      auditAdmission(ctx, projectId, chat.id),
+    ),
     signal: live.operation.signal,
     cwd: context.root,
     processStarted,
@@ -44,6 +62,7 @@ export async function chatSessionOptions(
     ...(settings.budgetUsd !== undefined ? { budgetUsd: settings.budgetUsd } : {}),
     permissionMode: settings.permissionMode ?? 'ask',
     planFirst: false,
+    ...(ctx.deps.db.getSetting(`c4.audit.chat.${chat.id}`, undefined) ? { readOnly: true } : {}),
     instructions,
     ...(imported ? { readDirs: [imported.dir] } : {}),
     mcpServers: live.grant

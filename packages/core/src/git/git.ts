@@ -1,7 +1,12 @@
+import {
+  markResourceCleanupEffect,
+  markResourceCleanupSettled,
+} from '../resources/cleanup-context.ts';
 // Git operations Skaro performs (docs/architecture.md, sections 7–8): a worktree and branch
 // per task, merge checks, squash or merge, revert. Uses the system git (2.38+ for merge-tree).
 
-import { existsSync } from 'node:fs';
+import { worktreePresent } from './worktree-files.ts';
+import { createWorktree, type WorktreeCreateOptions } from './worktree-create.ts';
 import { SKARO_DIR } from '../artifacts/store.ts';
 import { git, GitError } from './command.ts';
 import { assertRemovableWorktree, type ContainerMounts } from './worktree-safety.ts';
@@ -83,13 +88,18 @@ export class GitService {
 
   constructor(
     repo: string,
-    privateOptions: { inspectMounts?: () => Promise<ContainerMounts[]> } = {},
+    privateOptions: {
+      inspectMounts?: () => Promise<ContainerMounts[]>;
+      requireWorktreeActive?: () => void;
+    } = {},
   ) {
     this.repo = repo;
     this.inspectMounts = privateOptions.inspectMounts;
+    this.requireWorktreeActive = privateOptions.requireWorktreeActive;
   }
 
   private readonly inspectMounts: (() => Promise<ContainerMounts[]>) | undefined;
+  private readonly requireWorktreeActive?: () => void;
 
   async version(): Promise<[number, number]> {
     const out = (await git(this.repo, ['--version'])).stdout;
@@ -126,19 +136,14 @@ export class GitService {
   // ── worktrees ────────────────────────────────────────────────────────────
 
   /** Worktree for a task: reuses the branch if it exists, otherwise branches from `base`. */
-  async createWorktree(options: { path: string; branch: string; base: string }): Promise<void> {
-    return serializedWorktree(this.repo, async () => {
-      if (await this.branchExists(options.branch)) {
-        await git(this.repo, ['worktree', 'add', options.path, options.branch]);
-      } else {
-        await git(this.repo, ['worktree', 'add', '-b', options.branch, options.path, options.base]);
-      }
-    });
+  createWorktree(options: WorktreeCreateOptions): Promise<void> {
+    return createWorktree(this.repo, options, this.requireWorktreeActive);
   }
 
   /** Service-owned checkouts only; never used for agent or owner worktrees. */
   createDetachedWorktree(path: string, base: string): Promise<void> {
     return serializedWorktree(this.repo, async () => {
+      this.requireWorktreeActive?.();
       await git(this.repo, ['worktree', 'add', '--detach', path, base]);
     });
   }
@@ -151,7 +156,8 @@ export class GitService {
 
   /** Preflight before ending any task sessions or removing task records. */
   async assertRemovableWorktree(path: string): Promise<void> {
-    if (existsSync(path)) await assertRemovableWorktree(this.repo, path, this.inspectMounts);
+    if (await worktreePresent(path))
+      await assertRemovableWorktree(this.repo, path, this.inspectMounts);
   }
 
   /** Never force or swallow a failed removal: ignored data is not recoverable from Git. */
@@ -160,11 +166,13 @@ export class GitService {
     options: {
       deleteBranch?: string;
       preserve?: { branch: string; head: string };
+      prune?: boolean;
+      guard?: () => void;
     } = {},
   ): Promise<void> {
     return serializedWorktree(this.repo, async () => {
       await this.assertRemovableWorktree(path);
-      if (options.preserve && existsSync(path)) {
+      if (options.preserve && (await worktreePresent(path))) {
         const { branch, head } = options.preserve;
         if (
           options.deleteBranch ||
@@ -174,8 +182,16 @@ export class GitService {
         )
           throw new Error('Worktree or its preserved branch changed during cleanup');
       }
-      if (existsSync(path)) await git(this.repo, ['worktree', 'remove', path]);
-      await git(this.repo, ['worktree', 'prune']);
+      if (await worktreePresent(path)) {
+        options.guard?.();
+        markResourceCleanupEffect(path, true);
+        try {
+          await git(this.repo, ['worktree', 'remove', path]);
+        } finally {
+          markResourceCleanupSettled(path);
+        }
+      }
+      if (options.prune !== false) await git(this.repo, ['worktree', 'prune']);
       if (options.deleteBranch) await this.deleteBranch(options.deleteBranch);
     });
   }

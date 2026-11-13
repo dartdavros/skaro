@@ -3,8 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import {
   prepareC4Package,
-  applyC4Package,
-  c4PackageStatus,
   c4PackageText,
   prepareC4DocumentMigration,
   type C4Package,
@@ -16,6 +14,8 @@ import type { BackgroundMethods } from './protocol';
 import { PayloadStore } from './payload-store';
 import { c4Context } from '../c4-context';
 import { artifactWork } from './artifact-work';
+import { c4ApplicationWork } from './c4-application-work';
+import { c4RecordProtocol } from '../c4-record-protocol';
 
 type StoredPackage = Omit<C4Package, 'files'> & {
   files: { path: string; before: string | null; after: string }[];
@@ -24,6 +24,14 @@ export function c4Work(store: PayloadStore) {
   const db = store.db;
   function save(record: C4ProposalRecord): void {
     const { package: pkg, item, scope } = record;
+    const stored = db.prepare('SELECT project, metadata FROM records WHERE id=?').get(item.id);
+    if (
+      stored &&
+      (stored.project !== scope.projectId ||
+        c4RecordProtocol(JSON.parse(String(stored.metadata))) !== c4RecordProtocol(record))
+    )
+      throw new Error('An architecture package cannot change project or protocol');
+    c4RecordProtocol(record);
     if (!pkg.files.length && item.proposal.type === 'architecture' && item.proposal.contentRef) {
       db.prepare('UPDATE records SET state=?, metadata=? WHERE project=? AND id=?').run(
         item.state,
@@ -43,6 +51,7 @@ export function c4Work(store: PayloadStore) {
       }));
       const compact: C4ProposalRecord = {
         scope,
+        ...(record.protocol ? { protocol: record.protocol } : {}),
         package: { ...pkg, files: [] },
         fileIndex: files.map((f) => ({ path: f.path, beforeHash: f.before, afterHash: f.after })),
         item: {
@@ -117,7 +126,11 @@ export function c4Work(store: PayloadStore) {
         })),
     };
   }
-  function recordPackage(prepared: C4Package, scope: C4ProposalRecord['scope']): C4ProposalRecord {
+  function recordPackage(
+    prepared: C4Package,
+    scope: C4ProposalRecord['scope'],
+    protocol?: C4ProposalRecord['protocol'],
+  ): C4ProposalRecord {
     const item: C4ProposalRecord['item'] = {
       id: `skaro-c4-${randomUUID()}`,
       turnId: '',
@@ -135,7 +148,7 @@ export function c4Work(store: PayloadStore) {
         task: prepared.task,
       },
     };
-    save({ scope, package: prepared, item });
+    save({ scope, package: prepared, item, ...(protocol ? { protocol } : {}) });
     return list(scope.projectId, scope.taskId ?? scope.chatId).find((r) => r.item.id === item.id)!;
   }
   return {
@@ -206,15 +219,18 @@ export function c4Work(store: PayloadStore) {
     'c4.package': pkg,
     'c4.save': save,
     'c4.content': (project, id, side) => c4PackageText(pkg(project, id), side),
-    'c4.apply': async (root, project, id) => applyC4Package(root, pkg(project, id)),
-    'c4.status': async (root, project, id) => c4PackageStatus(root, pkg(project, id)),
+    ...c4ApplicationWork(store, pkg, (project, id) => {
+      const value = list(project).find((r) => r.item.id === id);
+      if (!value) throw new Error('Unknown C4 application');
+      return value;
+    }),
     'c4.prepare': async (root, args, scope) => {
       migrate(scope.projectId);
       const prepared = await prepareC4Package(root, {
         ...args,
         ...(scope.kind === 'task' ? { task: { id: scope.taskId!, runId: scope.runId! } } : {}),
       });
-      return recordPackage(prepared, scope);
+      return recordPackage(prepared, scope, args.protocol);
     },
   } satisfies Pick<BackgroundMethods, Extract<keyof BackgroundMethods, `c4.${string}`>>;
 }

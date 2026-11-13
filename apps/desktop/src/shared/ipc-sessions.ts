@@ -149,6 +149,7 @@ export interface ChatSummary {
 
 /** Everything the chat screen needs to open a chat. */
 export interface ChatView {
+  decisionEpoch?: string;
   historyPage?: import('./history').HistoryPage;
   history?: import('./history').HistorySource;
   projectId: string;

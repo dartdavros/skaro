@@ -1,3 +1,9 @@
+import {
+  questionDraftKey,
+  readQuestionDraft,
+  saveQuestionDraft,
+  forgetQuestionDraft,
+} from './question-drafts';
 import type { Interaction } from '@skaro/timeline';
 import { useFeed } from './context.svelte';
 
@@ -5,15 +11,20 @@ export function createQuestionController(
   getInteraction: () => Extract<Interaction, { kind: 'question' }>,
 ) {
   const feed = useFeed();
+  const draftKey = questionDraftKey(feed.draftOwner, getInteraction());
+  const saved = readQuestionDraft(draftKey);
   let step = $state(0);
-  const picked = $state<Record<string, string[]>>({});
-  const custom = $state<Record<string, string>>({});
-  const customOn = $state<Record<string, boolean>>({});
+  const picked = $state<Record<string, string[]>>(saved.picked);
+  const custom = $state<Record<string, string>>(saved.custom);
+  const customOn = $state<Record<string, boolean>>(saved.customOn);
   let reveal = $state(false);
   let sending = $state(false);
   let advance: ReturnType<typeof setTimeout> | undefined;
 
   $effect(() => () => clearTimeout(advance));
+  $effect(() =>
+    saveQuestionDraft(draftKey, getInteraction(), $state.snapshot({ picked, custom, customOn })),
+  );
 
   const questions = $derived(getInteraction().questions);
   const q = $derived(questions[Math.min(step, questions.length - 1)]!);
@@ -88,6 +99,7 @@ export function createQuestionController(
         kind: 'question',
         answers: Object.fromEntries(questions.map((x) => [x.id, answerOf(x.id)])),
       });
+      if (feed.responseAccepted?.(getInteraction().id) !== false) forgetQuestionDraft(draftKey);
     } finally {
       sending = false;
     }

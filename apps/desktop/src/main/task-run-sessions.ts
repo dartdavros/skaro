@@ -3,7 +3,6 @@ import type { AgentId } from '../shared/ipc';
 import { errorText } from './session-log';
 import { key, settingsKey, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
-import { ownsCheckout } from './task-stage';
 import type { TaskRunEngine } from './task-run-engine';
 import { taskRunDirectory } from './task-run-directory';
 import { closeSessionLog } from './close-session-log';
@@ -12,6 +11,7 @@ import { startBuiltinTaskSession } from './builtin-task-session';
 import { retireNativeSession } from './native/session-retirement';
 import { CommandCancelled } from './owner-commands';
 import { requireTaskNotStopping } from './builtin-task-stop';
+import { forgetTaskRun } from './task-run-forget';
 
 /** sessions: a focused part of the task-run controller. */
 export class TaskRunSessions {
@@ -21,6 +21,7 @@ export class TaskRunSessions {
   }
 
   attach(active: ActiveRun): Promise<AgentSession> {
+    if (active.suspending) return active.suspending.then(() => this.attach(active));
     try {
       requireTaskNotStopping(active);
     } catch (error) {
@@ -228,6 +229,7 @@ export class TaskRunSessions {
 
   async close(): Promise<void> {
     this.ctx.closing = true;
+    await this.ctx.architecture.close();
     await this.ctx.cleanup.close();
     // Releasing a review slot during shutdown must not launch a queued agent turn.
     for (const queued of this.ctx.queue.state().queued) this.ctx.queue.cancel(queued);
@@ -235,6 +237,8 @@ export class TaskRunSessions {
     await this.ctx.integrations.close();
     await this.ctx.merges.close();
     await Promise.all([...this.ctx.active.values()].map((a) => this.detach(a)));
+    await Promise.allSettled(this.ctx.incidentCaptures);
+    await this.ctx.incidents.idle();
     await Promise.all([...this.ctx.active.values()].map((active) => closeSessionLog(active.log)));
     await this.ctx.environments
       .close()
@@ -243,47 +247,6 @@ export class TaskRunSessions {
   }
 
   async forget(projectId: string, taskId: string): Promise<void> {
-    const k = key(projectId, taskId);
-    if (
-      this.ctx.integrations.store
-        .all(projectId)
-        .some(
-          (op) =>
-            (op.taskId === taskId || op.results.some((result) => result.taskId === taskId)) &&
-            (op.worker || op.executor),
-        )
-    )
-      throw new Error('Stop the task integration before deleting its checkout.');
-    const git = this.ctx.project(projectId).git;
-    const runs = this.ctx.deps.db.listRuns(projectId, taskId);
-    // The checkout, the branch and the environment of a stage belong to its other tasks too:
-    // deleting one task leaves them alone.
-    const own = runs.filter(ownsCheckout);
-    const worktrees = new Set(own.flatMap((run) => (run.worktree ? [run.worktree] : [])));
-    const branches = new Set(own.flatMap((run) => (run.branch ? [run.branch] : [])));
-    const active = this.ctx.active.get(k);
-    if (active?.switching) throw new Error('The agent is being changed; retry after the handoff.');
-    this.ctx.queue.cancel(k);
-    this.ctx.queuedInputs.delete(k);
-    await this.ctx.reviews.stop(projectId, taskId);
-    // No writer may recreate services or keep using them while deletion removes the environment.
-    if (active) await this.detach(active);
-    else for (const run of runs) await this.ctx.processes.stop(run.id);
-    // Containers retain checkout mounts even while stopped, so release them before Git's check.
-    if (own.length === runs.length) await this.ctx.removeEnvironment({ projectId, taskId });
-    // A failed preflight keeps the task, history and checkout available for recovery.
-    for (const worktree of worktrees) await git.assertRemovableWorktree(worktree);
-    if (active) {
-      active.log?.end();
-      this.ctx.active.delete(k);
-    }
-    for (const run of runs) {
-      if (!run.endedAt) this.ctx.deps.db.finishRun(run.id, 'interrupted');
-    }
-    for (const worktree of worktrees) await git.removeWorktree(worktree);
-    for (const branch of branches) await git.deleteBranch(branch);
-    this.ctx.deps.db.setSetting(settingsKey(projectId, taskId), null);
-    this.ctx.setRuntime(projectId, taskId, 'idle');
-    await this.ctx.stages.sync(projectId, taskId);
+    return forgetTaskRun(this.ctx, projectId, taskId);
   }
 }

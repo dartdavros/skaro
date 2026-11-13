@@ -6,6 +6,8 @@ export interface ComposePort {
   [key: string]: unknown;
 }
 export interface ComposeModel {
+  volumes?: Record<string, { name?: string; external?: boolean }>;
+  networks?: Record<string, { name?: string; external?: boolean }>;
   services: Record<string, { ports?: ComposePort[]; [key: string]: unknown }>;
 }
 

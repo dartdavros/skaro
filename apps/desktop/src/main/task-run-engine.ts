@@ -1,3 +1,5 @@
+import { busyTaskEnvironments } from './task-environment-consumers';
+import { C4TaskCoordination } from './c4-task-coordination';
 import { RunQueue, type TaskKey, type TaskRuntime } from '@skaro/core';
 import { updateTaskRuntime } from './task-runtime-state';
 import type { MessageInput } from '../shared/ipc';
@@ -28,6 +30,12 @@ import { TaskEnvironmentReviews, isReviewQueueKey } from './task-environment-rev
 import { taskEnvironmentFinished } from './task-environment-finished';
 import { TaskRunContinuation } from './task-run-continuation';
 import { TaskResourceCleanup } from './task-resource-cleanup';
+import { executeResourceQueue } from './resource-task-queue';
+import { resourcesFor } from './resource-execution';
+import { LocalCandidates } from './local-candidates';
+import { TaskIncidents } from './task-incidents';
+import { captureStartupIncident } from './incident-startup';
+import { TaskFileReads } from './task-file-reads';
 
 function taskKey(k: string): TaskKey {
   const [projectId, taskId] = k.split('\n') as [string, string];
@@ -36,6 +44,10 @@ function taskKey(k: string): TaskKey {
 
 /** Shared state and composition of the task-run services. */
 export class TaskRunEngine {
+  readonly files = new TaskFileReads(this);
+  readonly incidents = new TaskIncidents(this);
+  readonly incidentCaptures = new Set<Promise<void>>();
+  readonly localCandidates = new LocalCandidates(this);
   closing = false;
   readonly continuation = new TaskRunContinuation(this);
   readonly cleanup = new TaskResourceCleanup(this);
@@ -60,8 +72,10 @@ export class TaskRunEngine {
   readonly stages = new TaskRunStages(this);
   readonly handoff = new TaskRunHandoff(this);
   readonly processes: TaskRunProcesses;
+  readonly architecture: C4TaskCoordination;
   constructor(deps: TaskRunDeps, slots = 3) {
     this.deps = deps;
+    this.architecture = new C4TaskCoordination(this);
     this.processes = new TaskRunProcesses(deps.db);
     this.startup = new TaskStartup(deps.db);
     this.integrations = new TaskIntegrations(this);
@@ -82,6 +96,7 @@ export class TaskRunEngine {
     });
     this.queue = new RunQueue({
       slots,
+      externalAdmission: !!resourcesFor(deps.db),
       canRun: () => undefined,
       blocked: (key) => {
         if (isReviewQueueKey(key)) return this.reviews.blocked(key);
@@ -94,12 +109,7 @@ export class TaskRunEngine {
               this.handoff.blocked(key) ||
               this.stages.blocked(key);
       },
-      start: async (key) => {
-        if (isReviewQueueKey(key)) return this.reviews.run(key);
-        await this.reviews.ready();
-        const op = this.integrations.operation(key);
-        return op ? this.integrations.run(op) : this.scheduling.begin(key);
-      },
+      start: (key) => executeResourceQueue(this, key),
     });
     this.queue.on((event) => {
       if (isReviewQueueKey(event.taskId)) {
@@ -115,6 +125,11 @@ export class TaskRunEngine {
       if (event.type === 'queued') setRuntime('queued');
       if (event.type === 'finished' && event.error) {
         this.startup.fail(projectId, taskId, errorText(event.error));
+        const capture = captureStartupIncident(this, projectId, taskId, event.error);
+        this.incidentCaptures.add(capture);
+        void capture
+          .finally(() => this.incidentCaptures.delete(capture))
+          .catch((error) => console.error('Startup incident:', error));
         const active = this.active.get(key(projectId, taskId));
         if (active) this.history.notice(active, 'other', 'error', errorText(event.error));
         setRuntime('failed');
@@ -128,21 +143,7 @@ export class TaskRunEngine {
       projectScope: deps.db.shell.projectScope,
       dataDir: deps.dataDir,
       projects: deps.projects,
-      busy: () => [
-        ...this.reviews.protectedEnvironments(),
-        ...[...this.active.values()].filter((active) => active.afterTurn).map(checkoutKey),
-        ...this.queue.state().running.map((k) => {
-          const review = this.reviews.environment(k);
-          if (review) return review;
-          const active = this.active.get(k);
-          const op = this.integrations.operation(k);
-          return op
-            ? { projectId: op.projectId, taskId: `integration-${op.id}` }
-            : active
-              ? checkoutKey(active)
-              : taskKey(k);
-        }),
-      ],
+      busy: (stoppedReview) => busyTaskEnvironments(this, stoppedReview),
       finished: async (task) => {
         if (
           !(await taskEnvironmentFinished(
@@ -173,13 +174,18 @@ export class TaskRunEngine {
   }
 
   /** Docker being away must not fail a merge or a deletion; the next pass removes what is left. */
-  async removeEnvironment(task: TaskKey): Promise<void> {
+  async removeEnvironment(
+    task: TaskKey,
+    options: { requireSuccess?: boolean } = {},
+  ): Promise<void> {
     await this.reviews.stopEnvironment(task);
     const failures = await this.environments
       .destroy(task)
       .catch((error: unknown) => [String(error)]);
     if (failures.length) console.error(`environment of ${task.taskId}: ${failures.join('; ')}`);
     if (!this.closing) setImmediate(() => this.limitEnvironments());
+    if (failures.length && options.requireSuccess)
+      throw new Error(`Task environment retained: ${failures.join('; ')}`);
   }
 
   /** Finished tasks lose their environments; idle services always stop. */
