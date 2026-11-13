@@ -15,6 +15,10 @@ export interface BackgroundHandle {
 export class BackgroundWork {
   private jobs: BackgroundJob[] = [];
   private emit?: (state: BackgroundState) => void;
+  private archive?: (job: BackgroundJob) => void;
+  attachArchive(archive: (job: BackgroundJob) => void): void {
+    this.archive = archive;
+  }
 
   attach(emit: (state: BackgroundState) => void): void {
     this.emit = emit;
@@ -42,6 +46,8 @@ export class BackgroundWork {
       ...(params ? { params } : {}),
       state: 'running',
       startedAt: Date.now(),
+      ...(params?.projectId ? { projectId: params.projectId } : {}),
+      ...(params?.task ? { taskId: params.task } : {}),
     };
     this.jobs.push(job);
     this.changed();
@@ -59,6 +65,7 @@ export class BackgroundWork {
     job.state = 'done';
     job.endedAt = Date.now();
     if (result) job.result = result;
+    this.archive?.(job);
     // Work that repeats (indexing after each change) stays one row with its count.
     const same = this.jobs.find(
       (other) =>
@@ -78,6 +85,7 @@ export class BackgroundWork {
     job.state = 'failed';
     job.endedAt = Date.now();
     job.error = error instanceof Error ? error.message : String(error);
+    this.archive?.(job);
     this.changed();
   }
 
@@ -89,14 +97,16 @@ export class BackgroundWork {
     result?: (value: T) => Result,
   ): Promise<T> {
     const job = this.start(what, params);
+    let value: T;
     try {
-      const value = await action({ progress: (percent) => this.progress(job, percent) });
-      this.finish(job, result?.(value));
-      return value;
+      value = await action({ progress: (percent) => this.progress(job, percent) });
     } catch (error) {
       this.fail(job, error);
       throw error;
     }
+    // An archive/observer failure cannot turn completed physical work into a failed action.
+    this.finish(job, result?.(value));
+    return value;
   }
 
   private changed(): void {
@@ -113,8 +123,8 @@ export function environmentJob(
 ): [string, Record<string, string>] {
   const project = db.getProject(key.projectId)?.name ?? '';
   return key.taskId.startsWith('integration-')
-    ? ['environment.merge', { project, merge: key.taskId.slice(12, 20) }]
-    : ['environment.task', { project, task: key.taskId }];
+    ? ['environment.merge', { projectId: key.projectId, project, merge: key.taskId.slice(12, 20) }]
+    : ['environment.task', { projectId: key.projectId, project, task: key.taskId }];
 }
 
 /** What a cleanup gave back, in the owner's units. */

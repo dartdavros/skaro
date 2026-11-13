@@ -60,6 +60,7 @@ export class ChatViews {
       )
         return {
           projectId,
+          decisionEpoch: saved.logPath,
           chat: this.summary(saved),
           settings: this.ctx.settings.settings(saved),
           timeline: cached.view.timeline,
@@ -100,6 +101,7 @@ export class ChatViews {
       );
     return {
       projectId,
+      decisionEpoch: live.chat.logPath,
       chat: this.summary(live.chat),
       settings: this.ctx.settings.settings(live.chat),
       timeline: read?.timeline ?? presentationState(live.timeline.state),

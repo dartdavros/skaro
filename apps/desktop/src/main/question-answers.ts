@@ -6,6 +6,8 @@ import {
   type TimelineState,
 } from '@skaro/timeline';
 import type { AppDb } from '@skaro/core';
+import { randomUUID } from 'node:crypto';
+import { coordinationHash } from './project-coordinator-request';
 import { withoutSecrets } from './session-log';
 import { queueOwnerMessage } from './owner-commands';
 import { openPrivate, sealPrivate } from './private-input';
@@ -16,6 +18,9 @@ interface SavedAnswer {
   interaction: Question;
   answer: InteractionAnswer;
   encrypted?: string;
+  deliveryId?: string;
+  requestEpoch?: string;
+  acceptedAt?: number;
 }
 /** Decisions and all answers precede continuation. Several cards become one complete delivery. */
 export class QuestionAnswers {
@@ -29,47 +34,78 @@ export class QuestionAnswers {
     question: Question,
     answer: InteractionAnswer,
     emit: (event: TimelineEvent) => void,
+    requestEpoch?: string,
   ): void {
     validateQuestionAnswer(question, answer);
     const previous = this.pending({ items: [], turns: [], interactions: [], status: 'idle' });
-    if (previous && this.db.commands.get(previous.commandId)?.state === 'delivered')
+    if (
+      previous &&
+      this.modern() &&
+      this.db.commands.get(previous.commandId)?.state === 'delivered'
+    )
       this.delivered();
     const sanitized = withoutSecrets(question, answer);
     const encrypted = question.questions.some((q) => q.secret) ? sealPrivate(answer) : undefined;
     const saved = this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? [];
-    const entries = [
-      ...saved.filter((entry) => entry.interaction.id !== question.id),
-      { interaction: question, answer: sanitized, ...(encrypted ? { encrypted } : {}) },
-    ];
+    if (
+      saved.some(
+        (entry) =>
+          entry.interaction.id === question.id &&
+          (!entry.deliveryId || entry.requestEpoch !== requestEpoch),
+      )
+    )
+      throw new Error(
+        'An earlier answer with this adapter ID still awaits delivery; review is required.',
+      );
+    const existing = saved.find(
+      (entry) =>
+        entry.deliveryId &&
+        entry.interaction.id === question.id &&
+        entry.requestEpoch === requestEpoch,
+    );
+    if (
+      existing &&
+      coordinationHash(existing.encrypted ? openPrivate(existing.encrypted) : existing.answer) !==
+        coordinationHash(answer)
+    )
+      throw new Error('This answer was already accepted; its delivery cannot be replaced.');
+    const entry: SavedAnswer = {
+      interaction: question,
+      answer: sanitized,
+      deliveryId: existing?.deliveryId ?? randomUUID(),
+      requestEpoch,
+      acceptedAt: existing?.acceptedAt ?? Date.now(),
+      ...(encrypted ? { encrypted } : {}),
+    };
+    const entries = [...saved.filter((entry) => entry.interaction.id !== question.id), entry];
     this.db.setSetting(this.key, entries);
-    this.replay({ interaction: question, answer: sanitized }, emit);
+    this.replay(entry, emit);
   }
-  private replay(entry: SavedAnswer, emit: (event: TimelineEvent) => void): void {
+  private replay(entry: SavedAnswer, emit: (event: TimelineEvent) => void, close = true): void {
     const { interaction: question, answer } = entry;
     emit({
       t: 'item.upsert',
       item: {
-        id: `skaro-decision-${question.id}`,
+        id: this.decisionId(entry),
         turnId: '',
         kind: 'decision',
         interaction: question,
         answer,
         status: 'done',
-        startedAt: Date.now(),
+        startedAt: entry.acceptedAt ?? 0,
         native: { agent: 'skaro', type: 'decision', ref: question.id },
       },
     });
-    emit({ t: 'interaction.closed', id: question.id, resolution: 'answered' });
+    if (close) emit({ t: 'interaction.closed', id: question.id, resolution: 'answered' });
   }
   /** Replay acceptance after a crash between the database commit and the journal write. */
   recover(state: TimelineState, emit: (event: TimelineEvent) => void): void {
     const entries = this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? [];
     for (const entry of entries) {
-      if (
-        state.interactions.some((i) => i.id === entry.interaction.id) ||
-        !state.items.some((i) => i.id === `skaro-decision-${entry.interaction.id}`)
-      )
-        this.replay(entry, emit);
+      const matches = !!entry.requestEpoch && entry.requestEpoch === state.turns.at(-1)?.id;
+      const open = state.interactions.some((i) => i.id === entry.interaction.id);
+      if ((open && matches) || !state.items.some((i) => i.id === this.decisionId(entry)))
+        this.replay(entry, emit, open && matches);
     }
   }
   pending(state: TimelineState): (MessageInput & { commandId: string }) | undefined {
@@ -100,11 +136,20 @@ export class QuestionAnswers {
     return {
       text,
       ...(secrets.length ? { privateText: sealPrivate({ text: textOf(decoded), secrets }) } : {}),
-      commandId: `answers-${entries.map((entry) => entry.interaction.id).join('-')}`,
+      commandId: entries.every((entry) => entry.deliveryId)
+        ? `answers-${coordinationHash([this.key, entries.map((entry) => entry.deliveryId)])}`
+        : `answers-${entries.map((entry) => entry.interaction.id).join('-')}`,
     };
   }
   delivered(): void {
     this.db.setSetting(this.key, null);
+  }
+  private modern(): boolean {
+    const entries = this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? [];
+    return entries.length > 0 && entries.every((entry) => !!entry.deliveryId);
+  }
+  private decisionId(entry: SavedAnswer): string {
+    return `skaro-decision-${entry.deliveryId ?? entry.interaction.id}`;
   }
   queue(
     method: 'chat.send' | 'task.send',
@@ -114,8 +159,14 @@ export class QuestionAnswers {
   ): void {
     const input = this.pending(state);
     if (!input) return;
+    // Old adapter IDs alone cannot prove which acceptance was delivered.
+    if (!this.modern()) return;
     const command = this.db.commands.get(input.commandId);
+    if (command && (command.owner !== `${project}:${owner}` || command.method !== method))
+      throw new Error('Saved answer delivery belongs to another owner; review is required.');
     if (command?.state === 'delivered') {
+      if (!this.modern())
+        throw new Error('Legacy answer delivery is ambiguous; review is required.');
       this.delivered();
       return;
     }

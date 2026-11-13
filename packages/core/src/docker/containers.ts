@@ -5,6 +5,7 @@ import { docker, ids } from './cli.ts';
 export interface DockerContainer {
   Id: string;
   Name: string;
+  Image?: string;
   State?: {
     Running?: boolean;
     Restarting?: boolean;
@@ -13,8 +14,11 @@ export interface DockerContainer {
     Health?: { Status: string };
   };
   Config?: { Labels?: Record<string, string> | null };
-  NetworkSettings?: { Ports?: Record<string, { HostIp: string; HostPort: string }[] | null> };
-  Mounts: { Type: string; Source: string }[];
+  NetworkSettings?: {
+    Ports?: Record<string, { HostIp: string; HostPort: string }[] | null>;
+    Networks?: Record<string, { NetworkID?: string }>;
+  };
+  Mounts: { Type: string; Source: string; Name?: string; Destination?: string; RW?: boolean }[];
 }
 
 export const COMPOSE_PROJECT = 'com.docker.compose.project';

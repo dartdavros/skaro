@@ -2,6 +2,14 @@ import { DbTable } from './table.ts';
 import { type Row } from './rows.ts';
 
 export class DbSettings extends DbTable {
+  /** Synchronous metadata writes on the shared connection, never external work or awaits. */
+  atomic<T>(action: () => T): T {
+    let result!: T;
+    this.transaction(() => {
+      result = action();
+    });
+    return result;
+  }
   // ── settings ─────────────────────────────────────────────────────────────
 
   getSetting<T>(key: string, fallback: T, options: { strict?: boolean } = {}): T {

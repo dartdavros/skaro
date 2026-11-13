@@ -38,6 +38,26 @@ export async function startTaskEnvironment(
         'may have been replaced since the shell was attached. Name these addresses in your verification result.',
     };
   } catch (error) {
+    if (ctx.deps.coordinators) {
+      const resource = ctx.deps.db.resources
+        .list(scope.projectId)
+        .find(
+          (r) =>
+            r.kind === 'environment' &&
+            r.owner.kind === 'task' &&
+            r.owner.id === checkoutKey(active).taskId,
+        );
+      await ctx.incidents.report(
+        active,
+        errorText(error),
+        {
+          cause: 'environment',
+          code: 'environment_start_failed',
+          ...(resource ? { resourceId: resource.id, condition: 'environment-ready' as const } : {}),
+        },
+        'controller',
+      );
+    }
     if (error instanceof EnvironmentUnavailable) {
       return {
         text:

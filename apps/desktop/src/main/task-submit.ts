@@ -5,6 +5,7 @@ import { requireBuiltinSubmission } from './builtin-submission';
 import { key } from './task-run-helpers';
 import { C4ValidationError } from '@skaro/core';
 import { c4ToolFailure, recordC4Diagnostic } from './c4-tool-diagnostic';
+import { verifyPrerequisites } from './task-preflight-inputs';
 
 export async function submitTaskResult(
   ctx: TaskRunEngine,
@@ -22,6 +23,14 @@ export async function submitTaskResult(
   try {
     return await taskTool(ctx, scope, async () => {
       const active = ctx.requireActive(scope.projectId, scope.taskId!);
+      const context = ctx.project(scope.projectId);
+      if (args.criteria.every((item) => item.met))
+        await verifyPrerequisites(
+          await context.store.load(),
+          active.taskId,
+          active.run.worktree ?? context.root,
+          'result',
+        );
       if (active.run.agent !== 'skaro') return ctx.results.submitResult(args, scope);
       return ctx.results.submitResult(args, scope, async () => {
         if (!args.criteria.length || args.criteria.some((item) => item.met))

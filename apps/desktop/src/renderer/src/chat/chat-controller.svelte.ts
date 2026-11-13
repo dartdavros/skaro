@@ -1,3 +1,5 @@
+import { chatFileActions } from './feed-file-actions';
+import { watchDecisionImport } from '../decisions/source-navigation.svelte';
 import { chatDefaults } from './chat-defaults';
 import { chatModalSettings } from './chat-modal-settings';
 import { OwnerMessages } from '../feed/owner-messages.svelte';
@@ -47,6 +49,9 @@ export function createChatController(
   let modal = $state(false);
   /** Proposal item of the import whose review screen is open (ImportReview mockup). */
   let reviewing = $state<string | undefined>();
+  watchDecisionImport(projectId, chatId, (id) => {
+    reviewing = id;
+  });
   /** The project has code of its own: the start screen offers a feature or a fix (D-32). */
   let hasCode = $state(false);
   void window.skaro
@@ -180,6 +185,9 @@ export function createChatController(
   }
 
   provideFeed({
+    get draftOwner() {
+      return JSON.stringify([projectId, 'chat', chatId, view?.decisionEpoch ?? '']);
+    },
     ...historyActions(
       projectId,
       (error) => {
@@ -194,17 +202,9 @@ export function createChatController(
     get interactive() {
       return !archived;
     },
-    openPath: (path) =>
-      void guard(() => window.skaro.invoke('files.open', projectId, '', path)).catch(
-        () => undefined,
-      ),
-    existing: (paths) => window.skaro.invoke('files.exist', projectId, '', paths).catch(() => []),
-    fileDiff: (path) => window.skaro.invoke('files.diff', projectId, '', path),
-    openExternal: (url) => void window.skaro.invoke('shell.openExternal', url),
+    ...chatFileActions(projectId, guard),
     viewImage: (src) => (viewer = src),
-    stopBackground: () => undefined,
     respond,
-    merge: () => Promise.resolve(),
     restart: () => void send({ text: t('chat.continue') }).catch(() => undefined),
     proposal: (itemId: string, action: ProposalAction) => {
       const chat = chatId;

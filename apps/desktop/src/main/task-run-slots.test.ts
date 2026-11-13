@@ -1,10 +1,10 @@
 import { Timeline } from '@skaro/timeline';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { TaskRunEngine } from './task-run-engine';
+import type { TaskRunEngine } from './task-run-engine';
 import { key } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
-import { db, dir, projectId, projects, taskRunDeps } from './task-run-test-support';
+import { db, dir, projectId, projects, restartTaskEngine } from './task-run-test-support';
 
 async function startedTask(engine: TaskRunEngine, title: string): Promise<ActiveRun> {
   const context = projects.get(projectId);
@@ -30,7 +30,7 @@ async function startedTask(engine: TaskRunEngine, title: string): Promise<Active
 
 describe('slot per agent turn', () => {
   it('holds a later message of a started task in the queue until a slot is free', async () => {
-    const engine = new TaskRunEngine(taskRunDeps(), 1);
+    const engine = await restartTaskEngine(1);
     try {
       // No agent process: the message reaches the point where it would be handed to one.
       const delivered: string[] = [];

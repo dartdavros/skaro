@@ -9,6 +9,7 @@ import type { IntegrationHistory } from './integration-history';
 import { taskBrowserServer } from './task-browser';
 import { IntegrationAgentUnavailable } from './integration-failure';
 import { UnstartedInputs } from './integration-unstarted-inputs';
+import { resourceSessionAdmission } from './resource-session';
 
 export interface ResolverSession {
   session: AgentSession;
@@ -69,6 +70,15 @@ export async function runIntegrationWorker(
         : undefined;
     ctx.integrations.assertExecuting(op);
     session = await ctx.deps.agents.adapter(settings.agent).start({
+      resourceAdmission: resourceSessionAdmission(
+        ctx.deps.db,
+        op.projectId,
+        `integration:${op.id}`,
+        `managed:${settings.agent}`,
+        () => ctx.integrations.assertExecuting(op),
+        op.worktree,
+        worker,
+      ),
       cwd: op.worktree,
       model: settings.model,
       effort: settings.effort,

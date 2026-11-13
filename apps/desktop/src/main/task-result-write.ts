@@ -40,6 +40,10 @@ export async function writeTaskResult(
   const met = criteria.map((_, index) => verdicts.get(index + 1)!.met);
   try {
     await beforeWrite?.();
+    if (met.every(Boolean)) {
+      const pending = await ctx.architecture.submission(active);
+      if (pending) return reply(pending);
+    }
     if (met.every(Boolean))
       await assertC4TaskReview(
         ctx.deps.db,

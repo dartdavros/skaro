@@ -7,10 +7,13 @@ import {
   type InteractionAnswer,
 } from '@skaro/timeline';
 import type { MessageInput } from '../shared/ipc';
+import { resourcesFor } from './resource-execution';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ResolverSession } from './integration-worker';
 import { QuestionAnswers } from './question-answers';
 import { hasOwnerCommand } from './owner-command-history';
+import { renewIntegrationDispatch, requireIntegrationDispatch } from './integration-dispatch-fence';
+import { decisionIsSafety } from './decision-authority';
 import type { TimelineEvent } from '@skaro/timeline';
 import {
   currentIntegration,
@@ -45,7 +48,7 @@ export class IntegrationControls {
   async send(projectId: string, taskId: string, input: MessageInput): Promise<boolean> {
     const op = this.current(projectId, taskId);
     if (!op) return false;
-    await this.deliver(op, input);
+    await this.deliver(op, input, !input.internal);
     return true;
   }
 
@@ -63,10 +66,16 @@ export class IntegrationControls {
     }
   }
 
-  private async deliver(op: IntegrationOperation, input: MessageInput): Promise<void> {
+  private async deliver(
+    op: IntegrationOperation,
+    input: MessageInput,
+    freshOwner = false,
+  ): Promise<void> {
     const timeline = (await this.ctx.integrations.history.state(op)).state;
     assertQuestionMessageAllowed(timeline, input.internal);
     if (hasOwnerCommand(timeline, input.commandId)) return;
+    if (freshOwner) renewIntegrationDispatch(this.ctx.deps.db, op.projectId, op.id);
+    else requireIntegrationDispatch(this.ctx.deps.db, op.projectId, op.id);
     const live = this.sessions.get(op.id);
     if (live) {
       const decoded = this.ctx.integrations.history.secrets(op).input(input);
@@ -107,6 +116,8 @@ export class IntegrationControls {
     const interaction = timeline.state.interactions.find((value) => value.id === scoped);
     if (!interaction) throw new Error('This integration interaction is no longer open.');
     validateQuestionAnswer(interaction, answer);
+    if (!decisionIsSafety({ kind: 'respond', answer }))
+      renewIntegrationDispatch(this.ctx.deps.db, projectId, op.id);
     if (interaction.kind === 'question' && answer.kind === 'question')
       this.ctx.integrations.history
         .secrets(op)
@@ -117,7 +128,12 @@ export class IntegrationControls {
     if (interaction.kind === 'question' && (isAsyncQuestion(interaction) || !live)) {
       const mailbox = new QuestionAnswers(this.ctx.deps.db, `integration.${op.id}`);
       const events: TimelineEvent[] = [];
-      mailbox.accept(interaction, answer, (event) => events.push(event));
+      mailbox.accept(
+        interaction,
+        answer,
+        (event) => events.push(event),
+        timeline.state.turns.at(-1)?.id,
+      );
       for (const event of events) await this.ctx.integrations.history.event(op, event);
       const input = mailbox.pending((await this.ctx.integrations.history.state(op)).state);
       // The answer continues the candidate that asked; a finished one only closes its card.
@@ -145,6 +161,7 @@ export class IntegrationControls {
   async interrupt(projectId: string, taskId: string): Promise<void> {
     const saved = this.current(projectId, taskId);
     if (!saved) return;
+    resourcesFor(this.ctx.deps.db)?.stopOwner(projectId, `integration:${saved.id}`);
     const live = this.sessions.get(saved.id);
     const op = this.ctx.integrations.executing(saved.id) ?? live?.operation ?? saved;
     this.ctx.integrations.pause(op);
@@ -152,6 +169,7 @@ export class IntegrationControls {
     await this.ctx.processes.stop(`verification-${op.id}`);
     this.ctx.integrations.service.interrupt(op.id);
     await live?.session.interrupt();
+    await live?.session.close();
     this.ctx.integrations.setRuntime(op, 'idle');
   }
 }

@@ -1,6 +1,8 @@
 import type { Item } from '@skaro/timeline';
 import type { SkaroScope } from '@skaro/mcp-server';
 import type { TaskRunEngine } from './task-run-engine';
+import { taskC4Protocol } from './c4-protocol';
+import { queueOwnerMessage } from './owner-commands';
 
 /** Preserve the existing C4 decision delivery while the facade composes task services. */
 export async function taskArchitectureEvent(
@@ -32,6 +34,21 @@ export async function taskArchitectureEvent(
   const context = ctx.project(scope.projectId);
   context.invalidate();
   const task = (await context.load()).tasks.find((t) => t.id === scope.taskId);
+  if (taskC4Protocol(ctx.deps.db, scope.projectId, active.run.id) === 'impact-v1') {
+    const execution = ctx.continuation.execution(active);
+    if (
+      task &&
+      !['done', 'cancelled'].includes(task.status) &&
+      active.run.id === scope.runId &&
+      execution.read().enabled
+    )
+      queueOwnerMessage('task.send', scope.projectId, scope.taskId, {
+        internal: true,
+        commandId: `continue-c4-decision-${item.id}-${item.state}-${execution.intentVersion()}`,
+        text: architectureDecision(item),
+      });
+    return;
+  }
   if (task && !['done', 'cancelled'].includes(task.status))
     await ctx.messages
       .continueAfter(active, architectureDecision(item))

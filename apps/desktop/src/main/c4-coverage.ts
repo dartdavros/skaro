@@ -7,6 +7,7 @@ export function c4CoverageProblems(
   taskId: string,
   review?: ReviewC4Args,
   scope = taskC4Scope(artifacts, taskId, []),
+  preservedImplementation = false,
 ): string[] {
   const problems: string[] = [];
   if (scope.kind === 'artifacts') {
@@ -29,7 +30,7 @@ export function c4CoverageProblems(
       problems.push(`SPEC-${task?.spec}/${requirement}: missing task requirement coverage`);
   const affected = reviewedC4Ids(scope, review, model);
   for (const question of model.questions)
-    if (question.affects.some((id) => affected.has(id)))
+    if (!preservedImplementation && question.affects.some((id) => affected.has(id)))
       problems.push(
         `${taskId}: ${question.id} blocks affected IDs ${question.affects.filter((id) => affected.has(id)).join(', ')}: ${question.question}`,
       );

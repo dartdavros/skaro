@@ -9,6 +9,9 @@
   import TitleBar from './TitleBar.svelte';
   import SelectionCopy from './SelectionCopy.svelte';
   import UpdatesModal from './updates/UpdatesModal.svelte';
+  import DecisionModal from './decisions/DecisionModal.svelte';
+  import { decisionNavigation } from './decisions/source-navigation.svelte';
+  import { decisions } from './decisions/decisions.svelte';
   import BackgroundModal from './background/BackgroundModal.svelte';
   import { createNavigation } from './app-navigation.svelte';
   import { updates } from './settings/updates.svelte';
@@ -24,11 +27,30 @@
 <TooltipHost />
 <SelectionCopy />
 <UpdatesModal />
-<BackgroundModal />
+<BackgroundModal
+  onchat={(project, chat) => {
+    nav.sections[project] = 'chat';
+    nav.openChats[project] = chat;
+    decisions.open = false;
+    void nav.openProject(project);
+  }}
+/>
+<DecisionModal
+  onopen={(origin, importId) => {
+    decisionNavigation.origin = origin;
+    decisionNavigation.importId = importId;
+    nav.sections[origin.projectId] = origin.kind === 'task' ? 'tasks' : 'chat';
+    if (origin.kind === 'task') nav.openTasks[origin.projectId] = origin.id;
+    else nav.openChats[origin.projectId] = origin.id;
+    decisions.open = false;
+    void nav.openProject(origin.projectId);
+  }}
+/>
 <NewProjectModal bind:open={nav.newProject} oncreated={(p) => void nav.projectAdded(p)} />
 
 <div class="app">
   <TitleBar
+    project={nav.activeProject}
     locked={agents.none}
     tabs={nav.projectTabs}
     active={nav.view === 'project' ? nav.tabs.active : undefined}

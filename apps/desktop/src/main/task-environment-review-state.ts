@@ -1,5 +1,6 @@
 import type { TaskKey } from '@skaro/core';
 import type { TaskView } from '../shared/ipc';
+import type { HeldResource } from './resource-execution';
 
 function completion() {
   let resolve!: () => void;
@@ -25,6 +26,7 @@ export class EnvironmentReview implements SavedEnvironmentReview {
   state: NonNullable<TaskView['environmentReview']> = 'queued';
   cancelled = false;
   cleanupFailed = false;
+  holding?: HeldResource;
   readonly controller = new AbortController();
   readonly ready = completion();
   readonly ended = completion();

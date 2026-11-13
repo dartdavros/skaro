@@ -11,6 +11,21 @@
 | [product.md](product.md)                                       | Продуктовая концепция, основной сценарий, MVP и отложенные возможности                  |
 | [architecture.md](architecture.md)                             | Целевая архитектура, процессы, артефакты, агенты, MCP и слияние                         |
 | [implementation-plan.md](implementation-plan.md)               | Статус реализации по исходникам, остаток работы и ограничения проверки                  |
+| [ADR-0049](adr/0049-project-archiagent.md)                      | Принятая целевая архитектура архиагента, ресурсов и C4; реализация открыта |
+| [archiagent.md](archiagent.md)                                 | Общий координатор проекта, блокеры, память, полномочия и решения владельца |
+| [project-resources.md](project-resources.md)                   | Владение окружениями, общий допуск по ресурсам, ожидания и безопасная очистка |
+| [c4-workflow.md](c4-workflow.md)                               | Новый целевой порядок: автоматическая актуализация и согласование существенных решений |
+| [archiagent-plan.md](archiagent-plan.md)                       | Общий порядок внедрения AC/RC/C4, зависимости и сквозная приёмка AG-1 |
+| [archiagent-coordination-plan.md](archiagent-coordination-plan.md) | Подробные этапы AC-1–AC-5: координация, права, интерфейс и восстановление |
+| [archiagent-coordination-ac1.md](archiagent-coordination-ac1.md) | Реализация AC-1: durable dispatch, свидетельства и границы локальной проверки |
+| [archiagent-coordination-ac2.md](archiagent-coordination-ac2.md) | AC-2 завершён: общая память, preflight, локальная установка с откатом; приёмка 11/11 |
+| [archiagent-coordination-ac3.md](archiagent-coordination-ac3.md) | AC-3 завершён: блокеры, полномочия и безопасное продолжение; локальная приёмка 11/11 |
+| [archiagent-coordination-ac5.md](archiagent-coordination-ac5.md) | AC-5 завершён: миграция, восстановление, реальная приёмка координатора 9/9 и evidence для AG-1 |
+| [archiagent-resource-plan.md](archiagent-resource-plan.md)     | Подробные этапы RC-1–RC-4: учёт, ресурсный допуск, очистка и проверка |
+| [archiagent-resource-rc1.md](archiagent-resource-rc1.md)       | Реализация RC-1: реестр, защита ресурсов, проверки и границы приёмки |
+| [archiagent-resource-rc2.md](archiagent-resource-rc2.md)       | RC-2 завершён: общий диспетчер, бюджеты и сквозная приёмка Cat-pilot |
+| [archiagent-c4-plan.md](archiagent-c4-plan.md)                 | Подробные этапы C4-1–C4-3: классификация, сопровождение, миграция и аудит |
+| [archiagent-c4-1.md](archiagent-c4-1.md) | Контракт C4-1, классификация, совместимость и результаты проверки |
 | [ui-baseline.md](ui-baseline.md)                               | Принятый дизайн в коде, точки входа и правила дальнейших UI-правок                      |
 | [c4.md](c4.md)                                                 | Действующий контракт модели C4, документов, просмотра и согласования изменений          |
 | [project-graph.md](project-graph.md)                           | Полноценный граф на Sigma.js; C4 и граф в основном меню после задач                     |

@@ -207,6 +207,8 @@ export async function verifyNativeModelPlan(input: {
       notice: 'Native model planning, not accepted task execution or submission',
     };
   } finally {
+    services?.coordinators.stopAccepting();
+    services?.resources.stopAccepting();
     await session?.close();
     await drain;
     if (services) {
@@ -219,6 +221,9 @@ export async function verifyNativeModelPlan(input: {
         services.graph.close(),
         services.ci.close(),
       ]);
+      await services.managedCaches.close();
+      await services.coordinators.close();
+      await services.resources.close();
       services.projects.close();
     }
     await closeBackground();

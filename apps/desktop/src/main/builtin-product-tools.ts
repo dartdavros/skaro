@@ -12,6 +12,8 @@ export async function productSessionTools(
   input: BuiltinSessionPreparation,
 ) {
   const reads = new Set([
+    'read_project_incidents',
+    'read_project_memory',
     'get_project_context',
     'get_c4_context',
     'read_task_history',

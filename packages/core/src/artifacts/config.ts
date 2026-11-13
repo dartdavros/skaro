@@ -12,6 +12,7 @@ import type {
 import { DEFAULT_CONFIG } from './model.ts';
 import { readChecks } from './checks.ts';
 import { environmentYaml, readEnvironment } from './environment.ts';
+import { parseProjectWorkflow } from '../coordination/preflight.ts';
 
 export async function readConfig(
   files: ArtifactFiles,
@@ -40,7 +41,14 @@ export async function readConfig(
   const bool = (value: unknown, fallback: boolean | undefined, base: boolean): boolean =>
     typeof value === 'boolean' ? value : (fallback ?? base);
   const environment = readEnvironment(raw['environment'], problems);
+  let workflow: ProjectConfig['workflow'];
+  try {
+    workflow = parseProjectWorkflow(raw['workflow']);
+  } catch (error) {
+    problems.push({ path: '.skaro/config.yaml', message: String(error) });
+  }
   return {
+    ...(workflow ? { workflow } : {}),
     ...(environment ? { environment } : {}),
     checks: readChecks(raw['checks'], problems),
     defaultAgent: str(raw['default_agent']) ?? DEFAULT_CONFIG.defaultAgent,
@@ -78,6 +86,7 @@ export async function writeConfig(
   };
   const autoAccept = own('autoAcceptDocs', config.chat.autoAcceptDocs);
   const yaml = stringifyYaml({
+    workflow: config.workflow,
     default_agent: config.defaultAgent,
     default_model: config.defaultModel,
     default_effort: config.defaultEffort,

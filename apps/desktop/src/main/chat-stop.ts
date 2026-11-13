@@ -2,12 +2,19 @@ import { randomUUID } from 'node:crypto';
 import { operationTimeout } from '@skaro/timeline';
 import type { ChatEngine } from './chat-engine';
 import type { LiveChat } from './chat-model';
-import { blockOwnerMessages, cancelOwnerMessages, CommandCancelled } from './owner-commands';
+import { resourcesFor } from './resource-execution';
+import {
+  blockOwnerMessages,
+  stopOwnerMessages,
+  CommandCancelled,
+  confirmOwnerMessagesStopped,
+} from './owner-commands';
 
 /** Stop is an admission barrier, followed by native shutdown, never an optimistic idle flag. */
-export function stopChat(ctx: ChatEngine, live: LiveChat): Promise<void> {
+export function stopChat(ctx: ChatEngine, live: LiveChat, commands: string[] = []): Promise<void> {
   if (live.stopping) return live.stopping;
   const { projectId, chat } = live;
+  resourcesFor(ctx.deps.db)?.stopOwner(projectId, `chat:${chat.id}`);
   const unblock = blockOwnerMessages(
     projectId,
     chat.id,
@@ -27,7 +34,7 @@ export function stopChat(ctx: ChatEngine, live: LiveChat): Promise<void> {
   const session = live.session;
   const work = (async () => {
     try {
-      cancelOwnerMessages(projectId, chat.id);
+      commands = [...new Set([...commands, ...stopOwnerMessages(projectId, chat.id)])];
       ctx.planningContinuation.stop(
         live,
         'Interrupted by the owner; resume only on explicit instruction.',
@@ -47,6 +54,15 @@ export function stopChat(ctx: ChatEngine, live: LiveChat): Promise<void> {
       // Retire the transport as well: SDK queues/background work must not survive Stop.
       // NativeSession.close verifies owned process trees; the native thread ID stays resumable.
       await ctx.sessions.detach(live);
+      await operationTimeout(
+        confirmOwnerMessagesStopped(projectId, chat.id, commands, {
+          kind: 'chat',
+          id: chat.id,
+          version: requestId,
+        }),
+        15_000,
+        'Interrupted message delivery has not settled',
+      );
       for (const interaction of [...live.timeline.state.interactions]) {
         if (
           interaction.kind === 'approval' ||

@@ -119,7 +119,11 @@ export interface BackgroundMethods
   'c4.save': (record: C4ProposalRecord) => void;
   'c4.prepare': (
     root: string,
-    args: ProposeC4Args & { locale: string; codeRoot: string },
+    args: ProposeC4Args & {
+      locale: string;
+      codeRoot: string;
+      protocol?: import('@skaro/core').C4Protocol;
+    },
     scope: SkaroScope,
   ) => Promise<C4ProposalRecord>;
   'c4.prepareMigration': (

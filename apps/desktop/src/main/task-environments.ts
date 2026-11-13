@@ -1,43 +1,34 @@
 import { existsSync } from 'node:fs';
 import { join, relative, isAbsolute } from 'node:path';
-import {
-  containerTask,
-  ownProjects,
-  type AppDb,
-  type DockerContainer,
-  type EnvironmentConfig,
-  type TaskKey,
-} from '@skaro/core';
+import { type AppDb, type EnvironmentConfig, type TaskKey } from '@skaro/core';
 import type { Projects } from './projects';
 import { EnvironmentRegistry } from './task-environment-registry';
-import {
-  namedContainers,
-  systemDocker,
-  taskContainers,
-  type EnvironmentDocker,
-} from './task-environment-docker';
-import { reconcileTaskEnvironments } from './task-environment-limit';
+import { systemDocker, type EnvironmentDocker } from './task-environment-docker';
 import type { ConfigureEnvironmentArgs } from '@skaro/mcp-server';
 import { configureEnvironment } from './task-environment-config';
 import {
   describeTaskEnvironment,
   type EnvironmentDescription,
 } from './task-environment-description';
-import { removeCompose } from './task-compose';
 import { refreshEnvironmentPorts } from './task-environment-ports';
 import { startEnvironmentServices, type EnvironmentStartOptions } from './task-environment-start';
 import { environmentLink, environmentLinkAddress } from './task-environment-link';
-import { backgroundWork, environmentJob } from './background-work';
 import { EnvironmentProjectScope } from './task-environment-scope';
-import { EnvironmentPruning } from './task-environment-prune';
+import { EnvironmentResourceLifecycle } from './environment-resource-lifecycle';
+import { reportEnvironmentRegistryFailure } from './environment-resource-diagnostics';
+import { EnvironmentAdmission } from './resource-environment';
+import type { HeldResource } from './resource-execution';
 
 export interface EnvironmentDeps {
-  db: Pick<AppDb, 'getSetting' | 'setSetting' | 'getProject'>;
+  db: Pick<
+    AppDb,
+    'getSetting' | 'setSetting' | 'getProject' | 'listProjects' | 'resources' | 'addEvent'
+  >;
   /** App data folder: task checkouts live in worktrees/<project>/<task>. */
   dataDir: string;
   projects: Projects;
   /** Tasks whose agent works now. */
-  busy: () => TaskKey[];
+  busy: (stoppedReview?: TaskKey) => TaskKey[];
   /** The task is merged, cancelled or gone: its environment has no reason to exist. */
   finished: (key: TaskKey) => Promise<boolean>;
   docker?: EnvironmentDocker;
@@ -62,16 +53,23 @@ export class TaskEnvironments {
   private readonly registry: EnvironmentRegistry;
   private readonly docker: EnvironmentDocker;
   private readonly scope: EnvironmentProjectScope;
-  private readonly pruning = new EnvironmentPruning();
+  private readonly lifecycle: EnvironmentResourceLifecycle;
+  private readonly admission: EnvironmentAdmission;
   /** Docker work runs one at a time: parallel builds and starts are what made tasks hang. */
   private work: Promise<unknown> = Promise.resolve();
   private allocation: Promise<unknown> = Promise.resolve();
 
   constructor(deps: EnvironmentDeps) {
     this.deps = deps;
-    this.registry = new EnvironmentRegistry(deps.db);
+    this.registry = new EnvironmentRegistry(deps.db, () =>
+      reportEnvironmentRegistryFailure(deps.db, deps.projectScope),
+    );
     this.docker = deps.docker ?? systemDocker;
     this.scope = new EnvironmentProjectScope(deps.projectScope);
+    this.admission = new EnvironmentAdmission(deps);
+    this.lifecycle = new EnvironmentResourceLifecycle(deps, this.registry, this.docker, (key) =>
+      this.admission.stopped(key),
+    );
   }
 
   /** Shutdown must drain scheduled cleanup before the application's database is closed. */
@@ -81,25 +79,7 @@ export class TaskEnvironments {
 
   /** Once agent processes have stopped, no task services may outlive the application. */
   close(): Promise<void> {
-    return this.serial('work', async () => {
-      const all = this.scope.containers(
-        await this.docker.inspect(),
-        this.worktrees(),
-        this.names(),
-      );
-      const owned = all.filter(
-        (container) => !!containerTask(container, this.worktrees(), this.names()),
-      );
-      await this.docker.stop(owned);
-    });
-  }
-
-  private worktrees(): string {
-    return join(this.deps.dataDir, 'worktrees');
-  }
-
-  private names(): Map<string, TaskKey> {
-    return new Map(this.registry.all().map((r) => [r.name, r]));
+    return this.serial('work', () => this.lifecycle.close());
   }
 
   private serial<T>(queue: 'work' | 'allocation', action: () => Promise<T>): Promise<T> {
@@ -174,125 +154,66 @@ export class TaskEnvironments {
   }
 
   /** Creates the copy on first use, starts the services and waits until they are ready. */
-  start(key: TaskKey, options: EnvironmentStartOptions = {}): Promise<EnvironmentInfo> {
+  async start(key: TaskKey, options: EnvironmentStartOptions = {}): Promise<EnvironmentInfo> {
     this.scope.require(key);
     const requestedAt = Date.now();
-    return this.serial('work', async () => {
-      const startedAt = Date.now();
-      options.signal?.throwIfAborted();
-      const artifacts = await this.deps.projects.get(key.projectId).load();
-      const problem = artifacts.problems.find(
-        (p) => p.path === '.skaro/config.yaml' && p.message.startsWith('environment:'),
-      );
-      if (problem) throw new EnvironmentUnavailable(`.skaro/config.yaml: ${problem.message}`);
-      const initial = await this.describe(key);
-      if (!initial.config)
-        throw new EnvironmentUnavailable('The project describes no task environment.');
-      if (!existsSync(initial.identity.worktree))
-        throw new EnvironmentUnavailable('The task has no checkout of its own.');
-      this.touch(key);
-      return startEnvironmentServices(key, requestedAt, startedAt, options, {
-        registry: this.registry,
-        docker: this.docker,
-        describe: () => this.describe(key),
-        prepare: async () => {
-          await this.reconcile(key);
-          await this.serial('allocation', () =>
-            refreshEnvironmentPorts(this.registry, key, this.docker),
+    const description = await this.describe(key);
+    return this.admission.start(
+      key,
+      options,
+      (admitted) =>
+        this.serial('work', async () => {
+          options = admitted;
+          const startedAt = Date.now();
+          options.signal?.throwIfAborted();
+          const artifacts = await this.deps.projects.get(key.projectId).load();
+          const problem = artifacts.problems.find(
+            (p) => p.path === '.skaro/config.yaml' && p.message.startsWith('environment:'),
           );
-        },
-        remove: () => this.remove(key, 'named'),
-      });
-    });
+          if (problem) throw new EnvironmentUnavailable(`.skaro/config.yaml: ${problem.message}`);
+          const initial = await this.describe(key);
+          if (!initial.config)
+            throw new EnvironmentUnavailable('The project describes no task environment.');
+          if (!existsSync(initial.identity.worktree))
+            throw new EnvironmentUnavailable('The task has no checkout of its own.');
+          this.touch(key);
+          return startEnvironmentServices(key, requestedAt, startedAt, options, {
+            registry: this.registry,
+            docker: this.docker,
+            describe: () => this.describe(key),
+            prepare: async () => {
+              await this.lifecycle.reconcile(key);
+              await this.lifecycle.admit(key);
+              await this.serial('allocation', () =>
+                refreshEnvironmentPorts(this.registry, key, this.docker),
+              );
+            },
+            remove: () => this.lifecycle.remove(key, true),
+            provenance: (description) => this.lifecycle.provenance.begin(key, description),
+            sourceObserved: (source, containers) =>
+              this.lifecycle.resources.beginSource(key, source.project, containers),
+          });
+        }),
+      description,
+    );
   }
 
   /** Stops the task's containers; the copy of the data stays for the next start. */
-  stop(key: TaskKey): Promise<void> {
+  stop(key: TaskKey, consumer?: HeldResource, ownerStopped = false): Promise<void> {
     this.scope.require(key);
-    return this.serial('work', async () => {
-      const all = await this.docker.inspect();
-      await this.docker.stop(taskContainers(all, key, this.worktrees(), this.names()));
-    });
+    return this.serial('work', () =>
+      this.lifecycle.stop(key, undefined, consumer?.lease, ownerStopped),
+    );
   }
 
   /** Removes the environment for good: the task is merged, cancelled or deleted. */
   destroy(key: TaskKey): Promise<string[]> {
     this.scope.require(key);
-    return this.serial('work', async () => {
-      if (
-        this.deps
-          .busy()
-          .some((owner) => owner.projectId === key.projectId && owner.taskId === key.taskId)
-      )
-        return ['The environment is still in use; cleanup will retry after its owner stops.'];
-      const failures = await this.remove(key);
-      if (!failures.length) {
-        const name = this.registry.find(key)?.name;
-        if (name) await removeCompose(this.deps.dataDir, name);
-        this.registry.remove(key);
-      }
-      return failures;
-    });
+    return this.serial('work', () => this.lifecycle.destroy(key));
   }
 
   /** Finished tasks lose their environments; idle services always stop. */
   enforce(): Promise<void> {
-    return this.serial('work', () => this.reconcile());
-  }
-
-  private async remove(key: TaskKey, scope: 'task' | 'named' = 'task'): Promise<string[]> {
-    this.scope.require(key);
-    const all = await this.docker.inspect();
-    const name = this.registry.find(key)?.name;
-    if (!name) return []; // A guessed name or a bind mount never authorizes deletion.
-    const owned =
-      scope === 'named'
-        ? namedContainers(all, name)
-        : taskContainers(all, key, this.worktrees(), this.names());
-    this.registry.update(key, { created: false });
-    return this.docker.remove(owned, ownProjects(name, owned, all));
-  }
-
-  private async reconcile(starting?: TaskKey): Promise<void> {
-    let all: DockerContainer[];
-    try {
-      all = this.scope.containers(await this.docker.inspect(), this.worktrees(), this.names());
-    } catch {
-      return; // No Docker, nothing to limit.
-    }
-    const busy = [...this.deps.busy(), ...(starting ? [starting] : [])];
-    const stale = await reconcileTaskEnvironments({
-      containers: all,
-      worktrees: this.worktrees(),
-      names: this.names(),
-      records: this.scope.records(this.registry.all()),
-      busy,
-      ...(starting ? { starting } : {}),
-      finished: this.deps.finished,
-      stop: (containers) => this.docker.stop(containers),
-    });
-    for (const key of stale) {
-      if (
-        this.deps
-          .busy()
-          .some((owner) => owner.projectId === key.projectId && owner.taskId === key.taskId)
-      )
-        continue;
-      const job = backgroundWork.start(...environmentJob(this.deps.db, key));
-      const failures = await this.remove(key).catch((error: unknown) => [String(error)]);
-      if (!failures.length) {
-        const name = this.registry.find(key)?.name;
-        if (name) await removeCompose(this.deps.dataDir, name);
-        this.registry.remove(key);
-        backgroundWork.finish(job);
-      } else backgroundWork.fail(job, failures.join('; '));
-    }
-    await this.pruning.run(
-      this.docker,
-      this.registry,
-      this.deps.finished,
-      this.deps.busy,
-      this.deps.projectScope,
-    );
+    return this.serial('work', () => this.lifecycle.reconcile());
   }
 }

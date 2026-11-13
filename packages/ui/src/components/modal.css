@@ -1,0 +1,98 @@
+.sk-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--sk-black-a55);
+  backdrop-filter: blur(3px);
+}
+
+.sk-modal-dialog {
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--sk-radius-modal);
+  background: var(--sk-modal);
+  box-shadow:
+    0 30px 80px var(--sk-black-a60),
+    0 0 0 1px var(--sk-white-a4);
+  animation: skIn 0.16s ease-out;
+  outline: none;
+}
+
+.sk-modal-dialog.flush {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.sk-modal-dialog.flush > .sk-modal-head {
+  padding: 18px 18px 14px 20px;
+}
+
+.sk-modal-dialog.flush > .sk-modal-footer {
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 1px solid var(--sk-line);
+  background: var(--sk-bg);
+}
+
+.sk-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sk-modal-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sk-modal-subtitle {
+  font-size: var(--sk-fs-4);
+  color: var(--sk-text-muted);
+}
+
+.sk-modal-title {
+  font-size: var(--sk-fs-10);
+  font-weight: 700;
+  color: var(--sk-text);
+}
+
+.sk-modal-x {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sk-text-muted);
+  cursor: pointer;
+}
+
+.sk-modal-x:hover {
+  background: var(--sk-surface-2);
+  color: var(--sk-text-bright);
+}
+
+.sk-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sk-modal-backdrop.projectScoped {
+  top: 42px;
+}

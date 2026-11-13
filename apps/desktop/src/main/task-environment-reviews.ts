@@ -1,4 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import { resourcesFor } from './resource-execution';
+import {
+  savedEnvironmentReviews,
+  saveEnvironmentReviews,
+  recoverEnvironmentReviews,
+} from './environment-review-persistence';
 import type { TaskKey } from '@skaro/core';
 import type { TaskView } from '../shared/ipc';
 import type { TaskRunEngine } from './task-run-engine';
@@ -10,8 +16,6 @@ import {
   EnvironmentReview as Review,
   type SavedEnvironmentReview as SavedReview,
 } from './task-environment-review-state';
-
-const SAVED = 'environment.reviews';
 
 export function reviewQueueKey(task: TaskKey): string {
   return `${task.projectId}\n@review:${task.taskId}`;
@@ -45,7 +49,7 @@ export class TaskEnvironmentReviews {
 
   /** Recovery and a failed stop still own their services until shutdown is proved. */
   protectedEnvironments(): TaskKey[] {
-    const pending = this.recovered ? [] : this.ctx.deps.db.getSetting<SavedReview[]>(SAVED, []);
+    const pending = this.recovered ? [] : savedEnvironmentReviews(this.ctx.deps.db);
     return [
       ...pending,
       ...[...this.entries.values()].filter(
@@ -137,6 +141,7 @@ export class TaskEnvironmentReviews {
     try {
       await this.ensureRecovered();
       if (review.cancelled) return;
+      review.holding = await resourcesFor(this.ctx.deps.db)?.acquire('review');
       const task = await readSubject(this.ctx.project(review.projectId), review.taskId);
       if (['done', 'cancelled'].includes(task.status))
         throw new Error('This task is already completed.');
@@ -148,6 +153,16 @@ export class TaskEnvironmentReviews {
         },
       });
       if (review.cancelled) return;
+      const environment = await this.ctx.environments.describe(review.environment);
+      const resource = this.ctx.deps.db.resources
+        .list(review.projectId)
+        .find((record) => record.identity.composeProject === environment.identity.name);
+      if (review.holding) {
+        if (!resource) throw new Error('Review environment resource is not registered');
+        review.holding.bind([
+          { resourceId: resource.id, generation: resource.generation, mode: 'shared' },
+        ]);
+      }
       review.state = 'running';
       this.changed(review);
       review.ready.resolve();
@@ -170,6 +185,7 @@ export class TaskEnvironmentReviews {
   }
 
   async stop(projectId: string, taskId: string): Promise<void> {
+    resourcesFor(this.ctx.deps.db)?.stopOwner(projectId, `review:${taskId}`);
     const queueKey = reviewQueueKey({ projectId, taskId });
     const review = this.entries.get(queueKey);
     if (!review) return;
@@ -213,8 +229,8 @@ export class TaskEnvironmentReviews {
   }
 
   private save(): void {
-    this.ctx.deps.db.setSetting(
-      SAVED,
+    saveEnvironmentReviews(
+      this.ctx.deps.db,
       [...this.entries.values()].map(({ projectId, taskId, id, environment }) => ({
         projectId,
         taskId,
@@ -227,7 +243,12 @@ export class TaskEnvironmentReviews {
   private async cleanup(review: Review): Promise<void> {
     await this.ctx.processes.stop(review.id);
     // Keep ownership until services have really stopped; only then can another writer start.
-    await this.ctx.environments.stop(review.environment);
+    await this.ctx.environments.stop(review.environment, review.holding, true);
+    resourcesFor(this.ctx.deps.db)?.releaseOwner(
+      review.projectId,
+      `review:${review.taskId}`,
+      'manual_review_and_services_stopped',
+    );
     this.entries.delete(reviewQueueKey(review));
     this.save();
     this.changed(review);
@@ -251,11 +272,6 @@ export class TaskEnvironmentReviews {
   }
 
   private async recover(): Promise<void> {
-    const saved = this.ctx.deps.db.getSetting<SavedReview[]>(SAVED, []);
-    for (const review of saved) {
-      await this.ctx.processes.stop(review.id);
-      await this.ctx.environments.stop(review.environment);
-    }
-    this.ctx.deps.db.setSetting(SAVED, []);
+    await recoverEnvironmentReviews(this.ctx);
   }
 }

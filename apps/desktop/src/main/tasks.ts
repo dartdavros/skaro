@@ -1,3 +1,4 @@
+import { recoverCoordinatorIncidents } from './coordinator-recovery';
 import { type ProjectArtifacts, type Task } from '@skaro/core';
 import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
 import { type InteractionAnswer, type Item } from '@skaro/timeline';
@@ -14,8 +15,8 @@ import type {
 import { type TaskRunDeps } from './task-run-model';
 import type { HistoryArgs } from '@skaro/mcp-server';
 import { taskTool, trackRun } from './task-run-access';
-import { historyPage, historyText } from './task-history-context';
-import { handoffRecord } from './task-handoff-record';
+import { readTaskHistory } from './task-history-context';
+import { taskDecisionSources } from './task-decision-sources';
 import { serializeTaskMutation } from './project-task-mutations';
 import { TaskRunEngine } from './task-run-engine';
 import { TaskCatalogService } from './task-catalog-service';
@@ -38,6 +39,12 @@ export { requirementsOf } from './task-run-helpers';
 
 /** Public API: composes focused task-run services without owning their workflows. */
 export class TaskRuns {
+  get incidents() {
+    return this.engine.incidents;
+  }
+  get localCandidates() {
+    return this.engine.localCandidates;
+  }
   handoffBuiltin(request: BuiltinTaskHandoffRequest): Promise<void> {
     return this.engine.handoff.changeBuiltin(request);
   }
@@ -125,6 +132,9 @@ export class TaskRuns {
   workdir(projectId: string, taskId: string): Promise<string> {
     return this.engine.views.workdir(projectId, taskId);
   }
+  get files() {
+    return this.engine.files;
+  }
   toggleCriterion(projectId: string, taskId: string, index: number): Promise<void> {
     return serializeTaskMutation(this.engine.project(projectId), () =>
       this.engine.views.toggleCriterion(projectId, taskId, index),
@@ -203,10 +213,16 @@ export class TaskRuns {
   submitResult(args: SubmitResultArgs, scope: SkaroScope): Promise<ToolResult> {
     return submitTaskResult(this.engine, args, scope);
   }
-  reportBlocker(reason: string, scope: SkaroScope): Promise<ToolResult> {
+  reportBlocker(
+    reason: string,
+    scope: SkaroScope,
+    details?: import('@skaro/mcp-server').TaskBlockerDetails,
+  ): Promise<ToolResult> {
     return taskTool(this.engine, scope, async () => {
       const active = this.engine.requireActive(scope.projectId, scope.taskId!);
-      this.engine.continuation.block(active, reason);
+      if (this.engine.deps.coordinators)
+        await this.engine.incidents.report(active, reason, details);
+      else this.engine.continuation.block(active, reason);
       return {
         text: 'The external blocker is recorded. The task remains incomplete; automatic continuation is suspended. Report the precise blocker without asking for a generic continue message.',
       };
@@ -239,20 +255,14 @@ export class TaskRuns {
     return taskTool(this.engine, scope, () => configureTaskEnvironment(this.engine, args, scope));
   }
 
+  recoverCoordination() {
+    return recoverCoordinatorIncidents(this.engine);
+  }
+  decisionSources(projectId: string, only?: string) {
+    return taskDecisionSources(this.engine, projectId, only);
+  }
   readHistory(args: HistoryArgs, scope: SkaroScope): Promise<ToolResult> {
-    return taskTool(this.engine, scope, async () => {
-      const active = this.engine.requireActive(scope.projectId, scope.taskId!);
-      const transfers: string[] = [];
-      let run = active.run;
-      while (run.previousRunId) {
-        transfers.unshift(JSON.stringify({ run: run.id, handoff: handoffRecord(run) }));
-        const previous = this.engine.deps.db.getRun(run.previousRunId);
-        if (!previous) break;
-        run = previous;
-      }
-      const text = [...transfers, historyText(active.timeline.state)].join('\n');
-      return { text: JSON.stringify(historyPage(text, args.query, args.offset, args.limit)) };
-    });
+    return readTaskHistory(this.engine, args, scope);
   }
 
   verifyIntegration(

@@ -1,4 +1,7 @@
 import { dirname } from 'node:path';
+import { taskC4Protocol } from './c4-protocol';
+import { inspectSemanticC4Review } from './c4-semantic-gate';
+import { c4PackageBlocks } from './c4-package-policy';
 import { background } from './background/client';
 import { C4ValidationError, c4Issue, git, type AppDb } from '@skaro/core';
 import { inspectC4ReviewCandidate } from './c4-review-candidate';
@@ -13,6 +16,10 @@ export interface C4TaskReview extends ReviewC4Args {
   baseHead: string;
   modelHash: string;
   scope?: C4TaskScope;
+  protocol?: import('@skaro/core').C4Protocol;
+  semanticReceipt?: string;
+  semanticContextHash?: string;
+  preservation?: import('./c4-preservation').C4Preservation;
 }
 import { c4ArchitectureHash, c4ChangeHash, c4ReviewKey } from './c4-fingerprint';
 export { c4ArchitectureHash, c4ChangeHash, c4ReviewKey } from './c4-fingerprint';
@@ -25,7 +32,8 @@ export async function assertC4TaskReview(
   runId?: string,
 ): Promise<C4TaskReview> {
   const inspected = await inspectC4TaskReviewData(db, context, taskId, checkout, runId);
-  if (inspected.artifactOnly) db.setSetting(c4ReviewKey(context.id, taskId), inspected.review);
+  if (inspected.artifactOnly && inspected.review.protocol !== 'impact-v1')
+    db.setSetting(c4ReviewKey(context.id, taskId), inspected.review);
   return inspected.review;
 }
 
@@ -51,10 +59,14 @@ async function inspectC4TaskReviewData(
   const artifacts = await context.load();
   const baseHead = (await git(checkout, ['rev-parse', artifacts.config.baseBranch])).stdout.trim();
   const actualScope = await readTaskC4Scope(checkout, baseHead, artifacts, taskId);
+  const run = runId ?? db.latestRun(context.id, taskId)?.id;
+  const impact = !!run && taskC4Protocol(db, context.id, run) === 'impact-v1';
   const packages = await background(dirname(db.filePath), 'c4.list', context.id, taskId);
   if (
     packages.some(
-      (p) => p.package.task?.id === taskId && ['pending', 'accepted'].includes(p.item.state),
+      (p) =>
+        p.package.task?.id === taskId &&
+        (impact ? c4PackageBlocks(db, p, run!) : ['pending', 'accepted'].includes(p.item.state)),
     )
   )
     throw new C4ValidationError(
@@ -74,10 +86,21 @@ async function inspectC4TaskReviewData(
       scope: actualScope,
       runId: runId ?? 'artifacts',
       modelHash: c4ArchitectureHash(artifacts, actualScope),
+      ...(impact ? { protocol: 'impact-v1' as const } : {}),
     };
     return { review, artifactOnly: true };
   }
   const review = db.getSetting<C4TaskReview | null>(c4ReviewKey(context.id, taskId), null);
+  if (impact)
+    return {
+      review: await inspectSemanticC4Review(db, context, taskId, run!),
+      artifactOnly: false,
+    };
+  if (review?.protocol && review.protocol !== 'package-v1')
+    throw new C4ValidationError(
+      [c4Issue('C4 review belongs to another protocol.', 'stale_review')],
+      'submission',
+    );
   if (!review || (runId && review.runId !== runId))
     throw new C4ValidationError(
       [

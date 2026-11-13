@@ -63,7 +63,10 @@ export class ChatHistory {
   /** A chat from AppDb, rebuilt from its raw log (principle P2). */
   async restore(projectId: string, chatId: string): Promise<LiveChat> {
     const existing = this.ctx.live.get(chatId);
-    if (existing) return existing;
+    if (existing) {
+      if (existing.projectId !== projectId) throw new Error('The chat belongs to another project');
+      return existing;
+    }
     const chat = this.ctx.deps.db.getChat(chatId);
     if (!chat || chat.projectId !== projectId) throw new Error('The chat is not found');
     const restored = await restoreHistory(

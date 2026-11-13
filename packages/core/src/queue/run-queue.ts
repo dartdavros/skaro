@@ -3,6 +3,8 @@
 export interface RunQueueOptions {
   /** Parallel runs; 3 by default. */
   slots?: number;
+  /** The application resource ledger admits expensive work; this queue only serializes owners. */
+  externalAdmission?: boolean;
   /** Why a task cannot run now (blocked, archived...), or undefined if it can. Checked on enqueue and on start. */
   canRun: (taskId: string) => string | undefined;
   /**
@@ -96,7 +98,7 @@ export class RunQueue {
   }
 
   private pump(): void {
-    while (this.running.size < this.slots) {
+    while (this.options.externalAdmission || this.running.size < this.slots) {
       const next = this.waiting.findIndex((id) => !this.options.blocked?.(id));
       if (next < 0) break;
       const id = this.waiting.splice(next, 1)[0]!;

@@ -2,6 +2,7 @@ import { git, runShell, type ProjectCheck } from '@skaro/core';
 import type { IntegrationOperation } from './integration-model';
 import type { IntegrationDeps } from './integration-service';
 import { checkItem } from './integration-check-feed';
+import { resourcePhase } from './resource-execution';
 
 /** Execute and retain evidence for real checks on the immutable integration candidate. */
 export async function runIntegrationChecks(
@@ -34,22 +35,24 @@ export async function runIntegrationChecks(
         .catch(() => undefined);
     }, 30 * 60_000);
     try {
-      await runShell(check.run, {
-        cwd: op.worktree,
-        env,
-        label: check.name,
-        shell: check.shell,
-        signal: cancellation.signal,
-        processStarted: (pid) => deps.processStarted?.(op, pid),
-        output: (text) => {
-          evidence.output = text;
-          if (Date.now() - lastOutputSave >= 250) {
-            lastOutputSave = Date.now();
-            save(op);
-            show();
-          }
-        },
-      });
+      await resourcePhase('build', () =>
+        runShell(check.run, {
+          cwd: op.worktree,
+          env,
+          label: check.name,
+          shell: check.shell,
+          signal: cancellation.signal,
+          processStarted: (pid) => deps.processStarted?.(op, pid),
+          output: (text) => {
+            evidence.output = text;
+            if (Date.now() - lastOutputSave >= 250) {
+              lastOutputSave = Date.now();
+              save(op);
+              show();
+            }
+          },
+        }),
+      );
       evidence.state = 'passed';
       save(op);
       show(checkItem(op, evidence, index, startedAt, Date.now()));

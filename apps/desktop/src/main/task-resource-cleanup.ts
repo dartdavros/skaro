@@ -1,5 +1,7 @@
 import type { TaskRunEngine } from './task-run-engine';
 import { cleanCompletedWorktrees } from './task-worktree-retention';
+import { cleanCompletedIntegrations } from './integration-cleanup';
+import { managedCachesFor } from './managed-caches';
 
 /** A real hourly sweep, plus startup/completion triggers; overlapping passes coalesce. */
 export class TaskResourceCleanup {
@@ -23,8 +25,28 @@ export class TaskResourceCleanup {
       }));
   }
   private async sweep() {
-    await this.ctx.environments.enforce();
-    if (!this.closed && !this.ctx.closing) await cleanCompletedWorktrees(this.ctx);
+    for (const [phase, action] of [
+      ['environments', () => this.ctx.environments.enforce()],
+      ['integrations', () => cleanCompletedIntegrations(this.ctx)],
+      ['worktrees', () => cleanCompletedWorktrees(this.ctx)],
+      ['history-cache', () => this.ctx.files.sweep()],
+      ['managed-caches', () => managedCachesFor(this.ctx.deps.db)?.sweep() ?? Promise.resolve()],
+    ] as const) {
+      if (this.closed || this.ctx.closing) return;
+      try {
+        await action();
+      } catch (error) {
+        for (const project of this.ctx.deps.db.listProjects()) {
+          if (
+            this.ctx.deps.db.shell.projectScope &&
+            this.ctx.deps.db.shell.projectScope !== project.id
+          )
+            continue;
+          this.ctx.deps.db.addEvent(project.id, 'resource_cleanup_failed', { phase });
+        }
+        console.error(`Resource cleanup ${phase}:`, error);
+      }
+    }
   }
   async close() {
     this.closed = true;

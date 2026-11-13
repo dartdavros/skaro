@@ -1,6 +1,5 @@
 import { Worker } from 'node:worker_threads';
-import { join } from 'node:path';
-import { app } from 'electron';
+import { nativeWorkerEntry } from './worker-entry';
 import {
   EventChannel,
   type AgentSession,
@@ -12,6 +11,7 @@ import type { NativeConfig, NativeOptions, Reply, Request, SessionMethod } from 
 import { RuntimeHostServer, requireModelBaseline } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
 import { requireNativeSessionHost, type NativeSessionHost } from './host-binding';
+import { NativeResources, resourceMethod } from './resources';
 
 const workers = new Set<NativeSession>();
 let closing = false;
@@ -20,6 +20,8 @@ class NativeSession implements AgentSession {
   readonly events = new EventChannel<TimelineEvent>();
   private readonly worker: Worker;
   private readonly options: SessionOptions;
+  private readonly resources: NativeResources;
+  private idleTimer?: NodeJS.Timeout;
   private readonly processes: OwnedProcess[] = [];
   private readonly pending = new Map<
     number,
@@ -37,13 +39,15 @@ class NativeSession implements AgentSession {
   constructor(
     config: NativeConfig,
     options: SessionOptions,
+    resources: NativeResources,
     host: NativeSessionHost = {},
-    workerEntry = join(app.getAppPath(), 'out', 'main', 'native-worker.js'),
+    workerEntry = nativeWorkerEntry(),
   ) {
     requireNativeSessionHost(config, host);
     this.hostSignal = host.signal;
     this.bundled = 'bundled' in config;
     this.options = options;
+    this.resources = resources;
     this.hosts = new RuntimeHostServer(
       host,
       (reply) => this.worker.postMessage(reply),
@@ -110,8 +114,24 @@ class NativeSession implements AgentSession {
     } else if (reply.type === 'raw') {
       if (this.options.rawSerialized) this.options.rawSerialized(new Uint8Array(reply.bytes));
       else this.options.raw(JSON.parse(new TextDecoder().decode(reply.bytes)));
-    } else if (reply.type === 'event') this.events.push(reply.event);
-    else if (reply.type === 'ended') {
+    } else if (reply.type === 'event') {
+      this.resources.event(reply.event);
+      this.events.push(reply.event);
+      if (
+        this.resources.idle &&
+        ((reply.event.t === 'turn.completed' && !reply.event.continuing) ||
+          (reply.event.t === 'item.upsert' && reply.event.item.kind === 'command'))
+      ) {
+        clearTimeout(this.idleTimer);
+        this.idleTimer = setTimeout(() => {
+          if (this.resources.idle)
+            void this.close().catch((error: unknown) =>
+              console.error('Idle native cleanup:', error),
+            );
+        }, 30000);
+        this.idleTimer.unref();
+      }
+    } else if (reply.type === 'ended') {
       if (reply.error) this.fail(new Error(reply.error));
       this.events.close();
       void this.close().catch((error: unknown) => console.error('Native cleanup:', error));
@@ -131,7 +151,16 @@ class NativeSession implements AgentSession {
     if (!this.stopping)
       void this.close().catch((failure: unknown) => console.error('Native cleanup:', failure));
   }
-  call<T = void>(method: SessionMethod | 'start', args: unknown[] = []): Promise<T> {
+  async call<T = void>(method: SessionMethod | 'start', args: unknown[] = []): Promise<T> {
+    await this.resources.before(method);
+    if (resourceMethod(method)) {
+      try {
+        await this.requireOwner(new AbortController().signal);
+      } catch (error) {
+        this.fail(error instanceof Error ? error : new Error(String(error)));
+        throw error;
+      }
+    }
     if (method !== 'close' && method !== 'interrupt' && (this.stopping || this.hostSignal?.aborted))
       return Promise.reject(new Error('Native host admission is closed'));
     if (this.error) return Promise.reject(this.error);
@@ -163,6 +192,8 @@ class NativeSession implements AgentSession {
   stopBackground = (id: string) => this.call('stopBackground', [id]);
   close(): Promise<void> {
     if (this.stopping) return this.stopping;
+    this.resources.stop();
+    clearTimeout(this.idleTimer);
     const extensionsClosed = this.hosts.close();
     void extensionsClosed?.catch(() => undefined);
     this.stopping = (async () => {
@@ -195,6 +226,7 @@ class NativeSession implements AgentSession {
         workers.delete(this);
         await extensionsClosed;
       }
+      this.resources.closed();
     })();
     return this.stopping;
   }
@@ -217,9 +249,22 @@ export async function startNativeSession(
     rawSerialized: _encoded,
     secretValues: _secrets,
     signal,
+    resourceAdmission: _resourceAdmission,
     ...plain
   } = options;
-  const session = new NativeSession(config, options, host, workerEntry);
+  const resources = new NativeResources(
+    options,
+    'bundled' in config ? config.bundled.route.connectionId : undefined,
+  );
+  await resources.start();
+  let session: NativeSession;
+  try {
+    session = new NativeSession(config, options, resources, host, workerEntry);
+  } catch (error) {
+    resources.stop();
+    resources.closed();
+    throw error;
+  }
   const abort = () => {
     void session.close().catch(() => undefined);
   };

@@ -231,6 +231,7 @@ void app.whenReady().then(async () => {
     });
   } finally {
     if (services) {
+      services.resources.stopAccepting();
       await services.modelCatalog.close();
       await services.modelSettings.close();
       await Promise.allSettled([
@@ -240,6 +241,9 @@ void app.whenReady().then(async () => {
         services.graph.close(),
         services.ci.close(),
       ]);
+      await services.managedCaches.close();
+      await services.coordinators.close();
+      await services.resources.close();
       services.projects.close();
     }
     await closeBackground();

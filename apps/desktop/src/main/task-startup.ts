@@ -6,6 +6,8 @@ import { parseBuiltinTaskStart, type BuiltinTaskStart } from './builtin-task-sta
 
 interface Startup {
   inputs: MessageInput[];
+  dispatchRevision?: number;
+  c4Protocol?: import('@skaro/core').C4Protocol;
   error?: string;
   updatedAt: number;
   builtin?: BuiltinTaskStart;
@@ -55,14 +57,32 @@ export class TaskStartup {
       throw new Error('Retry requires the exact pending builtin selection and owner input');
     return true;
   }
-  begin(project: string, task: string, inputs: MessageInput[]): MessageInput[] {
+  begin(
+    project: string,
+    task: string,
+    inputs: MessageInput[],
+    dispatchRevision?: number,
+    c4Protocol?: import('@skaro/core').C4Protocol,
+  ): MessageInput[] {
     const saved = this.read(project, task);
+    if (
+      saved?.inputs.length &&
+      dispatchRevision !== undefined &&
+      saved.dispatchRevision !== dispatchRevision
+    )
+      throw new Error(
+        'Pending task startup belongs to an earlier dispatch generation; stop it before a fresh request.',
+      );
     const combined = [...(saved?.inputs ?? [])];
     for (const input of inputs)
       if (!input.commandId || !combined.some((existing) => existing.commandId === input.commandId))
         combined.push(input);
     this.db.setSetting(this.key(project, task), {
       inputs: combined,
+      ...((c4Protocol ?? saved?.c4Protocol) ? { c4Protocol: c4Protocol ?? saved?.c4Protocol } : {}),
+      ...((dispatchRevision ?? saved?.dispatchRevision) !== undefined
+        ? { dispatchRevision: dispatchRevision ?? saved?.dispatchRevision }
+        : {}),
       ...(saved?.builtin ? { builtin: saved.builtin, builtinAttempt: saved.builtinAttempt } : {}),
       error: undefined,
       updatedAt: Date.now(),
@@ -80,6 +100,10 @@ export class TaskStartup {
     const saved = this.read(project, task);
     this.db.setSetting(this.key(project, task), {
       inputs: saved?.inputs ?? [],
+      ...(saved?.c4Protocol ? { c4Protocol: saved.c4Protocol } : {}),
+      ...(saved?.dispatchRevision !== undefined
+        ? { dispatchRevision: saved.dispatchRevision }
+        : {}),
       ...(saved?.builtin ? { builtin: saved.builtin, builtinAttempt: saved.builtinAttempt } : {}),
       error,
       updatedAt: Date.now(),

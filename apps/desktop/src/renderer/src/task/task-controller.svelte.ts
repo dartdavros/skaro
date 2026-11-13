@@ -155,6 +155,9 @@ export function createTaskController(
   }
 
   provideFeed({
+    get draftOwner() {
+      return JSON.stringify([projectId, 'task', taskId, view?.run?.id ?? '']);
+    },
     ...historyActions(
       projectId,
       (error) => {

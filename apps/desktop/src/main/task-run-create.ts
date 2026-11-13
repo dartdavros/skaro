@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import { bindC4Protocol } from './c4-protocol';
 import { join } from 'node:path';
-import { taskBranch, indexTasks, pendingDependencies, startBlocker } from '@skaro/core';
+import {
+  taskBranch,
+  indexTasks,
+  pendingDependencies,
+  startBlocker,
+  assertWorkflowGraph,
+} from '@skaro/core';
 import { Timeline } from '@skaro/timeline';
 import { findTask, key } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
@@ -38,6 +45,9 @@ async function createLockedTaskRun(
   const context = ctx.project(projectId);
   const artifacts = await context.load();
   const task = findTask(artifacts, taskId);
+  if (!artifacts.tasks.some((item) => item.id === taskId))
+    throw new Error('Milestones have no agent sessions. Open a task or the project chat.');
+  assertWorkflowGraph(artifacts.tasks, artifacts.config.workflow, taskId);
   const currentBuiltin = () => {
     if (!builtin || !requireCurrent) throw new CommandCancelled();
     requireCurrent();
@@ -62,8 +72,6 @@ async function createLockedTaskRun(
 
   let worktree: string | undefined;
   let branch: string | undefined;
-  if (!artifacts.tasks.some((item) => item.id === taskId))
-    throw new Error('Milestones have no agent sessions. Open a task or the project chat.');
   const pending = pendingDependencies(task, indexTasks(artifacts.tasks));
   if (!task.unblocked && pending.length)
     throw new Error(`${task.id}: dependencies are not ready: ${pending.join(', ')}`);
@@ -78,6 +86,7 @@ async function createLockedTaskRun(
     branch = task.branch ?? taskBranch(artifacts.config, task);
     worktree = await prepareTaskWorktree({
       git: context.git,
+      resources: ctx.deps.db.resources,
       dataDir: ctx.deps.dataDir,
       projectId,
       taskId,
@@ -121,6 +130,13 @@ async function createLockedTaskRun(
   if (settings.agent === 'skaro')
     saveBuiltinRunSettings(ctx.deps.db, run.id, parseBuiltinTaskStart(settings));
   const active = new ActiveRun(projectId, taskId, run, new Timeline());
+  bindC4Protocol(
+    ctx.deps.db,
+    projectId,
+    run.id,
+    undefined,
+    ctx.startup.read(projectId, taskId)?.c4Protocol ?? 'package-v1',
+  );
   ctx.active.set(key(projectId, taskId), active);
   ctx.continuation.execution(active).start();
   return active;

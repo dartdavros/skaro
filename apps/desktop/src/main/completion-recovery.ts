@@ -4,6 +4,7 @@ import { CompletionStore, criteriaRevision, type TaskResult } from './completion
 import { acceptedResult, containsCommit, assertResultUnchanged } from './completion-results';
 import { finishCompletion } from './completion-projection';
 import { withSummary } from './task-body';
+import { reconcileCompletedPublicationResources } from './completion-recovery-resources';
 
 export async function reconcileCompletions(
   context: ProjectContext,
@@ -32,6 +33,7 @@ export async function reconcileCompletions(
     if (await containsCommit(context, op.base, op.commit))
       await finishCompletion(hooks, context, store, op);
   }
+  await reconcileCompletedPublicationResources(context, hooks, store.operations());
   const artifacts = await context.summary();
   for (const task of artifacts.tasks) {
     const result = store.result(task.id);
