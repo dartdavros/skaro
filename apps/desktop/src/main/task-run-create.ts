@@ -45,6 +45,8 @@ async function createLockedTaskRun(
   const context = ctx.project(projectId);
   const artifacts = await context.load();
   const task = findTask(artifacts, taskId);
+  if (!artifacts.tasks.some((item) => item.id === taskId))
+    throw new Error('Milestones have no agent sessions. Open a task or the project chat.');
   assertWorkflowGraph(artifacts.tasks, artifacts.config.workflow, taskId);
   const currentBuiltin = () => {
     if (!builtin || !requireCurrent) throw new CommandCancelled();
@@ -70,8 +72,6 @@ async function createLockedTaskRun(
 
   let worktree: string | undefined;
   let branch: string | undefined;
-  if (!artifacts.tasks.some((item) => item.id === taskId))
-    throw new Error('Milestones have no agent sessions. Open a task or the project chat.');
   const pending = pendingDependencies(task, indexTasks(artifacts.tasks));
   if (!task.unblocked && pending.length)
     throw new Error(`${task.id}: dependencies are not ready: ${pending.join(', ')}`);

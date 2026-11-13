@@ -9,6 +9,7 @@ import { Projects } from './projects';
 import { TaskRuns, type TaskRunDeps } from './tasks';
 import { prepareFixtureArchitecture, reviewFixtureResult } from './c4-test-support';
 import { closeBackground } from './background/client';
+import { TaskRunEngine } from './task-run-engine';
 
 export let dir: string;
 export let repo: string;
@@ -19,11 +20,11 @@ export let tasks: TaskRuns;
 export let projectId: string;
 export let taskId: string;
 export let runId: string;
+let closeRuns: (() => Promise<void>) | undefined;
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'skaro-task-retention-'));
   repo = join(dir, 'repo');
-  worktree = join(dir, 'worktree');
   await mkdir(repo);
   await git(repo, ['init', '-qb', 'main']);
   await git(repo, ['config', 'user.name', 'Test']);
@@ -41,6 +42,7 @@ beforeEach(async () => {
   await git(repo, ['commit', '-qm', 'init']);
   db = AppDb.open(join(dir, 'skaro.db'));
   projectId = db.addProject({ name: 'Runtime safety', path: repo }).id;
+  worktree = join(dir, 'worktrees', projectId, taskId);
   projects = new Projects(db, () => undefined);
   await projects
     .get(projectId)
@@ -64,7 +66,9 @@ beforeEach(async () => {
 });
 
 function createTaskRuns(): TaskRuns {
-  return new TaskRuns(taskRunDeps());
+  const runs = new TaskRuns(taskRunDeps());
+  closeRuns = () => runs.close();
+  return runs;
 }
 
 export function taskRunDeps(): TaskRunDeps {
@@ -103,7 +107,7 @@ export async function expectMergedWithoutCard(): Promise<string> {
 }
 
 afterEach(async () => {
-  await tasks?.close();
+  await closeRuns?.();
   projects?.close();
   await closeBackground();
   db?.close();
@@ -120,5 +124,22 @@ afterEach(async () => {
 });
 
 export function resetTaskRuns(): void {
+  reopenDatabase();
   tasks = createTaskRuns();
+}
+
+/** Replace the whole host scope, preserving SQLite records without a second live controller. */
+export async function restartTaskEngine(slots = 3): Promise<TaskRunEngine> {
+  await closeRuns?.();
+  reopenDatabase();
+  const engine = new TaskRunEngine(taskRunDeps(), slots);
+  closeRuns = () => engine.sessions.close();
+  return engine;
+}
+
+function reopenDatabase(): void {
+  projects.close();
+  db.close();
+  db = AppDb.open(join(dir, 'skaro.db'));
+  projects = new Projects(db, () => undefined);
 }

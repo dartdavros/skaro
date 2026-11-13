@@ -19,6 +19,8 @@ import type { AgentManager } from './agents';
 import { ChatSessions } from './chats';
 import { Projects } from './projects';
 import { closeBackground } from './background/client';
+import { OwnerCommands } from './owner-commands';
+import { ProjectCoordinators } from './project-coordinators';
 
 type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 
@@ -68,6 +70,8 @@ let chats: ChatSessions;
 let session: FakeSession;
 let started: SessionOptions | undefined;
 let projectId: string;
+let commands: OwnerCommands;
+let coordinators: ProjectCoordinators;
 
 beforeEach(async () => {
   dataDir = await mkdtemp(join(tmpdir(), 'skaro-chats-data-'));
@@ -108,10 +112,21 @@ beforeEach(async () => {
     emit: () => undefined,
     locale: () => 'ru',
   });
+  coordinators = new ProjectCoordinators(db);
+  coordinators.recover();
+  commands = new OwnerCommands(db, () => undefined, coordinators, dataDir);
+  commands.start({
+    'chat.send': (project, chat, input) => chats.send(project, chat, input),
+    'task.send': async () => {
+      throw new Error('This chat fixture does not own task sessions');
+    },
+  });
 });
 
 afterEach(async () => {
+  await commands.close();
   await chats.close();
+  await coordinators.close();
   await mcp.close();
   projects.close();
   await closeBackground();

@@ -1,8 +1,7 @@
 import { expect, it } from 'vitest';
 import type { IntegrationOperation } from './integration-model';
 import { recoverIntegrationStarts } from './integration-recovery';
-import { TaskRunEngine } from './task-run-engine';
-import { db, projectId, taskId, projects, taskRunDeps } from './task-run-test-support';
+import { db, projectId, taskId, projects, restartTaskEngine } from './task-run-test-support';
 
 /** Closing the sessions alone takes close to the default five seconds of a test. */
 const CLOSING = 20_000;
@@ -13,7 +12,7 @@ const runtime = () => db.getTaskRuntime(projectId).get(taskId)?.state ?? 'idle';
 it(
   'keeps task status after a failed turn and holds the error until the agent works',
   async () => {
-    const ctx = new TaskRunEngine(taskRunDeps());
+    const ctx = await restartTaskEngine();
     try {
       const before = await projects.get(projectId).store.readTask(taskId);
       const active = (await ctx.history.restore(projectId, taskId))!;
@@ -34,7 +33,7 @@ it(
 it(
   'never marks an accepted result as failed: not by a broken turn, not by its merge',
   async () => {
-    const ctx = new TaskRunEngine(taskRunDeps());
+    const ctx = await restartTaskEngine();
     try {
       await projects.get(projectId).store.updateTask(taskId, { status: 'review' });
       projects.get(projectId).invalidate();
