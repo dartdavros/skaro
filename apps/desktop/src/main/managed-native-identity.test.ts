@@ -59,7 +59,22 @@ it('pins path, device, inode AND birthtimeNs; never adopts a replacement root', 
 it('rejects noncanonical, nonpositive, out-of-dimension and unversioned native identities', () => {
   const encoded = encodeNativeIdentity(observed);
   for (const field of ['dev', 'ino', 'birthtimeNs'] as const)
-    for (const bad of ['0', '-1', '+1', '01', '1.0', '1e3', ' 1', '1 ', '1\n', '1\r\n', '', 1, 1n, null])
+    for (const bad of [
+      '0',
+      '-1',
+      '+1',
+      '01',
+      '1.0',
+      '1e3',
+      ' 1',
+      '1 ',
+      '1\n',
+      '1\r\n',
+      '',
+      1,
+      1n,
+      null,
+    ])
       expect(validExactNativeIdentity({ ...encoded, [field]: bad })).toBe(false);
   for (const changed of [
     { ...encoded, dev: '18446744073709551616' },

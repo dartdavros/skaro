@@ -190,4 +190,3 @@ layout и визуальные состояния не менялись. `git di
 | 9. Unknown spend и смена модели/аккаунта | Выполнен: null/нечисловой расход запрещён, смена аккаунта не проходит evidence, автоматического provider/model switch нет |
 | 10. Независимость и освобождение RC | Выполнен локально: waiting task без lease, repair через RC-2, native continuation и отдельный ручной review lease; общий multi-task stress остаётся AG-1 |
 | 11. Проверки и структура | Выполнен: 22 целевых теста, build/typecheck/lint, реальный workflow, browser-проверка полного Skaro и NO GOD |
-
