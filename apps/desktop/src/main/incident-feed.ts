@@ -1,6 +1,22 @@
 import type { CoordinationBlocker, RemedyAction } from '@skaro/core';
 import type { Interaction, InteractionAnswer } from '@skaro/timeline';
 import type { TaskRunEngine } from './task-run-engine';
+import type { ActiveRun } from './task-run-model';
+import { retiredIncidentDecision } from './incident-decision-availability';
+
+/** Repair stale derived cards from older builds using the durable decision, without dispatch. */
+export function retireIncidentInteractions(ctx: TaskRunEngine, active: ActiveRun): void {
+  for (const interaction of [...active.timeline.state.interactions]) {
+    if (!interaction.id.startsWith('coordinator:')) continue;
+    const resolution = retiredIncidentDecision(
+      ctx.deps.db,
+      active.projectId,
+      interaction.id.slice('coordinator:'.length),
+    );
+    if (resolution)
+      ctx.history.skaroEvent(active, { t: 'interaction.closed', id: interaction.id, resolution });
+  }
+}
 
 /** Reuses the existing pinned approval interaction; AC-4 owns the future global presentation. */
 export async function showIncidentApproval(

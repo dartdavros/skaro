@@ -6,7 +6,8 @@ import type {
   actionGroupSummary,
   actionGroupDiffStats,
 } from '@skaro/timeline';
-export const HISTORY_VERSION = 4;
+// Rebuild derived rows that previously exposed the second leading service note.
+export const HISTORY_VERSION = 5;
 
 /** A stable read projection; pages may be evicted without losing the conversation. */
 export interface HistorySource {
