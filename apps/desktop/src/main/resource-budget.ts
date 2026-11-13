@@ -1,4 +1,5 @@
-import { availableParallelism, freemem } from 'node:os';
+import { availableParallelism, cpus, freemem } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 import { realpath, stat, statfs } from 'node:fs/promises';
 import type { ResourceBudget } from '@skaro/core';
 
@@ -57,13 +58,21 @@ export async function measureResourceBudget(
       diskBytes[volume] = null;
     }
   }
+  const before = cpus();
+  await delay(100);
+  const after = cpus();
+  const idle = measuredIdleCpu(
+    before.map((c) => c.times),
+    after.map((c) => c.times),
+    availableParallelism(),
+  );
   const memory = freemem();
   return {
     ramBytes:
       Number.isSafeInteger(memory) && memory >= 0
         ? Math.max(0, memory - policy.reserveRamBytes)
         : null,
-    cpuMillis: Math.max(0, availableParallelism() * 1000 - policy.reserveCpuMillis),
+    cpuMillis: idle === null ? null : Math.max(0, idle - policy.reserveCpuMillis),
     model: policy.model,
     environment: policy.environment,
     build: policy.build,
@@ -73,4 +82,24 @@ export async function measureResourceBudget(
     measuredAt: Date.now(),
     maxAgeMs: 5000,
   };
+}
+
+/** CPU availability is sampled idle time, bounded by this process's actual CPU allocation. */
+export function measuredIdleCpu(
+  before: ReadonlyArray<{ idle: number; user: number; nice: number; sys: number; irq: number }>,
+  after: typeof before,
+  parallelism: number,
+): number | null {
+  if (!before.length || before.length !== after.length) return null;
+  let total = 0,
+    idle = 0;
+  for (const [i, current] of after.entries()) {
+    for (const key of ['idle', 'user', 'nice', 'sys', 'irq'] as const) {
+      const delta = current[key] - before[i]![key];
+      if (!Number.isFinite(delta) || delta < 0) return null;
+      total += delta;
+      if (key === 'idle') idle += delta;
+    }
+  }
+  return total > 0 ? Math.floor((parallelism * 1000 * idle) / total) : null;
 }

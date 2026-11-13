@@ -32,7 +32,12 @@ export async function currentIncidentSubscriber(
       await context.store.load(),
       s.taskId,
     );
-    return inputs.version === s.inputs;
+    return (
+      inputs.version === s.inputs &&
+      execution.read().enabled &&
+      execution.intentVersion() === s.intent &&
+      ctx.deps.db.listRuns(projectId, s.taskId)[0]?.id === s.runId
+    );
   } catch {
     return false;
   }
@@ -45,7 +50,7 @@ export async function incidentResourceVersion(
 ): Promise<string> {
   const resource = ctx.deps.db.resources.get(target);
   if (resource) {
-    if (resource.projectId !== projectId || resource.ownership !== 'registered')
+    if (resource.projectId !== projectId)
       throw new Error('Incident resource is outside registered scope');
     const context = ctx.project(projectId);
     const { taskEnvironmentVersion } = await import('./task-environment-version');
@@ -55,11 +60,16 @@ export async function incidentResourceVersion(
         : undefined;
     const { GitService } = await import('@skaro/core');
     const head = ownerRun?.worktree ? await new GitService(ownerRun.worktree).head() : undefined;
+    const taskConfig =
+      resource.kind === 'environment' && resource.owner.kind === 'task'
+        ? (await ctx.environments.describe({ projectId, taskId: resource.owner.id })).config
+        : undefined;
     return incidentHash([
       resource.id,
       resource.generation,
       resource.identity,
       head,
+      taskConfig,
       await taskEnvironmentVersion(context.root, (await context.store.load()).config.environment),
     ]);
   }
@@ -80,7 +90,12 @@ export async function incidentAction(
   if (!['environment-ready', 'inputs-current'].includes(protocol.condition)) return undefined;
   if (protocol.condition === 'environment-ready') {
     const resource = ctx.deps.db.resources.get(row.subject.id);
-    if (!resource || resource.kind !== 'environment' || resource.owner.kind !== 'task')
+    if (
+      !resource ||
+      resource.kind !== 'environment' ||
+      resource.owner.kind !== 'task' ||
+      resource.ownership !== 'registered'
+    )
       return undefined;
   }
   if (
@@ -109,7 +124,12 @@ export async function checkIncident(
   if (row.protocol!.condition === 'provider-evidence') return checkIncidentProvider(ctx, row);
   if (row.protocol!.condition === 'environment-ready') {
     const resource = ctx.deps.db.resources.get(row.subject.id);
-    if (!resource || resource.kind !== 'environment' || resource.owner.kind !== 'task')
+    if (
+      !resource ||
+      resource.kind !== 'environment' ||
+      resource.owner.kind !== 'task' ||
+      resource.ownership !== 'registered'
+    )
       return false;
     const description = await ctx.environments.describe({
       projectId: row.projectId,

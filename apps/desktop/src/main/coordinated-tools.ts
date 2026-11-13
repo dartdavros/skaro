@@ -4,6 +4,7 @@ import type { ProjectCoordinators } from './project-coordinators';
 import { coordinationHash } from './project-coordinator-request';
 import { resourcesFor } from './resource-execution';
 import { auditToolsAllowed, isAuditChat } from './c4-audit-admission';
+import { environmentToolPolicy } from './coordinated-tool-policy';
 
 const reads = new Set([
   'read_project_incidents',
@@ -97,7 +98,8 @@ export function coordinatedTools(
         const subject = coordinationToolSubject(scope);
         const version = coordinators.version(scope.projectId);
         const previous = db.coordination.getOperation(scope.projectId, identity.id);
-        const mode = controls.has(tool.name) ? 'control' : 'mutation';
+        const policy = environmentToolPolicy(db, tool.name, args, scope);
+        const mode = policy?.mode ?? (controls.has(tool.name) ? 'control' : 'mutation');
         return coordinators.execute(
           {
             id: identity.id,
@@ -107,7 +109,9 @@ export function coordinatedTools(
             subject,
             inputHash: coordinationHash({ args, scope }),
             mode,
-            scopeKey: mode === 'mutation' ? 'project' : `control:${subject.kind}:${subject.id}`,
+            scopeKey:
+              policy?.scopeKey ??
+              (mode === 'mutation' ? 'project' : `control:${subject.kind}:${subject.id}`),
             ...(mode === 'mutation'
               ? { expectedVersion: previous?.expectedVersion ?? version }
               : {}),

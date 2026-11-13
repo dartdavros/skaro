@@ -4,6 +4,7 @@ import { CoordinationPending } from './project-coordinator-errors';
 import { dispatchProjectOperation, type CoordinationExecution } from './coordinator-delivery';
 import { migrateCoordinatorProject } from './coordinator-migration';
 import { requireCoordinationDispatch, dispatchSafetyAction } from './coordination-dispatch';
+import { reconcileUnstartedEnvironments } from './environment-operation-recovery';
 export type { CoordinationExecution } from './coordinator-delivery';
 
 /** One logical controller per project. Models and executors do not own its durable identity. */
@@ -37,6 +38,7 @@ export class ProjectCoordinators {
       this.db.coordination.ensure(project.id);
       migrateCoordinatorProject(this.db, project.id);
       this.db.coordination.recover(project.id);
+      reconcileUnstartedEnvironments(this.db, project.id);
       for (const operation of this.db.coordination.pending(project.id)) {
         if (operation.state !== 'queued' || operation.action.startsWith('owner.')) continue;
         this.db.coordination.reject(project.id, operation.id, {

@@ -9,6 +9,7 @@ import {
   closeIncidentApproval,
   cancelIncidentApproval,
 } from './incident-feed';
+import { answerIncidentEscalation } from './incident-escalation';
 
 /** Exact, expiring owner decisions; the action policy remains independent of worker access. */
 export class IncidentDecisions {
@@ -53,8 +54,6 @@ export class IncidentDecisions {
   ): Promise<void> {
     if (answer.kind === 'approval' && answer.choice !== 'deny')
       requireCoordinationDispatch(this.ctx.deps.db, projectId);
-    if (answer.kind !== 'approval' || answer.choice === 'allow_session')
-      throw new Error('Incident requires an exact one-time decision');
     const decision = this.ctx.deps.db.coordination.decisions.get(projectId, decisionId);
     if (!decision || decision.state !== 'pending')
       throw new Error('Incident decision is not pending');
@@ -64,6 +63,10 @@ export class IncidentDecisions {
       (taskId && !row.protocol!.subscriptions.some((s) => s.taskId === taskId))
     )
       throw new Error('Decision is not owned by this active incident/task');
+    if (decision.kind === 'question')
+      return answerIncidentEscalation(this.ctx, row, decisionId, answer);
+    if (answer.kind !== 'approval' || answer.choice === 'allow_session')
+      throw new Error('Incident requires an exact one-time decision');
     const request = this.ctx.deps.db.getSetting<
       { policyRevision: number; expiresAt: number } | undefined
     >(`coordination.decision-action.${decisionId}`, undefined);
