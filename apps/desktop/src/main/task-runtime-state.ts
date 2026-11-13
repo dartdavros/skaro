@@ -1,4 +1,15 @@
 import type { AppDb, TaskRuntime } from '@skaro/core';
+import type { TimelineState } from '@skaro/timeline';
+
+/** Only a pending interaction needs an answer; machine recovery uses the existing queue state. */
+export function taskTimelineRuntime(
+  timeline: Pick<TimelineState, 'status' | 'interactions'>,
+  recovering: boolean,
+): TaskRuntime {
+  if (timeline.interactions.some((interaction) => interaction.kind !== 'merge')) return 'waiting';
+  if (timeline.status !== 'idle') return 'running';
+  return recovering ? 'queued' : 'idle';
+}
 
 /** The database represents idle by deleting the row, including its run identity. */
 export function sameTaskRuntime(

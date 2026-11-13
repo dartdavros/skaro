@@ -61,8 +61,11 @@ test('shows only the accepted owner input from real multi-note history, includin
     }
   };
   const previousCache = cached();
-  expect(previousCache.signature).toMatch(/^4:/);
-  expect(previousCache.exposed).toBeGreaterThan(0);
+  // Reuse actual history whether an earlier native launch already rebuilt its cache or not.
+  const previousVersion = Number(previousCache.signature.split(':')[0]);
+  expect([4, HISTORY_VERSION]).toContain(previousVersion);
+  if (previousVersion === 4) expect(previousCache.exposed).toBeGreaterThan(0);
+  else expect(previousCache.exposed).toBe(0);
   const errors: string[] = [];
   const results: { phase: string; item: string; length: number }[] = [];
   let selected: { id: string; text: string } | undefined;
