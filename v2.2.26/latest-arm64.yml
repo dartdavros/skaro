@@ -1,0 +1,5 @@
+version: 2.2.26
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.26/Skaro-2.2.26-win-arm64.exe
+    sha512: YpFCm5gUAySfTOTxuTUSwhtPjM6O4eWYHyo6+DZNBOoZsuyayI9P3rVkABL0Xpg2+aS7tuOPYHwBr59JD+W11Q==
+    size: 117987429
