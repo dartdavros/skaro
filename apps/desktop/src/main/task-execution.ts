@@ -3,6 +3,7 @@ import type { AppDb } from '@skaro/core';
 export interface TaskExecutionState {
   enabled: boolean;
   blocked?: string;
+  blockedIncident?: string;
   turn?: string;
   fingerprint?: string;
   stalls: number;
@@ -26,6 +27,7 @@ export class TaskExecution {
     if (this.db.getSetting(this.key, null) === null) this.db.setSetting(this.key, retained);
   }
   start(): void {
+    this.bumpIntent();
     this.db.setSetting(this.key, { enabled: true, stalls: 0 });
   }
   /** A chat message is not renewed authorization; retain any existing external blocker. */
@@ -59,17 +61,37 @@ export class TaskExecution {
     )
       return false;
     if (state.enabled) return !state.blocked;
+    this.bumpIntent();
     this.db.setSetting(this.key, { enabled: true, stalls: 0, followUp: request });
     return true;
   }
   stop(): void {
+    this.bumpIntent();
     this.db.setSetting(this.key, { ...this.read(), enabled: false, followUp: undefined });
   }
-  block(reason: string): void {
-    this.db.setSetting(this.key, { ...this.read(), blocked: reason });
+  block(reason: string, incident?: string): void {
+    this.db.setSetting(this.key, {
+      ...this.read(),
+      blocked: reason,
+      ...(incident ? { blockedIncident: incident } : {}),
+    });
   }
   clearBlock(): void {
+    if (this.read().blockedIncident) return;
     this.db.setSetting(this.key, { ...this.read(), blocked: undefined });
+  }
+  intentVersion(): number {
+    return this.db.getSetting(`${this.key}.intent`, 0);
+  }
+  private bumpIntent(): void {
+    this.db.setSetting(`${this.key}.intent`, this.intentVersion() + 1);
+  }
+  clearIncident(id: string, intent: number): boolean {
+    const state = this.read();
+    if (!state.enabled || state.blockedIncident !== id || this.intentVersion() !== intent)
+      return false;
+    this.db.setSetting(this.key, { ...state, blocked: undefined, blockedIncident: undefined });
+    return true;
   }
   /** A duplicated terminal event cannot schedule another turn; repeated stalls cannot loop. */
   next(turn: string, fingerprint: string): 'continue' | 'duplicate' | 'stalled' {

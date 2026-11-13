@@ -49,9 +49,13 @@ export async function ensureSourceServices(
   source: NonNullable<EnvironmentConfig['source']>,
   taskName: string,
   signal?: AbortSignal,
+  observed?: (containers: DockerContainer[]) => void | Promise<void>,
 ): Promise<void> {
   signal?.throwIfAborted();
   const selected = sourceContainers(await inspectContainers(), root, source, taskName);
+  // Persist the source's durable purpose and copy consumer before any service is started.
+  await observed?.(selected);
+  signal?.throwIfAborted();
   const stopped = selected.filter((container) => !container.State?.Running);
   if (stopped.length) {
     signal?.throwIfAborted();

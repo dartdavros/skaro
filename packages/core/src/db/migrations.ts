@@ -1,4 +1,7 @@
 import { CHAT_CATALOG_MIGRATION } from './chat-catalog-migration.ts';
+import { RESOURCE_MIGRATION } from './resource-migration.ts';
+import { COORDINATION_MIGRATION } from './coordination-migration.ts';
+import { ADMISSION_MIGRATION } from './admission-migration.ts';
 export const MIGRATIONS: string[] = [
   `
   CREATE TABLE projects (
@@ -117,4 +120,7 @@ export const MIGRATIONS: string[] = [
     PRIMARY KEY(collection,id));
    CREATE TABLE collection_migrations (key TEXT PRIMARY KEY);`,
   CHAT_CATALOG_MIGRATION,
+  RESOURCE_MIGRATION,
+  COORDINATION_MIGRATION,
+  ADMISSION_MIGRATION,
 ];

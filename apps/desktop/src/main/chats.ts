@@ -27,6 +27,7 @@ import type { ChatRange } from '../shared/chat-catalog';
 import { background } from './background/client';
 
 import { ChatEngine } from './chat-engine';
+import { chatDecisionSources } from './chat-decision-sources';
 import { clearChat } from './chat-clear';
 import { historyText, historyPage } from './task-history-context';
 export { titleOf } from './chat-settings-helpers';
@@ -75,6 +76,9 @@ export class ChatSessions implements ProjectToolHandlers {
   }
   get planning(): NonNullable<ProjectToolHandlers['planning']> {
     return this.engine.planning;
+  }
+  decisionSources(projectId: string, only?: string) {
+    return chatDecisionSources(this.engine, projectId, only);
   }
   list(projectId: string): ChatSummary[] {
     return this.engine.views.list(projectId);

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { Icon, t, Banner } from '@skaro/ui';
+  import { Check, FileCheck2, FolderOpen, X } from '@lucide/svelte';
   import type { C4PackageReview } from '@skaro/core/c4-view';
   import type { ProposalState } from './proposal-state.svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import { architectureCounts } from './architecture-review';
   import './architecture-review-i18n';
+  import '../c4/audit-i18n';
   let { state: model }: { state: ProposalState } = $props();
   let review = $state.raw<C4PackageReview>();
   let error = $state('');
@@ -56,7 +58,7 @@
             : t(`c4.review.${model.item.state}`))}</span
       >
       <button type="button" class="btn" onclick={() => (model.viewer = true)}
-        ><Icon name="eye" size={13} />{t('proposal.open')}</button
+        ><FolderOpen size={16} />{t('proposal.open')}</button
       >
       {#if model.actionable && model.item.state === 'pending'}
         <button
@@ -64,7 +66,7 @@
           class="btn"
           disabled={model.busy}
           onclick={() => void model.decide({ action: 'reject' })}
-          ><Icon name="close" size={13} />{t('proposal.reject')}</button
+          ><X size={16} />{t('proposal.reject')}</button
         >
       {/if}
       {#if model.actionable && (model.item.state === 'pending' || (model.item.state === 'accepted' && model.item.result?.error))}
@@ -73,7 +75,9 @@
           class="btn primary"
           disabled={model.busy || !review}
           onclick={() => void model.decide({ action: 'apply', fingerprint: review?.fingerprint })}
-          ><Icon name="check" size={13} />{t('proposal.apply')}</button
+          >{#if model.item.state === 'accepted'}<FileCheck2 size={16} />{t(
+              'c4.audit.recover',
+            )}{:else}<Check size={16} />{t('proposal.apply')}{/if}</button
         >
       {/if}
     </div>

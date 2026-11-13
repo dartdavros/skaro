@@ -9,7 +9,7 @@
 </script>
 
 <!-- Shown while Skaro works by itself and while its recent outcomes are worth a look. -->
-{#if background.jobs.length}
+{#if background.jobs.length || background.projectId}
   <IconButton
     tip={t('background.title')}
     aria-label={t('background.title')}

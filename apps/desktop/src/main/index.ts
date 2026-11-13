@@ -1,4 +1,4 @@
-import { OwnerCommands } from './owner-commands';
+import { observeProjectDecisions } from './project-decision-handlers';
 import { app, BrowserWindow, protocol } from 'electron';
 import { join } from 'node:path';
 import type { EventName, Events } from '../shared/ipc';
@@ -19,6 +19,7 @@ import { CLOSE_TO_TRAY_SETTING, CLOSE_TO_TRAY_DEFAULT } from '../shared/app-shel
 import { registerMedia } from './app-media';
 import { appHandlers } from './app-handlers';
 import { sessionHandlers } from './session-handlers';
+import { coordinatedSessionHandlers } from './coordinated-session-handlers';
 import { fileHandlers } from './file-handlers';
 import { diagramExportHandlers } from './diagram-export-handlers';
 import { createUpdates } from './update-service';
@@ -67,8 +68,13 @@ function emit<E extends EventName>(event: E, payload: Events[E]): void {
     void graph?.rebuild((payload as Events['project.changed']).projectId).catch(() => undefined);
   if (event === 'project.changed' || event === 'task.changed')
     taskRuns?.projectChanged((payload as { projectId: string }).projectId);
+  const decisionProject = state && observeProjectDecisions(state.db, event, payload);
   const window = mainWindow();
-  if (window) sendEvent(window.webContents, event, payload);
+  if (window) {
+    sendEvent(window.webContents, event, payload);
+    if (decisionProject)
+      sendEvent(window.webContents, 'decisions.changed', { projectId: decisionProject });
+  }
 }
 const locked = app.requestSingleInstanceLock();
 trace(`single instance lock: ${locked}`);
@@ -144,7 +150,10 @@ if (!locked) {
     createMainWindow();
     // Services and the renderer are independent: history requests must not wait for first paint.
     const { createServices } = await import('./app-services');
-    const services = await createServices(appState, dataDir, emit).catch((error: unknown) => {
+    const services = await createServices(appState, dataDir, emit, {
+      silentVerification:
+        !!appState.db.shell.projectScope && process.env.SKARO_VERIFICATION_SILENT === '1',
+    }).catch((error: unknown) => {
       rejectHandlers(error);
       throw error;
     });
@@ -161,10 +170,14 @@ if (!locked) {
     if (updates.canRunAgents()) void services.agents.refresh();
     const picked = new Set<string>();
     registerMedia(services, picked);
-    const commands = new OwnerCommands(appState.db, (command) => emit('command.changed', command));
+    const commands = services.commands;
     shutdown = () => shutdownApp(services, commands, updates, historyReads!);
     const handlers = {
-      ...appHandlers(services, updates, mainWindow, emit, () => tray?.refresh()),
+      ...coordinatedSessionHandlers(
+        appHandlers(services, updates, mainWindow, emit, () => tray?.refresh()),
+        services.coordinators,
+        services.db,
+      ),
       ...sessionHandlers(services),
       ...fileHandlers(services, mainWindow, picked),
       ...diagramExportHandlers(mainWindow),
@@ -174,7 +187,6 @@ if (!locked) {
       }),
       ...modelCatalogHandlers(services.modelCatalog),
     };
-    commands.start(handlers);
     const acceptedHandlers = {
       ...handlers,
       'chat.send': (project: string, owner: string, input: import('../shared/ipc').MessageInput) =>

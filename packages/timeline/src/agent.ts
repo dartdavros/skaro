@@ -35,6 +35,19 @@ export type McpServer = (
 };
 
 export interface SessionOptions {
+  /** Main-only resource admission. Never sent to adapters' worker processes or models. */
+  resourceAdmission?: {
+    limits?(state: 'ok' | 'warning' | 'exhausted', resetsAt?: string, connectionId?: string): void;
+    process(signal: AbortSignal): Promise<{ release(evidence: string): void }>;
+    turn(
+      signal: AbortSignal,
+      connectionId?: string,
+      needsWork?: boolean,
+    ): Promise<{
+      release(evidence: string): void;
+      work?: { release(evidence: string): void };
+    }>;
+  };
   /** Cancels session admission/startup; never serialized to a native worker. */
   signal?: AbortSignal;
   /** Worktree of the task, or the project root for chats. */

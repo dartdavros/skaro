@@ -19,6 +19,9 @@ import { ProjectArtifactStore } from './project-artifact-store';
 import { requirementsOf } from '../shared/task-requirements';
 import { ProjectArtifactMemory } from './project-artifact-memory';
 import { artifactBytes } from './background/artifact-weight';
+import { resourcesFor } from './resource-execution';
+import { ResourceGit } from './resource-git';
+import type { ApplicationResources } from './application-resources';
 
 export class ProjectContext {
   readonly id: string;
@@ -41,6 +44,7 @@ export class ProjectContext {
     assertTasksMutable: () => void = () => undefined,
     dataDir?: string,
     memory = new ProjectArtifactMemory(),
+    resources?: ApplicationResources,
   ) {
     this.id = id;
     this.memory = memory;
@@ -51,7 +55,7 @@ export class ProjectContext {
     this.store = dataDir
       ? new ProjectArtifactStore(root, defaults, reservedTaskIds, dataDir)
       : new ArtifactStore(root, defaults, reservedTaskIds);
-    this.git = new GitService(root);
+    this.git = resources ? new ResourceGit(root, id, resources) : new GitService(root);
     this.stopWatch = watchProjectArtifacts(root, this.store, (paths) => {
       this.invalidate(paths);
       onChange();
@@ -182,6 +186,7 @@ export class Projects {
       () => assertTaskGraphAvailable(this.db, projectId),
       this.dataDir,
       this.memory,
+      resourcesFor(this.db),
     );
     this.contexts.set(projectId, context);
     return context;

@@ -2,8 +2,9 @@ import { projectRecords } from './project-records';
 import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
 import { settingsKey } from './task-run-helpers';
+import { requireStartupGeneration } from './task-startup-generation';
 
-/** Resume preserved startup requests, including the known pre-session dependency failure. */
+/** Resume only preserved requests with verified current dispatch authority. */
 export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void> {
   for await (const project of projectRecords(ctx.deps.db)) {
     try {
@@ -26,23 +27,19 @@ export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void
         }
         const startup = ctx.startup.read(project.id, task.id);
         if (startup?.inputs.length && !startup.error) {
+          try {
+            requireStartupGeneration(ctx.deps.db, project.id, startup.dispatchRevision);
+          } catch (error) {
+            ctx.startup.fail(project.id, task.id, errorText(error));
+            ctx.setRuntime(project.id, task.id, 'failed');
+            continue;
+          }
           ctx.queue.enqueue([`${project.id}\n${task.id}`]);
           continue;
         }
+        if (await ctx.architecture.recover(project.id, task.id)) continue;
         if (await ctx.continuation.recover(project.id, task)) continue;
-        // Prior versions lost the request before recording a run. Retry only this diagnosed defect.
-        if (
-          runtime.get(task.id)?.state !== 'failed' ||
-          ctx.deps.db.listRuns(project.id, task.id).length
-        )
-          continue;
-        const error = ctx.startup.error(project.id, task.id);
-        if (!error?.startsWith(`${task.id}: dependency integration failed:`)) continue;
-        const marker = `integration.legacy-start.${project.id}.${task.id}`;
-        if (ctx.deps.db.getSetting(marker, false)) continue;
-        ctx.startup.begin(project.id, task.id, [{ text: '' }]);
-        await ctx.scheduling.start(project.id, task.id, { text: '' });
-        ctx.deps.db.setSetting(marker, true);
+        // An old diagnostic is never a substitute for a preserved, current owner instruction.
       }
     } catch (error) {
       ctx.deps.db.addEvent(project.id, 'integration_recovery_failed', { error: errorText(error) });

@@ -26,6 +26,8 @@ export interface IntegrationDeps {
   stopProcesses?: (op: IntegrationOperation) => Promise<void>;
   /** A check row for the candidate feed: started, live output, finished. */
   checkChanged?: (op: IntegrationOperation, item: Item) => void;
+  /** Persist additional verification evidence before exposing the ready state. */
+  verified?: (op: IntegrationOperation) => Promise<void>;
 }
 
 /** The same recoverable integration protocol prepares dependencies and publication candidates. */
@@ -242,6 +244,7 @@ export class IntegrationService {
     )
       throw new Error('Integration verification was interrupted.');
     op.verification = { head: op.head, checks: plan, completedAt: Date.now() };
+    await this.deps.verified?.(op);
     op.state = 'ready';
     op.error = undefined;
     this.save(op);

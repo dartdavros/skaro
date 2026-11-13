@@ -1,4 +1,6 @@
 <script lang="ts">
+  import './modal.css';
+  import { observeModalLayer, isTopModal } from './modal-layer.svelte';
   import type { Snippet } from 'svelte';
   import { t } from '../i18n.svelte.ts';
   import Icon from './Icon.svelte';
@@ -10,6 +12,7 @@
     subtitle,
     width = 440,
     closable = true,
+    projectScoped = false,
     flush = false,
     children,
     footer,
@@ -20,6 +23,7 @@
     width?: number;
     /** The × in the corner; some mockups close only by Esc, the backdrop and "Отмена". */
     closable?: boolean;
+    projectScoped?: boolean;
     /**
      * No inner padding: the head and the footer run edge to edge (the footer on its own band
      * with a line above), the body sets its own padding and scrolls by itself.
@@ -29,12 +33,17 @@
     footer?: Snippet;
   } = $props();
 
+  let root = $state<HTMLElement>();
+  $effect(() => {
+    if (open && root) return observeModalLayer();
+  });
   const close = () => (open = false);
 </script>
 
 <svelte:window
   onkeydown={(e) =>
     open &&
+    isTopModal(root) &&
     e.key === 'Escape' &&
     !document.fullscreenElement &&
     !document.querySelector('[data-viewer-dialog]') &&
@@ -42,12 +51,14 @@
 />
 
 {#if open}
-  <div class="backdrop" role="presentation" onclick={close}>
+  <div class="backdrop sk-modal-backdrop" class:projectScoped role="presentation" onclick={close}>
     <div
-      class="dialog"
+      class="dialog sk-modal-dialog"
+      bind:this={root}
+      data-modal-root
       class:flush
       role="dialog"
-      aria-modal="true"
+      aria-modal={isTopModal(root)}
       aria-label={title}
       tabindex="-1"
       style="width: {width}px"
@@ -55,14 +66,15 @@
       onkeydown={() => undefined}
     >
       {#if title}
-        <div class="head">
-          <span class="titles"
-            ><span class="title">{title}</span>{#if subtitle}<span class="subtitle">{subtitle}</span
+        <div class="head sk-modal-head">
+          <span class="titles sk-modal-titles"
+            ><span class="title sk-modal-title">{title}</span>{#if subtitle}<span
+                class="subtitle sk-modal-subtitle">{subtitle}</span
               >{/if}</span
           >
           {#if closable}<button
               type="button"
-              class="x"
+              class="x sk-modal-x"
               data-tip={t('ui.closeEsc')}
               aria-label={t('ui.close')}
               onclick={close}
@@ -72,104 +84,7 @@
         </div>
       {/if}
       {@render children()}
-      {#if footer}<div class="footer">{@render footer()}</div>{/if}
+      {#if footer}<div class="footer sk-modal-footer">{@render footer()}</div>{/if}
     </div>
   </div>
 {/if}
-
-<style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 80;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: var(--sk-black-a55);
-    backdrop-filter: blur(3px);
-  }
-
-  .dialog {
-    max-width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
-    border-radius: var(--sk-radius-modal);
-    background: var(--sk-modal);
-    box-shadow:
-      0 30px 80px var(--sk-black-a60),
-      0 0 0 1px var(--sk-white-a4);
-    animation: skIn 0.16s ease-out;
-    outline: none;
-  }
-
-  .dialog.flush {
-    gap: 0;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .flush > .head {
-    padding: 18px 18px 14px 20px;
-  }
-
-  .flush > .footer {
-    align-items: center;
-    padding: 14px 20px;
-    border-top: 1px solid var(--sk-line);
-    background: var(--sk-bg);
-  }
-
-  .head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .titles {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .subtitle {
-    font-size: var(--sk-fs-4);
-    color: var(--sk-text-muted);
-  }
-
-  .title {
-    font-size: var(--sk-fs-10);
-    font-weight: 700;
-    color: var(--sk-text);
-  }
-
-  .x {
-    width: 28px;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border: none;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--sk-text-muted);
-    cursor: pointer;
-  }
-
-  .x:hover {
-    background: var(--sk-surface-2);
-    color: var(--sk-text-bright);
-  }
-
-  .footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-</style>

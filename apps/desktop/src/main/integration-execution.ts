@@ -3,6 +3,7 @@ import type { IntegrationOperation } from './integration-model';
 import { IntegrationPending, integrationEnvironmentKey } from './integration-model';
 import { admitIntegration } from './integration-git';
 import { assertResultUnchanged } from './completion-results';
+import { assertAcceptedDependency } from './dependency-code-inputs';
 import { integrationChecks } from './integration-checks';
 import { runIntegrationWorker } from './integration-worker';
 import { errorText } from './session-log';
@@ -27,6 +28,7 @@ export async function executeIntegration(
       return;
     }
     integration.setRuntime(op, 'running');
+    if (op.purpose === 'local') await ctx.localCandidates.requireInputs(op);
     await integration.history.announce(
       op,
       op.conflicts.length
@@ -40,7 +42,10 @@ export async function executeIntegration(
     await admitIntegration(ctx.project(op.projectId), op, (value) =>
       integration.service.save(value),
     );
-    for (const result of op.results) await assertResultUnchanged(ctx.project(op.projectId), result);
+    for (const result of op.results)
+      if (op.purpose === 'publication')
+        await assertResultUnchanged(ctx.project(op.projectId), result);
+      else await assertAcceptedDependency(ctx.deps.db, ctx.project(op.projectId), result);
     integration.assertExecuting(op);
     if (op.state === 'preparing') await integration.service.advance(op);
     integration.assertExecuting(op);
@@ -105,7 +110,7 @@ export async function executeIntegration(
       publishing = true;
       await ctx.merges.coordinator.publishCandidate(op);
       await integration.history.notice(op, 'Интеграция проверена. Skaro продолжает выполнение.');
-    } else {
+    } else if (op.purpose === 'publication') {
       const active = await ctx.history.restore(op.projectId, op.taskId);
       if (active) await ctx.merges.showCard(active, ctx.project(op.projectId));
     }

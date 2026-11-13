@@ -114,6 +114,7 @@ export interface EnvironmentConfig {
 }
 
 export interface ProjectConfig {
+  workflow?: import('../coordination/preflight.ts').ProjectWorkflow;
   /** Absent: the project has no services Skaro runs for a task. */
   environment?: EnvironmentConfig;
   checks: ProjectCheck[];

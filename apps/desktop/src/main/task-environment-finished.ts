@@ -22,7 +22,7 @@ async function inventory(root: string): Promise<string[]> {
 
 /** Destructive cleanup needs a complete, fresh read, not ArtifactStore's tolerant UI snapshot. */
 export async function environmentArtifacts(
-  context: ProjectContext,
+  context: Pick<ProjectContext, 'root' | 'store'>,
 ): Promise<ProjectArtifacts | undefined> {
   try {
     const before = await inventory(context.root);

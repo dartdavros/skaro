@@ -7,6 +7,25 @@ import { taskBlockerTool } from '@skaro/mcp-server';
 const db = AppDb.open(':memory:');
 afterAll(() => db.close());
 
+it('resolves only the subscribed incident and never undoes an explicit stop or a newer intent', () => {
+  const execution = new TaskExecution(db, 'incident-intent');
+  execution.start();
+  const intent = execution.intentVersion();
+  execution.block('Unavailable', 'incident');
+  execution.clearBlock();
+  expect(execution.read().blockedIncident).toBe('incident');
+  expect(execution.clearIncident('other', intent)).toBe(false);
+  execution.stop();
+  expect(execution.clearIncident('incident', intent)).toBe(false);
+  execution.decisionAnswered();
+  expect(execution.read().enabled).toBe(false);
+  execution.start();
+  execution.block('Unavailable', 'incident');
+  expect(execution.clearIncident('incident', intent)).toBe(false);
+  expect(execution.clearIncident('incident', execution.intentVersion())).toBe(true);
+  expect(execution.read().blocked).toBeUndefined();
+});
+
 it('retains execution intent and a concrete blocker across controller restoration', () => {
   const execution = new TaskExecution(db, 'restore');
   execution.start();

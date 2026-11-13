@@ -2,6 +2,32 @@ import type { MethodName, EventName } from './ipc';
 
 /** The whitelist the preload exposes; must list every key of `Methods`. */
 export const METHODS = [
+  'archiagent.status',
+  'archiagent.activate',
+  'c4.audit',
+  'c4.auditStart',
+  'c4.auditStop',
+  'c4.auditRecover',
+  'c4.coordination',
+  'c4.selectProtocol',
+  'coordinator.state',
+  'coordinator.setDispatch',
+  'activity.page',
+  'decisions.list',
+  'decisions.answer',
+  'decisions.status',
+  'incidents.list',
+  'incidents.policy',
+  'incidents.setPolicy',
+  'incidents.recheck',
+  'incidents.answer',
+  'incidents.revoke',
+  'incidents.cancel',
+  'local.register',
+  'local.install',
+  'local.rollback',
+  'local.prepareCandidate',
+  'local.candidate',
   'diagram.save',
   'diagram.pickFolder',
   'diagram.saveInFolder',
@@ -164,12 +190,14 @@ export const METHODS = [
 ] as const satisfies readonly MethodName[];
 
 export const EVENTS = [
+  'c4.auditChanged',
   'app.navigate',
   'graph.changed',
   'history.changed',
   'command.changed',
   'projects.card',
   'updates.changed',
+  'decisions.changed',
   'background.changed',
   'window.maximized',
   'agents.changed',
@@ -186,3 +214,4 @@ export const EVENTS = [
 type Missing = Exclude<MethodName, (typeof METHODS)[number]>;
 const _complete: Missing extends never ? true : Missing = true;
 void _complete;
+// Local-version commands are owner IPC only; agents cannot invoke them through MCP.

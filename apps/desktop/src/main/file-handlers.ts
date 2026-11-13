@@ -1,7 +1,6 @@
 import { clipboard, dialog, nativeImage, shell, type BrowserWindow } from 'electron';
 import type { PickedFile } from '../shared/ipc';
-import { fileDiff } from './file-diff';
-import { existingPaths, isImagePath, resolveInside, suggestPaths } from './files';
+import { isImagePath } from './files';
 import type { Handlers } from './ipc';
 import type { Services } from './app-services';
 
@@ -27,17 +26,15 @@ export function fileHandlers(
     'task.stopEnvironmentReview': (projectId, taskId) =>
       runs.stopEnvironmentReview(projectId, taskId),
     'files.suggest': async (projectId, taskId, query) =>
-      suggestPaths(await runs.workdir(projectId, taskId), query),
-    'files.exist': async (projectId, taskId, paths) =>
-      existingPaths(await runs.workdir(projectId, taskId), paths),
+      runs.files.suggest(projectId, taskId, query),
+    'files.exist': async (projectId, taskId, paths) => runs.files.exist(projectId, taskId, paths),
     'files.open': async (projectId, taskId, path) => {
-      const error = await shell.openPath(
-        resolveInside(await runs.workdir(projectId, taskId), path),
-      );
-      if (error) throw new Error(error);
+      await runs.files.open(projectId, taskId, path, async (file) => {
+        const error = await shell.openPath(file);
+        if (error) throw new Error(error);
+      });
     },
-    'files.diff': async (projectId, taskId, path) =>
-      fileDiff(await runs.workdir(projectId, taskId), path),
+    'files.diff': async (projectId, taskId, path) => runs.files.diff(projectId, taskId, path),
     'files.pasteImage': async () => {
       const items = await clipboard.read();
       const item = items.find((entry) => entry.types.includes('image/png'));

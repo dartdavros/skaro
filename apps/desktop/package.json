@@ -27,6 +27,7 @@
     "@skaro/adapter-claude": "workspace:*",
     "@skaro/adapter-codex": "workspace:*",
     "@skaro/agent-runtime": "workspace:*",
+    "@skaro/agents": "workspace:*",
     "@skaro/core": "workspace:*",
     "@skaro/mcp-server": "workspace:*",
     "@skaro/timeline": "workspace:*",
@@ -59,11 +60,12 @@
     "typescript": "~6.0.3",
     "unpdf": "^1.8.1",
     "vite": "^7.3.6",
-    "web-tree-sitter": "0.25.10",
-    "@skaro/agents": "workspace:*"
+    "web-tree-sitter": "0.25.10"
   },
   "dependencies": {
+    "@balena/dockerignore": "1.0.2",
     "@playwright/mcp": "0.0.83",
+    "dockerfile-ast": "0.7.1",
     "electron-updater": "6.8.9",
     "yaml": "2.9.1"
   }

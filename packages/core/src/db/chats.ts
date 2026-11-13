@@ -80,16 +80,17 @@ export class DbChats extends DbTable {
   /** Chats of a project (or of one task), most recently active first. */
   listChats(
     projectId: string,
-    options: { taskId?: string; archived?: boolean } = {},
+    options: { taskId?: string; archived?: boolean; includeTasks?: boolean } = {},
   ): ChatRecord[] {
     const rows = this.db
       .prepare(
         `SELECT * FROM chats WHERE project_id = ? AND archived = ?
-         AND (? IS NULL AND task_id IS NULL OR task_id = ?) ORDER BY updated_at DESC, rowid DESC`,
+         AND (? = 1 OR (? IS NULL AND task_id IS NULL OR task_id = ?)) ORDER BY updated_at DESC, rowid DESC`,
       )
       .all(
         projectId,
         options.archived ? 1 : 0,
+        options.includeTasks ? 1 : 0,
         options.taskId ?? null,
         options.taskId ?? null,
       ) as Row[];

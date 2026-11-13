@@ -54,6 +54,10 @@ export async function suggestPaths(
   limit = 30,
 ): Promise<PathSuggestion[]> {
   const files = await listFiles(cwd);
+  return suggestListedPaths(files, query, limit);
+}
+
+export function suggestListedPaths(files: string[], query: string, limit = 30): PathSuggestion[] {
   const folders = new Set<string>();
   for (const file of files) {
     const parts = file.split('/');

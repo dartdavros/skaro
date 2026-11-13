@@ -181,19 +181,19 @@ function withSection(
   heading: string,
   content: string,
 ): string {
-  const lines = body.replace(/\s+$/, '').split('\n');
+  const lines = body.split('\n');
   const start = lines.findIndex((l) => {
     const h = /^##\s+(.+?)\s*$/.exec(l.replace(/\r$/, ''));
     return h !== null && HEADINGS[h[1]!.toLowerCase()] === key;
   });
   if (start === -1) {
-    const head = lines.join('\n').trim();
-    return `${head ? `${head}\n\n` : ''}## ${heading}\n\n${content.trim()}\n`;
+    const separator = !body || body.endsWith('\n\n') ? '' : body.endsWith('\n') ? '\n' : '\n\n';
+    return `${body}${separator}## ${heading}\n\n${content.trim()}\n`;
   }
   let end = start + 1;
   while (end < lines.length && !/^##\s/.test(lines[end]!)) end++;
-  return [...lines.slice(0, start + 1), '', content.trim(), '', ...lines.slice(end)]
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/\s*$/, '\n');
+  // A host-written summary must never reformat authored requirements or later sections.
+  const prefix = lines.slice(0, start + 1).join('\n');
+  const suffix = lines.slice(end).join('\n');
+  return `${prefix}\n\n${content.trim()}\n${suffix ? '\n' + suffix : ''}`;
 }

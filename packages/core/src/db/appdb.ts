@@ -1,10 +1,14 @@
 import { DbCollections } from './collections.ts';
+import { DbVerificationArchives } from './verification-archive.ts';
 import { DbProjectShell } from './project-shell.ts';
 import { DbCommands } from './commands.ts';
 export type { OwnerCommand } from './commands.ts';
 // Public application database API; persistence is composed by table responsibility.
-import { DatabaseSync } from 'node:sqlite';
-import { MIGRATIONS } from './migrations.ts';
+import type { DatabaseSync } from 'node:sqlite';
+import { openDatabase } from './open.ts';
+import { DbResources } from './resources.ts';
+import { DbCoordination } from './coordination.ts';
+import { DbResourceAdmission } from './admission.ts';
 import { DbTable } from './table.ts';
 export type * from './model.ts';
 import type {
@@ -28,7 +32,11 @@ import { DbInteractions } from './interactions.ts';
 
 export class AppDb extends DbTable {
   readonly commands: DbCommands;
+  readonly resources: DbResources;
+  readonly coordination: DbCoordination;
+  readonly admission: DbResourceAdmission;
   readonly collections: DbCollections;
+  readonly verificationArchives: DbVerificationArchives;
   readonly shell: DbProjectShell;
   readonly filePath: string;
   private readonly projects: DbProjects;
@@ -37,15 +45,24 @@ export class AppDb extends DbTable {
   private readonly runs: DbRuns;
   readonly chats: DbChats;
   private readonly merges: DbMerges;
-  private readonly events: DbEvents;
+  readonly events: DbEvents;
   private readonly interactions: DbInteractions;
 
   private constructor(db: DatabaseSync, now: () => number, filePath: string, readOnly = false) {
     super(db, now);
     this.filePath = filePath;
     this.commands = new DbCommands(db, now);
+    this.resources = new DbResources(db, now);
+    this.coordination = new DbCoordination(db, now);
+    this.admission = new DbResourceAdmission(db, now);
     this.collections = new DbCollections(db, now, readOnly);
     this.shell = new DbProjectShell(db, now);
+    this.verificationArchives = new DbVerificationArchives(
+      db,
+      filePath,
+      readOnly,
+      () => this.shell.projectScope,
+    );
     this.projects = new DbProjects(db, now);
     this.settings = new DbSettings(db, now);
     this.runtime = new DbRuntime(db, now);
@@ -57,30 +74,12 @@ export class AppDb extends DbTable {
   }
 
   static readOnly(path: string): AppDb {
-    const db = new DatabaseSync(path, { readOnly: true });
-    db.exec('PRAGMA query_only=ON; PRAGMA busy_timeout=5000;');
-    return new AppDb(db, Date.now, path, true);
+    return new AppDb(openDatabase(path, true), Date.now, path, true);
   }
 
   /** Opens (and migrates) the database; `:memory:` for tests. */
   static open(path: string, now: () => number = Date.now): AppDb {
-    const db = new DatabaseSync(path);
-    db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout=5000;');
-    const version = Number(
-      (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version,
-    );
-    for (let v = version; v < MIGRATIONS.length; v++) {
-      db.exec('BEGIN');
-      try {
-        db.exec(MIGRATIONS[v]!);
-        db.exec(`PRAGMA user_version = ${v + 1}`);
-        db.exec('COMMIT');
-      } catch (error) {
-        db.exec('ROLLBACK');
-        throw error;
-      }
-    }
-    return new AppDb(db, now, path);
+    return new AppDb(openDatabase(path), now, path);
   }
 
   close(): void {
@@ -145,8 +144,8 @@ export class AppDb extends DbTable {
 
   // ── settings ─────────────────────────────────────────────────────────────
 
-  getSetting<T>(key: string, fallback: T): T {
-    return this.settings.getSetting(key, fallback);
+  getSetting<T>(key: string, fallback: T, options: { strict?: boolean } = {}): T {
+    return this.settings.getSetting(key, fallback, options);
   }
 
   setSetting(key: string, value: unknown): void {
@@ -243,10 +242,7 @@ export class AppDb extends DbTable {
   }
 
   /** Chats of a project (or of one task), most recently active first. */
-  listChats(
-    projectId: string,
-    options: { taskId?: string; archived?: boolean } = {},
-  ): ChatRecord[] {
+  listChats(projectId: string, options: Parameters<DbChats['listChats']>[1] = {}): ChatRecord[] {
     return this.chats.listChats(projectId, options);
   }
 

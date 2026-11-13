@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AppDb } from './appdb.ts';
+import { MIGRATIONS } from './migrations.ts';
 
 let clock = 1000;
 let db: AppDb;
@@ -16,7 +17,7 @@ afterEach(() => db.close());
 
 describe('AppDb', () => {
   it('migrates a new database', () => {
-    expect(db.schemaVersion).toBe(8);
+    expect(db.schemaVersion).toBe(MIGRATIONS.length);
   });
 
   it('keeps projects, most recently opened first', () => {
@@ -191,7 +192,7 @@ describe('AppDb', () => {
       first.close();
       const second = AppDb.open(path);
       try {
-        expect(second.schemaVersion).toBe(8);
+        expect(second.schemaVersion).toBe(MIGRATIONS.length);
         expect(second.listProjects().map((p) => p.name)).toEqual(['P']);
       } finally {
         second.close();

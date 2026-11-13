@@ -1,11 +1,13 @@
 <script lang="ts">
   import { IconButton, Icon, ProjectTabs, t, WindowControls, type ProjectTab } from '@skaro/ui';
   import UpdateButton from './updates/UpdateButton.svelte';
+  import DecisionButton from './decisions/DecisionButton.svelte';
   import BackgroundButton from './background/BackgroundButton.svelte';
 
   /** The top bar is the window title bar: home, project tabs, settings, window buttons. */
   let {
     locked = false,
+    project,
     tabs,
     active,
     home,
@@ -18,6 +20,7 @@
   }: {
     /** No agent yet: home and projects are closed until one is added. */
     locked?: boolean;
+    project?: { id: string; name: string };
     tabs: ProjectTab[];
     active?: string;
     home: boolean;
@@ -55,6 +58,7 @@
     <ProjectTabs {tabs} {active} {onselect} {onclose} {onadd} />
   </div>
   <div class="right">
+    <DecisionButton {project} />
     <BackgroundButton />
     <UpdateButton />
     <IconButton tip={t('window.settings')} active={settings} onclick={onsettings}>

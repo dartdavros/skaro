@@ -1,4 +1,12 @@
+import type { CoordinationControlMethods } from './coordination-control';
+import type { ArchiagentActivationMethods } from './archiagent-activation';
+import type { C4CoordinationMethods } from './c4-coordination';
+import type { C4AuditMethods } from './c4-audit';
 import type { AgentMethods } from './agent-methods';
+import type { LocalVersionMethods } from './local-versions';
+import type { IncidentMethods } from './incidents';
+import type { ProjectActivityMethods } from './project-activity';
+import type { ProjectDecisionMethods } from './project-decisions';
 import type { ModelSettingsMethods } from './model-settings';
 import type { ModelCatalogMethods } from './model-catalog';
 import type { ModelUsageMethods } from './model-usage';
@@ -55,6 +63,14 @@ export type { UpdateState } from './updates';
 /** Methods the renderer may call: name → signature. */
 export interface Methods
   extends
+    ArchiagentActivationMethods,
+    C4CoordinationMethods,
+    C4AuditMethods,
+    CoordinationControlMethods,
+    ProjectActivityMethods,
+    ProjectDecisionMethods,
+    LocalVersionMethods,
+    IncidentMethods,
     AgentMethods,
     ModelSettingsMethods,
     ModelCatalogMethods,
@@ -236,7 +252,9 @@ export interface Events extends HistoryEvents, GraphEvents, ShellEvents {
   'command.changed': import('@skaro/timeline').OwnerCommand;
   'projects.card': ProjectCard;
   'updates.changed': UpdateState;
+  'decisions.changed': { projectId: string };
   'background.changed': import('./background').BackgroundState;
+  'c4.auditChanged': { projectId: string };
   'window.maximized': boolean;
   'agents.changed': AgentInfo[];
   /** Artifacts of a project changed (task list and task details). */
@@ -276,16 +294,4 @@ export { METHODS, EVENTS } from './ipc-channels';
 export const INVOKE_CHANNEL = 'skaro:invoke';
 export const EVENT_CHANNEL = 'skaro:event';
 
-/** What the renderer sees as `window.skaro`. */
-export interface SkaroApi {
-  readonly bootstrap?: import('./ipc-sessions').BootstrapState;
-  readonly bootstrapReady?: Promise<import('./ipc-sessions').BootstrapState | undefined>;
-  readonly platform: string;
-  /** Path on disk of a file or a folder dropped into the window. */
-  pathOf(file: File): string;
-  invoke<M extends MethodName>(
-    method: M,
-    ...args: Parameters<Methods[M]>
-  ): Promise<ReturnType<Methods[M]>>;
-  on<E extends EventName>(event: E, listener: (payload: Events[E]) => void): () => void;
-}
+export type { SkaroApi } from './ipc-api';

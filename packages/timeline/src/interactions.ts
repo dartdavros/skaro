@@ -12,6 +12,8 @@ export type Interaction =
   | {
       kind: 'approval';
       id: string;
+      /** Persisted controller decision, independent of a native adapter turn. */
+      delivery?: 'async';
       itemId?: string;
       action: {
         type: 'command' | 'file_write' | 'network' | 'mcp' | 'other';

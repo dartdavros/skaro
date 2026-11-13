@@ -6,6 +6,7 @@ import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { readSubject, updateSubject } from './task-subject';
 import { awaitsDecision, waitCard } from './task-wait-card';
+import { suspendWaitingTask } from './task-suspension';
 
 /** events: a focused part of the task-run controller. */
 export class TaskRunEvents {
@@ -60,9 +61,15 @@ export class TaskRunEvents {
       case 'interaction.closed':
         this.settleRuntime(active);
         return;
-      case 'turn.completed':
+      case 'turn.completed': {
+        const recorded =
+          event.outcome === 'failed' && event.error
+            ? this.ctx.incidents
+                .failure(active, event.error)
+                .catch((error) => console.error('Incident capture:', error))
+            : Promise.resolve();
         if (!event.continuing) {
-          const pending = this.onTurnCompleted(active, event.outcome);
+          const pending = recorded.then(() => this.onTurnCompleted(active, event.outcome));
           active.operations.add(pending);
           void pending.then(
             () => active.operations.delete(pending),
@@ -73,6 +80,7 @@ export class TaskRunEvents {
           );
         }
         return;
+      }
     }
   }
 
@@ -107,6 +115,7 @@ export class TaskRunEvents {
       active.release?.();
       active.release = undefined;
       this.ctx.queue.poke();
+      await suspendWaitingTask(this.ctx, active);
       return;
     }
     const after = active.afterTurn;
@@ -124,6 +133,9 @@ export class TaskRunEvents {
       this.ctx.limitEnvironments();
     }
     if (after) return;
+    await suspendWaitingTask(this.ctx, active);
+    if (this.ctx.deps.coordinators && (await this.ctx.incidents.afterTurn(active))) return;
+    if (await this.ctx.architecture.afterTurn(active)) return;
     const { projectId, taskId } = active;
     const context = this.ctx.project(projectId);
     try {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { C4Model, C4State, C4View, C4ViewKind } from '@skaro/core/c4-view';
   import C4ExportAll from './C4ExportAll.svelte';
+  import C4AuditButton from './C4AuditButton.svelte';
   import { Icon, ViewSwitch, t } from '@skaro/ui';
   import FilterDrop from '../tasks/FilterDrop.svelte';
   import { viewKinds, viewKindIcons } from './view-kinds';
@@ -63,6 +64,7 @@
     >
   {/if}
   <div data-task-toolbar class="spacer"></div>
+  <C4AuditButton />
   <C4ExportAll {model} onerror={onexporterror} />
   <ViewSwitch
     value={view}

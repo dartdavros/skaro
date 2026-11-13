@@ -1,3 +1,6 @@
+import type { HistoryArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
+import { handoffRecord } from './task-handoff-record';
+import { taskTool } from './task-run-access';
 import { git } from '@skaro/core';
 import type { Item, TimelineState } from '@skaro/timeline';
 import type { ActiveRun } from './task-run-model';
@@ -12,7 +15,10 @@ export function historyText(state: TimelineState): string {
 
 function publicItem(item: Item): Item {
   // Including the tool's own output would recursively duplicate the entire history each read.
-  return item.kind === 'tool' && item.name.endsWith('read_task_history')
+  return item.kind === 'tool' &&
+    ['read_task_history', 'read_chat_history', 'read_project_memory'].some((name) =>
+      item.name.endsWith(name),
+    )
     ? { ...item, output: '[History page; source records are available directly.]' }
     : item;
 }
@@ -71,4 +77,24 @@ export async function handoffContext(
   ]
     .filter(Boolean)
     .join('\n\n');
+}
+
+export function readTaskHistory(
+  ctx: TaskRunEngine,
+  args: HistoryArgs,
+  scope: SkaroScope,
+): Promise<ToolResult> {
+  return taskTool(ctx, scope, async () => {
+    const active = ctx.requireActive(scope.projectId, scope.taskId!);
+    const transfers: string[] = [];
+    let run = active.run;
+    while (run.previousRunId) {
+      transfers.unshift(JSON.stringify({ run: run.id, handoff: handoffRecord(run) }));
+      const previous = ctx.deps.db.getRun(run.previousRunId);
+      if (!previous) break;
+      run = previous;
+    }
+    const text = [...transfers, historyText(active.timeline.state)].join('\n');
+    return { text: JSON.stringify(historyPage(text, args.query, args.offset, args.limit)) };
+  });
 }

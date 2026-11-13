@@ -28,6 +28,7 @@ export async function assertRemovableWorktree(
   repo: string,
   path: string,
   inspect: () => Promise<ContainerMounts[]> = containerMounts,
+  options: { completed?: boolean } = {},
 ): Promise<void> {
   const target = await realpath(path);
   const main = await realpath(repo);
@@ -41,11 +42,15 @@ export async function assertRemovableWorktree(
   if (!registered.some((entry) => containsPath(entry, target) && containsPath(target, entry))) {
     throw new WorktreeRemovalBlocked(path, 'the folder is not a registered task worktree');
   }
-  const changes = (
-    await git(path, ['status', '--porcelain', '--untracked-files=all', '--ignored=matching'])
-  ).stdout;
-  if (changes.trim())
-    throw new WorktreeRemovalBlocked(path, 'it contains changed, untracked or ignored files');
+  // Completed task checkouts are disposable, including generated and ignored dependencies.
+  // Ordinary user-requested removal must still protect uncommitted local data.
+  if (!options.completed) {
+    const changes = (
+      await git(path, ['status', '--porcelain', '--untracked-files=all', '--ignored=matching'])
+    ).stdout;
+    if (changes.trim())
+      throw new WorktreeRemovalBlocked(path, 'it contains changed, untracked or ignored files');
+  }
   let containers: ContainerMounts[];
   try {
     containers = await inspect();

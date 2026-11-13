@@ -3,10 +3,11 @@ import type { TaskResult } from './completion-store';
 import type { AgentId, MergeProgress } from '../shared/ipc';
 
 export interface IntegrationRequest {
+  inputVersion?: string;
   localChanges?: import('@skaro/core').LocalChangesSnapshot;
   projectId: string;
   taskId: string;
-  purpose: 'dependencies' | 'publication';
+  purpose: 'dependencies' | 'publication' | 'local';
   base: string;
   results: TaskResult[];
   baseResults?: TaskResult[];

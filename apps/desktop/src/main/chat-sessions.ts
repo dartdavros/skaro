@@ -11,6 +11,7 @@ import type { ChatEngine } from './chat-engine';
 import { chatSessionOptions } from './chat-session-options';
 import { startBuiltinChatSession } from './builtin-chat-session';
 import { retireNativeSession } from './native/session-retirement';
+import { resourcesFor } from './resource-execution';
 
 export class ChatSessions {
   private readonly ctx: ChatEngine;
@@ -89,7 +90,7 @@ export class ChatSessions {
     } catch (error) {
       live.grant?.revoke();
       live.grant = undefined;
-      if (resume) this.ctx.history.notice(live, 'session_lost', 'error', errorText(error));
+      this.ctx.history.notice(live, resume ? 'session_lost' : 'other', 'error', errorText(error));
       throw error;
     }
     return this.publish(live, session, segment, !!resume, signal);
@@ -119,7 +120,9 @@ export class ChatSessions {
         try {
           await session.close();
         } finally {
-          await this.processes.stop(`chat.${live.chat.id}`);
+          const key = `chat.${live.chat.id}`;
+          await this.processes.stop(key);
+          resourcesFor(this.ctx.deps.db)?.reconcileProcess(live.projectId, key);
         }
       });
       throw new CommandCancelled();
@@ -192,7 +195,9 @@ export class ChatSessions {
             'Agent session shutdown was not confirmed',
           );
         } finally {
-          await this.processes.stop(`chat.${live.chat.id}`);
+          const key = `chat.${live.chat.id}`;
+          await this.processes.stop(key);
+          resourcesFor(this.ctx.deps.db)?.reconcileProcess(live.projectId, key);
         }
       });
     } finally {

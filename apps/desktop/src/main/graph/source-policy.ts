@@ -58,7 +58,7 @@ export function language(path: string): string {
   if (path.endsWith('.json')) return 'json';
   return 'file';
 }
-const textSource = (path: string): boolean =>
+export const textSource = (path: string): boolean =>
   /(?:\.(?:[cm]?[jt]sx?|svelte|py|mdx?|ya?ml|json|toml|txt|css|html|sh|sql|ini|cfg)|(?:^|\/)Dockerfile(?:\.[^/]+)?)$/.test(
     path,
   );

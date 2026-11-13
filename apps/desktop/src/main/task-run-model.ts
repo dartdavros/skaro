@@ -12,6 +12,7 @@ import type { NativeAdmissions } from './native/admissions';
 import type { BuiltinTaskModels } from './builtin-task-models';
 
 export interface TaskRunDeps {
+  coordinators?: import('./project-coordinators').ProjectCoordinators;
   db: AppDb;
   /** App data folder: runs/, worktrees/. */
   dataDir: string;
@@ -51,6 +52,7 @@ export class ActiveRun {
   /** Invalidates a delivery/attachment already awaiting I/O when the owner stops the task. */
   deliveryEpoch = 0;
   stopping?: Promise<void>;
+  suspending?: Promise<void>;
   stopError?: string;
   grant: Grant | undefined;
   log: WriteStream | undefined;

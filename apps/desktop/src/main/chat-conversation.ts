@@ -1,6 +1,11 @@
 import { QuestionAnswers } from './question-answers';
 import { hasOwnerCommand } from './owner-command-history';
-import { cancelOwnerMessages, CommandCancelled } from './owner-commands';
+import {
+  cancelOwnerMessages,
+  stopOwnerMessages,
+  CommandCancelled,
+  queueOwnerMessage,
+} from './owner-commands';
 import {
   assertQuestionMessageAllowed,
   questionMessageNote,
@@ -22,6 +27,7 @@ import { saved, lastOf, settingsKey, lastKey, currentTurn, titleOf } from './cha
 
 import type { ChatEngine } from './chat-engine';
 import { stopChat } from './chat-stop';
+import { projectMemory } from './project-memory-binding';
 import { parseBuiltinChatSettings, saveBuiltinChatSettings } from './builtin-chat-settings';
 
 export class ChatConversation {
@@ -79,6 +85,11 @@ export class ChatConversation {
       saveBuiltinChatSettings(this.ctx.deps.db, chat.id, parseBuiltinChatSettings(settings));
     this.ctx.deps.db.setSetting(lastKey(projectId), lastOf(settings));
     const live = new LiveChat(projectId, chat, new Timeline());
+    if (
+      this.ctx.deps.db.getSetting<{ id: string } | undefined>(`c4.audit.${projectId}`, undefined)
+        ?.id === input.commandId
+    )
+      this.ctx.deps.db.setSetting(`c4.audit.chat.${chat.id}`, input.commandId);
     this.ctx.live.set(chat.id, live);
     this.ctx.history.skaroEvent(live, {
       t: 'item.upsert',
@@ -94,34 +105,7 @@ export class ChatConversation {
       },
     });
     this.ctx.listChanged(projectId, chat.id);
-    this.ctx.deps.db.commands.accept({
-      id: commandId,
-      method: 'chat.send',
-      owner: `${projectId}:${chat.id}`,
-      args: [projectId, chat.id, input],
-      state: 'accepted',
-    });
-    this.ctx.deps.db.commands.update(commandId, 'delivering');
-    void this.deliver(live, input)
-      .then(() => {
-        if (this.ctx.deps.db.commands.get(commandId)?.state === 'cancelled') return;
-        this.ctx.deps.emit(
-          'command.changed',
-          this.ctx.deps.db.commands.update(commandId, 'delivered'),
-        );
-      })
-      .catch((error: unknown) => {
-        if (
-          error instanceof CommandCancelled ||
-          this.ctx.deps.db.commands.get(commandId)?.state === 'cancelled'
-        )
-          return;
-        this.ctx.deps.emit(
-          'command.changed',
-          this.ctx.deps.db.commands.update(commandId, 'failed', String(error)),
-        );
-        this.ctx.history.failTurn(live, error);
-      });
+    queueOwnerMessage('chat.send', projectId, chat.id, input);
     return this.ctx.views.summary(chat);
   }
 
@@ -166,6 +150,8 @@ export class ChatConversation {
     if (hasOwnerCommand(live.timeline.state, input.commandId)) return;
     input = live.secrets.input(input);
     const deliveryRevision = live.operation.capture();
+    if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
+      throw new CommandCancelled();
     const session = await this.ctx.sessions.attach(live);
     live.operation.assert(deliveryRevision);
     assertQuestionMessageAllowed(live.timeline.state, input.internal);
@@ -177,6 +163,8 @@ export class ChatConversation {
     )
       return;
     const notes = this.ctx.proposals.takeNotes(live.chat.id);
+    const memory = await projectMemory(this.ctx.deps.db)?.note(live.projectId);
+    live.operation.assert(deliveryRevision);
     const workflow = this.ctx.importReview.importRecord(live.chat.id) ? '' : PROJECT_CHAT_WORKFLOW;
     const message = {
       ...input,
@@ -185,6 +173,7 @@ export class ChatConversation {
           input.commandId ? `command_id: ${input.commandId}` : '',
           questionMessageNote(live.timeline.state, input.internal),
           workflow,
+          memory ?? '',
           ...notes,
         ]
           .filter(Boolean)
@@ -225,7 +214,12 @@ export class ChatConversation {
         !live.timeline.state.turns.some((turn) => !turn.outcome))
     ) {
       const mailbox = new QuestionAnswers(this.ctx.deps.db, `live.${live.chat.id}`);
-      mailbox.accept(interaction, answer, (event) => this.ctx.history.skaroEvent(live, event));
+      mailbox.accept(
+        interaction,
+        answer,
+        (event) => this.ctx.history.skaroEvent(live, event),
+        live.timeline.state.turns.at(-1)?.id,
+      );
       mailbox.queue('chat.send', projectId, chatId, live.timeline.state);
       return;
     } else {
@@ -236,7 +230,7 @@ export class ChatConversation {
     this.ctx.history.skaroEvent(live, {
       t: 'item.upsert',
       item: {
-        id: `skaro-decision-${interactionId}`,
+        id: decisionItemId(live.chat.id, live.timeline.state.turns.at(-1)?.id, interactionId),
         turnId: isAsyncQuestion(interaction) ? '' : currentTurn(live),
         kind: 'decision',
         interaction,
@@ -249,9 +243,9 @@ export class ChatConversation {
   }
 
   async interrupt(projectId: string, chatId: string): Promise<void> {
-    cancelOwnerMessages(projectId, chatId);
+    const commands = stopOwnerMessages(projectId, chatId);
     const live = await this.ctx.history.restore(projectId, chatId);
-    return stopChat(this.ctx, live);
+    return stopChat(this.ctx, live, commands);
   }
 
   /** An archived chat is read-only: its agent process stops. */
@@ -267,3 +261,4 @@ export class ChatConversation {
     this.ctx.listChanged(projectId, chatId);
   }
 }
+import { decisionItemId } from './decision-item-id';

@@ -1,5 +1,13 @@
 import { existsSync } from 'node:fs';
-import { ensureSourceServices, expand, runShell, waitReady, type TaskKey } from '@skaro/core';
+import {
+  ensureSourceServices,
+  expand,
+  runShell,
+  waitReady,
+  type DockerContainer,
+  type EnvironmentConfig,
+  type TaskKey,
+} from '@skaro/core';
 import { admitCompose } from './task-compose';
 import type { EnvironmentDescription } from './task-environment-description';
 import type { EnvironmentRegistry } from './task-environment-registry';
@@ -34,7 +42,12 @@ export async function startEnvironmentServices(
     docker: EnvironmentDocker;
     describe: () => Promise<EnvironmentDescription>;
     prepare: () => Promise<void>;
+    provenance: (description: EnvironmentDescription) => Promise<() => Promise<void>>;
     remove: () => Promise<string[]>;
+    sourceObserved: (
+      source: NonNullable<EnvironmentConfig['source']>,
+      containers: DockerContainer[],
+    ) => () => void;
   },
 ) {
   const timing: EnvironmentStartTiming = {
@@ -60,7 +73,7 @@ export async function startEnvironmentServices(
     }
   };
   try {
-    const { identity, config, variables, compose } = await timed('prepareMs', async () => {
+    const description = await timed('prepareMs', async () => {
       await deps.prepare();
       const description = await deps.describe();
       if (!existsSync(description.identity.worktree))
@@ -68,6 +81,8 @@ export async function startEnvironmentServices(
       if (!description.config) throw new Error('The project describes no task environment.');
       return description;
     });
+    const { identity, config, variables, compose } = description;
+    let completeProvenance: (() => Promise<void>) | undefined;
     const portBindings = compose
       ? await timed('prepareMs', () => admitCompose(identity, compose))
       : undefined;
@@ -84,22 +99,32 @@ export async function startEnvironmentServices(
         !!deps.registry.find(key)?.created && (await deps.docker.hasData(identity.name));
       if (!timing.reusedData)
         await timed('createMs', async () => {
-          if (config!.source)
-            await ensureSourceServices(
-              identity.root,
-              config!.source,
-              identity.name,
-              options.signal,
-            );
-          const failures = await deps.remove();
-          if (failures.length)
-            throw new Error(`Cannot prepare a clean environment: ${failures.join('; ')}`);
-          options.assertActive?.();
-          options.signal?.throwIfAborted();
-          await run('create', config!.create!);
-          deps.registry.update(key, { created: true });
+          let releaseSource: (() => void) | undefined;
+          try {
+            if (config!.source)
+              await ensureSourceServices(
+                identity.root,
+                config!.source,
+                identity.name,
+                options.signal,
+                (containers) => {
+                  releaseSource = deps.sourceObserved(config!.source!, containers);
+                },
+              );
+            const failures = await deps.remove();
+            if (failures.length)
+              throw new Error(`Cannot prepare a clean environment: ${failures.join('; ')}`);
+            options.assertActive?.();
+            options.signal?.throwIfAborted();
+            completeProvenance = await deps.provenance(description);
+            await run('create', config!.create!);
+            deps.registry.update(key, { created: true });
+          } finally {
+            releaseSource?.();
+          }
         });
     }
+    completeProvenance ??= await deps.provenance(description);
     await timed('startMs', () => run('start', config!.start));
     if (config!.ready)
       await timed('readyMs', () =>
@@ -115,6 +140,7 @@ export async function startEnvironmentServices(
       if (problems.length)
         throw new Error(`Environment services are not ready: ${problems.join('; ')}`);
     }
+    await completeProvenance();
     return {
       name: identity.name,
       urls: Object.fromEntries(
