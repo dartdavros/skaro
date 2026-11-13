@@ -1,4 +1,5 @@
 import { recoverCoordinatorIncidents } from './coordinator-recovery';
+import { taskUpdateBusy } from './task-update-activity';
 import { type ProjectArtifacts, type Task } from '@skaro/core';
 import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
 import { type InteractionAnswer, type Item } from '@skaro/timeline';
@@ -88,6 +89,9 @@ export class TaskRuns {
   }
   slots(): RunSlots {
     return this.engine.scheduling.slots();
+  }
+  updateBusy(): boolean {
+    return taskUpdateBusy(this.engine);
   }
   publicationAgents(): number {
     return this.engine.integrations.publicationAgents();

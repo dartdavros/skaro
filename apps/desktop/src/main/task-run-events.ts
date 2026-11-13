@@ -1,4 +1,4 @@
-import { type TaskRuntime } from '@skaro/core';
+import { taskTimelineRuntime } from './task-runtime-state';
 import { currentActivity, persistsAfterTurn, type TimelineEvent } from '@skaro/timeline';
 import { errorText } from './session-log';
 import { FLUSH_MS, key } from './task-run-helpers';
@@ -173,12 +173,14 @@ export class TaskRunEvents {
 
   settleRuntime(active: ActiveRun): void {
     if (active.switching) return;
-    const s = active.timeline.state;
-    const state: TaskRuntime = s.interactions.some((i) => i.kind !== 'merge')
-      ? 'waiting'
-      : s.status === 'idle'
-        ? 'idle'
-        : 'running';
+    const execution = this.ctx.continuation.execution(active).read();
+    const incident = execution.blockedIncident
+      ? this.ctx.deps.db.coordination.blockers.get(active.projectId, execution.blockedIncident)
+      : undefined;
+    const state = taskTimelineRuntime(
+      active.timeline.state,
+      execution.enabled && incident?.state === 'open',
+    );
     // After a failed turn the agent stays idle: "failed" holds until it works again.
     const current = this.ctx.deps.db.getTaskRuntime(active.projectId).get(active.taskId)?.state;
     if (state === 'idle' && current === 'failed') return;

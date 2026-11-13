@@ -4,6 +4,7 @@ import type { Services } from './app-services';
 import { projectDecisionProjection } from './decision-projection';
 import { decisionReplyStatus } from './decision-replies';
 import { canonicalC4Decisions } from './c4-decision-sources';
+import { incidentDecisionAvailability } from './incident-decision-availability';
 
 /** Incremental project read model. Dirty owners are read, never attached/resumed. */
 export class DecisionSources {
@@ -41,18 +42,13 @@ export class DecisionSources {
       if (!entry.id.startsWith('coordinator:')) return [entry];
       const id = entry.id.slice('coordinator:'.length),
         db = this.services.db;
-      const decision = db.coordination.decisions.get(entry.origin.projectId, id);
-      const request = db.getSetting<{ expiresAt: number; policyRevision: number } | undefined>(
-        `coordination.decision-action.${id}`,
-        undefined,
+      const available = incidentDecisionAvailability(
+        db,
+        entry.origin.projectId,
+        id,
+        this.services.runs.incidents.policy.read(entry.origin.projectId).revision,
       );
-      const allowed =
-        decision?.state === 'pending' &&
-        request &&
-        request.expiresAt > Date.now() &&
-        request.policyRevision ===
-          this.services.runs.incidents.policy.read(entry.origin.projectId).revision;
-      return allowed ? [{ ...entry, expiresAt: request.expiresAt }] : [];
+      return available ? [{ ...entry, ...available }] : [];
     });
   }
   list(project: string): Promise<ProjectDecision[]> {

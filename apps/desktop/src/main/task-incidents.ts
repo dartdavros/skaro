@@ -105,7 +105,7 @@ export class TaskIncidents {
       await rememberEnvironmentWait(this.ctx, row);
     execution.block(reason, row.id);
     this.ctx.history.notice(active, 'other', 'error', reason);
-    this.ctx.setRuntime(active.projectId, active.taskId, 'waiting', active.run.id);
+    this.ctx.events.settleRuntime(active);
     return row;
   }
   async failure(active: ActiveRun, error: unknown): Promise<void> {

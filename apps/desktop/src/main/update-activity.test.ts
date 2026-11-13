@@ -24,25 +24,15 @@ describe('explicit update application guard', () => {
     activity.quarantine(false);
     await expect(activity.invoke('chat.send', () => true)).resolves.toBe(true);
   });
-  it('blocks running tasks and pending user interaction, then permits an idle app', () => {
+  it('rechecks actual executing work instead of retaining a previous busy status', () => {
     let running = true;
     const activity = new UpdateActivity(() => running);
     expect(() => activity.enterApply()).toThrow('UPDATE_BUSY');
     running = false;
-    activity.observe('chat.events', {
-      projectId: 'project',
-      chatId: 'chat',
-      seq: 0,
-      events: [{ t: 'status', state: 'waiting' }],
-    });
-    expect(() => activity.enterApply()).toThrow('UPDATE_BUSY');
-    activity.observe('chat.events', {
-      projectId: 'project',
-      chatId: 'chat',
-      seq: 1,
-      events: [{ t: 'status', state: 'idle' }],
-    });
     expect(() => activity.enterApply()).not.toThrow();
+    activity.release();
+    running = true;
+    expect(() => activity.enterApply()).toThrow('UPDATE_BUSY');
   });
   it('covers in-flight import writes and closes the race with new IPC work', async () => {
     const activity = new UpdateActivity(() => false);
@@ -68,21 +58,30 @@ describe('explicit update application guard', () => {
       }),
     ).rejects.toThrow('failed');
     expect(activity.busy()).toBe(false);
-    activity.observe('task.events', {
-      projectId: 'project',
-      taskId: 'task',
-      runId: 'run',
-      seq: 0,
-      events: [{ t: 'status', state: 'working' }],
-    });
-    expect(activity.busy()).toBe(true);
-    activity.observe('task.events', {
-      projectId: 'project',
-      taskId: 'task',
-      runId: 'run',
-      seq: 1,
-      events: [{ t: 'status', state: 'idle' }],
-    });
+    expect(() => activity.enterApply()).not.toThrow();
+  });
+  it('permits application while UI observations are pending but fences subsequent IPC', async () => {
+    const activity = new UpdateActivity(() => false);
+    let finish!: () => void;
+    const read = new Promise<void>((resolve) => (finish = resolve));
+    const observations = [
+      'background.state',
+      'history.page',
+      'task.open',
+      'chat.open',
+      'tasks.query',
+      'tasks.slots',
+      'agents.list',
+      'projects.overview',
+      'incidents.list',
+    ] as const;
+    const pending = observations.map((method) => activity.invoke(method, () => read));
+    expect(activity.busy()).toBe(false);
+    activity.enterApply();
+    await expect(activity.invoke('history.page', () => true)).rejects.toThrow('UPDATE_APPLYING');
+    finish();
+    await Promise.all(pending);
+    activity.release();
     expect(activity.busy()).toBe(false);
   });
 });

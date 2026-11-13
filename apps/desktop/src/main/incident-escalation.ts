@@ -3,13 +3,15 @@ import type { Interaction, InteractionAnswer } from '@skaro/timeline';
 import type { TaskRunEngine } from './task-run-engine';
 import { currentIncidentSubscriber } from './incident-condition';
 import { QuestionAnswers } from './question-answers';
-import { closeIncidentApproval } from './incident-feed';
+import { cancelIncidentApproval, closeIncidentApproval } from './incident-feed';
 
 /** Unsupported recovery needs a durable, pinned decision, not an invisible waiting record. */
 export async function escalateIncident(ctx: TaskRunEngine, row: CoordinationBlocker) {
   const id = incidentHash([row.id, 'owner-evidence', row.protocol!.ownerPolicyRevision]);
   const existing = ctx.deps.db.coordination.decisions.get(row.projectId, id);
   if (existing && existing.state !== 'pending') return;
+  if (row.protocol!.decisionId && row.protocol!.decisionId !== id)
+    await cancelIncidentApproval(ctx, row, row.protocol!.decisionId, 'decision_superseded');
   if (!existing)
     ctx.deps.db.coordination.decisions.create({
       id,

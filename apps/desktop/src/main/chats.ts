@@ -25,6 +25,7 @@ import type {
 import type { Deps } from './chat-model';
 import type { ChatRange } from '../shared/chat-catalog';
 import { background } from './background/client';
+import { updateSessionBusy } from './update-session-activity';
 
 import { ChatEngine } from './chat-engine';
 import { chatDecisionSources } from './chat-decision-sources';
@@ -109,6 +110,9 @@ export class ChatSessions implements ProjectToolHandlers {
     for (const chat of this.engine.live.values())
       if (chat.timeline.state.status !== 'idle') return true;
     return false;
+  }
+  updateBusy(): boolean {
+    return [...this.engine.live.values()].some(updateSessionBusy);
   }
   activity(): { working: number; waiting: number } {
     let working = 0;

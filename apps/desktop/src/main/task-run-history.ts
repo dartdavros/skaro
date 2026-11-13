@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { retireIncidentInteractions } from './incident-feed';
 import { createWriteStream, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { persistsAfterTurn, type RawLine, type TimelineEvent } from '@skaro/timeline';
@@ -68,6 +69,7 @@ export class TaskRunHistory {
     active.commitMessage = handoff?.commitMessage ?? result?.message;
     active.verification = result?.verification;
     this.ctx.active.set(k, active);
+    retireIncidentInteractions(this.ctx, active);
     // Generic wait cards never represented an owner decision; do not restore their tool barrier.
     for (const interaction of [...active.timeline.state.interactions])
       if (isLegacyWaitCard(interaction))
