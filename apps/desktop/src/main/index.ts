@@ -23,7 +23,6 @@ import { coordinatedSessionHandlers } from './coordinated-session-handlers';
 import { fileHandlers } from './file-handlers';
 import { diagramExportHandlers } from './diagram-export-handlers';
 import { createUpdates } from './update-service';
-import type { UpdateActivity } from './update-activity';
 import { trace } from './trace';
 import { HistoryReads, setHistoryReads } from './history-read-service';
 import { registerProjectLogos } from './app-logo';
@@ -49,14 +48,12 @@ protocol.registerSchemesAsPrivileged([
 
 let state: AppState | undefined;
 let historyReads: HistoryReads | undefined;
-let updateActivity: UpdateActivity | undefined;
 let overview: import('./project-overview').ProjectOverview | undefined;
 let taskRuns: import('./tasks').TaskRuns | undefined;
 let graph: import('./graph/service').GraphService | undefined;
 let tray: AppTray | undefined;
 function emit<E extends EventName>(event: E, payload: Events[E]): void {
   historyReads?.observe(event, payload);
-  updateActivity?.observe(event, payload);
   overview?.observe(event, payload);
   if (
     ['task.changed', 'chat.events', 'chats.changed', 'updates.changed', 'command.changed'].includes(
@@ -164,7 +161,6 @@ if (!locked) {
     graph = services.graph;
     taskRuns = services.runs;
     const result = await createUpdates({ ...services, emit });
-    updateActivity = result.activity;
     const updates = result.updates;
     hasUpdate = () => updates.snapshot().components.length > 0;
     if (updates.canRunAgents()) void services.agents.refresh();

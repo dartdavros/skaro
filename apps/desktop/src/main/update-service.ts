@@ -1,7 +1,7 @@
 import { RELEASE_AGENT_IDS, type ManagedAgentId as AgentId } from '@skaro/agents';
 import { app, net } from 'electron';
 import { join } from 'node:path';
-import { AgentInstaller, currentPlatform, isAgentBusy, type AppDb } from '@skaro/core';
+import { AgentInstaller, currentPlatform, type AppDb } from '@skaro/core';
 import type { ChatSessions } from './chats';
 import type { TaskRuns } from './tasks';
 import type { Events, EventName } from '../shared/ipc';
@@ -18,18 +18,9 @@ export async function createUpdates(options: {
   dataDir: string;
   emit: <E extends EventName>(event: E, payload: Events[E]) => void;
 }): Promise<{ updates: Updates; activity: UpdateActivity }> {
-  const { db, runs, chats, dataDir, emit } = options;
+  const { runs, chats, dataDir, emit } = options;
   const platform = currentPlatform();
-  const activity = new UpdateActivity(
-    () =>
-      runs.slots().free < runs.slots().total ||
-      chats.busy() ||
-      db
-        .listProjects()
-        .some((project) =>
-          [...db.getTaskRuntime(project.id).values()].some((task) => isAgentBusy(task.state)),
-        ),
-  );
+  const activity = new UpdateActivity(() => runs.updateBusy() || chats.updateBusy());
   const installer = new AgentInstaller({
     dir: process.env['SKARO_AGENTS_DIR'] ?? join(dataDir, 'agents'),
   });
