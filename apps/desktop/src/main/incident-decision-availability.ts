@@ -17,6 +17,17 @@ export function retiredIncidentDecision(
       (incident.protocol?.decisionId && incident.protocol.decisionId !== id))
   )
     return 'cancelled';
+  if (decision.kind === 'approval') {
+    const request = db.getSetting<{ expiresAt: number; policyRevision: number } | undefined>(
+      `coordination.decision-action.${id}`,
+      undefined,
+    );
+    const policy = db.getSetting<{ revision: number }>(`coordination.policy.${projectId}`, {
+      revision: 0,
+    });
+    if (!request || request.expiresAt <= Date.now() || request.policyRevision !== policy.revision)
+      return 'cancelled';
+  }
 }
 
 /** Owner questions carry no executable remedy and therefore need no action permission. */

@@ -3,6 +3,7 @@
   import { ArrowUpRight, MessageSquare, RefreshCw, RotateCw } from '@lucide/svelte';
   import ImageViewer from '../feed/ImageViewer.svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
+  import '../c4/audit-i18n';
   import { provideFeed } from '../feed/context.svelte';
   import InteractionCard from '../feed/InteractionCard.svelte';
   import ProposalCard from '../feed/ProposalCard.svelte';
@@ -42,7 +43,7 @@
     >
   </div>
   {#if !terminal}
-    <div inert={card.status === 'sending'}>
+    <div inert={card.status === 'sending' || card.uncertain}>
       {#if entry.kind === 'interaction'}<InteractionCard
           interaction={entry.interaction}
           {primary}
@@ -54,9 +55,12 @@
     {#if card.status === 'sending'}<LoadingIndicator size={16} /><span
         >{t('decisions.sending')}</span
       >
+    {:else if card.uncertain}<span>{t('c4.audit.detail.recovering')}</span>
     {:else if card.status !== 'pending'}<span>{t(`decisions.${card.status}`)}</span>{/if}
-    {#if card.status === 'error'}<Button size="sm" onclick={() => void card.repeat()}
-        ><RotateCw size={16} />{t('decisions.retry')}</Button
+    {#if card.status === 'error' || card.uncertain}<Button
+        size="sm"
+        onclick={() => void card.repeat()}
+        ><RotateCw size={16} />{t(card.uncertain ? 'decisions.update' : 'decisions.retry')}</Button
       >
     {:else if card.status === 'stale'}<Button
         size="sm"

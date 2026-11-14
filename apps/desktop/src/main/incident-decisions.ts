@@ -10,6 +10,9 @@ import {
   cancelIncidentApproval,
 } from './incident-feed';
 import { answerIncidentEscalation } from './incident-escalation';
+import { commitIncidentApproval, validateIncidentAnswer } from './incident-answer-validation';
+import { DecisionNotDispatched } from './decision-not-dispatched';
+import { incidentRequestIdentity } from './incident-request-identity';
 
 /** Exact, expiring owner decisions; the action policy remains independent of worker access. */
 export class IncidentDecisions {
@@ -21,29 +24,34 @@ export class IncidentDecisions {
   }
   async request(row: CoordinationBlocker, action: RemedyAction) {
     const policy = this.incidents.policy.read(row.projectId);
-    const id = incidentHash([row.id, remedyKey(action), policy.revision]);
+    if (policy.expiresAt <= Date.now()) return;
+    const id = incidentRequestIdentity(this.ctx.deps.db, row, action, policy.revision);
     if (row.protocol!.decisionId && row.protocol!.decisionId !== id)
       await cancelIncidentApproval(this.ctx, row, row.protocol!.decisionId, 'decision_superseded');
-    if (!this.ctx.deps.db.coordination.decisions.get(row.projectId, id)) {
-      this.ctx.deps.db.coordination.decisions.create({
-        id,
-        projectId: row.projectId,
-        eventId: row.eventId,
-        kind: 'approval',
-        subject: { kind: 'blocker', id: row.id },
-        inputHash: remedyKey(action),
+    const pending = this.ctx.deps.db.settings.atomic(() => {
+      if (!this.ctx.deps.db.coordination.decisions.get(row.projectId, id)) {
+        this.ctx.deps.db.coordination.decisions.create({
+          id,
+          projectId: row.projectId,
+          eventId: row.eventId,
+          kind: 'approval',
+          subject: { kind: 'blocker', id: row.id },
+          inputHash: remedyKey(action),
+        });
+        this.ctx.deps.db.setSetting(`coordination.decision-action.${id}`, {
+          action,
+          policyRevision: policy.revision,
+          expiresAt: Math.min(Date.now() + 15 * 60_000, policy.expiresAt),
+        });
+      }
+      const saved = this.ctx.deps.db.coordination.decisions.get(row.projectId, id)!;
+      if (saved.state !== 'pending') return false;
+      row = this.incidents.store.update(this.incidents.store.get(row.projectId, row.id), {
+        decisionId: id,
       });
-      this.ctx.deps.db.setSetting(`coordination.decision-action.${id}`, {
-        action,
-        policyRevision: policy.revision,
-        expiresAt: Math.min(Date.now() + 15 * 60_000, policy.expiresAt),
-      });
-    }
-    const saved = this.ctx.deps.db.coordination.decisions.get(row.projectId, id)!;
-    if (saved.state !== 'pending') return;
-    row = this.incidents.store.update(this.incidents.store.get(row.projectId, row.id), {
-      decisionId: id,
+      return true;
     });
+    if (!pending) return;
     await showIncidentApproval(this.ctx, row, action, id);
   }
   async answer(
@@ -52,47 +60,43 @@ export class IncidentDecisions {
     answer: InteractionAnswer,
     taskId?: string,
   ): Promise<void> {
-    if (answer.kind === 'approval' && answer.choice !== 'deny')
-      requireCoordinationDispatch(this.ctx.deps.db, projectId);
-    const decision = this.ctx.deps.db.coordination.decisions.get(projectId, decisionId);
-    if (!decision || decision.state !== 'pending')
-      throw new Error('Incident decision is not pending');
-    const row = this.incidents.store.get(projectId, decision.subject.id);
-    if (
-      row.state !== 'open' ||
-      (taskId && !row.protocol!.subscriptions.some((s) => s.taskId === taskId))
-    )
-      throw new Error('Decision is not owned by this active incident/task');
-    if (decision.kind === 'question')
+    let prepared: Awaited<ReturnType<typeof validateIncidentAnswer>>;
+    try {
+      prepared = await validateIncidentAnswer(
+        this.ctx,
+        this.incidents,
+        projectId,
+        decisionId,
+        answer,
+        taskId,
+      );
+    } catch (error) {
+      if (error instanceof DecisionNotDispatched && error.message === 'decision_stale') {
+        const saved = this.ctx.deps.db.coordination.decisions.get(projectId, decisionId);
+        if (saved?.state === 'pending') {
+          const row = this.incidents.store.get(projectId, saved.subject.id);
+          await cancelIncidentApproval(this.ctx, row, decisionId, 'decision_context_stale');
+          this.reconcileLater(projectId, row.id);
+        }
+      }
+      throw error;
+    }
+    const { row } = prepared;
+    if (prepared.kind === 'question')
       return answerIncidentEscalation(this.ctx, row, decisionId, answer);
     if (answer.kind !== 'approval' || answer.choice === 'allow_session')
-      throw new Error('Incident requires an exact one-time decision');
-    const request = this.ctx.deps.db.getSetting<
-      { policyRevision: number; expiresAt: number } | undefined
-    >(`coordination.decision-action.${decisionId}`, undefined);
-    if (
-      !request ||
-      request.policyRevision !== this.incidents.policy.read(projectId).revision ||
-      Date.now() >= request.expiresAt
-    )
-      throw new Error('Incident decision expired or policy changed');
-    const action = await incidentAction(this.ctx, row);
-    if (!action || remedyKey(action) !== decision.inputHash)
-      throw new Error('Incident action changed');
-    this.incidents.policy.decide(
-      action,
-      answer.choice === 'allow_once',
-      'owner',
-      'owner approval',
-      request.expiresAt,
-    );
-    this.ctx.deps.db.coordination.decisions.transition(projectId, decisionId, {
-      expectedRevision: decision.revision,
-      state: answer.choice === 'deny' ? 'denied' : 'answered',
-      evidence: { code: answer.choice, refs: [row.subject], fingerprint: remedyKey(action) },
-    });
+      throw new DecisionNotDispatched('Exact approval required');
+    commitIncidentApproval(this.ctx.deps.db, this.incidents.policy, prepared, answer.choice);
     await closeIncidentApproval(this.ctx, row, decisionId, answer);
-    if (answer.choice !== 'deny') await this.incidents.reconcile(projectId, row.id);
+    if (answer.choice !== 'deny') this.reconcileLater(projectId, row.id);
+  }
+  private reconcileLater(projectId: string, id: string) {
+    void this.incidents.reconcile(projectId, id).catch((error: unknown) => {
+      this.ctx.deps.db.addEvent(projectId, 'incident_diagnosis_deferred', {
+        incident: id,
+        reason: incidentHash(String(error)),
+      });
+    });
   }
   async delegate(projectId: string, id: string, allow: boolean, reason: string, expiresAt: number) {
     if (allow) requireCoordinationDispatch(this.ctx.deps.db, projectId);

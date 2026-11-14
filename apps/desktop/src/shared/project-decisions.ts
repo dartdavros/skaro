@@ -50,5 +50,5 @@ export interface ProjectDecisionMethods {
     projectId: string,
     id: string,
     revision: string,
-  ) => 'expired' | 'answered' | 'denied' | 'stale';
+  ) => 'expired' | 'answered' | 'denied' | 'stale' | 'pending' | 'uncertain';
 }

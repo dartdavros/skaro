@@ -7,19 +7,36 @@ import {
 import { decisionHash } from './decision-projection';
 import { withoutSecrets } from './session-log';
 import { linkC4DecisionReply } from './c4-decision-recovery';
+import { DecisionNotDispatched } from './decision-not-dispatched';
+import { incidentReplyProof } from './incident-reply-proof';
 
 interface Receipt {
   revision: string;
   answer: string;
   outcome: 'answered' | 'denied';
-  state: 'dispatching' | 'done' | 'uncertain';
+  state: 'dispatching' | 'done' | 'uncertain' | 'not_dispatched';
 }
 export function decisionReplyStatus(db: AppDb, entry: ProjectDecision) {
   const receipt = db.getSetting<Receipt | undefined>(
     `coordination.decision-reply.v1.${entry.origin.projectId}.${decisionHash([entry.id, entry.revision])}`,
     undefined,
   );
-  return receipt?.state === 'done' ? receipt.outcome : undefined;
+  if (!receipt) return;
+  if (receipt.state === 'done') return receipt.outcome;
+  const proof = incidentReplyProof(db, entry, receipt.answer);
+  return proof === 'answered' || proof === 'denied' ? proof : undefined;
+}
+export function decisionReplyUncertain(db: AppDb, entry: ProjectDecision): boolean {
+  const receipt = db.getSetting<Receipt | undefined>(
+    `coordination.decision-reply.v1.${entry.origin.projectId}.${decisionHash([entry.id, entry.revision])}`,
+    undefined,
+    { strict: true },
+  );
+  return (
+    !!receipt &&
+    ['dispatching', 'uncertain'].includes(receipt.state) &&
+    !incidentReplyProof(db, entry, receipt.answer)
+  );
 }
 /** Same durable receipt and in-flight promise for every presentation; unknown effects never retry blindly. */
 export class DecisionReplies {
@@ -51,7 +68,7 @@ export class DecisionReplies {
       liveHash = decisionHash(answer),
       current = this.running.get(mutex);
     if (current) {
-      if (current.answer !== liveHash) throw new Error('decision_answer_conflict');
+      if (current.answer !== liveHash) throw new DecisionNotDispatched('decision_answer_conflict');
       return current.promise;
     }
     const promise = this.execute(
@@ -81,27 +98,48 @@ export class DecisionReplies {
   ) {
     const previous = this.db.getSetting<Receipt | undefined>(key, undefined, { strict: true });
     if (previous) {
-      if (previous.revision !== entry.revision || previous.answer !== hash)
-        throw new Error('decision_answer_conflict');
+      const proof = incidentReplyProof(this.db, entry, previous.answer);
+      const notDispatched = previous.state === 'not_dispatched' || proof === 'not_dispatched';
+      if (previous.revision !== entry.revision || (previous.answer !== hash && !notDispatched))
+        throw new DecisionNotDispatched('decision_answer_conflict');
       if (previous.state === 'done') return;
-      throw new Error('decision_reply_uncertain');
+      if (proof === 'answered' || proof === 'denied') {
+        if (!this.db.settings.compareAndSet(key, previous, { ...previous, state: 'done' }))
+          throw new Error('decision_reply_uncertain');
+        return;
+      }
+      if (!notDispatched) throw new DecisionNotDispatched('decision_reply_uncertain');
     }
-    await verify();
+    try {
+      await verify();
+    } catch (error) {
+      throw new DecisionNotDispatched(error);
+    }
     const receipt: Receipt = {
       revision: entry.revision,
       answer: hash,
       outcome,
       state: 'dispatching',
     };
-    if (!this.db.settings.compareAndSet(key, undefined, receipt))
-      throw new Error('decision_answer_conflict');
+    if (!this.db.settings.compareAndSet(key, previous, receipt))
+      throw new DecisionNotDispatched('decision_answer_conflict');
     try {
       linkC4DecisionReply(this.db, entry, answer, key, receipt);
       await effect();
       if (!this.db.settings.compareAndSet(key, receipt, { ...receipt, state: 'done' }))
         throw new Error('decision_reply_uncertain');
     } catch (error) {
-      this.db.settings.compareAndSet(key, receipt, { ...receipt, state: 'uncertain' });
+      const proof = incidentReplyProof(this.db, entry, hash);
+      const committed = proof === 'answered' || proof === 'denied';
+      this.db.settings.compareAndSet(key, receipt, {
+        ...receipt,
+        state: committed
+          ? 'done'
+          : error instanceof DecisionNotDispatched
+            ? 'not_dispatched'
+            : 'uncertain',
+      });
+      if (committed) return;
       throw error;
     }
   }

@@ -3,6 +3,7 @@ import type { ChatEngine } from './chat-engine';
 import { restoreHistory } from './restore-history';
 import { decisionTimeline } from './decision-projection';
 import type { DecisionSource } from '../shared/project-decisions';
+import { QuestionAnswers } from './question-answers';
 
 export async function chatDecisionSources(
   ctx: ChatEngine,
@@ -33,7 +34,7 @@ export async function chatDecisionSources(
       epoch: chat.logPath,
       cwd: context.root,
       timeline: decisionTimeline(
-        timeline,
+        new QuestionAnswers(ctx.deps.db, `live.${chat.id}`).project(timeline),
         !!live?.session && timeline.turns.some((turn) => !turn.outcome),
       ),
     });

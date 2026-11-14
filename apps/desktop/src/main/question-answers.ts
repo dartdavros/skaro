@@ -1,4 +1,5 @@
 import {
+  Timeline,
   validateQuestionAnswer,
   type Interaction,
   type InteractionAnswer,
@@ -106,11 +107,29 @@ export class QuestionAnswers {
   recover(state: TimelineState, emit: (event: TimelineEvent) => void): void {
     const entries = this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? [];
     for (const entry of entries) {
-      const matches = !!entry.requestEpoch && entry.requestEpoch === state.turns.at(-1)?.id;
-      const open = state.interactions.some((i) => i.id === entry.interaction.id);
+      const current = state.interactions.find((i) => i.id === entry.interaction.id);
+      const stableItem =
+        current?.kind === 'question' &&
+        entry.interaction.delivery === 'async' &&
+        !!entry.interaction.itemId &&
+        current.itemId === entry.interaction.itemId;
+      const matches =
+        stableItem || (!!entry.requestEpoch && entry.requestEpoch === state.turns.at(-1)?.id);
+      const open = !!current;
       if ((open && matches) || !state.items.some((i) => i.id === this.decisionId(entry)))
         this.replay(entry, emit, open && matches);
     }
+  }
+  /** Read-only decision projection: accepted answers survive a missing journal flush too. */
+  project(state: TimelineState): TimelineState {
+    const projected = Timeline.restore({
+      ...state,
+      items: [...state.items],
+      interactions: [...state.interactions],
+      turns: state.turns.map((turn) => ({ ...turn })),
+    });
+    this.recover(projected.state, (event) => projected.apply(event));
+    return projected.state;
   }
   pending(state: TimelineState): (MessageInput & { commandId: string }) | undefined {
     if (state.interactions.some((i) => i.kind === 'question')) return undefined;

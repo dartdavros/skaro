@@ -37,10 +37,33 @@ it('keeps genuine pending choices but excludes an obsolete merge after task comp
     conflicts: [],
   };
   const question: Interaction = { ...approval, id: 'coordinator:still-pending', delivery: 'async' };
-  const state = { ...emptyTimeline(), interactions: [merge, question] };
-  expect(taskDecisionTimeline(state, false, false).interactions).toEqual([merge, question]);
+  const state: ReturnType<typeof emptyTimeline> = {
+    ...emptyTimeline(),
+    interactions: [merge, question],
+  };
+  const nativeQuestion: Interaction = {
+    kind: 'question',
+    id: 'historical-native-question',
+    delivery: 'async',
+    questions: [
+      {
+        id: 'q',
+        header: '',
+        text: 'Old completed task input',
+        multi: false,
+        allowFreeText: true,
+        options: [],
+      },
+    ],
+  };
+  state.interactions.push(nativeQuestion);
+  expect(taskDecisionTimeline(state, false, false).interactions).toEqual([
+    merge,
+    question,
+    nativeQuestion,
+  ]);
   expect(taskDecisionTimeline(state, false, true).interactions).toEqual([question]);
-  expect(state.interactions).toEqual([merge, question]);
+  expect(state.interactions).toEqual([merge, question, nativeQuestion]);
 });
 it('keeps accepted architecture in the source while removing it from unanswered decisions', () => {
   const entry = source('architecture-owner');

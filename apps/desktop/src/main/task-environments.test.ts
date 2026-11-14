@@ -76,4 +76,20 @@ describe('task environment', () => {
     const { service } = await environments('default_agent: codex\n', () => false);
     await expect(service.start({ projectId, taskId })).rejects.toThrow('describes no task');
   });
+  it('awaits an asynchronous owner fence before cleanup or launching a shell', async () => {
+    const { service, steps, removed } = await environments(described, () => false);
+    await expect(
+      service.start(
+        { projectId, taskId },
+        {
+          assertActive: async () => {
+            await Promise.resolve();
+            throw new Error('Owner stopped before dispatch');
+          },
+        },
+      ),
+    ).rejects.toThrow('Owner stopped before dispatch');
+    expect(removed).toEqual([]);
+    await expect(steps()).rejects.toThrow('ENOENT');
+  });
 });

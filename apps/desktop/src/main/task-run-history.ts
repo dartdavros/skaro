@@ -4,7 +4,8 @@ import { createWriteStream, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { persistsAfterTurn, type RawLine, type TimelineEvent } from '@skaro/timeline';
 import { loadTaskHistory } from './task-history-load';
-import { key, settingsKey } from './task-run-helpers';
+import { key, settingsKey, findTask } from './task-run-helpers';
+import { terminalTaskHistory, retireTerminalTaskRequests } from './terminal-task-requests';
 import { handoffRecord } from './task-handoff-record';
 import { CompletionStore } from './completion-store';
 import { ActiveRun } from './task-run-model';
@@ -58,6 +59,7 @@ export class TaskRunHistory {
       return undefined;
     }
     const restored = await loadTaskHistory(this.ctx.deps, run);
+    const task = findTask(await this.ctx.project(projectId).summary(), taskId);
     const again = this.ctx.active.get(k);
     if (again) return again;
     const active = new ActiveRun(projectId, taskId, run, restored.timeline);
@@ -94,10 +96,14 @@ export class TaskRunHistory {
       `${settingsKey(projectId, taskId)}.handoff`,
       null,
     );
-    this.ctx.events.settleRuntime(active);
     const answers = new QuestionAnswers(this.ctx.deps.db, `active.${run.id}`);
     answers.recover(active.timeline.state, (event) => this.skaroEvent(active, event));
-    answers.queue('task.send', projectId, taskId, active.timeline.state);
+    const terminal = terminalTaskHistory(this.ctx.deps.db, task.status, run.id);
+    retireTerminalTaskRequests(active.timeline.state, terminal, (event) =>
+      this.skaroEvent(active, event),
+    );
+    if (!terminal) answers.queue('task.send', projectId, taskId, active.timeline.state);
+    this.ctx.events.settleRuntime(active);
     return active;
   }
 

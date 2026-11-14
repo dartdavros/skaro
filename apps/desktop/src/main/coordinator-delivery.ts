@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { AppDb, CoordinationEvidence, CoordinationOperation } from '@skaro/core';
 import { CoordinationPending } from './project-coordinator-errors';
+import { DecisionNotDispatched } from './decision-not-dispatched';
 
 export interface CoordinationExecution<T> {
   /** Main-owned classification for denial/stop only; never caller-provided authority. */
@@ -62,8 +63,14 @@ export async function dispatchProjectOperation<T>(
       ledger.finish(projectId, id, {
         expectedRevision: latest.revision,
         claimId,
-        state: 'uncertain',
-        evidence: { code: 'dispatch_result_unknown', refs: [operation.subject] },
+        state: error instanceof DecisionNotDispatched ? 'failed' : 'uncertain',
+        evidence: {
+          code:
+            error instanceof DecisionNotDispatched
+              ? 'decision_not_dispatched'
+              : 'dispatch_result_unknown',
+          refs: [operation.subject],
+        },
       });
     throw error;
   }
