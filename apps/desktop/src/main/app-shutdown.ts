@@ -5,42 +5,45 @@ import type { HistoryReads } from './history-read-service';
 import { closeNativeSessions } from './native/client';
 import { closeBackground } from './background/client';
 import { trace } from './trace';
-
-async function settle(stage: string, actions: (() => void | Promise<unknown>)[]): Promise<void> {
-  trace(`shutdown ${stage}: start`);
-  const results = await Promise.allSettled(actions.map((action) => Promise.resolve().then(action)));
-  for (const result of results)
-    if (result.status === 'rejected') console.error('Service shutdown:', result.reason);
-  trace(`shutdown ${stage}: settled`);
-}
+import type { ShutdownProgress } from './shutdown-progress';
+import { runShutdownStage } from './shutdown-stage';
 
 export async function shutdownApp(
   services: Services,
   commands: OwnerCommands,
   updates: Updates,
   historyReads: HistoryReads,
+  progress: ShutdownProgress,
 ): Promise<void> {
   trace('before quit');
+  progress.begin();
   updates.stop();
   services.coordinators.stopAccepting();
   services.resources.stopAccepting();
-  await settle('c4 audits', [() => services.c4Audits.close()]);
-  await settle('native sessions', [closeNativeSessions]);
-  await settle('model catalog', [() => services.modelCatalog.close()]);
-  await settle('model settings', [() => services.modelSettings.close()]);
-  await settle('owner commands', [() => commands.close()]);
-  await settle('ci', [() => services.ci.close()]);
-  await settle('runs, chats, mcp, graph', [
-    () => services.runs.close(),
-    () => services.chats.close(),
-    () => services.mcp.close(),
-    () => services.graph.close(),
+  await runShutdownStage(progress, 'agents', [
+    ['c4 audits', [() => services.c4Audits.close()]],
+    ['native sessions', [closeNativeSessions]],
+    ['model catalog', [() => services.modelCatalog.close()]],
+    ['model settings', [() => services.modelSettings.close()]],
+    ['owner commands', [() => commands.close()]],
+  ]);
+  await runShutdownStage(progress, 'environments', [
+    ['ci', [() => services.ci.close()]],
+    [
+      'runs, chats, mcp, graph',
+      [
+        () => services.runs.close(),
+        () => services.chats.close(),
+        () => services.mcp.close(),
+        () => services.graph.close(),
+      ],
+    ],
+    ['managed caches', [() => services.managedCaches.close()]],
+    ['coordinators', [() => services.coordinators.close()]],
+    ['resources', [() => services.resources.close()]],
+    ['projects', [() => services.projects.close()]],
   ]);
   trace('runs and mcp server closed');
-  await settle('managed caches', [() => services.managedCaches.close()]);
-  await settle('coordinators', [() => services.coordinators.close()]);
-  await settle('resources', [() => services.resources.close()]);
-  await settle('projects', [() => services.projects.close()]);
-  await settle('history reads', [() => historyReads.close()]);
-  await settle('background', [closeBackground]);
+  await runShutdownStage(progress, 'history', [['history reads', [() => historyReads.close()]]]);
+  await runShutdownStage(progress, 'background', [['background', [closeBackground]]]);
 }

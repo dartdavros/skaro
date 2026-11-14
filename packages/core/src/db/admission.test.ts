@@ -86,7 +86,7 @@ it('serializes real observation leases across handles, preserves consumers and f
       locks: [],
     });
     expect(db.admission.admit(waiting.projectId, waiting.id, waiting.revision, budget).reason).toBe(
-      'budget_ramBytes',
+      'budget_review',
     );
     expect(() =>
       db.admission.release(
@@ -166,22 +166,20 @@ it('keeps unknown budgets and quota closed, honors FIFO and never resumes a stop
       maxAgeMs: 60000,
       accounts: {},
     };
-    const older = db.admission.request({ ...input, cost: { ...input.cost, ramBytes: bytes * 2 } });
-    expect(db.admission.admit(root, older.id, older.revision, budget).reason).toBe(
-      'budget_ramBytes',
-    );
+    const older = db.admission.request({ ...input, cost: { ...input.cost, build: 2 } });
+    expect(db.admission.admit(root, older.id, older.revision, budget).reason).toBe('budget_build');
     const newer = db.admission.request({ ...input, id: randomUUID() });
     const queued = db.admission.admit(root, newer.id, newer.revision, budget);
     expect(queued.reason).toBe('older_request');
     const stop = db.admission.stop(root, older.id, db.admission.get(root, older.id)!.revision);
-    expect(
-      db.admission.admit(root, older.id, stop.revision, { ...budget, ramBytes: bytes * 3 }).state,
-    ).toBe('stopped_by_owner');
+    expect(db.admission.admit(root, older.id, stop.revision, { ...budget, build: 3 }).state).toBe(
+      'stopped_by_owner',
+    );
     const unknown = db.admission.admit(root, newer.id, queued.revision, {
       ...budget,
-      ramBytes: null,
+      build: null,
     });
-    expect(unknown.reason).toBe('unknown_ramBytes');
+    expect(unknown.reason).toBe('unknown_build');
     const granted = db.admission.admit(root, newer.id, unknown.revision, budget);
     expect(granted.state).toBe('granted');
     const model = db.admission.request({

@@ -1,8 +1,13 @@
 import type { OwnerCommand } from '@skaro/timeline';
 
-/** Only unresolved delivery has an optimistic row. A failed attempt is not a sent message. */
+/** Restore unresolved delivery only; completed commands already belong to history. */
 export function pendingOwnerCommand(command: Pick<OwnerCommand, 'state'>): boolean {
   return ['accepted', 'delivering', 'uncertain'].includes(command.state);
+}
+
+/** Delivery alone does not prove that the replacement history row has loaded. */
+export function retiredOwnerCommand(command: Pick<OwnerCommand, 'state'>): boolean {
+  return command.state === 'failed' || command.state === 'cancelled';
 }
 
 export function restoredCommandError(commands: readonly OwnerCommand[]): string | undefined {

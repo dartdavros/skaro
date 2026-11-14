@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon, t } from '@skaro/ui';
-  import { localImageUrl } from '../feed/format';
+  import { imageUrl, localImageUrl } from '../feed/format';
   import type { ComposerController } from './composer-controller.svelte';
   import './composer-attachments.css';
   let {
@@ -16,7 +16,7 @@
         class="thumb"
         data-tip={imagesSupported ? image.path.split(/[\\/]/).pop() : t('composer.image.noSupport')}
       >
-        <img src={localImageUrl(image.path)} alt="" />
+        <img src={image.image ? imageUrl(image.image) : localImageUrl(image.path)} alt="" />
         {#if !imagesSupported}
           <span class="warn"><Icon name="warning" size={10} stroke={2.6} /></span>
         {/if}

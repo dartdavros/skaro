@@ -1,36 +1,12 @@
 <script lang="ts">
-  import { IconButton, Icon, ProjectTabs, t, WindowControls, type ProjectTab } from '@skaro/ui';
+  import { IconButton, Icon, ProjectTabs, t, WindowControls } from '@skaro/ui';
+  import type { TitleBarProps } from './titlebar-props';
   import UpdateButton from './updates/UpdateButton.svelte';
   import DecisionButton from './decisions/DecisionButton.svelte';
   import BackgroundButton from './background/BackgroundButton.svelte';
 
   /** The top bar is the window title bar: home, project tabs, settings, window buttons. */
-  let {
-    locked = false,
-    project,
-    tabs,
-    active,
-    home,
-    settings,
-    onhome,
-    onselect,
-    onclose,
-    onadd,
-    onsettings,
-  }: {
-    /** No agent yet: home and projects are closed until one is added. */
-    locked?: boolean;
-    project?: { id: string; name: string };
-    tabs: ProjectTab[];
-    active?: string;
-    home: boolean;
-    settings: boolean;
-    onhome: () => void;
-    onselect: (id: string) => void;
-    onclose: (id: string) => void;
-    onadd: () => void;
-    onsettings: () => void;
-  } = $props();
+  let p: TitleBarProps = $props();
 
   const mac = window.skaro.platform === 'darwin';
   let maximized = $state(false);
@@ -41,33 +17,44 @@
   });
 </script>
 
-<header class="bar" class:mac>
+<header class="bar" class:mac class:closing={p.closing}>
   <button
     type="button"
     class="home"
-    class:current={home}
-    class:locked
-    disabled={locked}
+    class:current={p.closing || p.home}
+    class:locked={!p.closing && p.locked}
+    disabled={p.closing || p.locked}
     data-tip={t('tabs.home')}
     aria-label={t('tabs.home')}
-    onclick={onhome}
+    onclick={() => {
+      if (!p.closing) p.onhome();
+    }}
   >
     <span>skaro</span>
   </button>
-  <div class="tabs" class:locked inert={locked}>
-    <ProjectTabs {tabs} {active} {onselect} {onclose} {onadd} />
+  <div class="tabs" class:locked={!p.closing && p.locked} inert={!p.closing && p.locked}>
+    {#if !p.closing}<ProjectTabs
+        tabs={p.tabs}
+        active={p.active}
+        onselect={p.onselect}
+        onclose={p.onclose}
+        onadd={p.onadd}
+      />{/if}
   </div>
   <div class="right">
-    <DecisionButton {project} />
-    <BackgroundButton />
-    <UpdateButton />
-    <IconButton tip={t('window.settings')} active={settings} onclick={onsettings}>
-      <Icon name="settings" size={16} />
-    </IconButton>
+    {#if !p.closing}
+      <DecisionButton project={p.project} />
+      <BackgroundButton />
+      <UpdateButton />
+      <IconButton tip={t('window.settings')} active={p.settings} onclick={p.onsettings}>
+        <Icon name="settings" size={16} />
+      </IconButton>
+    {/if}
     {#if !mac}
-      <div class="sep"></div>
+      {#if !p.closing}<div class="sep"></div>{/if}
       <WindowControls
         {maximized}
+        closeDisabled={p.closing}
         onminimize={() => window.skaro.invoke('window.minimize')}
         onmaximize={() => window.skaro.invoke('window.toggleMaximize')}
         onclose={() => window.skaro.invoke('window.close')}
@@ -95,6 +82,13 @@
     padding-left: 80px;
   }
 
+  .bar.closing {
+    align-items: center;
+  }
+  .bar.closing .home span {
+    letter-spacing: -0.5px;
+  }
+
   /* The logo is plain text, not a tab: only its colour reacts to hover and "current". */
   .home {
     flex: none;
@@ -111,6 +105,10 @@
   .home.locked,
   .tabs.locked {
     opacity: 0.4;
+    cursor: default;
+  }
+
+  .home:disabled {
     cursor: default;
   }
 

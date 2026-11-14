@@ -14,7 +14,7 @@ import type { ModelUsageMethods } from './model-usage';
 // Node access and can call only the methods listed here.
 
 import type { InteractionAnswer, TimelineEvent } from '@skaro/timeline';
-import type { ShellEvents } from './app-shell';
+import type { ShellEvents, ShellMethods } from './app-shell';
 
 import type {
   Locale,
@@ -63,6 +63,7 @@ export type { UpdateState } from './updates';
 /** Methods the renderer may call: name → signature. */
 export interface Methods
   extends
+    ShellMethods,
     ArchiagentActivationMethods,
     C4CoordinationMethods,
     C4AuditMethods,

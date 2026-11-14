@@ -12,6 +12,9 @@ const id = (value: unknown): value is string =>
   typeof value === 'string' && !!value.trim() && value.length <= 4096 && !/[\r\n\0]/.test(value);
 const poolValue = (values: Record<string, number | null> | undefined, key: string) =>
   values && Object.hasOwn(values, key) ? values[key] : undefined;
+// RAM remains observation metadata; the owner disabled host and Docker memory admission.
+const admissionCapacities = RESOURCE_CAPACITIES.filter((key) => key !== 'ramBytes');
+const admissionPool = (pool: string) => pool !== 'dockerRamBytes';
 export function validateResourceRequest(request: ResourceLeaseRequest): void {
   if (
     ![request.id, request.projectId, request.ownerId, request.intentId, request.checkpoint].every(
@@ -132,7 +135,7 @@ export function resourceAdmissionReason(
         return 'resource_locked';
     }
   }
-  for (const key of RESOURCE_CAPACITIES) {
+  for (const key of admissionCapacities) {
     if (!request.cost[key]) continue;
     const available = budget[key];
     if (available === null) return `unknown_${key}`;
@@ -143,12 +146,15 @@ export function resourceAdmissionReason(
     (Object.hasOwn(lease.cost.diskBytes, volume) ? lease.cost.diskBytes[volume]! : 0) +
     Object.entries(budget.poolVolumes ?? {}).reduce(
       (sum, [pool, physical]) =>
-        sum + (physical === volume ? (poolValue(lease.cost.pools, pool) ?? 0) : 0),
+        sum +
+        (admissionPool(pool) && physical === volume ? (poolValue(lease.cost.pools, pool) ?? 0) : 0),
       0,
     );
   const volumes = new Set([
     ...Object.keys(request.cost.diskBytes),
-    ...Object.values(budget.poolVolumes ?? {}),
+    ...Object.entries(budget.poolVolumes ?? {})
+      .filter(([pool]) => admissionPool(pool))
+      .map(([, volume]) => volume),
   ]);
   for (const volume of volumes) {
     const needed = diskCost(request, volume);
@@ -161,6 +167,7 @@ export function resourceAdmissionReason(
       return 'budget_disk';
   }
   for (const [pool, needed] of Object.entries(request.cost.pools ?? {})) {
+    if (!admissionPool(pool)) continue;
     if (!needed) continue;
     const available = poolValue(budget.pools, pool);
     if (available === undefined || available === null) return `unknown_pool:${pool}`;
@@ -181,15 +188,16 @@ export function resourceAdmissionReason(
   const competing = (other: ResourceLease) => {
     // A queued build must not block an admitted worker's environment slot: that would prevent
     // the worker from completing and returning the very build capacity the older job needs.
-    const bottleneck = RESOURCE_CAPACITIES.find(
+    const bottleneck = admissionCapacities.find(
       (key) => other.reason === `budget_${key}` || other.reason === `unknown_${key}`,
     );
     if (bottleneck) return request.cost[bottleneck] > 0 && other.cost[bottleneck] > 0;
     return (
-      RESOURCE_CAPACITIES.some((key) => request.cost[key] > 0 && other.cost[key] > 0) ||
+      admissionCapacities.some((key) => request.cost[key] > 0 && other.cost[key] > 0) ||
       [...volumes].some((volume) => diskCost(request, volume) > 0 && diskCost(other, volume) > 0) ||
       Object.keys(request.cost.pools ?? {}).some(
         (pool) =>
+          admissionPool(pool) &&
           (poolValue(request.cost.pools, pool) ?? 0) > 0 &&
           (poolValue(other.cost.pools, pool) ?? 0) > 0,
       ) ||

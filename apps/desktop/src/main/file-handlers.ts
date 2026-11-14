@@ -50,7 +50,7 @@ export function fileHandlers(
         width,
         height,
       });
-      return { path: attachments.file(ref), kind: 'image' };
+      return { path: attachments.file(ref), kind: 'image', image: ref };
     },
     'files.pick': async (kind) => {
       const options: Electron.OpenDialogOptions = {

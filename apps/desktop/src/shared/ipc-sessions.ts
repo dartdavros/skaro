@@ -1,6 +1,7 @@
-import type { PermissionMode, TimelineState } from '@skaro/timeline';
+import type { ImageRef, PermissionMode, TimelineState } from '@skaro/timeline';
 import type { AgentId, AgentSettings, StageInfo, TaskRef, TaskSummary } from './ipc-entities';
 import type { IntegrationTimeline } from './task-timeline';
+export type { BootstrapState, WorkspaceState } from './bootstrap';
 
 /** Parallel run slots (architecture.md 7.1). */
 export interface RunSlots {
@@ -86,30 +87,6 @@ export interface MessageInput {
   images?: string[];
 }
 
-export interface WorkspaceState {
-  view: 'home' | 'project' | 'settings' | 'inventory';
-  sections: Record<string, string>;
-  openTasks: Record<string, string | undefined>;
-  openChats: Record<string, string | undefined>;
-}
-
-export interface BootstrapState {
-  chatCatalog?: import('./chat-catalog').ChatCatalog;
-  sessions?: Record<string, ChatView | TaskView>;
-  projectsView?: {
-    query?: string;
-    sort?: import('./project-catalog').ProjectSort;
-    view?: 'grid' | 'list';
-  };
-  locale: 'ru' | 'en';
-  projects: ProjectInfo[];
-  tabs: TabsState;
-  workspace?: WorkspaceState;
-  cards: ProjectCard[];
-  feedFont?: string;
-  panelCollapsed: boolean;
-}
-
 export type MergeAction =
   | {
       action: 'confirm';
@@ -192,6 +169,8 @@ export interface PathSuggestion {
 export interface PickedFile {
   path: string;
   kind: 'image' | 'file' | 'folder';
+  /** Stored clipboard images use the same content-addressed media URL as feed images. */
+  image?: ImageRef;
 }
 
 export interface ProjectInfo {
