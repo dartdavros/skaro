@@ -8,7 +8,7 @@ import { EnvironmentProjectScope } from './task-environment-scope';
 import { EnvironmentPruning } from './task-environment-prune';
 import { EnvironmentResources } from './environment-resources';
 import { removeCompose } from './task-compose';
-import { backgroundWork, environmentJob } from './background-work';
+import { maintainEnvironments, type EnvironmentSchedule } from './environment-maintenance';
 import { absentEnvironmentBlocker } from './environment-resource-guard';
 import { ResourceLifecycle } from './resource-lifecycle';
 import { EnvironmentDockerProvenance } from './environment-docker-provenance';
@@ -25,13 +25,16 @@ export class EnvironmentResourceLifecycle {
   private readonly registry: EnvironmentRegistry;
   private readonly docker: EnvironmentDocker;
   private readonly stopped: (key: TaskKey) => void;
+  private readonly starting: () => TaskKey[];
   private readonly journal: ResourceLifecycle;
   constructor(
     deps: EnvironmentDeps,
     registry: EnvironmentRegistry,
     docker: EnvironmentDocker,
     stopped: (key: TaskKey) => void = () => undefined,
+    starting: () => TaskKey[] = () => [],
   ) {
+    this.starting = starting;
     this.stopped = stopped;
     this.provenance = new EnvironmentDockerProvenance(deps.db);
     this.journal = new ResourceLifecycle(deps.db);
@@ -191,7 +194,10 @@ export class EnvironmentResourceLifecycle {
     this.registry.remove(key);
   }
 
-  async reconcile(starting?: TaskKey): Promise<void> {
+  async reconcile(
+    starting?: TaskKey,
+    schedule: EnvironmentSchedule = (_key, action) => action(),
+  ): Promise<void> {
     let all: DockerContainer[];
     try {
       all = await this.inspect();
@@ -199,32 +205,31 @@ export class EnvironmentResourceLifecycle {
       return;
     } // inspect persisted unavailable facts for every scoped resource.
     await this.resources.observe(all); // Protect declarations before any stop/remove.
-    const busy = [...this.deps.busy(), ...(starting ? [starting] : [])];
-    for (const record of this.scope.records(this.registry.all())) {
-      if (busy.some((key) => key.projectId === record.projectId && key.taskId === record.taskId))
-        continue;
-      try {
-        if (await this.deps.finished(record)) {
-          const job = backgroundWork.start(...environmentJob(this.deps.db, record));
-          try {
-            const failures = await this.destroy(record);
-            if (failures.length) backgroundWork.fail(job, failures.join('; '));
-            else backgroundWork.finish(job);
-          } catch (error) {
-            backgroundWork.fail(job, String(error));
-          }
-        } else await this.stop(record);
-      } catch {
-        /* Guards and executors persist the outcome and retain this environment. */
-      }
-    }
+    await maintainEnvironments(
+      { ...this.deps, busy: () => [...this.deps.busy(), ...this.starting()] },
+      this.scope.records(this.registry.all()),
+      starting,
+      schedule,
+      (key) => this.destroy(key),
+      (key) => this.stop(key),
+    );
     await this.pruning.run(
       this.docker,
       this.registry,
       this.deps.finished,
-      this.deps.busy,
+      () => [...this.deps.busy(), ...this.starting()],
       this.deps.projectScope,
-      (owner, containers) => this.prune(owner, containers),
+      (owner, containers) =>
+        schedule(owner, async () => {
+          if (
+            this.registry.find(owner) ||
+            [...this.deps.busy(), ...this.starting()].some(
+              (key) => key.projectId === owner.projectId && key.taskId === owner.taskId,
+            )
+          )
+            return [];
+          return this.prune(owner, containers);
+        }),
       () => this.inspect(),
     );
   }

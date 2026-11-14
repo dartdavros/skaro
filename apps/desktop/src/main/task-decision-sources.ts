@@ -2,8 +2,10 @@ import type { DecisionSource } from '../shared/project-decisions';
 import type { TaskRunEngine } from './task-run-engine';
 import { loadTaskHistory } from './task-history-load';
 import { taskDecisionTimeline, integrationDecisionLive } from './decision-projection';
-import { key } from './task-run-helpers';
+import { key, findTask } from './task-run-helpers';
 import { emptyTimeline } from '@skaro/timeline';
+import { terminalTaskHistory } from './terminal-task-requests';
+import { QuestionAnswers } from './question-answers';
 
 /** Reads canonical histories without restoring a runtime, queuing delivery or materializing a checkout. */
 export async function taskDecisionSources(
@@ -17,14 +19,21 @@ export async function taskDecisionSources(
   const result: DecisionSource[] = [];
   for (const task of subjects) {
     if (only && task.id !== only) continue;
-    const completed = 'status' in task && task.status === 'done';
     const run = ctx.deps.db.listRuns(projectId, task.id)[0];
+    const completed = terminalTaskHistory(
+      ctx.deps.db,
+      findTask(artifacts, task.id).status,
+      run?.id,
+    );
     const active = ctx.active.get(key(projectId, task.id));
     const current = active?.run.id === run?.id ? active : undefined;
-    const base =
+    const restored =
       current?.timeline.state ??
       (run ? (await loadTaskHistory(ctx.deps, run)).timeline.state : emptyTimeline());
-    const baseLive = !!current?.session && base.turns.some((turn) => !turn.outcome);
+    const base = run
+      ? new QuestionAnswers(ctx.deps.db, `active.${run.id}`).project(restored)
+      : restored;
+    const baseLive = !!current?.session && !!base.turns.at(-1) && !base.turns.at(-1)!.outcome;
     const hidden = ctx.deps.db.getSetting<string[]>(
       `task.${projectId}.${task.id}.clearedIntegrations`,
       [],

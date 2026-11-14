@@ -8,13 +8,14 @@ import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
 import { readSubject, updateSubject } from './task-subject';
 import type { MessageInput } from '../shared/ipc';
 import { withoutSecrets } from './session-log';
-import { key } from './task-run-helpers';
+import { key, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import { trackRun } from './task-run-access';
 import type { TaskRunEngine } from './task-run-engine';
 import { stopBuiltinTask, requireTaskNotStopping } from './builtin-task-stop';
 import { taskAgentInput } from './task-agent-input';
 import { prepareTaskFollowUp } from './task-follow-up';
+import { terminalTaskHistory, retireTerminalTaskRequests } from './terminal-task-requests';
 import { taskPreflight, requireTaskInputsCurrent } from './task-preflight';
 import { stopManagedTask } from './managed-task-stop';
 
@@ -38,6 +39,13 @@ export class TaskRunMessages {
     if (!active) return this.ctx.scheduling.start(projectId, taskId, input, requireCurrent);
     active = await this.ctx.handoff.recover(active);
     requireCurrent();
+    const task = findTask(await this.ctx.project(projectId).summary(), taskId);
+    requireCurrent();
+    retireTerminalTaskRequests(
+      active.timeline.state,
+      terminalTaskHistory(this.ctx.deps.db, task.status, active.run.id),
+      (event) => this.ctx.history.skaroEvent(active, event),
+    );
     requireTaskNotStopping(active);
     assertQuestionMessageAllowed(active.timeline.state, input.internal);
     if (!input.internal) {

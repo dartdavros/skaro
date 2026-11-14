@@ -19,13 +19,15 @@ import {
 
 export type CoordinationDb = { db: DatabaseSync; now: () => number };
 export function coordinationAtomic<T>(db: DatabaseSync, action: () => T): T {
-  db.exec('BEGIN IMMEDIATE');
+  const nested = db.isTransaction;
+  db.exec(nested ? 'SAVEPOINT coordination_atomic' : 'BEGIN IMMEDIATE');
   try {
     const result = action();
-    db.exec('COMMIT');
+    db.exec(nested ? 'RELEASE coordination_atomic' : 'COMMIT');
     return result;
   } catch (error) {
-    db.exec('ROLLBACK');
+    db.exec(nested ? 'ROLLBACK TO coordination_atomic' : 'ROLLBACK');
+    if (nested) db.exec('RELEASE coordination_atomic');
     throw error;
   }
 }

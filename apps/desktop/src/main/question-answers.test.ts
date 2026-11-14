@@ -19,6 +19,36 @@ const question: Extract<Interaction, { kind: 'question' }> = {
   ],
 };
 const answer: InteractionAnswer = { kind: 'question', answers: { choice: ['Continue'] } };
+
+it('reconciles a saved async answer by its exact native item across later turns without closing a reused ID', () => {
+  const db = AppDb.open(':memory:');
+  try {
+    const request: typeof question = {
+      ...question,
+      id: 'async-observed',
+      itemId: 'native-item',
+      delivery: 'async',
+    };
+    const mailbox = new QuestionAnswers(db, 'observed-async-owner');
+    mailbox.accept(request, answer, () => undefined, 'original-turn');
+    const original = Timeline.from([
+      { t: 'turn.started', turnId: 'original-turn' },
+      { t: 'interaction.opened', interaction: request },
+      { t: 'turn.completed', turnId: 'original-turn', outcome: 'done' },
+      { t: 'turn.started', turnId: 'later-turn' },
+    ]);
+    expect(mailbox.project(original.state).interactions).toEqual([]);
+    expect(original.state.interactions).toEqual([request]);
+    const reused = Timeline.from([
+      { t: 'turn.started', turnId: 'new-request' },
+      { t: 'interaction.opened', interaction: { ...request, itemId: 'different-native-item' } },
+    ]);
+    expect(mailbox.project(reused.state).interactions).toHaveLength(1);
+    expect(db.commands.pending()).toEqual([]);
+  } finally {
+    db.close();
+  }
+});
 function waiting(turn: string) {
   return Timeline.from([
     { t: 'turn.started', turnId: turn },
@@ -34,6 +64,10 @@ it('persists acceptance identity across recovery and separates repeated adapter 
     mailbox.accept(question, answer, (event) => timeline.apply(event), 'first');
     const first = mailbox.pending(timeline.state)!;
     const restored = waiting('first');
+    const projected = mailbox.project(restored.state);
+    expect(projected.interactions).toEqual([]);
+    expect(restored.state.interactions).toEqual([question]);
+    expect(mailbox.project(waiting('second').state).interactions).toEqual([question]);
     new QuestionAnswers(db, 'actual-owner').recover(restored.state, (event) =>
       restored.apply(event),
     );

@@ -7,7 +7,7 @@ interface Reply {
   revision: string;
   answer: string;
   outcome: string;
-  state: 'dispatching' | 'done' | 'uncertain';
+  state: 'dispatching' | 'done' | 'uncertain' | 'not_dispatched';
 }
 interface Link extends Omit<Reply, 'state'> {
   key: string;

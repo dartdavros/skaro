@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { emptyTimeline, persistsAfterTurn, type TimelineState } from '@skaro/timeline';
 import { pendingProposals } from '../shared/feed-actions';
 import type { DecisionPayload, DecisionSource, ProjectDecision } from '../shared/project-decisions';
+import { terminalTaskTimeline } from './terminal-task-requests';
 
 export const decisionHash = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -37,19 +38,14 @@ export function decisionTimeline(
     items: pendingProposals(state.items),
   };
 }
-/** Match the task view: a completed task cannot offer a second merge from an old log. */
+/** Terminal tasks retain history; only an independently pending controller decision can outlive them. */
 export function taskDecisionTimeline(
   state: TimelineState,
   nativeLive: boolean,
   completed: boolean,
   nativePrefix?: string,
 ) {
-  const snapshot = decisionTimeline(state, nativeLive, nativePrefix);
-  if (completed)
-    snapshot.interactions = snapshot.interactions.filter(
-      (interaction) => interaction.kind !== 'merge',
-    );
-  return snapshot;
+  return decisionTimeline(terminalTaskTimeline(state, completed), nativeLive, nativePrefix);
 }
 export function projectDecisionProjection(sources: DecisionSource[]): ProjectDecision[] {
   const result = new Map<string, ProjectDecision>();

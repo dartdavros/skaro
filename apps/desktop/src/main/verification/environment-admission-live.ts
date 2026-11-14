@@ -11,6 +11,7 @@ import { RESOURCE_POLICY_KEY } from '../resource-policy';
 import { eventually } from './resource-workflow-observation';
 import { hasEnvironmentWait } from '../incident-environment-wait';
 import { incidentAction } from '../incident-condition';
+import { verifyBuildCheckpoint } from './environment-build-checkpoint';
 
 /** Existing real audit task, real host/VM metrics, normal MCP and Docker. No substitute services. */
 export async function verifyEnvironmentAdmission(
@@ -60,6 +61,10 @@ export async function verifyEnvironmentAdmission(
   };
   try {
     execution.start();
+    await verifyBuildCheckpoint(s, project, task.id, policy, call, proof);
+    execution.start();
+    grant.revoke();
+    grant = s.mcp.grant(scope);
     const description = await engine.environments.describe({ projectId: project, taskId: task.id });
     proof.cost = await environmentResourceCost(s.db, s.dataDir, description, project);
     proof.hostAndDocker = await applicationResourceMeasurements(

@@ -47,12 +47,24 @@ export class EnvironmentAdmission {
             ),
           );
         const signal = AbortSignal.any([scope.signal, ...(options.signal ? [options.signal] : [])]);
-        return await resources.phase('build', () => {
-          entered = true;
-          return action({ ...options, signal });
-        });
+        return await resources.phase(
+          'build',
+          () => {
+            entered = true;
+            return action({
+              ...options,
+              signal,
+              assertActive: async () => {
+                await scope.requireCurrent();
+                await options.assertActive?.();
+              },
+            });
+          },
+          scope,
+          { wait: options.waitForResources },
+        );
       } catch (error) {
-        if (!entered && newlyReserved) {
+        if ((!entered || error instanceof EnvironmentNotDispatched) && newlyReserved) {
           this.held.get(identity)?.release('environment_start_cancelled_before_dispatch');
           this.held.delete(identity);
         }

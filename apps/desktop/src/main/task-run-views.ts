@@ -19,6 +19,7 @@ import { taskViewSettings } from './task-view-settings';
 import { c4DiagnosticKey } from './c4-tool-diagnostic';
 import { accessTaskWorktree } from './task-worktree-retention';
 import { validateBuiltinTaskSettings } from './builtin-task-settings-validation';
+import { terminalTaskHistory, terminalTaskTimeline } from './terminal-task-requests';
 import {
   IntegrationFailed,
   IntegrationPending,
@@ -88,6 +89,12 @@ export class TaskRunViews {
       this.ctx.deps.db.getSetting(`task.${projectId}.${taskId}.clearedIntegrations`, []),
     );
     const integrations = this.ctx.integrations.store.all(projectId);
+    const terminal = terminalTaskHistory(this.ctx.deps.db, task.status, active?.run.id);
+    integration.timeline = terminalTaskTimeline(integration.timeline, terminal);
+    if (integration.sources.base)
+      integration.sources.base = terminalTaskTimeline(integration.sources.base, terminal);
+    for (const source of integration.sources.integrations)
+      source.timeline = terminalTaskTimeline(source.timeline, terminal);
     const read = options?.paged
       ? await historyReads().syncTask(
           `${projectId}:task:${taskId}`,

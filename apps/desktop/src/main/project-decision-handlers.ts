@@ -4,10 +4,11 @@ import type { Handlers } from './ipc';
 import type { Services } from './app-services';
 import type { DecisionAnswer, ProjectDecision } from '../shared/project-decisions';
 import { DecisionSources, decisionReaders } from './decision-sources';
-import { DecisionReplies } from './decision-replies';
+import { DecisionReplies, decisionReplyUncertain } from './decision-replies';
 import { validateQuestionAnswer } from '@skaro/timeline';
 import { decisionIsSafety } from './decision-authority';
 import { requireCoordinationDispatch } from './coordination-dispatch';
+import { DecisionNotDispatched } from './decision-not-dispatched';
 
 /** Wrap the existing executors. The window and original feed enter this same gate. */
 export function projectDecisionHandlers<T extends Partial<Handlers>>(
@@ -18,27 +19,32 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
     replies = new DecisionReplies(services.db);
   decisionReaders.set(services.db, reader);
   const execute = async (entry: ProjectDecision, action: DecisionAnswer) => {
-    if (!decisionIsSafety(action)) requireCoordinationDispatch(services.db, entry.origin.projectId);
-    const expected =
-      entry.kind === 'proposal'
-        ? 'proposal'
-        : entry.interaction.kind === 'merge'
-          ? 'merge'
-          : 'respond';
-    if (
-      action.kind !== expected ||
-      (action.kind === 'proposal' && action.action.action === 'revert')
-    )
-      throw new Error('decision_answer_kind_invalid');
-    if (entry.kind === 'interaction' && action.kind === 'respond') {
-      validateQuestionAnswer(entry.interaction, action.answer);
+    try {
+      if (!decisionIsSafety(action))
+        requireCoordinationDispatch(services.db, entry.origin.projectId);
+      const expected =
+        entry.kind === 'proposal'
+          ? 'proposal'
+          : entry.interaction.kind === 'merge'
+            ? 'merge'
+            : 'respond';
       if (
-        entry.interaction.kind !== action.answer.kind ||
-        (entry.interaction.kind === 'approval' &&
-          action.answer.kind === 'approval' &&
-          !entry.interaction.choices.includes(action.answer.choice))
+        action.kind !== expected ||
+        (action.kind === 'proposal' && action.action.action === 'revert')
       )
         throw new Error('decision_answer_kind_invalid');
+      if (entry.kind === 'interaction' && action.kind === 'respond') {
+        validateQuestionAnswer(entry.interaction, action.answer);
+        if (
+          entry.interaction.kind !== action.answer.kind ||
+          (entry.interaction.kind === 'approval' &&
+            action.answer.kind === 'approval' &&
+            !entry.interaction.choices.includes(action.answer.choice))
+        )
+          throw new Error('decision_answer_kind_invalid');
+      }
+    } catch (error) {
+      throw new DecisionNotDispatched(error);
     }
     await replies.accept(
       entry,
@@ -84,14 +90,14 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
     ).find((row) =>
       row.kind === 'interaction' ? row.interaction.id === raw : row.item.id === raw,
     );
-    if (!current) throw new Error('decision_stale');
+    if (!current) throw new DecisionNotDispatched('decision_stale');
     return current;
   };
   return {
     ...original,
     'activity.page': (project: string, cursor?: number) =>
       projectActivityPage(services.db, project, cursor),
-    'decisions.status': (project: string, id: string, revision: string) => {
+    'decisions.status': async (project: string, id: string, revision: string) => {
       const entry = reader.knownEntry(project, id, revision);
       if (!entry) return 'stale' as const;
       const accepted = replies.status(entry);
@@ -108,6 +114,11 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
         );
         if (request && request.expiresAt <= Date.now()) return 'expired' as const;
       }
+      const current = (await reader.fresh(entry.origin)).find((row) => row.id === id);
+      if (current?.revision === revision)
+        return decisionReplyUncertain(services.db, entry)
+          ? ('uncertain' as const)
+          : ('pending' as const);
       return entry.kind === 'interaction' &&
         entry.interaction.kind === 'approval' &&
         entry.interaction.delivery !== 'async'
@@ -122,7 +133,7 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
       action: DecisionAnswer,
     ) => {
       const entry = (await reader.list(project)).find((row) => row.id === id);
-      if (!entry || entry.revision !== revision) throw new Error('decision_stale');
+      if (!entry || entry.revision !== revision) throw new DecisionNotDispatched('decision_stale');
       await execute(entry, action);
     },
     'task.respond': async (
@@ -137,7 +148,7 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
       answer: import('@skaro/timeline').InteractionAnswer,
     ) => {
       const entry = (await reader.list(p)).find((row) => row.id === `coordinator:${id}`);
-      if (!entry) throw new Error('decision_stale');
+      if (!entry) throw new DecisionNotDispatched('decision_stale');
       await execute(entry, { kind: 'respond', answer });
     },
     'chat.respond': async (
@@ -177,7 +188,7 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
       const entry = (await reader.list(p)).find(
         (row) => row.kind === 'proposal' && row.item.id === raw,
       );
-      if (!entry) throw new Error('decision_stale');
+      if (!entry) throw new DecisionNotDispatched('decision_stale');
       await execute(entry, {
         kind: 'proposal',
         action: action === 'apply' ? { action, fingerprint: fingerprint! } : { action },

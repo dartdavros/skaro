@@ -24,6 +24,7 @@ import { requireCoordinationDispatch } from './coordination-dispatch';
 import { checkoutKey } from './task-stage';
 import { rememberEnvironmentWait, hasEnvironmentWait } from './incident-environment-wait';
 import { escalateIncident } from './incident-escalation';
+import { refreshIncidentContext } from './incident-context-refresh';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -190,6 +191,7 @@ export class TaskIncidents {
       }
     }
     try {
+      if (await refreshIncidentContext(this.ctx, this, row, subscribers)) return;
       if (await checkIncident(this.ctx, row)) return this.resolved(row);
     } catch {
       await escalateIncident(this.ctx, row);

@@ -161,6 +161,7 @@ export class ApplicationResources {
     kind: ResourceWork,
     action: () => Promise<T>,
     scope = resourceExecution.getStore(),
+    options: { wait?: boolean } = {},
   ): Promise<T> {
     if (scope?.phases?.has(kind)) {
       await scope.requireCurrent();
@@ -178,7 +179,7 @@ export class ApplicationResources {
       await scope.requireCurrent();
       return action();
     }
-    const held = await this.acquire(kind, scope);
+    const held = await this.acquire(kind, scope, options);
     try {
       return await resourceExecution.run(
         { ...scope!, phases: new Set([...(scope?.phases ?? []), kind]) },

@@ -20,7 +20,7 @@ export interface EnvironmentStartOptions {
   waitForResources?: boolean;
   signal?: AbortSignal;
   processStarted?: (pid: number) => void | Promise<void>;
-  assertActive?: () => void;
+  assertActive?: () => void | Promise<void>;
 }
 
 export interface EnvironmentStartTiming {
@@ -66,7 +66,7 @@ export async function startEnvironmentServices(
     part: 'prepareMs' | 'createMs' | 'startMs' | 'readyMs',
     action: () => Promise<T>,
   ) => {
-    options.assertActive?.();
+    await options.assertActive?.();
     options.signal?.throwIfAborted();
     const began = Date.now();
     try {
@@ -122,7 +122,7 @@ export async function startEnvironmentServices(
             const failures = await deps.remove();
             if (failures.length)
               throw new Error(`Cannot prepare a clean environment: ${failures.join('; ')}`);
-            options.assertActive?.();
+            await options.assertActive?.();
             options.signal?.throwIfAborted();
             completeProvenance = await deps.provenance(description);
             await run('create', config!.create!);
