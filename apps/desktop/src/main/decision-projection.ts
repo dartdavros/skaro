@@ -38,7 +38,7 @@ export function decisionTimeline(
     items: pendingProposals(state.items),
   };
 }
-/** Terminal tasks retain history; only an independently pending controller decision can outlive them. */
+/** Terminal tasks retain history; their native and controller requests are no longer actionable. */
 export function taskDecisionTimeline(
   state: TimelineState,
   nativeLive: boolean,
@@ -56,6 +56,7 @@ export function taskDecisionTimeline(
 export function projectDecisionProjection(sources: DecisionSource[]): ProjectDecision[] {
   const result = new Map<string, ProjectDecision>();
   for (const { timeline, requestEpochs, terminalTask, ...origin } of sources) {
+    if (terminalTask) continue;
     const payloads: DecisionPayload[] = [
       ...timeline.interactions.map((interaction) => ({
         kind: 'interaction' as const,

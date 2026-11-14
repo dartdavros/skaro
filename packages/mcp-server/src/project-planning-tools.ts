@@ -56,7 +56,7 @@ const keySchema = { key: { type: 'string', description: 'Stable key returned by 
 const keyArgs = (args: Record<string, unknown>) => ({ key: text(args, 'key') });
 
 export function planningTools(handlers: ProjectPlanningHandlers): Tool<SkaroScope>[] {
-  return [
+  const result: Tool<SkaroScope>[] = [
     {
       name: 'prepare_plan',
       description:
@@ -170,4 +170,26 @@ export function planningTools(handlers: ProjectPlanningHandlers): Tool<SkaroScop
       ),
     },
   ];
+  if (handlers.revisePlan) {
+    const prepare = result[0]!;
+    result.splice(1, 0, {
+      ...prepare,
+      name: 'revise_plan',
+      description:
+        'Revise an existing saved draft after the owner requests a correction, including removing uncreated tasks and fixing dependencies. Supply the SAME key, reason and COMPLETE replacement decomposition. Only unaccepted drafts can change. The prior review is superseded and a fresh complete card requires owner confirmation; no task files change. Use delete_tasks/replan_tasks for already created tasks. Never bypass a refusal through computer control or shell.',
+      inputSchema: {
+        ...prepare.inputSchema,
+        properties: {
+          ...(prepare.inputSchema.properties as Record<string, unknown>),
+          reason: { type: 'string', minLength: 1 },
+        },
+        required: [...(prepare.inputSchema.required as string[]), 'reason'],
+      },
+      call: guarded(
+        (args) => ({ ...parsePreparedPlan(args), reason: text(args, 'reason') }),
+        (args, scope) => handlers.revisePlan!(args, scope),
+      ),
+    });
+  }
+  return result;
 }

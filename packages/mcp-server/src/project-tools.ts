@@ -10,6 +10,7 @@ import { planTools, updateTaskTool } from './project-plan-tools.ts';
 import { importTools } from './project-import-tools.ts';
 import { planningTools } from './project-planning-tools.ts';
 import { replanTasksTool } from './task-replan-tool.ts';
+import { deleteTasksTool } from './task-delete-tool.ts';
 export type * from './project-tool-model.ts';
 export { ToolArgsError } from './project-tool-args.ts';
 
@@ -27,7 +28,10 @@ export function projectTools(handlers: ProjectToolHandlers): Tool<SkaroScope>[] 
     ...documentTools(handlers),
     ...planTools(handlers),
     ...(handlers.replanTasks
-      ? [replanTasksTool((args, scope) => handlers.replanTasks!(args, scope))]
+      ? [
+          replanTasksTool((args, scope) => handlers.replanTasks!(args, scope)),
+          deleteTasksTool((args, scope) => handlers.replanTasks!(args, scope)),
+        ]
       : []),
     ...(handlers.planning ? planningTools(handlers.planning) : []),
     ...importTools(handlers),

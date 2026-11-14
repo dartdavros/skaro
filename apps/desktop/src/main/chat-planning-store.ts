@@ -3,6 +3,7 @@ import type { PreparePlanArgs } from '@skaro/mcp-server';
 import { findCycle } from './chat-proposal-helpers';
 
 export interface SavedChatPlan extends PreparePlanArgs {
+  revision?: number;
   state: 'active' | 'waiting' | 'paused' | 'blocked' | 'complete' | 'cancelled';
   reason?: string;
   attempts: number;

@@ -34,6 +34,16 @@ export function prepareTaskReplan(
     return task;
   });
   const sourceIds = new Set(args.taskIds);
+  const deleted = new Set(args.deleteIds ?? []);
+  if (
+    deleted.size !== (args.deleteIds?.length ?? 0) ||
+    [...deleted].some((id) => !sourceIds.has(id))
+  )
+    throw new Error('Deleted tasks must be distinct source IDs.');
+  if (!args.tasks.length && !deleted.size)
+    throw new Error('A replan needs outputs or explicit deletions.');
+  if (args.revisionReason !== undefined && !args.revisionReason.trim())
+    throw new Error('A scope revision needs a reason.');
   const retained = new Set<string>();
   const refs = new Set(args.tasks.map((t) => t.ref));
   if (refs.size !== args.tasks.length || [...refs].some((ref) => /^T-\d+$/i.test(ref)))
@@ -45,6 +55,8 @@ export function prepareTaskReplan(
     if (id) retained.add(id);
     if (input.sources.some((source) => !sourceIds.has(source)))
       throw new Error(`${input.ref}: sources must belong to task_ids.`);
+    if (!input.sources.length || input.sources.some((source) => deleted.has(source)))
+      throw new Error(`${input.ref}: deleted tasks cannot also have replacements.`);
     const sources = originals.filter((t) => input.sources.includes(t.id));
     const specs = unique(sources.flatMap((t) => (t.spec ? [adrId(t.spec)] : [])));
     const spec = input.spec ? adrId(input.spec) : specs[0];
@@ -70,10 +82,12 @@ export function prepareTaskReplan(
     };
   });
   for (const source of originals) {
+    if (deleted.has(source.id)) continue;
     if (!outputs.some((t) => t.sources.includes(source.id)))
       throw new Error(
         `${source.id}: every source must have a replacement; dropping work is not replanning.`,
       );
+    if (args.revisionReason) continue;
     const normalize = (text: string) => text.trim().replace(/\s+/g, ' ');
     const covered = new Set(
       outputs
@@ -106,6 +120,8 @@ export function prepareTaskReplan(
     throw new Error(`Unknown dependency ${dependency}.`);
   };
   for (const task of outputs) {
+    if (task.dependsOn.some((id) => deleted.has(id.toUpperCase())))
+      throw new Error(`${task.ref}: explicit dependencies cannot reference deleted tasks.`);
     const explicit = task.dependsOn.flatMap(resolve);
     if (explicit.includes(task.id ?? task.ref))
       throw new Error(`${task.ref}: a task cannot depend on itself.`);
@@ -114,7 +130,7 @@ export function prepareTaskReplan(
       .flatMap((s) => s.dependsOn)
       .flatMap(resolve)
       .filter((ref) => ref !== (task.id ?? task.ref));
-    task.dependsOn = unique([...inherited, ...explicit]);
+    task.dependsOn = unique([...(args.revisionReason ? [] : inherited), ...explicit]);
   }
   const external = artifacts.tasks.filter((t) => !sourceIds.has(t.id));
   const rewired = external.flatMap((task) => {

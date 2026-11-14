@@ -9,6 +9,8 @@ import type { TaskRunEngine } from './task-run-engine';
 import { taskInputSnapshot, verifyPrerequisites } from './task-preflight-inputs';
 import { TaskExecution } from './task-execution';
 import { checkIncidentProvider } from './incident-provider-check';
+import { terminalTaskHistory } from './terminal-task-requests';
+import { findTask } from './task-run-helpers';
 
 export async function currentIncidentSubscriber(
   ctx: TaskRunEngine,
@@ -26,12 +28,10 @@ export async function currentIncidentSubscriber(
     return false;
   try {
     const context = ctx.project(projectId);
-    const inputs = await taskInputSnapshot(
-      ctx.deps.db,
-      context,
-      await context.store.load(),
-      s.taskId,
-    );
+    const artifacts = await context.store.load();
+    const task = findTask(artifacts, s.taskId);
+    if (terminalTaskHistory(ctx.deps.db, task.status, run.id, task.archived)) return false;
+    const inputs = await taskInputSnapshot(ctx.deps.db, context, artifacts, s.taskId);
     return (
       inputs.version === s.inputs &&
       execution.read().enabled &&

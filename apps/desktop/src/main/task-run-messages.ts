@@ -43,7 +43,7 @@ export class TaskRunMessages {
     requireCurrent();
     retireTerminalTaskRequests(
       active.timeline.state,
-      terminalTaskHistory(this.ctx.deps.db, task.status, active.run.id),
+      terminalTaskHistory(this.ctx.deps.db, task.status, active.run.id, task.archived),
       (event) => this.ctx.history.skaroEvent(active, event),
     );
     requireTaskNotStopping(active);

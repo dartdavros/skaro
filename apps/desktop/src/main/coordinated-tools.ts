@@ -36,6 +36,7 @@ const mutations = new Set([
   'verify_integration',
   'ci_run',
   'prepare_plan',
+  'revise_plan',
   'propose_saved_plan',
   'finish_plan',
   'write_doc',
@@ -47,6 +48,7 @@ const mutations = new Set([
   'propose_tasks',
   'update_task',
   'replan_tasks',
+  'delete_tasks',
 ]);
 
 export function coordinationToolSubject(scope: SkaroScope): CoordinationRef {

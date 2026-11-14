@@ -24,7 +24,9 @@ export async function taskDecisionSources(
       ctx.deps.db,
       findTask(artifacts, task.id).status,
       run?.id,
+      findTask(artifacts, task.id).archived,
     );
+    if (completed) continue;
     const active = ctx.active.get(key(projectId, task.id));
     const current = active?.run.id === run?.id ? active : undefined;
     const restored =

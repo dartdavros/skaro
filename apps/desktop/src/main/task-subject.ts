@@ -6,6 +6,7 @@ import type { Milestone, ProjectArtifacts, Task, TaskPatch, TaskStatus } from '@
 import type { ProjectContext } from './projects';
 import { stageTasks } from './task-stage';
 import { taskSections } from './task-body';
+import { stageRequestsArchived } from './task-decision-lifecycle';
 
 const READINESS = /^##\s+(критерий готовности|done when|definition of done)\s*$/i;
 const LIST_ITEM = /^\s*[-*]\s+/;
@@ -47,7 +48,7 @@ export function stageSubject(stage: Milestone, artifacts: ProjectArtifacts): Tas
     status: stageStatus(stage, artifacts),
     dependsOn: [],
     unblocked: false,
-    archived: false,
+    archived: stageRequestsArchived(stage.id, artifacts.tasks),
     ...(stage.branch ? { branch: stage.branch } : {}),
     body: readinessAsList(stage.body),
     path: stage.path,

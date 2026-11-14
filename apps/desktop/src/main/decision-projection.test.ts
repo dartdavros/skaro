@@ -22,7 +22,7 @@ const source = (id: string): DecisionSource => ({
   epoch: 'observed',
   timeline: { ...emptyTimeline(), interactions: [approval] },
 });
-it('keeps genuine pending choices but excludes an obsolete merge after task completion without rewriting history', () => {
+it('excludes every request of a completed task, including controller questions, without rewriting history', () => {
   const merge: Interaction = {
     kind: 'merge',
     id: 'previous-merge',
@@ -62,7 +62,10 @@ it('keeps genuine pending choices but excludes an obsolete merge after task comp
     question,
     nativeQuestion,
   ]);
-  expect(taskDecisionTimeline(state, false, true).interactions).toEqual([question]);
+  expect(taskDecisionTimeline(state, false, true).interactions).toEqual([]);
+  expect(
+    projectDecisionProjection([{ ...source('closed'), terminalTask: true, timeline: state }]),
+  ).toEqual([]);
   expect(state.interactions).toEqual([merge, question, nativeQuestion]);
 });
 it('keeps accepted architecture in the source while removing it from unanswered decisions', () => {

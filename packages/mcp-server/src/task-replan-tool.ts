@@ -28,6 +28,8 @@ export interface ReplanTasksArgs {
   title: string;
   taskIds: string[];
   tasks: ReplannedTaskArgs[];
+  deleteIds?: string[];
+  revisionReason?: string;
 }
 
 export function parseTaskReplan(args: Record<string, unknown>): ReplanTasksArgs {
@@ -36,10 +38,19 @@ export function parseTaskReplan(args: Record<string, unknown>): ReplanTasksArgs 
   const taskIds = strings(args, 'task_ids').map((id) => id.toUpperCase());
   if (!taskIds.length || new Set(taskIds).size !== taskIds.length)
     throw new ToolArgsError('task_ids must contain distinct existing task IDs.');
-  const raw = list(args, 'tasks');
-  if (!raw.length) throw new ToolArgsError('A replan needs at least one resulting task.');
+  const deleteIds =
+    args['delete_ids'] === undefined
+      ? []
+      : strings(args, 'delete_ids').map((id) => id.toUpperCase());
+  if (new Set(deleteIds).size !== deleteIds.length || deleteIds.some((id) => !taskIds.includes(id)))
+    throw new ToolArgsError('delete_ids must be distinct source task IDs.');
+  const revisionReason =
+    args['revision_reason'] === undefined ? undefined : text(args, 'revision_reason');
+  const raw = list(args, 'tasks', true);
+  if (!raw.length && !deleteIds.length)
+    throw new ToolArgsError('A replan needs resulting tasks or explicit delete_ids.');
   raw.forEach((value) => text(record(value, 'tasks[]'), 'ref'));
-  const parsed = tasks(args).map((task, i) => {
+  const parsed = tasks(args, '', true).map((task, i) => {
     const value = record(raw[i], 'tasks[]');
     const order = value['order'];
     if (!Number.isSafeInteger(order) || Number(order) < 0)
@@ -56,7 +67,14 @@ export function parseTaskReplan(args: Record<string, unknown>): ReplanTasksArgs 
     };
   });
   uniqueRefs(parsed);
-  return { key, title: text(args, 'title'), taskIds, tasks: parsed };
+  return {
+    key,
+    title: text(args, 'title'),
+    taskIds,
+    tasks: parsed,
+    ...(deleteIds.length ? { deleteIds } : {}),
+    ...(revisionReason ? { revisionReason } : {}),
+  };
 }
 
 export function replanTasksTool(
@@ -71,6 +89,8 @@ export function replanTasksTool(
       'Keep each existing acceptance criterion text in at least one output mapped to that source; do not rewrite requirements during a replan. ' +
       'omit id only for a new task. Use local refs or existing task IDs in depends_on, and explicit order and milestone (omit for no milestone). ' +
       'External dependents are rewired from each source to all its replacements and shown in the same diff. ' +
+      'For owner-requested deletion, list source IDs in delete_ids and omit their replacements; tasks may be empty for deletion only. Incoming dependencies on deleted tasks are removed in the same reviewed diff. ' +
+      'For owner-requested corrections of requirements or dependencies, provide revision_reason and the complete revised outputs; their criteria and dependency lists then replace the originals. Without revision_reason preserve every original criterion and inherited dependency. ' +
       'Previously run, queued, scheduled, archived and non-todo tasks cannot be changed. ' +
       'The owner applies or rejects the ENTIRE package once; no files or worktrees are changed by this proposal. ' +
       'The same key is idempotent; use a new key for a revised proposal. Never bypass this tool with update_task or direct file edits.\n\n' +
@@ -81,9 +101,16 @@ export function replanTasksTool(
         key: { type: 'string' },
         title: { type: 'string' },
         task_ids: { type: 'array', minItems: 1, items: { type: 'string' } },
+        delete_ids: { type: 'array', items: { type: 'string' } },
+        revision_reason: {
+          type: 'string',
+          minLength: 1,
+          description:
+            'Explicit owner-requested scope correction. Explain what requirements or dependencies must change; the owner reviews the entire diff.',
+        },
         tasks: {
           type: 'array',
-          minItems: 1,
+          minItems: 0,
           items: {
             ...TASK_SCHEMA,
             properties: {

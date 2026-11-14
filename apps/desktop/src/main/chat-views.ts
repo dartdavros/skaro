@@ -8,6 +8,8 @@ import { QuestionAnswers } from './question-answers';
 import { presentationState } from './timeline-presentation';
 import { historyReads } from './history-read-service';
 import { join } from 'node:path';
+import type { TimelineState } from '@skaro/timeline';
+import { projectTaskProposalLifecycles } from './task-decision-lifecycle';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -63,7 +65,7 @@ export class ChatViews {
           decisionEpoch: saved.logPath,
           chat: this.summary(saved),
           settings: this.ctx.settings.settings(saved),
-          timeline: cached.view.timeline,
+          timeline: await this.projectTimeline(projectId, chatId, cached.view.timeline),
           history: cached.view.source,
           historyPage: cached.view.page,
           seq: cached.seq,
@@ -104,10 +106,22 @@ export class ChatViews {
       decisionEpoch: live.chat.logPath,
       chat: this.summary(live.chat),
       settings: this.ctx.settings.settings(live.chat),
-      timeline: read?.timeline ?? presentationState(live.timeline.state),
+      timeline: await this.projectTimeline(
+        projectId,
+        chatId,
+        read?.timeline ?? presentationState(live.timeline.state),
+      ),
       ...(read ? { history: read.source, historyPage: read.page } : {}),
       seq: live.seq,
     };
+  }
+
+  private async projectTimeline(projectId: string, chatId: string, state: TimelineState) {
+    const projected = new QuestionAnswers(this.ctx.deps.db, `live.${chatId}`).project(state);
+    return projectTaskProposalLifecycles(
+      projected,
+      (await this.ctx.project(projectId).summary()).tasks,
+    );
   }
 
   summary(chat: ChatRecord): ChatSummary {

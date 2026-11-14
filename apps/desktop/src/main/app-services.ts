@@ -159,6 +159,7 @@ export async function createServices(
       ...projectTools({
         planning: {
           preparePlan: (args, scope) => chats.planning.preparePlan(args, scope),
+          revisePlan: (args, scope) => chats.planning.revisePlan!(args, scope),
           proposeSavedPlan: (args, scope) => chats.planning.proposeSavedPlan(args, scope),
           finishPlan: (args, scope) => chats.planning.finishPlan(args, scope),
           controlPlan: (args, scope) => chats.planning.controlPlan(args, scope),

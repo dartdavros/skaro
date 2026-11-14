@@ -2,6 +2,7 @@ import type {
   ControlPlanArgs,
   PlanKeyArgs,
   PreparePlanArgs,
+  RevisePlanArgs,
   ProjectPlanningHandlers,
   ProposeSavedPlanArgs,
   SkaroScope,
@@ -14,6 +15,7 @@ import { planningReadiness } from './chat-planning-readiness';
 import type { LiveChat } from './chat-model';
 import { serializeChatMutation } from './chat-mutations';
 import { pendingC4PlanProblem } from './chat-plan-c4';
+import { reviseChatPlan } from './chat-plan-revision';
 
 export class ChatPlanning implements ProjectPlanningHandlers {
   private readonly ctx: ChatEngine;
@@ -29,6 +31,10 @@ export class ChatPlanning implements ProjectPlanningHandlers {
     const live = this.ctx.context.caller(scope);
     return serializeChatMutation(live, () => this.prepare(live, args));
   }
+  async revisePlan(args: RevisePlanArgs, scope: SkaroScope): Promise<ToolResult> {
+    const live = this.ctx.context.caller(scope);
+    return serializeChatMutation(live, () => reviseChatPlan(this.ctx, live, args));
+  }
 
   async prepare(live: LiveChat, args: PreparePlanArgs): Promise<ToolResult> {
     const artifacts = await this.ctx.project(live.projectId).load();
@@ -41,6 +47,7 @@ export class ChatPlanning implements ProjectPlanningHandlers {
         reason: _reason,
         attempts: _attempts,
         lastProgress: _progress,
+        revision: _revision,
         ...contents
       } = prior;
       if (JSON.stringify(contents) !== JSON.stringify(normalized)) {
