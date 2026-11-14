@@ -14,6 +14,7 @@ import { queueOwnerMessage } from './owner-commands';
 import { openPrivate, sealPrivate } from './private-input';
 import type { MessageInput } from '../shared/ipc';
 import { TaskExecution } from './task-execution';
+import { QuestionRetirements } from './question-retirements';
 
 type Question = Extract<Interaction, { kind: 'question' }>;
 interface SavedAnswer {
@@ -29,9 +30,11 @@ interface SavedAnswer {
 export class QuestionAnswers {
   private readonly db: AppDb;
   private readonly key: string;
+  private readonly retired: QuestionRetirements;
   constructor(db: AppDb, owner: string) {
     this.db = db;
     this.key = `question.answers.${owner}`;
+    this.retired = new QuestionRetirements(db, owner);
   }
   accept(
     question: Question,
@@ -105,6 +108,7 @@ export class QuestionAnswers {
   }
   /** Replay acceptance after a crash between the database commit and the journal write. */
   recover(state: TimelineState, emit: (event: TimelineEvent) => void): void {
+    this.retired.recover(state, emit);
     const entries = this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? [];
     for (const entry of entries) {
       const current = state.interactions.find((i) => i.id === entry.interaction.id);

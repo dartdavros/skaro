@@ -16,6 +16,7 @@ import { PlanJournal } from './chat-plan-journal';
 import { TaskReplanJournal } from './task-replan-journal';
 import { serializeTaskMutation } from './project-task-mutations';
 import { taskText } from './chat-proposal-helpers';
+import { DecisionNotDispatched } from './decision-not-dispatched';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -44,6 +45,7 @@ export class ChatProposals {
       (i): i is ProposalItem => i.kind === 'proposal' && i.id === itemId,
     );
     if (!item) throw new Error('The proposal is no longer in the chat');
+    if (item.state === 'superseded') throw new DecisionNotDispatched('decision_stale');
     if (item.proposal.type === 'task_replan') {
       if (action.action === 'apply' || action.action === 'revert') {
         try {

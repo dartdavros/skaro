@@ -98,7 +98,7 @@ export class TaskRunHistory {
     );
     const answers = new QuestionAnswers(this.ctx.deps.db, `active.${run.id}`);
     answers.recover(active.timeline.state, (event) => this.skaroEvent(active, event));
-    const terminal = terminalTaskHistory(this.ctx.deps.db, task.status, run.id);
+    const terminal = terminalTaskHistory(this.ctx.deps.db, task.status, run.id, task.archived);
     retireTerminalTaskRequests(active.timeline.state, terminal, (event) =>
       this.skaroEvent(active, event),
     );

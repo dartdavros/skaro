@@ -45,7 +45,7 @@ export function chatInstructions(options: {
         '- Discuss what to build with the user, ask questions when something is unclear.',
         '- Turn what you agree on into artifacts with the tools of the skaro MCP server: ' +
           'get_project_context, get_c4_context, propose_c4, write_doc (brief.md, docs/<name>.md), ' +
-          'propose_adr, propose_milestones, propose_tasks, update_task, replan_tasks.',
+          'propose_adr, propose_milestones, propose_tasks, update_task, replan_tasks, delete_tasks.',
         '- Read get_project_context before writing documents or proposing milestones and tasks.',
         '- New functionality starts with a specification and C4 coverage (propose_c4): problem, scenarios, ' +
           'requirements R-1, R-2…, out of scope, open questions. Cut its tasks after the user ' +

@@ -4,6 +4,7 @@ import { restoreHistory } from './restore-history';
 import { decisionTimeline } from './decision-projection';
 import type { DecisionSource } from '../shared/project-decisions';
 import { QuestionAnswers } from './question-answers';
+import { taskProposalCurrent } from './task-decision-lifecycle';
 
 export async function chatDecisionSources(
   ctx: ChatEngine,
@@ -12,6 +13,7 @@ export async function chatDecisionSources(
 ): Promise<DecisionSource[]> {
   const context = ctx.deps.projects.get(projectId),
     result: DecisionSource[] = [];
+  const artifacts = await context.summary();
   for (const chat of ctx.deps.db.listChats(projectId)) {
     if (chat.archived || (only && chat.id !== only)) continue;
     const live = ctx.live.get(chat.id);
@@ -26,6 +28,11 @@ export async function chatDecisionSources(
           projectId,
         )
       ).timeline.state;
+    const projected = decisionTimeline(
+      new QuestionAnswers(ctx.deps.db, `live.${chat.id}`).project(timeline),
+      !!live?.session && timeline.turns.some((turn) => !turn.outcome),
+    );
+    projected.items = projected.items.filter((item) => taskProposalCurrent(item, artifacts.tasks));
     result.push({
       projectId,
       kind: 'chat',
@@ -33,10 +40,7 @@ export async function chatDecisionSources(
       title: chat.title,
       epoch: chat.logPath,
       cwd: context.root,
-      timeline: decisionTimeline(
-        new QuestionAnswers(ctx.deps.db, `live.${chat.id}`).project(timeline),
-        !!live?.session && timeline.turns.some((turn) => !turn.outcome),
-      ),
+      timeline: projected,
     });
   }
   return result;

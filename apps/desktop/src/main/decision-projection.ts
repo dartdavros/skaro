@@ -56,6 +56,7 @@ export function taskDecisionTimeline(
 export function projectDecisionProjection(sources: DecisionSource[]): ProjectDecision[] {
   const result = new Map<string, ProjectDecision>();
   for (const { timeline, requestEpochs, terminalTask, ...origin } of sources) {
+    if (terminalTask) continue;
     const payloads: DecisionPayload[] = [
       ...timeline.interactions.map((interaction) => ({
         kind: 'interaction' as const,

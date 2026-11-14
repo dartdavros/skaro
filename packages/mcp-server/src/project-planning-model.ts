@@ -20,6 +20,9 @@ export interface PreparePlanArgs {
 export interface PlanKeyArgs {
   key: string;
 }
+export interface RevisePlanArgs extends PreparePlanArgs {
+  reason: string;
+}
 
 export interface ProposeSavedPlanArgs extends PlanKeyArgs {
   milestone?: string;
@@ -31,6 +34,7 @@ export interface ControlPlanArgs extends PlanKeyArgs {
 }
 
 export interface ProjectPlanningHandlers {
+  revisePlan?(args: RevisePlanArgs, scope: SkaroScope): Promise<ToolResult>;
   preparePlan(args: PreparePlanArgs, scope: SkaroScope): Promise<ToolResult>;
   proposeSavedPlan(args: ProposeSavedPlanArgs, scope: SkaroScope): Promise<ToolResult>;
   finishPlan(args: PlanKeyArgs, scope: SkaroScope): Promise<ToolResult>;

@@ -89,7 +89,12 @@ export class TaskRunViews {
       this.ctx.deps.db.getSetting(`task.${projectId}.${taskId}.clearedIntegrations`, []),
     );
     const integrations = this.ctx.integrations.store.all(projectId);
-    const terminal = terminalTaskHistory(this.ctx.deps.db, task.status, active?.run.id);
+    const terminal = terminalTaskHistory(
+      this.ctx.deps.db,
+      task.status,
+      active?.run.id,
+      task.archived,
+    );
     integration.timeline = terminalTaskTimeline(integration.timeline, terminal);
     if (integration.sources.base)
       integration.sources.base = terminalTaskTimeline(integration.sources.base, terminal);

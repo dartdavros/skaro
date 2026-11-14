@@ -1,8 +1,10 @@
 import type { NewTask } from '@skaro/core';
 import type { ChatEngine } from './chat-engine';
 import type { LiveChat, ProposalItem } from './chat-model';
+import { ChatPlanningStore, type SavedChatPlan } from './chat-planning-store';
 
 export interface PlanDecision {
+  revisedDraft?: SavedChatPlan;
   item: ProposalItem;
   milestoneId?: string;
   milestoneIds?: Record<string, string>;
@@ -44,6 +46,11 @@ export class PlanJournal {
     for (const record of this.list()) this.publish(record);
   }
   private publish(record: PlanDecision): void {
+    if (record.revisedDraft) {
+      const store = new ChatPlanningStore(this.ctx.deps.db, this.live.chat.id);
+      if ((store.get(record.revisedDraft.key)?.revision ?? 0) < record.revisedDraft.revision!)
+        store.put(record.revisedDraft);
+    }
     const current = this.live.timeline.state.items.find((i) => i.id === record.item.id);
     if (JSON.stringify(current) !== JSON.stringify(record.item)) {
       this.ctx.history.skaroEvent(this.live, { t: 'item.upsert', item: record.item });
