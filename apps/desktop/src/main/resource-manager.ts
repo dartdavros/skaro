@@ -1,4 +1,5 @@
 import type { AppDb, ResourceBudget, ResourceLease, ResourceLeaseRequest } from '@skaro/core';
+import { resourceWait } from './resource-wait';
 
 export interface ResourceAdmissionOptions {
   signal: AbortSignal;
@@ -6,6 +7,7 @@ export interface ResourceAdmissionOptions {
   wait?: boolean;
   /** Re-read intent, current requirements and readiness; never use a stale boolean snapshot. */
   requireCurrent(): void | Promise<void>;
+  changed?(): void;
 }
 export class ResourceAdmissionUnavailable extends Error {
   readonly reason: string;
@@ -31,6 +33,7 @@ export class ResourceManager {
   private pumping?: Promise<void>;
   private timer?: ReturnType<typeof setTimeout>;
   private closed = false;
+  private budget?: ResourceBudget;
   constructor(
     db: AppDb,
     measure: () => Promise<ResourceBudget>,
@@ -96,6 +99,7 @@ export class ResourceManager {
   }
   private async pump(): Promise<void> {
     const budget = await this.measure();
+    this.budget = budget;
     const ordered = this.db.admission.all().filter((lease) => this.pending.has(lease.id));
     for (const saved of ordered) {
       const pending = this.pending.get(saved.id);
@@ -108,6 +112,11 @@ export class ResourceManager {
         const current = this.db.admission.get(saved.projectId, saved.id)!;
         const lease = this.db.admission.admit(saved.projectId, saved.id, current.revision, budget);
         if (lease.state !== current.state || lease.reason !== current.reason) this.changed(lease);
+        try {
+          pending.options.changed?.();
+        } catch (error) {
+          console.error('Resource wait notification failed:', error);
+        }
         if (lease.state === 'granted') this.finish(saved.id, undefined, lease);
         else if (
           pending.options.wait === false &&
@@ -133,6 +142,17 @@ export class ResourceManager {
     pending.options.signal.removeEventListener('abort', pending.cancelled);
     if (lease) pending.resolve(lease);
     else pending.reject(error);
+  }
+  /** Only this process's live waiters count; restart history cannot invent active work. */
+  waiting(projectId: string, ownerId: string) {
+    const pending = [...this.pending.values()].find(
+      ({ request }) => request.projectId === projectId && request.ownerId === ownerId,
+    );
+    if (!pending) return undefined;
+    const lease = this.db.admission.get(projectId, pending.request.id);
+    return lease && ['waiting_resource', 'waiting_quota'].includes(lease.state)
+      ? resourceWait(lease, this.budget, this.db.admission.all())
+      : undefined;
   }
   /** Caller supplies confirmed external teardown, not just Promise completion or a TTL. */
   release(lease: ResourceLease, evidence: string): void {

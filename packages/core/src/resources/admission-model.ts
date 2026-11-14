@@ -20,6 +20,8 @@ export interface ResourceBudget extends Record<ResourceCapacity, number | null> 
   >;
   /** Free capacity after OS reserves, keyed by actual filesystem identity. Unknown is null. */
   diskBytes: Record<string, number | null>;
+  /** Exact observation behind the disk budget, for truthful host wait diagnostics. */
+  disks?: Record<string, { path: string; freeBytes: number; reserveBytes: number }>;
   pools?: Record<string, number | null>;
   /** Disk pools backed by a host filesystem also charge that physical volume. */
   poolVolumes?: Record<string, string>;

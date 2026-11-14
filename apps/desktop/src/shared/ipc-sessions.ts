@@ -126,6 +126,7 @@ export interface ChatSummary {
 
 /** Everything the chat screen needs to open a chat. */
 export interface ChatView {
+  resourceWait?: import('./resource-wait').ResourceWait;
   decisionEpoch?: string;
   historyPage?: import('./history').HistoryPage;
   history?: import('./history').HistorySource;

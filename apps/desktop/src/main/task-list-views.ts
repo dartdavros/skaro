@@ -8,6 +8,7 @@ import { key } from './task-run-helpers';
 import { background } from './background/client';
 import { taskListAssignment } from './task-list-assignment';
 import { taskListSnapshot } from './task-list-reader';
+import { taskResourceWait } from './resource-wait-view';
 
 export class TaskListViews {
   private readonly ctx: TaskRunEngine;
@@ -52,7 +53,7 @@ export class TaskListViews {
       const operation = id && ctx.integrations.store.find(projectId, id);
       if (operation) task.activity = await ctx.integrations.history.activity(operation);
     }
-    return snapshot.tasks;
+    return snapshot.tasks.map((task) => taskResourceWait(ctx.deps.db, projectId, task));
   }
   assigned(projectId: string, task: Task, run: RunRecord | undefined, artifacts: ProjectArtifacts) {
     return taskListAssignment(this.ctx.deps.db, projectId, task, run, artifacts);

@@ -5,6 +5,8 @@
   import { clock as formatClock, displayPath } from './format';
   import ActivityMark from '../activity/ActivityMark.svelte';
   import ActivityText from '../activity/ActivityText.svelte';
+  import type { ResourceWait } from '../../../shared/resource-wait';
+  import { resourceWaitLabel, resourceWaitAmount, resourceWaitDetail } from '../resource-wait';
 
   /** "Агент сейчас…": one line at the bottom of the feed, replaced by the next event (mockup 9b). */
   let {
@@ -12,27 +14,35 @@
     environment = false,
     since,
     cwd,
+    resourceWait,
   }: {
     activity: TimelineState['activity'];
     /** Skaro starts the task environment: the agent waits for that, not for the model. */
     environment?: boolean;
     since: number;
     cwd?: string;
+    resourceWait?: ResourceWait;
   } = $props();
 
   const tip = $derived(
-    environment
-      ? t('feed.live.environment.tip')
-      : activity?.state === 'waiting_model'
-        ? t('feed.live.model.tip')
-        : t('feed.live'),
+    resourceWait
+      ? resourceWaitDetail(resourceWait)
+      : environment
+        ? t('feed.live.environment.tip')
+        : activity?.state === 'waiting_model'
+          ? t('feed.live.model.tip')
+          : t('feed.live'),
   );
 </script>
 
 <div class="fd-live" data-tip={tip}>
-  <ActivityMark kind={activityKind(activity, environment)} />
+  <ActivityMark kind={resourceWait ? 'waiting_model' : activityKind(activity, environment)} />
   <ActivityText>
-    {#if environment}
+    {#if resourceWait}
+      {resourceWaitLabel(resourceWait)}{#if resourceWaitAmount(resourceWait)}
+        · {resourceWaitAmount(resourceWait)}{/if} ·
+      <span class="time">{formatClock(clock.now - since)}</span>
+    {:else if environment}
       {t('feed.live.environment')} · <span class="time">{formatClock(clock.now - since)}</span>
     {:else if activity?.state === 'thinking'}
       {t('feed.live.thinking')}

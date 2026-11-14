@@ -53,6 +53,7 @@ export async function chatSessionOptions(
       context.root,
       `chat.${chat.id}`,
       auditAdmission(ctx, projectId, chat.id),
+      () => ctx.listChanged(projectId, chat.id),
     ),
     signal: live.operation.signal,
     cwd: context.root,

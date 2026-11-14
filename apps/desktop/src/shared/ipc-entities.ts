@@ -75,6 +75,7 @@ export type MergeProgress = 'running' | 'queued' | 'needs_answer' | 'failed' | '
 export type TaskStage = 'todo' | 'in_progress' | 'review' | 'done' | 'failed' | 'cancelled';
 
 export interface TaskSummary extends TaskRef {
+  resourceWait?: import('./resource-wait').ResourceWait;
   stage: TaskStage;
   /** Current native agent activity; only present while the task is running. */
   activity?: AgentActivity;

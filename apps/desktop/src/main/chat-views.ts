@@ -10,6 +10,7 @@ import { historyReads } from './history-read-service';
 import { join } from 'node:path';
 import type { TimelineState } from '@skaro/timeline';
 import { projectTaskProposalLifecycles } from './task-decision-lifecycle';
+import { ownerResourceWait } from './resource-wait-view';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -111,6 +112,7 @@ export class ChatViews {
         chatId,
         read?.timeline ?? presentationState(live.timeline.state),
       ),
+      resourceWait: ownerResourceWait(this.ctx.deps.db, projectId, `chat:${chatId}`),
       ...(read ? { history: read.source, historyPage: read.page } : {}),
       seq: live.seq,
     };

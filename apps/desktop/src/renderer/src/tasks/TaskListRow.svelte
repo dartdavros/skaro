@@ -52,6 +52,7 @@
   >
   <StatusLabel
     status={task.status}
+    resourceWait={task.resourceWait}
     after={task.after}
     merge={task.merge}
     mergeAfter={task.mergeAfter}

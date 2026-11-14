@@ -1,4 +1,5 @@
 import { TaskListViews } from './task-list-views';
+import { taskResourceWait } from './resource-wait-view';
 import { presentationState } from './timeline-presentation';
 import { historyReads } from './history-read-service';
 import { emptyTimeline } from '@skaro/timeline';
@@ -81,7 +82,10 @@ export class TaskRunViews {
     );
     const stage = subjectStage(artifacts, taskId);
     const index = indexTasks(artifacts.tasks);
-    const shown = { ...detail(task, artifacts, runtime, active?.run), ...requirements };
+    const shown = taskResourceWait(this.ctx.deps.db, projectId, {
+      ...detail(task, artifacts, runtime, active?.run),
+      ...requirements,
+    });
     const integration = await this.ctx.integrations.history.project(
       projectId,
       taskId,

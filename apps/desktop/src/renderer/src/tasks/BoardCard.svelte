@@ -7,6 +7,7 @@
   import { agentLine, boardStatus, mergeWords, statusLabel } from './model';
   import ActivityMark from '../activity/ActivityMark.svelte';
   import { activityLabel } from '../activity/icons';
+  import { resourceWaitDetail } from '../resource-wait';
 
   /**
    * A task card of the board (Tasks mockup): title, lock or status dot; milestone; time and
@@ -101,7 +102,9 @@
       >
     {/if}
     {#if task.status === 'queued' || (task.status === 'todo' && task.after) || task.merge === 'queued'}
-      {@const queueTip = merge?.tip ?? statusLabel('queued')}
+      {@const queueTip = task.resourceWait
+        ? resourceWaitDetail(task.resourceWait)
+        : (merge?.tip ?? statusLabel('queued'))}
       <span class="queue" role="img" aria-label={queueTip} data-tip={queueTip}
         ><Icon name="clock" size={13} stroke={2} /></span
       >

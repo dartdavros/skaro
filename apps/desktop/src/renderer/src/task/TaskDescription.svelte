@@ -42,7 +42,10 @@
 <div class="desc task-description">
   <TaskDescriptionHeader {task} {oncollapse} />
   <div class="meta">
-    {#if stage}<StageChip info={stage.info} />{:else}<StatusChip status={task.status} />{/if}
+    {#if stage}<StageChip info={stage.info} />{:else}<StatusChip
+        status={task.status}
+        resourceWait={task.resourceWait}
+      />{/if}
     {#if task.dependsOn.length}
       <div class="line">
         {t('task.dependsOn')}
