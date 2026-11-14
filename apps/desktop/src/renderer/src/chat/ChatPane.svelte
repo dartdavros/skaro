@@ -96,6 +96,7 @@
   {:else if controller.timeline && controller.started}
     <Feed
       timeline={controller.timeline}
+      resourceWait={controller.view?.resourceWait}
       history={controller.view?.history}
       historyPage={controller.view?.historyPage}
       cwd={projectPath}

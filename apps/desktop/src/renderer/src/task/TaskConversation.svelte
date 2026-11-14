@@ -7,6 +7,7 @@
   import SessionBanners from './SessionBanners.svelte';
   import TaskCollapsedHeader from './TaskCollapsedHeader.svelte';
   import TaskStarting from './TaskStarting.svelte';
+  import TaskQueued from './TaskQueued.svelte';
   import TaskC4Diagnostic from './TaskC4Diagnostic.svelte';
   import LoadingView from '../screens/LoadingView.svelte';
   import TaskChatClear from './TaskChatClear.svelte';
@@ -75,20 +76,20 @@
     </div>
 
     {#if timeline && hasFeed}
-      <Feed {timeline} history={view.history} historyPage={view.historyPage} {cwd} />
+      <Feed
+        {timeline}
+        history={view.history}
+        historyPage={view.historyPage}
+        resourceWait={view.task.resourceWait}
+        {cwd}
+      />
     {:else if stage && left > 0}
       <div class="empty">
         <Icon name="tasks" size={30} stroke={1.5} color="var(--sk-text-29)" />
         <span class="empty-text">{t('task.stage.waiting', { n: left })}</span>
       </div>
-    {:else if view.queued}
-      <div class="empty">
-        <Icon name="clock" size={30} stroke={1.5} color="var(--sk-text-29)" />
-        <span class="empty-text"
-          >{#if stage}{t('task.stage.queued')}{:else if view.after}{t('task.queued.stage')}
-            <span class="mono">{view.after}</span>{:else}{t('task.queued')}{/if}</span
-        >
-      </div>
+    {:else if view.queued || view.task.resourceWait}
+      <TaskQueued stage={!!stage} after={view.after} resourceWait={view.task.resourceWait} />
     {:else if controller.starting}
       <div class="empty"><TaskStarting /></div>
     {:else if controller.running}

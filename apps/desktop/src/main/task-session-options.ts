@@ -55,6 +55,8 @@ export async function taskSessionOptions(
       },
       cwd,
       run.id,
+      undefined,
+      () => ctx.changed(projectId, taskId),
     ),
     cwd,
     processStarted: (pid, identity) => ctx.processes.started(run.id, pid, false, identity),

@@ -2,13 +2,17 @@
   import { t } from '@skaro/ui';
   import type { TaskStatus } from '../../../shared/ipc';
   import StatusOutlineIcon from './StatusOutlineIcon.svelte';
+  import type { ResourceWait } from '../../../shared/resource-wait';
+  import { resourceWaitLabel, resourceWaitDetail } from '../resource-wait';
 
   /** Task status chip of the task screen (mockup "Задача"). */
-  let { status }: { status: TaskStatus } = $props();
+  let { status, resourceWait }: { status: TaskStatus; resourceWait?: ResourceWait } = $props();
 </script>
 
-<span class="chip">
-  {#if status === 'in_progress'}
+<span class="chip" data-tip={resourceWait && resourceWaitDetail(resourceWait)}>
+  {#if resourceWait}
+    <StatusOutlineIcon />
+  {:else if status === 'in_progress'}
     <span class="dot working"></span>
   {:else if status === 'needs_answer' || status === 'review'}
     <span class="dot blue"></span>
@@ -41,7 +45,7 @@
   {:else}
     <StatusOutlineIcon />
   {/if}
-  {t(`task.status.${status}`)}
+  {resourceWait ? resourceWaitLabel(resourceWait) : t(`task.status.${status}`)}
 </span>
 
 <style>

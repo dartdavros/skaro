@@ -14,6 +14,7 @@ export interface ResourceExecution {
   /** Ephemeral admitted cache handle; ledger rows/restored metadata never populate this field. */
   cacheAuthority?: HeldResource;
   requireCurrent(): void | Promise<void>;
+  changed?(): void;
 }
 export interface HeldResource {
   lease: ResourceLease;

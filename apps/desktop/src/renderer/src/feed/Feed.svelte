@@ -18,6 +18,7 @@
   import { useFeed } from './context.svelte';
   import { provideFeedLoading } from './feed-loading.svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
+  import type { ResourceWait } from '../../../shared/resource-wait';
 
   /**
    * The agent history and live line. Pending actions live above the composer. Sticks to the bottom while the
@@ -28,11 +29,13 @@
     cwd,
     history,
     historyPage,
+    resourceWait,
   }: {
     timeline: TimelineState;
     cwd?: string;
     history?: HistorySource;
     historyPage?: import('../../../shared/history').HistoryPage;
+    resourceWait?: ResourceWait;
   } = $props();
 
   const scroll = new FeedScroll();
@@ -63,13 +66,14 @@
   const activity = $derived(liveActivity(timeline));
   // A running reasoning row already says "Думает…".
   const showLive = $derived(
-    timeline.status !== 'idle' &&
-      (startingEnvironment ||
-        (activity !== undefined &&
-          !(
-            activity.state === 'thinking' &&
-            timeline.items.some((i) => i.kind === 'reasoning' && i.status === 'running')
-          ))),
+    !!resourceWait ||
+      (timeline.status !== 'idle' &&
+        (startingEnvironment ||
+          (activity !== undefined &&
+            !(
+              activity.state === 'thinking' &&
+              timeline.items.some((i) => i.kind === 'reasoning' && i.status === 'running')
+            )))),
   );
 
   $effect(() => {
@@ -105,7 +109,13 @@
       {#if history}<PagedFeedRows source={history} initial={historyPage} {waiting} />{/if}
       {#if rows.length}<FeedRows {rows} {waiting} nested={!!history} />{/if}
       {#if showLive}
-        <LiveLine {activity} environment={startingEnvironment} since={activitySince} {cwd} />
+        <LiveLine
+          {activity}
+          {resourceWait}
+          environment={startingEnvironment}
+          since={resourceWait?.since ?? activitySince}
+          {cwd}
+        />
       {/if}
     </div>
   </div>

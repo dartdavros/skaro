@@ -73,6 +73,7 @@ export class ApplicationResources {
       intentId?: string;
       dispatchRevision?: number;
       requireCurrent?: () => void | Promise<void>;
+      changed?: () => void;
     } = {},
   ): Promise<T> {
     const controller = new AbortController();
@@ -92,6 +93,7 @@ export class ApplicationResources {
       intentId: options.intentId ?? randomUUID(),
       dispatchRevision: options.dispatchRevision ?? dispatchState(this.db, projectId).revision,
       signal,
+      changed: options.changed,
       requireCurrent: async () => {
         signal.throwIfAborted();
         if (!this.db.getProject(projectId))

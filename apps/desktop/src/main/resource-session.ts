@@ -16,6 +16,7 @@ export function resourceSessionAdmission(
   cwd?: string,
   processKey?: string,
   observe?: (state: 'resource' | 'model' | 'running') => void,
+  changed?: () => void,
 ): SessionOptions['resourceAdmission'] {
   const resources = resourcesFor(db);
   if (!resources) return undefined;
@@ -39,6 +40,7 @@ export function resourceSessionAdmission(
   ) => {
     const identity = identityOf(connectionId);
     observe?.(kind === 'model' ? 'model' : 'resource');
+    changed?.();
     return resources
       .scope(
         projectId,
@@ -69,10 +71,16 @@ export function resourceSessionAdmission(
               : [],
           });
         },
-        { signal, requireCurrent, intentId },
+        {
+          signal,
+          requireCurrent,
+          intentId,
+          changed,
+        },
       )
       .then((value) => {
         observe?.('running');
+        changed?.();
         return value;
       });
   };

@@ -1,6 +1,7 @@
 import { availableParallelism, cpus, freemem } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { realpath, stat, statfs } from 'node:fs/promises';
+import { parse } from 'node:path';
 import type { ResourceBudget } from '@skaro/core';
 
 export interface ResourceBudgetPolicy {
@@ -36,6 +37,7 @@ export async function measureResourceBudget(
     if (!Number.isSafeInteger(policy[key]) || policy[key] < 0)
       throw new Error('Invalid resource budget policy');
   const diskBytes: ResourceBudget['diskBytes'] = {};
+  const disks: NonNullable<ResourceBudget['disks']> = {};
   for (const path of paths) {
     let volume: string;
     try {
@@ -44,8 +46,19 @@ export async function measureResourceBudget(
       continue;
     } // No identity means no budget for that disk, not zero usage or a global outage.
     try {
-      const fs = await statfs(await realpath(path), { bigint: true });
+      const canonical = await realpath(path);
+      const fs = await statfs(canonical, { bigint: true });
       const free = fs.bavail * fs.bsize;
+      const previous = disks[volume];
+      if (
+        free <= BigInt(Number.MAX_SAFE_INTEGER) &&
+        (!previous || Number(free) < previous.freeBytes)
+      )
+        disks[volume] = {
+          path: process.platform === 'win32' ? parse(canonical).root : canonical,
+          freeBytes: Number(free),
+          reserveBytes: policy.reserveDiskBytes,
+        };
       const value =
         free > BigInt(Number.MAX_SAFE_INTEGER)
           ? null
@@ -78,6 +91,7 @@ export async function measureResourceBudget(
     build: policy.build,
     review: policy.review,
     diskBytes,
+    disks,
     accounts: structuredClone(policy.accounts),
     measuredAt: Date.now(),
     maxAgeMs: 5000,

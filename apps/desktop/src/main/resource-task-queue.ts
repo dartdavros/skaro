@@ -35,6 +35,7 @@ export async function executeResourceQueue(ctx: TaskRunEngine, key: string): Pro
   await resources
     .scope(projectId, ownerId, execute, {
       dispatchRevision: revision,
+      changed: () => ctx.changed(projectId, taskId),
       requireCurrent: () => {
         if (!review && !operation) requireStartupGeneration(ctx.deps.db, projectId, revision);
         if (operation) requireIntegrationDispatch(ctx.deps.db, projectId, operation.id);
