@@ -20,12 +20,20 @@ export class IncidentDispatchAuthority {
     approval: RemedyApproval | undefined,
     now = Date.now(),
   ) {
-    const at = this.enteredAt ?? now;
+    const at = this.time(now);
     requireRemedyDispatch(this.action, current, policy, approval, at);
     this.validatedAt = at;
   }
 
   enter() {
     this.enteredAt ??= this.validatedAt;
+  }
+
+  time(now = Date.now()) {
+    return this.enteredAt ?? now;
+  }
+
+  acceptTransfer(at: number) {
+    this.validatedAt = this.time(at);
   }
 }

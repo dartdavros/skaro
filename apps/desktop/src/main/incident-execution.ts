@@ -26,11 +26,14 @@ export async function executeIncident(
     for (const s of current.protocol!.subscriptions)
       if (await currentIncidentSubscriber(ctx, row.projectId, s)) active = true;
     if (!active) throw new Error('Remedy has no current authorized subscriber');
-    if (!hasEnvironmentWait(ctx, current, action, true))
+    const at = authority.time();
+    if (hasEnvironmentWait(ctx, current, action, true, at)) authority.acceptTransfer(at);
+    else
       authority.validate(
         fresh,
         incidents.policy.read(row.projectId),
         incidents.policy.approval(action),
+        at,
       );
   };
   row = incidents.store.update(row, {
