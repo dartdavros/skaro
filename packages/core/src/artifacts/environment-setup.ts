@@ -48,7 +48,8 @@ export function prepareEnvironmentSetup(
     throw new Error('Environment must be a mapping');
   const section = input.environment as Record<string, unknown>;
   const unknown = Object.keys(section).find(
-    (key) => !['start', 'create', 'ready', 'env', 'ports', 'urls', 'source'].includes(key),
+    (key) =>
+      !['start', 'create', 'ready', 'env', 'ports', 'urls', 'source', 'timeouts'].includes(key),
   );
   if (unknown) throw new Error(`Unknown environment field: ${unknown}`);
   for (const key of ['create', 'ready']) {

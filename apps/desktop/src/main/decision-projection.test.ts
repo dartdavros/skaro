@@ -95,6 +95,9 @@ it('keeps accepted architecture in the source while removing it from unanswered 
     state: 'pending',
   } as (typeof entry.timeline.items)[number];
   expect(projectDecisionProjection([entry])).toHaveLength(1);
+  expect(taskDecisionTimeline(entry.timeline, false, true).items).toEqual([]);
+  expect(taskDecisionTimeline(entry.timeline, false, false).items).toHaveLength(1);
+  expect(entry.timeline.items).toHaveLength(1); // Historical proposal remains intact.
 });
 it('drops an expired native permission but keeps durable controller approvals without attaching an executor', () => {
   const state = {

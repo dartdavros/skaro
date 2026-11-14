@@ -49,7 +49,11 @@ describe('task environment', () => {
     const key = { projectId, taskId };
     const name = `skaro-runtime-safety-${taskId.toLowerCase()}`;
     let started = 0;
-    const options = { onWorkStarted: () => started++ };
+    const options = {
+      onWorkStarted: () => {
+        started++;
+      },
+    };
     expect(await service.start(key, options)).toEqual({
       name,
       urls: { api: 'http://localhost:20000' },
@@ -100,6 +104,22 @@ describe('task environment', () => {
       ),
     ).rejects.toThrow('Owner stopped before dispatch');
     expect(started).toBe(false);
+    expect(removed).toEqual([]);
+    await expect(steps()).rejects.toThrow('ENOENT');
+  });
+
+  it('does not enter preparation when authority expires after admission but before actual work', async () => {
+    const { service, steps, removed } = await environments(described, () => false);
+    await expect(
+      service.start(
+        { projectId, taskId },
+        {
+          onWorkStarted: async () => {
+            throw new Error('Expired before work');
+          },
+        },
+      ),
+    ).rejects.toThrow('Expired before work');
     expect(removed).toEqual([]);
     await expect(steps()).rejects.toThrow('ENOENT');
   });

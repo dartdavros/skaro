@@ -20,6 +20,8 @@ export type ProjectDecision = DecisionPayload & {
   origin: DecisionOrigin;
 };
 export interface DecisionSource extends DecisionOrigin {
+  /** Historical closed task; storage recovery must not restore old actionable proposals. */
+  terminalTask?: boolean;
   timeline: TimelineState;
   /** Composed integration interactions retain their own originating turn, not the base task's. */
   requestEpochs?: Record<string, string>;

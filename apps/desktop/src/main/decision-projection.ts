@@ -45,17 +45,23 @@ export function taskDecisionTimeline(
   completed: boolean,
   nativePrefix?: string,
 ) {
-  return decisionTimeline(terminalTaskTimeline(state, completed), nativeLive, nativePrefix);
+  const projected = decisionTimeline(
+    terminalTaskTimeline(state, completed),
+    nativeLive,
+    nativePrefix,
+  );
+  // Obsolete worker proposals are history too; they must not keep a closed task actionable.
+  return completed ? { ...projected, items: [] } : projected;
 }
 export function projectDecisionProjection(sources: DecisionSource[]): ProjectDecision[] {
   const result = new Map<string, ProjectDecision>();
-  for (const { timeline, requestEpochs, ...origin } of sources) {
+  for (const { timeline, requestEpochs, terminalTask, ...origin } of sources) {
     const payloads: DecisionPayload[] = [
       ...timeline.interactions.map((interaction) => ({
         kind: 'interaction' as const,
         interaction,
       })),
-      ...pendingProposals(timeline.items)
+      ...pendingProposals(terminalTask ? [] : timeline.items)
         .filter((item) => item.proposal.type !== 'architecture' || item.state === 'pending')
         .map((item) => ({ kind: 'proposal' as const, item })),
     ];

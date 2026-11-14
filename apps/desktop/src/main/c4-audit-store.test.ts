@@ -86,6 +86,17 @@ it('maps both protocols without rewriting pending bytes and preserves accepted c
       record.item = { ...record.item, state: 'pending' };
       source.timeline.items = [];
       expect(projectDecisionProjection([canonicalC4Decisions(source, [record])])).toHaveLength(1);
+      const task = { ...source, id: 'closed-task', kind: 'task' as const, terminalTask: true };
+      const owned = {
+        ...record,
+        scope: { kind: 'task' as const, projectId: project.id, taskId: task.id, runId: task.epoch },
+      };
+      expect(projectDecisionProjection([canonicalC4Decisions(task, [owned])])).toEqual([]);
+      const renewed = projectDecisionProjection([
+        canonicalC4Decisions({ ...task, terminalTask: false }, [owned]),
+      ]);
+      expect(renewed).toHaveLength(1);
+      expect(renewed[0]!.origin).not.toHaveProperty('terminalTask');
       expect(() =>
         mapC4Operations(db, project.id, [
           { ...record, package: { ...record.package, summary: 'Changed bytes' } },

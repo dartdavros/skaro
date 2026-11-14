@@ -1,10 +1,4 @@
-import {
-  incidentHash,
-  remedyKey,
-  requireRemedyDispatch,
-  type CoordinationBlocker,
-  type RemedyAction,
-} from '@skaro/core';
+import { incidentHash, remedyKey, type CoordinationBlocker, type RemedyAction } from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
 import type { TaskIncidents } from './task-incidents';
 import { checkIncident, currentIncidentSubscriber, incidentAction } from './incident-condition';
@@ -12,6 +6,7 @@ import { resourceExecution, resourcesFor } from './resource-execution';
 import { hasEnvironmentWait } from './incident-environment-wait';
 import { EnvironmentNotDispatched, EnvironmentCommandFailed } from './environment-dispatch-error';
 import { incidentOperationId } from './incident-operation';
+import { IncidentDispatchAuthority } from './incident-dispatch-authority';
 export async function executeIncident(
   ctx: TaskRunEngine,
   incidents: TaskIncidents,
@@ -19,25 +14,24 @@ export async function executeIncident(
   action: RemedyAction,
 ): Promise<void> {
   const id = incidentOperationId(row);
+  const authority = new IncidentDispatchAuthority(action);
   const validate = async () => {
     const current = incidents.store.get(row.projectId, row.id);
     const fresh = await incidentAction(ctx, current);
     if (!fresh || remedyKey(action) !== remedyKey(fresh))
       throw new Error('Remedy action changed before dispatch');
-    if (!hasEnvironmentWait(ctx, current, action, true))
-      requireRemedyDispatch(
-        action,
-        fresh,
-        incidents.policy.read(row.projectId),
-        incidents.policy.approval(action),
-        Date.now(),
-      );
     if (ctx.closing || current.state !== 'open' || !fresh)
       throw new Error('Remedy authority changed before dispatch');
     let active = false;
     for (const s of current.protocol!.subscriptions)
       if (await currentIncidentSubscriber(ctx, row.projectId, s)) active = true;
     if (!active) throw new Error('Remedy has no current authorized subscriber');
+    if (!hasEnvironmentWait(ctx, current, action, true))
+      authority.validate(
+        fresh,
+        incidents.policy.read(row.projectId),
+        incidents.policy.approval(action),
+      );
   };
   row = incidents.store.update(row, {
     phase: 'executing',
@@ -78,12 +72,17 @@ export async function executeIncident(
                 },
                 {
                   assertActive: validate,
-                  onWorkStarted: () => {
+                  onWorkStarted: async () => {
+                    await validate();
+                    authority.enter();
                     finishWork ??= incidents.work.start(row);
                   },
                 },
               );
-            } else finishWork = incidents.work.start(row);
+            } else {
+              authority.enter();
+              finishWork = incidents.work.start(row);
+            }
             row = incidents.store.update(incidents.store.get(row.projectId, row.id), {
               phase: 'verifying',
             });

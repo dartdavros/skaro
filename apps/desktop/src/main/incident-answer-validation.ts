@@ -98,7 +98,14 @@ export function commitIncidentApproval(
     db.settings.atomic(() => {
       if (policy.read(row.projectId).revision !== request.policyRevision)
         throw new Error('decision_stale');
-      policy.decide(action, choice === 'allow_once', 'owner', 'owner approval', request.expiresAt);
+      policy.decide(
+        action,
+        choice === 'allow_once',
+        'owner',
+        'owner approval',
+        request.expiresAt,
+        decision.id,
+      );
       db.coordination.decisions.transition(row.projectId, decision.id, {
         expectedRevision: decision.revision,
         state: choice === 'deny' ? 'denied' : 'answered',

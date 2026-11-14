@@ -1,5 +1,6 @@
 import type { Tool, ToolResult } from './server.ts';
 import type { SkaroScope } from './tools.ts';
+import { ENVIRONMENT_TIMEOUT_MAX_SECONDS } from '@skaro/core';
 
 export interface SetupEnvironmentArgs {
   environment: Record<string, unknown>;
@@ -40,6 +41,18 @@ export function setupEnvironmentTool(
             start: { type: 'string', minLength: 1 },
             create: { type: 'string', minLength: 1 },
             ready: { type: 'string', minLength: 1 },
+            timeouts: {
+              type: 'object',
+              description:
+                'Optional stage deadlines in seconds. Commands otherwise run until completion or Stop; readiness defaults to 180 seconds.',
+              properties: Object.fromEntries(
+                ['create', 'start', 'ready'].map((stage) => [
+                  stage,
+                  { type: 'integer', minimum: 1, maximum: ENVIRONMENT_TIMEOUT_MAX_SECONDS },
+                ]),
+              ),
+              additionalProperties: false,
+            },
             ports: names,
             env: stringMap,
             urls: stringMap,

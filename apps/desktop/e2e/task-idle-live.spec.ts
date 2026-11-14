@@ -98,6 +98,7 @@ test('opening a completed real task remains idle without a project reload loop',
     });
     console.log('Actual Electron runtime proof:', proof);
   } finally {
+    await app.evaluate(({ powerMonitor }) => powerMonitor.emit('shutdown'));
     await app.close();
   }
 });

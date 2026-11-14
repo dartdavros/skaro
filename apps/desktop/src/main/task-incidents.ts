@@ -26,6 +26,7 @@ import { rememberEnvironmentWait, hasEnvironmentWait } from './incident-environm
 import { escalateIncident } from './incident-escalation';
 import { refreshIncidentContext } from './incident-context-refresh';
 import { IncidentWork } from './incident-work';
+import { canRenewIncidentApproval } from './incident-approval-renewal';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -246,7 +247,16 @@ export class TaskIncidents {
     }
     if (authority !== 'allowed' && !transferred) {
       row = this.store.update(row, { phase: 'waiting' });
-      if (authority === 'confirmation') await this.decisions.request(row, action);
+      if (
+        authority === 'confirmation' ||
+        canRenewIncidentApproval(
+          this.ctx.deps.db,
+          action,
+          this.policy.read(projectId),
+          this.policy.approval(action),
+        )
+      )
+        await this.decisions.request(row, action);
       return;
     }
     await executeIncident(this.ctx, this, row, action);

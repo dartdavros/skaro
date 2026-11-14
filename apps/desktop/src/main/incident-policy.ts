@@ -9,6 +9,7 @@ import {
   type RemedyApproval,
 } from '@skaro/core';
 import type { ProjectCoordinators } from './project-coordinators';
+import { canRenewIncidentApproval } from './incident-approval-renewal';
 
 /** Only owner IPC writes policies; delegated model decisions never edit the envelope. */
 export class IncidentPolicy {
@@ -52,6 +53,7 @@ export class IncidentPolicy {
     author: 'owner' | 'coordinator',
     reason: string,
     expiresAt: number,
+    decisionId?: string,
   ) {
     const policy = this.read(action.projectId);
     if (
@@ -75,11 +77,20 @@ export class IncidentPolicy {
           'allowed')
     )
       throw new Error('Delegated decision exceeds owner policy');
-    if (
-      this.approval(action)?.decision === 'deny' ||
-      this.approval(action)?.revoked ||
-      this.approval(action)?.consumed
-    )
+    const previous = this.approval(action);
+    const decision = decisionId && this.db.coordination.decisions.get(action.projectId, decisionId);
+    const incident = this.db.coordination.blockers.get(action.projectId, action.incidentId);
+    const renewed =
+      author === 'owner' &&
+      decision &&
+      decision.state === 'pending' &&
+      decision.kind === 'approval' &&
+      decision.subject.kind === 'blocker' &&
+      decision.inputHash === remedyKey(action) &&
+      decision.subject.id === action.incidentId &&
+      incident?.protocol?.decisionId === decisionId &&
+      canRenewIncidentApproval(this.db, action, policy, previous);
+    if (previous?.decision === 'deny' || previous?.revoked || (previous?.consumed && !renewed))
       throw new Error('Denied or revoked action requires a new owner policy and request');
     this.db.setSetting(`coordination.approval.${action.projectId}.${remedyKey(action)}`, approval);
     this.db.addEvent(action.projectId, 'coordinator_decision', {

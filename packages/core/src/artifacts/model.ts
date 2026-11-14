@@ -97,6 +97,8 @@ export interface ProjectCheck {
  * Commands run in the task checkout; values may use {name}, {root}, {worktree} and {PORT_VARIABLE}.
  */
 export interface EnvironmentConfig {
+  /** Optional per-stage deadlines in seconds; commands otherwise run until completion or Stop. */
+  timeouts?: Partial<Record<'create' | 'start' | 'ready', number>>;
   /** Existing services in the main checkout needed while copying its data. */
   source?: { project: string; services: string[] };
   /** Variables that each receive a free host port. */
