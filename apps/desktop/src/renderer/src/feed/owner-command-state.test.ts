@@ -1,12 +1,20 @@
 import { expect, it } from 'vitest';
 import type { OwnerCommand } from '@skaro/timeline';
-import { pendingOwnerCommand, restoredCommandError } from './owner-command-state';
+import {
+  pendingOwnerCommand,
+  retiredOwnerCommand,
+  restoredCommandError,
+} from './owner-command-state';
 
-it('restores only unresolved input and retires the echo on delivery, failure or cancellation', () => {
+it('restores unresolved input but keeps the live echo after delivery until history loads', () => {
   for (const state of ['accepted', 'delivering', 'uncertain'] as const)
     expect(pendingOwnerCommand({ state })).toBe(true);
   for (const state of ['delivered', 'failed', 'cancelled'] as const)
     expect(pendingOwnerCommand({ state })).toBe(false);
+  for (const state of ['accepted', 'delivering', 'uncertain', 'delivered'] as const)
+    expect(retiredOwnerCommand({ state })).toBe(false);
+  for (const state of ['failed', 'cancelled'] as const)
+    expect(retiredOwnerCommand({ state })).toBe(true);
 });
 
 it('does not resurrect a failed command banner but preserves an unresolved delivery warning', () => {

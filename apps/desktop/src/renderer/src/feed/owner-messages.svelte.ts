@@ -1,13 +1,10 @@
-import {
-  withoutSkaroNote,
-  type Item,
-  type TimelineState,
-  type OwnerCommand,
-} from '@skaro/timeline';
+import { type Item, type TimelineState, type OwnerCommand } from '@skaro/timeline';
 import type { MessageInput } from '../../../shared/ipc';
 import { pendingOwnerCommand } from './owner-command-state';
+import { matchesOwnerMessage, visibleOwnerMessages } from './owner-message-history';
+import type { HistoryPage, HistorySource } from '../../../shared/history';
 
-type Pending = { input: MessageInput; at: number; error?: string };
+type Pending = { input: MessageInput; at: number; error?: string; delivered?: boolean };
 /** Immediate owner echo, reconciled with the native message instead of showing duplicates. */
 export class OwnerMessages {
   pending = $state.raw<Pending[]>([]);
@@ -39,35 +36,32 @@ export class OwnerMessages {
   cancel(id: string): void {
     this.pending = this.pending.filter((pending) => pending.input.commandId !== id);
   }
+  delivered(id: string): void {
+    this.pending = this.pending.map((p) =>
+      p.input.commandId === id ? { ...p, delivered: true } : p,
+    );
+  }
   cancelThrough(at: number): void {
     this.pending = this.pending.filter((pending) => pending.at > at);
   }
   failed(id: string, error: string): void {
     this.pending = this.pending.map((p) => (p.input.commandId === id ? { ...p, error } : p));
   }
-  reconcile(timeline: TimelineState | undefined): void {
-    if (!timeline) return;
+  reconcile(
+    timeline: TimelineState | undefined,
+    view?: { history?: HistorySource; historyPage?: HistoryPage },
+  ): void {
+    const items = visibleOwnerMessages(timeline, view);
     const remaining = this.pending.filter(
-      (pending) =>
-        !timeline.items.some(
-          (item) =>
-            item.kind === 'message' &&
-            item.role === 'user' &&
-            item.native.type !== 'owner_command' &&
-            !item.parentId &&
-            (item.native.ref === pending.input.commandId ||
-              item.text.includes(`command_id: ${pending.input.commandId}`) ||
-              (item.startedAt >= pending.at - 2000 &&
-                withoutSkaroNote(item.text) === pending.input.text)),
-        ),
+      (pending) => !items.some((item) => matchesOwnerMessage(item, pending.input, pending.at)),
     );
     if (remaining.length !== this.pending.length) this.pending = remaining;
   }
-  timeline(base: TimelineState | undefined): TimelineState | undefined {
+  timeline(base: TimelineState | undefined, history?: HistorySource): TimelineState | undefined {
     if (!this.pending.length) return base;
     const items: (Item & { localEcho: boolean })[] = this.pending.map((p) => ({
       id: `owner-${p.input.commandId}`,
-      localEcho: !base?.items.some((item) => item.id === `owner-${p.input.commandId}`),
+      localEcho: !!history || !base?.items.some((item) => item.id === `owner-${p.input.commandId}`),
       turnId: '',
       kind: 'message',
       role: 'user',
@@ -79,7 +73,7 @@ export class OwnerMessages {
     return {
       ...(base ?? { turns: [], interactions: [], status: 'idle' }),
       ...(!base?.interactions.some((i) => i.kind === 'question') &&
-      this.pending.some((p) => !p.error)
+      this.pending.some((p) => !p.error && !p.delivered)
         ? { status: 'working' as const, activity: { state: 'waiting_model' } }
         : {}),
       items: [

@@ -1,5 +1,9 @@
 import type { OwnerMessages } from './owner-messages.svelte';
-import { pendingOwnerCommand, restoredCommandError } from './owner-command-state';
+import {
+  pendingOwnerCommand,
+  retiredOwnerCommand,
+  restoredCommandError,
+} from './owner-command-state';
 
 /** Durable delivery state is separate from a screen's transient action error. */
 export function watchOwnerCommands(
@@ -28,7 +32,8 @@ export function watchOwnerCommands(
     if (command.owner !== `${projectId}:${ownerId}`) return;
     changed.add(command.id);
     if (pendingOwnerCommand(command)) messages.restore([command]);
-    else messages.cancel(command.id);
+    else if (retiredOwnerCommand(command)) messages.cancel(command.id);
+    else messages.delivered(command.id);
     if (command.error) {
       messages.failed(command.id, command.error);
       onerror(command.error);

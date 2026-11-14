@@ -4,6 +4,9 @@ import type { Methods, MethodName } from '../../shared/ipc';
 export type PreviewMethods = Omit<
   Methods,
   | 'app.checkUpdate'
+  | 'app.shutdownState'
+  | 'app.shutdownPainted'
+  | 'app.shutdownNow'
   | 'updates.state'
   | 'updates.download'
   | 'updates.apply'
@@ -23,6 +26,7 @@ export type PreviewMethods = Omit<
 export function invokePreview(handlers: object, method: MethodName, args: unknown[]): unknown {
   if (
     method.startsWith('updates.') ||
+    method.startsWith('app.shutdown') ||
     method === 'app.checkUpdate' ||
     method === 'task.revertMerge' ||
     method === 'task.clear' ||

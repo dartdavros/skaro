@@ -30,6 +30,8 @@ import { graphHandlers } from './graph/handlers';
 import { modelSettingsHandlers } from './model-settings-handlers';
 import { modelCatalogHandlers } from './model-catalog-handlers';
 import { keepLoopbackDirect } from './loopback-proxy';
+import { ShutdownWindow } from './shutdown-window';
+import { allowedDuringShutdown } from './shutdown-access';
 trace(`main loaded, pid ${process.pid}`);
 keepLoopbackDirect();
 // Tests run against their own data dir.
@@ -107,12 +109,15 @@ if (!locked) {
     let activity = (): AgentActivity => ({ working: 0, waiting: 0, busy: false });
     let shutdown = async () => {};
     let hasUpdate = () => false;
+    const shutdownWindow = new ShutdownWindow();
     const lifecycle = new AppLifecycle({
       closeToTray: () =>
         (appState.getSetting(CLOSE_TO_TRAY_SETTING) ?? CLOSE_TO_TRAY_DEFAULT) !== false &&
         !!tray?.available(),
       busy: () => activity().busy || appState.db.commands.pending().length > 0,
       locale: () => appState.getLocale(app.getLocale()),
+      onStopping: (endingSession) => shutdownWindow.show(endingSession),
+      shutdownState: () => shutdownWindow.progress.state,
       shutdown: async () => {
         await ready.catch(() => undefined);
         await shutdown();
@@ -133,7 +138,14 @@ if (!locked) {
         get:
           (_target, method: string) =>
           (...args: unknown[]) => {
-            if (lifecycle.stopping()) throw new Error('Application is quitting');
+            if (Object.hasOwn(shutdownWindow.handlers, method)) {
+              const handler = shutdownWindow.handlers[
+                method as keyof typeof shutdownWindow.handlers
+              ] as (...values: unknown[]) => unknown;
+              return handler(...args);
+            }
+            if (lifecycle.stopping() && !allowedDuringShutdown(method))
+              throw new Error('Application is quitting');
             return ready.then((handlers) => {
               const handler = handlers[method as keyof Handlers] as (
                 ...values: unknown[]
@@ -167,8 +179,10 @@ if (!locked) {
     const picked = new Set<string>();
     registerMedia(services, picked);
     const commands = services.commands;
-    shutdown = () => shutdownApp(services, commands, updates, historyReads!);
+    shutdown = () =>
+      shutdownApp(services, commands, updates, historyReads!, shutdownWindow.progress);
     const handlers = {
+      ...shutdownWindow.handlers,
       ...coordinatedSessionHandlers(
         appHandlers(services, updates, mainWindow, emit, () => tray?.refresh()),
         services.coordinators,

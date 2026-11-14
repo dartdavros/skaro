@@ -1,12 +1,15 @@
 import { app, dialog, powerMonitor, type Event } from 'electron';
 import { focusWindow, mainWindow } from './app-window';
 import { trayText } from './tray-i18n';
+import type { ShutdownState } from '../shared/shutdown';
 
 interface LifecycleOptions {
   closeToTray: () => boolean;
   busy: () => boolean;
   locale: () => string;
   shutdown: () => Promise<void>;
+  onStopping: (endingSession: boolean) => Promise<void>;
+  shutdownState: () => ShutdownState | undefined;
 }
 
 /** Window hiding never enters shutdown. All actual exits share one guarded teardown. */
@@ -39,6 +42,10 @@ export class AppLifecycle {
 
   stopping(): boolean {
     return this.phase === 'stopping' || this.phase === 'stopped';
+  }
+
+  shutdownState(): ShutdownState | undefined {
+    return this.options.shutdownState();
   }
 
   endSession(): void {
@@ -83,6 +90,11 @@ export class AppLifecycle {
       }
     }
     this.phase = 'stopping';
+    try {
+      await this.options.onStopping(this.endingSession);
+    } catch (error) {
+      console.error('Shutdown presentation:', error);
+    }
     try {
       await this.options.shutdown();
     } catch (error) {

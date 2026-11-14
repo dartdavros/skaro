@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { SkaroApi } from '../src/shared/ipc';
 import { launchApp } from './launch';
 
@@ -68,6 +68,11 @@ test('native image paste preserves text, deduplicates attachments and supports r
       .toBe(true);
     const stored = await page.evaluate(() => window.skaro.invoke('files.pasteImage'));
     expect(stored?.kind).toBe('image');
+    expect(stored?.image?.mime).toBe('image/png');
+    await expect(thumbs.locator('img')).toHaveAttribute(
+      'src',
+      `skaro-media://attachment/${stored!.image!.id}.png`,
+    );
     expect(readFileSync(stored!.path).toString('base64')).toBe(expected.png);
     expect(
       await thumbs.locator('img').evaluate((img: HTMLImageElement) => ({
@@ -75,6 +80,12 @@ test('native image paste preserves text, deduplicates attachments and supports r
         height: img.naturalHeight,
       })),
     ).toEqual(expected.size);
+    await thumbs.hover({ position: { x: 10, y: 20 } });
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toHaveText(basename(stored!.path));
+    expect(await tooltip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+      true,
+    );
     await page.screenshot({ path: testInfo.outputPath('after-image.png') });
 
     await input.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V');

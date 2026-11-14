@@ -45,7 +45,7 @@ export function createChatController(
     (error) => (actionError = error),
   );
   onDestroy(stopCommands);
-  $effect(() => ownerMessages.reconcile(session?.timeline));
+  $effect(() => ownerMessages.reconcile(session?.timeline, session?.view));
   let modal = $state(false);
   /** Proposal item of the import whose review screen is open (ImportReview mockup). */
   let reviewing = $state<string | undefined>();
@@ -62,7 +62,7 @@ export function createChatController(
   let actionError = $state<string | undefined>();
 
   const view = $derived(session?.view);
-  const timeline = $derived(ownerMessages.timeline(session?.timeline));
+  const timeline = $derived(ownerMessages.timeline(session?.timeline, session?.view?.history));
   const settings = $derived(view?.settings ?? draft);
   const archived = $derived(view?.chat.archived === true);
   const running = $derived(timeline !== undefined && timeline.status !== 'idle');

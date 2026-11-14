@@ -4,11 +4,13 @@
   /** Window buttons for the frameless window on Windows and Linux (macOS keeps its own). */
   let {
     maximized = false,
+    closeDisabled = false,
     onminimize,
     onmaximize,
     onclose,
   }: {
     maximized?: boolean;
+    closeDisabled?: boolean;
     onminimize: () => void;
     onmaximize: () => void;
     onclose: () => void;
@@ -61,6 +63,7 @@
   <button
     type="button"
     class="close"
+    disabled={closeDisabled}
     data-tip={t('window.close')}
     aria-label={t('window.close')}
     onclick={onclose}
@@ -99,13 +102,17 @@
     cursor: pointer;
   }
 
-  button:hover {
+  button:hover:not(:disabled) {
     background: var(--sk-fill-4);
     color: var(--sk-text-bright);
   }
 
-  .close:hover {
+  .close:hover:not(:disabled) {
     background: var(--sk-accent);
     color: var(--sk-text-1);
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
 </style>

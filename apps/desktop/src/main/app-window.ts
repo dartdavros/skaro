@@ -4,6 +4,7 @@ import { windowIcon } from './app-icon';
 import { sendEvent } from './ipc';
 import type { AppState } from './state';
 import { trace } from './trace';
+import type { ShutdownState } from '../shared/shutdown';
 
 interface Bounds {
   x?: number;
@@ -15,7 +16,13 @@ interface Bounds {
 
 let win: BrowserWindow | undefined;
 let state: AppState | undefined;
-let lifecycle: { close: (event: Electron.Event) => void; endSession: () => void } | undefined;
+let lifecycle:
+  | {
+      close: (event: Electron.Event) => void;
+      endSession: () => void;
+      shutdownState: () => ShutdownState | undefined;
+    }
+  | undefined;
 
 export const setWindowLifecycle = (value: typeof lifecycle) => {
   lifecycle = value;
@@ -52,7 +59,7 @@ export function createMainWindow(): void {
     if (event.sender !== win?.webContents) return;
     const snapshot = first ? initial : state?.bootstrap(locale);
     first = false;
-    return snapshot;
+    return snapshot && { ...snapshot, shutdown: lifecycle?.shutdownState() };
   });
   const bounds = savedBounds();
   trace('bounds read');

@@ -2,6 +2,9 @@ import type { MethodName, EventName } from './ipc';
 
 /** The whitelist the preload exposes; must list every key of `Methods`. */
 export const METHODS = [
+  'app.shutdownState',
+  'app.shutdownPainted',
+  'app.shutdownNow',
   'archiagent.status',
   'archiagent.activate',
   'c4.audit',
@@ -190,6 +193,7 @@ export const METHODS = [
 ] as const satisfies readonly MethodName[];
 
 export const EVENTS = [
+  'app.shutdown',
   'c4.auditChanged',
   'app.navigate',
   'graph.changed',

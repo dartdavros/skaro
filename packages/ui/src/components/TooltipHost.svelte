@@ -101,6 +101,7 @@
     font-size: var(--sk-fs-3);
     line-height: 1.4;
     text-wrap: pretty;
+    overflow-wrap: anywhere;
     pointer-events: none;
   }
 

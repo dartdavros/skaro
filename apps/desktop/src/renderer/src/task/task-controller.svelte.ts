@@ -30,7 +30,7 @@ export function createTaskController(
     actionError = error;
   });
   onDestroy(stopCommands);
-  $effect(() => ownerMessages.reconcile(session.timeline));
+  $effect(() => ownerMessages.reconcile(session.timeline, session.view));
   let modal = $state(false);
   let viewer = $state<string | undefined>();
   let actionError = $state<string | undefined>();
@@ -39,7 +39,7 @@ export function createTaskController(
   const startRequest = new TaskStartState(startState);
 
   const view = $derived(session.view);
-  const timeline = $derived(ownerMessages.timeline(session.timeline));
+  const timeline = $derived(ownerMessages.timeline(session.timeline, session.view?.history));
   const hasFeed = $derived(
     !!timeline &&
       (timeline.items.length > 0 ||
