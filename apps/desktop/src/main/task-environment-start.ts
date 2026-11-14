@@ -4,6 +4,7 @@ import {
   expand,
   runShell,
   waitReady,
+  environmentTimeoutMs,
   type DockerContainer,
   type EnvironmentConfig,
   type TaskKey,
@@ -13,7 +14,7 @@ import type { EnvironmentDescription } from './task-environment-description';
 import type { EnvironmentRegistry } from './task-environment-registry';
 import type { EnvironmentDocker } from './task-environment-docker';
 import { environmentReadinessProblems } from './task-environment-readiness';
-import { EnvironmentCommandFailed } from './environment-dispatch-error';
+import { EnvironmentCommandFailed, EnvironmentNotDispatched } from './environment-dispatch-error';
 
 export interface EnvironmentStartOptions {
   /** Worker tools checkpoint instead of retaining a model while waiting for physical capacity. */
@@ -21,6 +22,8 @@ export interface EnvironmentStartOptions {
   signal?: AbortSignal;
   processStarted?: (pid: number) => void | Promise<void>;
   assertActive?: () => void | Promise<void>;
+  /** Admission and the owner's queue have finished; actual preparation is beginning. */
+  onWorkStarted?: () => void | Promise<void>;
 }
 
 export interface EnvironmentStartTiming {
@@ -76,6 +79,11 @@ export async function startEnvironmentServices(
     }
   };
   try {
+    try {
+      await options.onWorkStarted?.();
+    } catch (error) {
+      throw new EnvironmentNotDispatched(error);
+    }
     const description = await timed('prepareMs', async () => {
       await deps.prepare();
       const description = await deps.describe();
@@ -89,13 +97,13 @@ export async function startEnvironmentServices(
     const portBindings = compose
       ? await timed('prepareMs', () => admitCompose(identity, compose))
       : undefined;
-    const run = async (label: string, command: string) => {
+    const run = async (label: 'create' | 'start', command: string) => {
       try {
         await runShell(expand(command, identity), {
           cwd: identity.worktree,
           env: variables,
           label,
-          timeoutMs: 30 * 60_000,
+          timeoutMs: environmentTimeoutMs(config!, label),
           ...options,
         });
       } catch (error) {
@@ -137,6 +145,7 @@ export async function startEnvironmentServices(
     if (config!.ready)
       await timed('readyMs', () =>
         waitReady(expand(config!.ready!, identity), {
+          timeoutMs: environmentTimeoutMs(config!, 'ready'),
           ...(options.signal ? { signal: options.signal } : {}),
         }),
       );

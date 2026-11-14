@@ -62,6 +62,7 @@ it('rejects stale setup, malformed existing declarations and unsafe port ownersh
 it('accepts a missing file and keeps copying and readiness declarations on reread', () => {
   const next = {
     ...environment,
+    timeouts: { create: 7200, start: 5400, ready: 300 },
     create: 'scripts/clone {root} {name}',
     ready: 'http://localhost:{WEB_PORT}/ready',
     source: { project: 'main', services: ['db'] },

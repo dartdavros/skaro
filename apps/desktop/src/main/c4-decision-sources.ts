@@ -6,6 +6,7 @@ export function canonicalC4Decisions(
   source: DecisionSource,
   records: C4ProposalRecord[],
 ): DecisionSource {
+  if (source.terminalTask) return { ...source, timeline: { ...source.timeline, items: [] } };
   const owned = records.filter(
     (record) =>
       record.scope.projectId === source.projectId &&

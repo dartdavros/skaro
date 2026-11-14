@@ -25,6 +25,8 @@ import { checkoutKey } from './task-stage';
 import { rememberEnvironmentWait, hasEnvironmentWait } from './incident-environment-wait';
 import { escalateIncident } from './incident-escalation';
 import { refreshIncidentContext } from './incident-context-refresh';
+import { IncidentWork } from './incident-work';
+import { canRenewIncidentApproval } from './incident-approval-renewal';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -36,10 +38,18 @@ export interface TaskBlockerDetails {
 export class TaskIncidents {
   private readonly running = new Map<string, Promise<void>>();
   readonly decisions: IncidentDecisions;
+  readonly work: IncidentWork;
   private readonly ctx: TaskRunEngine;
   constructor(ctx: TaskRunEngine) {
     this.ctx = ctx;
     this.decisions = new IncidentDecisions(ctx, this);
+    this.work = new IncidentWork((projectId, id) => {
+      const row = ctx.deps.db.coordination.blockers.get(projectId, id);
+      for (const subscriber of row?.protocol?.subscriptions ?? []) {
+        const active = ctx.active.get(`${projectId}\n${subscriber.taskId}`);
+        if (active?.run.id === subscriber.runId) ctx.events.settleRuntime(active);
+      }
+    });
   }
   get store() {
     return new IncidentStore(this.ctx.deps.db, this.ctx.deps.coordinators!);
@@ -237,7 +247,16 @@ export class TaskIncidents {
     }
     if (authority !== 'allowed' && !transferred) {
       row = this.store.update(row, { phase: 'waiting' });
-      if (authority === 'confirmation') await this.decisions.request(row, action);
+      if (
+        authority === 'confirmation' ||
+        canRenewIncidentApproval(
+          this.ctx.deps.db,
+          action,
+          this.policy.read(projectId),
+          this.policy.approval(action),
+        )
+      )
+        await this.decisions.request(row, action);
       return;
     }
     await executeIncident(this.ctx, this, row, action);

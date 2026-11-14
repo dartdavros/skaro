@@ -1,4 +1,13 @@
-import { incidentHash, remedyKey, type CoordinationBlocker, type RemedyAction } from '@skaro/core';
+import {
+  incidentHash,
+  remedyKey,
+  remedyAuthority,
+  type AppDb,
+  type CoordinationBlocker,
+  type RemedyAction,
+  type RemedyPolicy,
+  type RemedyApproval,
+} from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
 import { incidentAction } from './incident-condition';
 
@@ -9,6 +18,15 @@ interface EnvironmentWait {
   expiresAt: number;
 }
 const key = (id: string) => `coordination.environment-wait.${id}`;
+interface WaitContext {
+  deps: { db: Pick<AppDb, 'getSetting'> };
+  incidents: {
+    policy: {
+      read(project: string): RemedyPolicy;
+      approval(action: RemedyAction): RemedyApproval | undefined;
+    };
+  };
+}
 
 /** Transfer only the actual controller-observed, authorized start. Worker prose cannot create it. */
 export async function rememberEnvironmentWait(ctx: TaskRunEngine, row: CoordinationBlocker) {
@@ -24,14 +42,15 @@ export async function rememberEnvironmentWait(ctx: TaskRunEngine, row: Coordinat
 
 /** Resource waiting is scheduling of the same start, not a new repair permission. Deny/stop still win. */
 export function hasEnvironmentWait(
-  ctx: TaskRunEngine,
+  ctx: WaitContext,
   row: CoordinationBlocker,
   action: RemedyAction,
   executing = false,
+  now = Date.now(),
 ) {
   const saved = ctx.deps.db.getSetting<EnvironmentWait | undefined>(key(row.id), undefined);
   const policy = ctx.incidents.policy.read(row.projectId);
-  const authority = ctx.incidents.policy.authority(action);
+  const authority = remedyAuthority(action, policy, ctx.incidents.policy.approval(action), now);
   return (
     !!saved &&
     action.kind === 'environment.start' &&
@@ -39,7 +58,7 @@ export function hasEnvironmentWait(
     saved.action === remedyKey(action) &&
     saved.policy === policy.revision &&
     saved.subscriptions === incidentHash(row.protocol!.subscriptions) &&
-    Date.now() < Math.min(saved.expiresAt, policy.expiresAt) &&
+    now < Math.min(saved.expiresAt, policy.expiresAt) &&
     row.protocol!.attempts === (executing ? 1 : 0)
   );
 }

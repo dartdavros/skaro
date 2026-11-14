@@ -4,7 +4,11 @@ export * from './artifacts/frontmatter.ts';
 export { toTask, toAdr, toSpec, toMilestone } from './artifacts/conversion.ts';
 export * from './artifacts/slug.ts';
 export * from './artifacts/store.ts';
-export { readEnvironment } from './artifacts/environment.ts';
+export {
+  readEnvironment,
+  environmentTimeoutMs,
+  ENVIRONMENT_TIMEOUT_MAX_SECONDS,
+} from './artifacts/environment.ts';
 export * from './status.ts';
 export * from './db/appdb.ts';
 export type * from './db/verification-archive-guards.ts';

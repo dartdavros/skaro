@@ -61,6 +61,7 @@ export async function taskDecisionSources(
       state.items.push(...snapshot.items);
     }
     result.push({
+      terminalTask: completed,
       projectId,
       kind: 'task',
       id: task.id,

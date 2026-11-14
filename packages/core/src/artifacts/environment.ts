@@ -1,4 +1,6 @@
 import type { ArtifactProblem, EnvironmentConfig } from './model.ts';
+import { readEnvironmentTimeouts } from './environment-timeouts.ts';
+export { environmentTimeoutMs, ENVIRONMENT_TIMEOUT_MAX_SECONDS } from './environment-timeouts.ts';
 
 const VARIABLE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const BUILT_IN = ['name', 'root', 'worktree'];
@@ -48,6 +50,12 @@ export function readEnvironment(
   };
   const start = command('start');
   if (!start) return fail('start must be a command');
+  let timeouts: EnvironmentConfig['timeouts'];
+  try {
+    timeouts = readEnvironmentTimeouts(section['timeouts']);
+  } catch (error) {
+    return fail((error as Error).message);
+  }
   const source = section['source'];
   if (
     source !== undefined &&
@@ -64,6 +72,7 @@ export function readEnvironment(
   )
     return fail('source must name a Compose project and its existing services');
   const config: EnvironmentConfig = {
+    ...(timeouts ? { timeouts } : {}),
     ...(source ? { source: source as NonNullable<EnvironmentConfig['source']> } : {}),
     ports: ports as string[],
     env,
@@ -89,6 +98,7 @@ export function readEnvironment(
 export function environmentYaml(config: EnvironmentConfig | undefined): unknown {
   if (!config) return undefined;
   return {
+    timeouts: config.timeouts,
     source: config.source,
     ports: config.ports.length ? config.ports : undefined,
     env: Object.keys(config.env).length ? config.env : undefined,

@@ -17,7 +17,7 @@ export function incidentRequestIdentity(
   const previous =
     row.protocol!.decisionId &&
     db.coordination.decisions.get(row.projectId, row.protocol!.decisionId);
-  if (!previous || !['pending', 'cancelled'].includes(previous.state)) return base;
+  if (!previous) return base;
   const request = db.getSetting<{ policyRevision: number; expiresAt: number } | undefined>(
     `coordination.decision-action.${previous.id}`,
     undefined,
