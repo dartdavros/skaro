@@ -24,11 +24,11 @@ it('holds preparation before any ledger generation/effect and reuses one admitte
       }),
     );
   try {
-    db.setSetting(RESOURCE_POLICY_KEY, { reserveRamBytes: 2 ** 50 });
+    db.setSetting(RESOURCE_POLICY_KEY, { reserveCpuMillis: 2 ** 50 });
     const pending = prepare().catch((error) => String(error));
     await expect
       .poll(() => db.admission.all().find((l) => l.ownerId === owner)?.reason)
-      .toBe('budget_ramBytes');
+      .toBe('budget_cpuMillis');
     expect(executions).toBe(0);
     expect(db.resources.list(project.id)).toEqual([]);
     resources.stopOwner(project.id, owner);

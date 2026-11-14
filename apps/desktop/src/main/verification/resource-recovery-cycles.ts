@@ -30,15 +30,15 @@ export async function recoveryCycles(s: Services, scenario: RecoveryCase) {
       }),
     );
   try {
-    s.db.setSetting(RESOURCE_POLICY_KEY, { ...original, reserveRamBytes: 2 ** 50 });
+    s.db.setSetting(RESOURCE_POLICY_KEY, { ...original, reserveCpuMillis: 2 ** 50 });
     const waiting = restore().then(
       () => ({ granted: true }),
       (error) => ({ error: String(error) }),
     );
     const lease = await eventually(
       () => s.db.admission.all().findLast((l) => l.ownerId === owner),
-      (l) => l?.state === 'waiting_resource',
-      'real RAM reservation pressure',
+      (l) => l?.state === 'waiting_resource' && l.reason === 'budget_cpuMillis',
+      'real CPU reservation pressure',
     );
     assert(lease);
     assert(!existsSync(scenario.target));

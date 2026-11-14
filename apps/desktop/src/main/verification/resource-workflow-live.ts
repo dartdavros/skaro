@@ -66,7 +66,7 @@ void app.whenReady().then(async () => {
     const taskOwner = `task:${taskId}`;
     const prompt =
       'Выполни только реальную проверку чтением: node --check js/controls.js и чтение index.html. Кратко сообщи результат и закончи ход. Не меняй файлы, не делай коммит, не запускай службы, не предлагай C4 и не вызывай submit_result: ручную проверку среды выполнит владелец отдельно.';
-    policy({ reserveRamBytes: 2 ** 50 });
+    policy({ reserveCpuMillis: 2 ** 50 });
     stage('worktree-budget-blocked');
     await s.runs.send(projectId, taskId, { text: prompt, commandId: randomUUID() });
     const blocked = await eventually(
@@ -78,7 +78,7 @@ void app.whenReady().then(async () => {
               lease.projectId === projectId &&
               lease.ownerId === taskOwner &&
               lease.state === 'waiting_resource' &&
-              lease.reason === 'budget_ramBytes',
+              lease.reason === 'budget_cpuMillis',
           ),
       Boolean,
       'waiting before expensive task effect',

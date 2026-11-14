@@ -1,7 +1,8 @@
-Skaro 2.2.19
+Skaro 2.2.28
 
-- Let project chats and current tasks register a missing project environment through `setup_environment`, without manually editing `.skaro/config.yaml`.
-- Preserve existing configuration and reject stale writes or replacement of an existing environment. Task-specific adjustments remain available through `configure_environment`.
-- Guide agents to configure and verify real services before dependent implementation, instead of getting stuck between unavailable setup tools and forbidden direct edits.
-- Return current shell variables after environment startup so verification uses the correct Compose configuration and allocated ports.
-- Check actual Compose container states before reporting readiness, including services that crash after `docker compose up --wait` returns.
+- Отправленное сообщение сразу остаётся в ленте до появления в сохранённой истории; одинаковые сообщения различаются по командам отправки.
+- Исправлены миниатюры изображений из буфера и перенос длинного имени файла в подсказке.
+- Добавлен согласованный экран закрытия с реальными этапами, временем ожидания, подробностями и кнопкой «Завершить сейчас».
+- RAM хоста и Docker больше не блокирует запуск задач и окружений; остальные ограничения, очередь и Stop сохраняются.
+- Чтения Docker `info`, `ps` и `inspect` допускают до 30 секунд ожидания занятого демона.
+- Включена вся накопленная рабочая ветка и сохранены исправления 2.2.27. Версии агентов, SDK и адаптеров не изменены.

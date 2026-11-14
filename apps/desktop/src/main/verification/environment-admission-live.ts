@@ -68,8 +68,20 @@ export async function verifyEnvironmentAdmission(
       new Set([s.dataDir, context.root]),
       true,
     );
-    // Exercise a real owner budget cap, never assign fabricated free-memory observations.
-    s.db.setSetting(RESOURCE_POLICY_KEY, { ...policy, reserveRamBytes: totalmem() });
+    // Real policy produces zero host RAM. Only the independent environment slot may wait.
+    s.db.setSetting(RESOURCE_POLICY_KEY, {
+      ...policy,
+      reserveRamBytes: totalmem(),
+      environment: 0,
+    });
+    const zeroRam = await applicationResourceMeasurements(
+      s.db,
+      new Set(),
+      new Set([s.dataDir, context.root]),
+      true,
+    );
+    assert.equal(zeroRam.ramBytes, 0);
+    proof.zeroRamBudget = zeroRam;
     const before = performance.now();
     const waiting = await call('start_environment');
     assert(waiting.isError, JSON.stringify(waiting));
@@ -124,7 +136,8 @@ export async function verifyEnvironmentAdmission(
       waiting,
       configurationReadable: true,
     };
-    s.db.setSetting(RESOURCE_POLICY_KEY, policy);
+    // Keep the measured zero-RAM policy through the actual successful launch.
+    s.db.setSetting(RESOURCE_POLICY_KEY, { ...policy, reserveRamBytes: totalmem() });
     // Prevent a full original task run: the actual bounded continuation below is read-only.
     const turns = active.timeline.state.turns.length;
     await repair;
