@@ -179,7 +179,11 @@ export class TaskRunEvents {
       : undefined;
     const state = taskTimelineRuntime(
       active.timeline.state,
-      execution.enabled && incident?.state === 'open',
+      execution.enabled && incident?.state === 'open'
+        ? this.ctx.incidents.work.running(active.projectId, incident.id)
+          ? 'running'
+          : 'queued'
+        : undefined,
     );
     // After a failed turn the agent stays idle: "failed" holds until it works again.
     const current = this.ctx.deps.db.getTaskRuntime(active.projectId).get(active.taskId)?.state;

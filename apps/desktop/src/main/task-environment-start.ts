@@ -21,6 +21,8 @@ export interface EnvironmentStartOptions {
   signal?: AbortSignal;
   processStarted?: (pid: number) => void | Promise<void>;
   assertActive?: () => void | Promise<void>;
+  /** Admission and the owner's queue have finished; actual preparation is beginning. */
+  onWorkStarted?: () => void;
 }
 
 export interface EnvironmentStartTiming {
@@ -76,6 +78,7 @@ export async function startEnvironmentServices(
     }
   };
   try {
+    options.onWorkStarted?.();
     const description = await timed('prepareMs', async () => {
       await deps.prepare();
       const description = await deps.describe();

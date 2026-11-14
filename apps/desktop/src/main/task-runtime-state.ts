@@ -1,14 +1,14 @@
 import type { AppDb, TaskRuntime } from '@skaro/core';
 import type { TimelineState } from '@skaro/timeline';
 
-/** Only a pending interaction needs an answer; machine recovery uses the existing queue state. */
+/** Owner questions, active work and resource waits retain their distinct existing statuses. */
 export function taskTimelineRuntime(
   timeline: Pick<TimelineState, 'status' | 'interactions'>,
-  recovering: boolean,
+  recovery: 'queued' | 'running' | undefined,
 ): TaskRuntime {
   if (timeline.interactions.some((interaction) => interaction.kind !== 'merge')) return 'waiting';
   if (timeline.status !== 'idle') return 'running';
-  return recovering ? 'queued' : 'idle';
+  return recovery ?? 'idle';
 }
 
 /** The database represents idle by deleting the row, including its run identity. */

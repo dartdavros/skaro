@@ -45,6 +45,7 @@ export async function executeIncident(
     operationId: id,
   });
   let environmentEntered = false;
+  let finishWork: (() => void) | undefined;
   try {
     await ctx.deps.coordinators!.execute(
       {
@@ -75,9 +76,14 @@ export async function executeIncident(
                   projectId: row.projectId,
                   taskId: resource.owner.id,
                 },
-                { assertActive: validate },
+                {
+                  assertActive: validate,
+                  onWorkStarted: () => {
+                    finishWork ??= incidents.work.start(row);
+                  },
+                },
               );
-            }
+            } else finishWork = incidents.work.start(row);
             row = incidents.store.update(incidents.store.get(row.projectId, row.id), {
               phase: 'verifying',
             });
@@ -134,6 +140,10 @@ export async function executeIncident(
       error: incidentHash(String(error)),
     });
   } finally {
-    incidents.policy.consume(action);
+    try {
+      finishWork?.();
+    } finally {
+      incidents.policy.consume(action);
+    }
   }
 }
