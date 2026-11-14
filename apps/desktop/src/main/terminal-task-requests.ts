@@ -16,7 +16,7 @@ export function terminalTaskTimeline(state: TimelineState, terminal: boolean): T
   return terminal ? { ...state, interactions: [] } : state;
 }
 
-/** Retire obsolete native channels; cancellation is never an invented answer or permission. */
+/** Retire obsolete task channels; cancellation is never an invented answer or permission. */
 export function retireTerminalTaskRequests(
   state: TimelineState,
   terminal: boolean,

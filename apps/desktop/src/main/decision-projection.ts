@@ -38,7 +38,7 @@ export function decisionTimeline(
     items: pendingProposals(state.items),
   };
 }
-/** Terminal tasks retain history; only an independently pending controller decision can outlive them. */
+/** Terminal tasks retain history; their native and controller requests are no longer actionable. */
 export function taskDecisionTimeline(
   state: TimelineState,
   nativeLive: boolean,
