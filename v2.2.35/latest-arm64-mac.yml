@@ -1,0 +1,5 @@
+version: 2.2.35
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.35/Skaro-2.2.35-mac-arm64.dmg
+    sha512: DkIEg+ugX9yFz7zM10QOtXS0cL+7HMq3Rjx0Ji4bvAkqcarxD8/izwyKB8yJ3qi/ntaj7fT+dz8hkbKr2fA2xQ==
+    size: 146518748
