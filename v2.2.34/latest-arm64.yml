@@ -1,0 +1,5 @@
+version: 2.2.34
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.34/Skaro-2.2.34-win-arm64.exe
+    sha512: 4MvDvv111LQYDT5FchGwrJEnpG0VSFHQXiY1bGjeaxF9WMNm3j1EUIyCgZEbGV2dgDyCv7irxOp4ui15h6/kpw==
+    size: 118004168
