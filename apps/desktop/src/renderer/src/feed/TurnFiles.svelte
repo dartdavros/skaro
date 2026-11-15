@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronRight, CodeXml, File } from '@lucide/svelte';
+  import { ChevronDown, ChevronRight, ChevronUp, CodeXml, File } from '@lucide/svelte';
   import type { TurnFile } from '@skaro/timeline';
   import { Icon, t, tn } from '@skaro/ui';
   import { useFeed } from './context.svelte';
@@ -64,15 +64,18 @@
       {@render counts(file.added ?? 0, file.removed ?? 0, counted(file))}
     </button>
   {/each}
-  {#if hidden}
+  {#if files.length > 3}
     <button
       type="button"
       class="line more-files"
-      aria-expanded="false"
-      onclick={() => (expanded = true)}
+      aria-expanded={expanded}
+      onclick={() => (expanded = !expanded)}
     >
-      <span>{tn('feed.files.more', hidden)}</span>
-      <ChevronDown size={14} strokeWidth={2} />
+      <span>{expanded ? t('feed.files.hide') : tn('feed.files.more', hidden)}</span>
+      {#if expanded}<ChevronUp size={14} strokeWidth={2} />{:else}<ChevronDown
+          size={14}
+          strokeWidth={2}
+        />{/if}
     </button>
   {/if}
 </div>
