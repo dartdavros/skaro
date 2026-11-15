@@ -107,6 +107,8 @@ describe('task instructions', () => {
     expect(inPlace).toContain('documented main-copy startup procedure');
     expect(inPlace).toContain('Verify actual service readiness');
     expect(inPlace).toContain('Do not stop, restart, recreate');
+    expect(inPlace).toContain('without explicit owner consent for that exact action');
+    expect(inPlace).toContain('Do not register a blocker for missing consent');
     expect(inPlace).not.toContain('The only source-start path');
     expect(inPlace).not.toContain('COMPOSE_PROJECT_NAME');
   });
@@ -132,6 +134,10 @@ it('separates runtime approvals from owner decisions in tasks, chats and imports
     expect(text).toContain('suspend this session until every question has been answered');
     expect(text).toContain('wait for its complete answer before performing any further task work');
     expect(text).toContain('A selected answer does not itself change settings or start services');
+    expect(text).toContain('immediately invoke the structured question tool with the exact action');
+    expect(text).toContain('Missing consent is not an external prerequisite failure');
+    expect(text).toContain('do not call report_task_blocker');
+    expect(text).toContain('Existing denials and stop requests remain binding');
   }
 });
 

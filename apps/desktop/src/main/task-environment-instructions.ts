@@ -79,13 +79,16 @@ export function taskEnvironmentInstructions(kind: TaskEnvironmentKind): string {
       kind === 'in-place'
         ? '- The environment and data are shared. Do not stop, restart, recreate, reconfigure or ' +
           "replace existing shared services or another task's services, reset data or accounts, " +
-          'or clean up their containers and volumes to make verification pass.'
+          'or clean up their containers and volumes to make verification pass without explicit ' +
+          'owner consent for that exact action.'
         : '- Do not stop, restart, reconfigure or replace services of another task or of the main ' +
           'working copy. The only source-start path is Skaro starting declared existing main-checkout ' +
           'containers for data copying; do not change shared services or accounts to make verification pass.',
-      '- If the environment cannot be started or is not ready, report the exact failure as a ' +
-        'blocker; ask through the structured question tool only when a concrete owner decision ' +
-        'can resolve it. Do not turn every environment check into a permission request.',
+      '- If the known recovery action requires separate owner consent (including updating or ' +
+        'restarting shared services), immediately request that exact permission through the structured ' +
+        'question tool and wait. Do not register a blocker for missing consent. Report the exact ' +
+        'environment failure as a blocker only when it cannot be resolved by an owner permission ' +
+        'and cannot be repaired within the authorized setup. Routine authorized checks need no new permission.',
       '- Never replace missing APIs with mock responses, temporary servers, seed accounts or ' +
         'reset credentials or volumes. Follow explicit project restrictions on verification ' +
         'actions.',

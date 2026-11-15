@@ -86,7 +86,9 @@ export function taskInstructions(options: {
           'Do not end a turn merely to request continue, repeat established decisions or ask the owner ' +
           'to perform routine environment preparation. Ask concrete missing decisions through the blocking ' +
           'question tool, then perform the selected action. For an evidenced external blocker or an explicit ' +
-          'owner pause/read-only limitation, call report_task_blocker. Never use it for unfinished routine work.',
+          'owner pause/read-only limitation, call report_task_blocker with requires_owner_permission=false. ' +
+          'A rule requiring separate consent is a pending permission request, not an owner pause. ' +
+          'Never use a blocker for missing consent or unfinished routine work.',
         '- Include verification in submit_result: named executable build and affected behavior checks ' +
           'you actually ran, so Skaro can repeat them when integrating accepted results. Use real project ' +
           'services; do not add mock services or tests for unrelated behavior. If Skaro reports pending ' +

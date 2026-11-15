@@ -84,8 +84,10 @@ export async function startTaskEnvironment(
         'If copying needs stopped main-checkout services, read the clone script and existing Docker labels, ' +
         'declare source with configure_environment (source/expected_source), and call start_environment again. ' +
         'Skaro starts only existing declared containers and waits for health; no source data or accounts are created or reset. ' +
-        'If the output shows a defect in the task sources, fix it and retry. Otherwise use report_task_blocker ' +
-        'with the exact failure, not a question asking the owner to do routine startup. Do not start ' +
+        'If the output shows a defect in the task sources, fix it and retry. If the known repair ' +
+        'requires separate owner consent, immediately ask for that exact permission through the ' +
+        'structured question tool and wait; do not report missing consent as a blocker. Otherwise ' +
+        'use report_task_blocker with the exact external failure, not a question asking the owner to do routine startup. Do not start ' +
         'substitute services or another copy.',
       isError: true,
     };

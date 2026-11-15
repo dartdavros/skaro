@@ -1,4 +1,15 @@
 import { RELEASE_AGENT_IDS, agentDefinition } from '@skaro/agents';
+
+export const OWNER_PERMISSION_INSTRUCTIONS =
+  'If the next known action requires owner permission that has not been granted, immediately ' +
+  'invoke the structured question tool with the exact action, affected services/data, consequences ' +
+  'and concrete allow/decline options. This includes updating or restarting a shared environment ' +
+  'when project instructions require separate consent. Wait for the complete answer before acting. ' +
+  'Missing consent is not an external prerequisite failure: do not call report_task_blocker, ' +
+  'submit_result or finish with a blocker summary instead of opening that card. ' +
+  'Never ask the owner to invent a resolution for an action you already know how to perform. ' +
+  'Existing denials and stop requests remain binding; do not ask again without a new owner instruction.';
+
 /** Execution approvals belong to the runtime; questions are reserved for missing decisions. */
 export function agentInteractionInstructions(): string {
   return (
@@ -17,6 +28,7 @@ export function agentInteractionInstructions(): string {
       '- Ask only for a missing product decision, indispensable information that cannot be ' +
         'discovered, or explicit owner consent required by project instructions. Explain the ' +
         'specific unresolved choice and its consequences; suspend this session until every question has been answered.',
+      '- ' + OWNER_PERMISSION_INSTRUCTIONS,
       '- For each required decision, show two or three concrete options with their consequences ' +
         'through the structured question tool. Ask the smallest actionable question first ' +
         'instead of listing unexplained requirements in chat. Keep free text available for details. ' +
