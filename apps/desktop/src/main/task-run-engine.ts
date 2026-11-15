@@ -31,7 +31,6 @@ import { taskEnvironmentFinished } from './task-environment-finished';
 import { TaskRunContinuation } from './task-run-continuation';
 import { TaskResourceCleanup } from './task-resource-cleanup';
 import { executeResourceQueue } from './resource-task-queue';
-import { resourcesFor } from './resource-execution';
 import { LocalCandidates } from './local-candidates';
 import { TaskIncidents } from './task-incidents';
 import { captureStartupIncident } from './incident-startup';

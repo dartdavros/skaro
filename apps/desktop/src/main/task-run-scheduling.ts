@@ -18,7 +18,6 @@ import { capturePendingBuiltinStart } from './builtin-task-pending';
 import { cancelTaskRun } from './task-run-cancel';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { restoreCleanedWorktree } from './task-worktree-retention';
-import { resourcesFor } from './resource-execution';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 
 /** scheduling: a focused part of the task-run controller. */
