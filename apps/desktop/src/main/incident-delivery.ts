@@ -9,6 +9,7 @@ export function commitIncidentDelivery(
   resource: string,
   subscription: IncidentSubscription,
   enqueue: typeof queueOwnerMessage = queueOwnerMessage,
+  message = 'The recorded prerequisite was verified by Skaro. Recheck current task inputs and continue the existing authorized task; do not repeat the repair.',
 ) {
   const execution = new TaskExecution(db, subscription.runId);
   db.settings.atomic(() => {
@@ -16,7 +17,7 @@ export function commitIncidentDelivery(
     enqueue('task.send', projectId, subscription.taskId, {
       internal: true,
       commandId: `continue-incident-${incident}-${subscription.runId}`,
-      text: 'The recorded prerequisite was verified by Skaro. Recheck current task inputs and continue the existing authorized task; do not repeat the repair.',
+      text: message,
     });
     db.addEvent(projectId, 'task_unblocked', { task: subscription.taskId, incident, resource });
   });

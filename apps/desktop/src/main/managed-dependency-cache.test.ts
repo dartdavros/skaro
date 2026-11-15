@@ -13,7 +13,7 @@ import {
   NPM_INSTALL_BYTE_LIMIT,
   NPM_INSTALL_FILE_LIMIT,
 } from './managed-npm-archive';
-import { managedCacheCost, requireManagedCacheBuildSlot } from './managed-cache-admission';
+import { managedCacheCost } from './managed-cache-admission';
 import { managedCacheArguments } from './managed-cache-tools';
 
 it('derives public npm CAS entries from actual integrity and counts every locked install location', () => {
@@ -68,8 +68,6 @@ it('reserves distinct cache, clone, extraction and Docker budgets without unknow
   expect(builder.build).toBe(1);
   expect(builder.pools?.dockerDiskBytes).toBe(3 * 1024 ** 3);
   expect(() => managedCacheCost('dependencies', budget, '', 'task')).toThrow('unknown');
-  expect(() => requireManagedCacheBuildSlot(1, 1)).toThrow('requires_available_build_slot');
-  expect(() => requireManagedCacheBuildSlot(3, 1)).not.toThrow();
 });
 
 it('never accepts model-supplied provenance, paths, commands, secrets or package manager flags', () => {

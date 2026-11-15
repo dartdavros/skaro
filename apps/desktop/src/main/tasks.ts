@@ -7,7 +7,6 @@ import type {
   AgentSettings,
   MergeAction,
   MessageInput,
-  RunSlots,
   StageInfo,
   TaskAssignment,
   TaskSummary,
@@ -33,6 +32,7 @@ import { submitTaskResult } from './task-submit';
 import { taskArchitectureEvent } from './task-architecture-events';
 import { requestTaskSecret } from './task-secret-input';
 import { resumeTaskExecution } from './task-resume';
+import { reportTaskBlocker } from './task-blocker-report';
 import { prepareBuiltinTaskReview } from './builtin-task-review';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
@@ -80,24 +80,18 @@ export class TaskRuns {
   }
   private readonly engine: TaskRunEngine;
   readonly catalog: TaskCatalogService;
-  constructor(deps: TaskRunDeps, slots = 3) {
-    this.engine = new TaskRunEngine(deps, slots);
+  constructor(deps: TaskRunDeps) {
+    this.engine = new TaskRunEngine(deps);
     this.catalog = new TaskCatalogService(this.engine);
   }
   list(projectId: string): Promise<TaskSummary[]> {
     return this.engine.views.list(projectId);
-  }
-  slots(): RunSlots {
-    return this.engine.scheduling.slots();
   }
   updateBusy(): boolean {
     return taskUpdateBusy(this.engine);
   }
   publicationAgents(): number {
     return this.engine.integrations.publicationAgents();
-  }
-  setSlots(slots: number): void {
-    return this.engine.scheduling.setSlots(slots);
   }
   launch(
     projectId: string,
@@ -221,16 +215,9 @@ export class TaskRuns {
     reason: string,
     scope: SkaroScope,
     details?: import('@skaro/mcp-server').TaskBlockerDetails,
+    operationId?: string,
   ): Promise<ToolResult> {
-    return taskTool(this.engine, scope, async () => {
-      const active = this.engine.requireActive(scope.projectId, scope.taskId!);
-      if (this.engine.deps.coordinators)
-        await this.engine.incidents.report(active, reason, details);
-      else this.engine.continuation.block(active, reason);
-      return {
-        text: 'The external blocker is recorded. The task remains incomplete; automatic continuation is suspended. Report the precise blocker without asking for a generic continue message.',
-      };
-    });
+    return reportTaskBlocker(this.engine, reason, scope, details, operationId);
   }
   resumeTask(commandId: string, instruction: string, scope: SkaroScope): Promise<ToolResult> {
     return taskTool(this.engine, scope, async () => {

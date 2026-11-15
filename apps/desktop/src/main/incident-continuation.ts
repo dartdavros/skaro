@@ -26,6 +26,16 @@ export async function continueResolvedIncident(ctx: TaskRunEngine, row: Coordina
       continue;
     }
     requireCoordinationDispatch(ctx.deps.db, row.projectId);
-    commitIncidentDelivery(ctx.deps.db, row.projectId, row.id, row.subject.id, subscription);
+    commitIncidentDelivery(
+      ctx.deps.db,
+      row.projectId,
+      row.id,
+      row.subject.id,
+      subscription,
+      undefined,
+      row.evidence?.code === 'resource_capacity_admission_removed'
+        ? 'Skaro removed its artificial resource-capacity checkpoint. Environment readiness has not been asserted. Inspect the actual checkout and prior command outcome, then continue the same authorized task through the normal environment tools. Ownership locks, Stop and unresolved owner decisions still apply.'
+        : undefined,
+    );
   }
 }

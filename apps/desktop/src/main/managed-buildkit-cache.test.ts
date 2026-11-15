@@ -9,6 +9,7 @@ import {
 import { verifiedManagedBuilderImage } from './managed-buildkit-image';
 import type { ManagedBuilder } from './managed-cache-store';
 import { builderLabels, builderVolumeName } from './managed-buildkit-policy';
+import { hasLegacyBuilderLimits } from './managed-buildkit-unrestricted';
 
 it('requires exact predeclared ownership token, daemon, container/image IDs and isolated driver configuration', () => {
   const name = `skaro-owned-${'a'.repeat(32)}`,
@@ -73,6 +74,16 @@ it('requires exact predeclared ownership token, daemon, container/image IDs and 
       NetworkMode: 'bridge',
     },
   };
+  expect(hasLegacyBuilderLimits(observed.HostConfig)).toBe(true);
+  const unrestricted = {
+    ...observed,
+    HostConfig: { ...observed.HostConfig, Memory: 0, MemorySwap: 0, CpuQuota: 0, CpuPeriod: 0 },
+  };
+  expect(hasLegacyBuilderLimits(unrestricted.HostConfig)).toBe(false);
+  expect(verifyBuildkitIdentity(entry, 'daemon-id', builder, unrestricted)).toMatchObject({
+    container,
+    running: false,
+  });
   expect(verifyBuildkitIdentity(entry, 'daemon-id', builder, observed)).toMatchObject({
     container,
     running: false,

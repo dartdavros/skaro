@@ -53,15 +53,12 @@ export function stageLine(info: StageInfo): StageLine | undefined {
 /** What the button of the stage does now; nothing while it waits for its merge or is done. */
 export function stageAction(
   info: StageInfo,
-  slotsFree: boolean,
-): { action: 'run' | 'stop'; icon: 'play' | 'stopSquare' | 'clock'; label: string } | undefined {
+): { action: 'run' | 'stop'; icon: 'play' | 'stopSquare'; label: string } | undefined {
   // A milestone without tasks has nothing to run.
   if (!info.total) return undefined;
   switch (info.state) {
     case 'idle':
-      return slotsFree
-        ? { action: 'run', icon: 'play', label: t('plan.run') }
-        : { action: 'run', icon: 'clock', label: t('plan.run.queue') };
+      return { action: 'run', icon: 'play', label: t('plan.run') };
     case 'stopped':
     case 'error':
       return { action: 'run', icon: 'play', label: t('plan.resume') };

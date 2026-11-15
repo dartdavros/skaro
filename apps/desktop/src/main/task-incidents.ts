@@ -8,25 +8,21 @@ import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
 import { IncidentStore } from './incident-store';
 import { IncidentPolicy } from './incident-policy';
-import {
-  checkIncident,
-  currentIncidentSubscriber,
-  incidentAction,
-  incidentResourceVersion,
-} from './incident-condition';
+import { checkIncident, currentIncidentSubscriber, incidentAction } from './incident-condition';
 import { IncidentDecisions } from './incident-decisions';
 import { executeIncident } from './incident-execution';
-import { taskInputSnapshot } from './task-preflight-inputs';
 import { incidentFailure } from './incident-failure';
 import { cancelIncidentApproval } from './incident-feed';
 import { continueResolvedIncident } from './incident-continuation';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 import { checkoutKey } from './task-stage';
-import { rememberEnvironmentWait, hasEnvironmentWait } from './incident-environment-wait';
+import { hasEnvironmentWait } from './incident-environment-wait';
 import { escalateIncident } from './incident-escalation';
 import { refreshIncidentContext } from './incident-context-refresh';
 import { IncidentWork } from './incident-work';
 import { canRenewIncidentApproval } from './incident-approval-renewal';
+import { reportTaskIncident } from './task-incident-report';
+import { retireCapacityWait } from './resource-wait-retirement';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -58,66 +54,14 @@ export class TaskIncidents {
     return new IncidentPolicy(this.ctx.deps.db, this.ctx.deps.coordinators!);
   }
 
-  async report(
+  report(
     active: ActiveRun,
     reason: string,
     details?: TaskBlockerDetails,
     source: 'worker' | 'controller' = 'worker',
+    operationId?: string,
   ): Promise<CoordinationBlocker> {
-    const context = this.ctx.project(active.projectId);
-    const inputs = await taskInputSnapshot(
-      this.ctx.deps.db,
-      context,
-      await context.store.load(),
-      active.taskId,
-    ).then(
-      (v) => v.version,
-      () => incidentHash(['unavailable', active.run.id]),
-    );
-    const execution = this.ctx.continuation.execution(active);
-    const failure = details ?? incidentFailure(reason);
-    const resource = details?.resourceId
-      ? this.ctx.deps.db.resources.get(details.resourceId)
-      : failure.cause === 'environment'
-        ? await this.ctx.environments.incidentResource(checkoutKey(active)).catch(() => undefined)
-        : undefined;
-    if (details?.resourceId && (!resource || resource.projectId !== active.projectId))
-      throw new Error('Blocker resource is outside this project');
-    const subject = resource
-      ? { kind: 'resource' as const, id: resource.id, version: resource.generation }
-      : { kind: 'run' as const, id: active.run.id };
-    const protocol: IncidentProtocol = {
-      ownerPolicyRevision: this.policy.read(active.projectId).revision,
-      cause: failure.cause,
-      code: failure.code,
-      resourceVersion: await incidentResourceVersion(this.ctx, active.projectId, subject.id),
-      condition:
-        failure.cause === 'environment' && !resource
-          ? 'owner-evidence'
-          : (details?.condition ??
-            (resource && resource.kind === 'environment'
-              ? 'environment-ready'
-              : ['quota', 'rate-limit', 'authentication'].includes(failure.cause)
-                ? 'provider-evidence'
-                : 'owner-evidence')),
-      phase: 'diagnosing',
-      attempts: 0,
-      subscriptions: [],
-    };
-    const row = await this.store.report(
-      active.projectId,
-      subject,
-      protocol,
-      { taskId: active.taskId, runId: active.run.id, inputs, intent: execution.intentVersion() },
-      reason,
-      source,
-    );
-    if (source === 'controller' && failure.code === 'environment_waiting_resource')
-      await rememberEnvironmentWait(this.ctx, row);
-    execution.block(reason, row.id);
-    this.ctx.history.notice(active, 'other', 'error', reason);
-    this.ctx.events.settleRuntime(active);
-    return row;
+    return reportTaskIncident(this.ctx, this, active, reason, details, source, operationId);
   }
   async failure(active: ActiveRun, error: unknown): Promise<void> {
     if (!this.ctx.deps.coordinators) return;
@@ -147,6 +91,7 @@ export class TaskIncidents {
   private async advance(projectId: string, id: string): Promise<void> {
     let row = this.store.get(projectId, id);
     if (row.state !== 'open' || this.ctx.closing) return;
+    if (await retireCapacityWait(this.ctx, row)) return;
     const subscribers = [];
     for (const s of row.protocol!.subscriptions)
       if (await currentIncidentSubscriber(this.ctx, projectId, s)) subscribers.push(s);

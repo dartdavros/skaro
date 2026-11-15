@@ -1,12 +1,12 @@
 import { type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
 export class InputQueue implements AsyncIterable<SDKUserMessage> {
-  private readonly items: SDKUserMessage[] = [];
+  private readonly items: { message: SDKUserMessage; current?: () => boolean }[] = [];
   private wake: (() => void) | undefined;
   private ended = false;
 
-  push(message: SDKUserMessage): void {
-    this.items.push(message);
+  push(message: SDKUserMessage, current?: () => boolean): void {
+    this.items.push({ message, current });
     this.wake?.();
   }
 
@@ -22,7 +22,8 @@ export class InputQueue implements AsyncIterable<SDKUserMessage> {
     while (true) {
       const next = this.items.shift();
       if (next) {
-        yield next;
+        if (next.current && !next.current()) continue;
+        yield next.message;
         continue;
       }
       if (this.ended) return;

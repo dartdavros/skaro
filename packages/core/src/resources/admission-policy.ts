@@ -10,11 +10,6 @@ const amount = (value: unknown): value is number =>
   Number.isSafeInteger(value) && Number(value) >= 0;
 const id = (value: unknown): value is string =>
   typeof value === 'string' && !!value.trim() && value.length <= 4096 && !/[\r\n\0]/.test(value);
-const poolValue = (values: Record<string, number | null> | undefined, key: string) =>
-  values && Object.hasOwn(values, key) ? values[key] : undefined;
-// RAM remains observation metadata; the owner disabled host and Docker memory admission.
-const admissionCapacities = RESOURCE_CAPACITIES.filter((key) => key !== 'ramBytes');
-const admissionPool = (pool: string) => pool !== 'dockerRamBytes';
 export function validateResourceRequest(request: ResourceLeaseRequest): void {
   if (
     ![request.id, request.projectId, request.ownerId, request.intentId, request.checkpoint].every(
@@ -83,46 +78,15 @@ export function validateResourceBudget(budget: ResourceBudget): void {
     throw new Error('Invalid resource budget');
 }
 
-/** Pure decision. Call under the same transaction that records the grant. Strict FIFO prevents starvation. */
+/** Admission protects ownership and exclusion only. Capacity observations never gate execution. */
 export function resourceAdmissionReason(
   request: ResourceLease,
   leases: readonly ResourceLease[],
-  budget: ResourceBudget,
-  now: number,
+  _budget?: ResourceBudget,
+  _now?: number,
 ): string | undefined {
   validateResourceRequest(request);
-  validateResourceBudget(budget);
-  if (!amount(now) || now < budget.measuredAt || now - budget.measuredAt > budget.maxAgeMs)
-    return 'metrics_stale';
   const holders = leases.filter((lease) => lease.id !== request.id && ownsResourceCapacity(lease));
-  const remaining = (lease: ResourceLease, key: (typeof RESOURCE_CAPACITIES)[number]) => {
-    const observed = budget.observedUsage?.[lease.id];
-    const used = key === 'ramBytes' || key === 'cpuMillis' ? (observed?.[key] ?? 0) : 0;
-    return Math.max(0, lease.cost[key] - used);
-  };
-  const accountAvailable = (other: ResourceLease): boolean => {
-    if (!other.account || !other.cost.model) return true;
-    const account = Object.hasOwn(budget.accounts, other.account)
-      ? budget.accounts[other.account]
-      : undefined;
-    return (
-      !!account &&
-      !account.blocked &&
-      holders
-        .filter((lease) => lease.account === other.account)
-        .reduce((sum, lease) => sum + lease.cost.model, other.cost.model) <= account.slots
-    );
-  };
-  if (request.account && request.cost.model) {
-    const account = Object.hasOwn(budget.accounts, request.account)
-      ? budget.accounts[request.account]
-      : undefined;
-    if (!account || account.blocked) return 'account_quota_unknown_or_blocked';
-    const used = holders
-      .filter((lease) => lease.account === request.account)
-      .reduce((sum, lease) => sum + lease.cost.model, 0);
-    if (used + request.cost.model > account.slots) return 'account_slots';
-  }
   for (const lock of request.locks) {
     for (const holder of holders) {
       const owned = holder.locks.find((other) => other.resourceId === lock.resourceId);
@@ -135,85 +99,4 @@ export function resourceAdmissionReason(
         return 'resource_locked';
     }
   }
-  for (const key of admissionCapacities) {
-    if (!request.cost[key]) continue;
-    const available = budget[key];
-    if (available === null) return `unknown_${key}`;
-    if (holders.reduce((sum, lease) => sum + remaining(lease, key), request.cost[key]) > available)
-      return `budget_${key}`;
-  }
-  const diskCost = (lease: ResourceLease, volume: string) =>
-    (Object.hasOwn(lease.cost.diskBytes, volume) ? lease.cost.diskBytes[volume]! : 0) +
-    Object.entries(budget.poolVolumes ?? {}).reduce(
-      (sum, [pool, physical]) =>
-        sum +
-        (admissionPool(pool) && physical === volume ? (poolValue(lease.cost.pools, pool) ?? 0) : 0),
-      0,
-    );
-  const volumes = new Set([
-    ...Object.keys(request.cost.diskBytes),
-    ...Object.entries(budget.poolVolumes ?? {})
-      .filter(([pool]) => admissionPool(pool))
-      .map(([, volume]) => volume),
-  ]);
-  for (const volume of volumes) {
-    const needed = diskCost(request, volume);
-    if (!needed) continue;
-    const available = Object.hasOwn(budget.diskBytes, volume)
-      ? budget.diskBytes[volume]
-      : undefined;
-    if (available === undefined || available === null) return 'unknown_disk';
-    if (holders.reduce((sum, lease) => sum + diskCost(lease, volume), needed) > available)
-      return 'budget_disk';
-  }
-  for (const [pool, needed] of Object.entries(request.cost.pools ?? {})) {
-    if (!admissionPool(pool)) continue;
-    if (!needed) continue;
-    const available = poolValue(budget.pools, pool);
-    if (available === undefined || available === null) return `unknown_pool:${pool}`;
-    if (
-      holders.reduce(
-        (sum, lease) =>
-          sum +
-          Math.max(
-            0,
-            (poolValue(lease.cost.pools, pool) ?? 0) -
-              (budget.observedUsage?.[lease.id]?.pools?.[pool] ?? 0),
-          ),
-        needed,
-      ) > available
-    )
-      return `budget_pool:${pool}`;
-  }
-  const competing = (other: ResourceLease) => {
-    // A queued build must not block an admitted worker's environment slot: that would prevent
-    // the worker from completing and returning the very build capacity the older job needs.
-    const bottleneck = admissionCapacities.find(
-      (key) => other.reason === `budget_${key}` || other.reason === `unknown_${key}`,
-    );
-    if (bottleneck) return request.cost[bottleneck] > 0 && other.cost[bottleneck] > 0;
-    return (
-      admissionCapacities.some((key) => request.cost[key] > 0 && other.cost[key] > 0) ||
-      [...volumes].some((volume) => diskCost(request, volume) > 0 && diskCost(other, volume) > 0) ||
-      Object.keys(request.cost.pools ?? {}).some(
-        (pool) =>
-          admissionPool(pool) &&
-          (poolValue(request.cost.pools, pool) ?? 0) > 0 &&
-          (poolValue(other.cost.pools, pool) ?? 0) > 0,
-      ) ||
-      request.locks.some((lock) =>
-        other.locks.some((candidate) => candidate.resourceId === lock.resourceId),
-      )
-    );
-  };
-  if (
-    leases.some(
-      (other) =>
-        other.sequence < request.sequence &&
-        (other.state === 'waiting_resource' ||
-          (other.state === 'waiting_quota' && accountAvailable(other))) &&
-        competing(other),
-    )
-  )
-    return 'older_request';
 }

@@ -3,12 +3,6 @@ import type { AgentId, AgentSettings, StageInfo, TaskRef, TaskSummary } from './
 import type { IntegrationTimeline } from './task-timeline';
 export type { BootstrapState, WorkspaceState } from './bootstrap';
 
-/** Parallel run slots (architecture.md 7.1). */
-export interface RunSlots {
-  total: number;
-  free: number;
-}
-
 export interface TaskDetail extends TaskSummary {
   dependsOn: TaskRef[];
   /** Tasks that wait for this one. */
@@ -63,12 +57,10 @@ export interface TaskView {
   timeline?: TimelineState;
   /** Number of events in the timeline; live batches continue from here. */
   seq: number;
-  /** Waiting for a free slot (architecture.md 7.1). */
+  /** Waiting for the current owner, stage or integration operation. */
   queued: boolean;
   /** A task of a stage: the task of the stage that works now; this one starts after it. */
   after?: string;
-  /** A new run would start now rather than wait in the queue. */
-  slotsFree: boolean;
   /** The current turn must stop, or an in-flight handoff must finish, before changing agents. */
   agentSwitchBlocked?: boolean;
   /** Command status line under the composer: sandbox note (D-28). */

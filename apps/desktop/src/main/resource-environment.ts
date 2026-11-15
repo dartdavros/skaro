@@ -6,7 +6,7 @@ import { environmentResourceCost } from './resource-environment-cost';
 import type { EnvironmentDescription } from './task-environment-description';
 import { EnvironmentNotDispatched } from './environment-dispatch-error';
 
-/** Runtime capacity outlives a build or model turn and is freed only by verified Docker teardown. */
+/** Runtime ownership outlives a build or model turn and is released after verified Docker teardown. */
 export class EnvironmentAdmission {
   private readonly deps: EnvironmentDeps;
   private readonly held = new Map<string, HeldResource>();

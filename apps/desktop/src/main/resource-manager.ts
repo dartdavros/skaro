@@ -1,9 +1,9 @@
-import type { AppDb, ResourceBudget, ResourceLease, ResourceLeaseRequest } from '@skaro/core';
+import type { AppDb, ResourceLease, ResourceLeaseRequest } from '@skaro/core';
 import { resourceWait } from './resource-wait';
 
 export interface ResourceAdmissionOptions {
   signal: AbortSignal;
-  /** false makes one real measured admission attempt; default keeps the durable waiter. */
+  /** false returns a conflict without waiting; default waits only for ownership locks. */
   wait?: boolean;
   /** Re-read intent, current requirements and readiness; never use a stale boolean snapshot. */
   requireCurrent(): void | Promise<void>;
@@ -24,23 +24,17 @@ interface Pending {
   cancelled(): void;
 }
 
-/** Application-scoped dispatcher. The ledger owns capacity, not this process's Promise map. */
+/** Application-scoped owner dispatcher. Measurements never participate in dispatch. */
 export class ResourceManager {
   private readonly db: AppDb;
-  private readonly measure: () => Promise<ResourceBudget>;
   private readonly publish: (lease: ResourceLease) => void;
   private readonly pending = new Map<string, Pending>();
   private pumping?: Promise<void>;
+  private repump = false;
   private timer?: ReturnType<typeof setTimeout>;
   private closed = false;
-  private budget?: ResourceBudget;
-  constructor(
-    db: AppDb,
-    measure: () => Promise<ResourceBudget>,
-    changed: (lease: ResourceLease) => void,
-  ) {
+  constructor(db: AppDb, changed: (lease: ResourceLease) => void) {
     this.db = db;
-    this.measure = measure;
     this.publish = changed;
   }
 
@@ -83,23 +77,27 @@ export class ResourceManager {
     return promise;
   }
   poke(): void {
-    if (this.closed || this.pumping) return;
+    if (this.closed) return;
+    if (this.pumping) {
+      this.repump = true;
+      return;
+    }
     clearTimeout(this.timer);
     this.pumping = this.pump().finally(() => {
       this.pumping = undefined;
-      if (!this.closed && this.pending.size) {
+      const immediate = this.repump;
+      this.repump = false;
+      if (!this.closed && immediate) this.poke();
+      else if (!this.closed && this.pending.size) {
         this.timer = setTimeout(() => this.poke(), 2000);
         this.timer.unref();
       }
     });
     void this.pumping.catch((error: unknown) => {
-      // Metrics failure never opens a gate; callers retain their durable place and checkpoint.
-      console.error('Resource admission observation failed:', error);
+      console.error('Resource ownership dispatch failed:', error);
     });
   }
   private async pump(): Promise<void> {
-    const budget = await this.measure();
-    this.budget = budget;
     const ordered = this.db.admission.all().filter((lease) => this.pending.has(lease.id));
     for (const saved of ordered) {
       const pending = this.pending.get(saved.id);
@@ -110,7 +108,7 @@ export class ResourceManager {
         pending.options.signal.throwIfAborted();
         if (this.closed || !this.pending.has(saved.id)) continue;
         const current = this.db.admission.get(saved.projectId, saved.id)!;
-        const lease = this.db.admission.admit(saved.projectId, saved.id, current.revision, budget);
+        const lease = this.db.admission.admit(saved.projectId, saved.id, current.revision);
         if (lease.state !== current.state || lease.reason !== current.reason) this.changed(lease);
         try {
           pending.options.changed?.();
@@ -122,7 +120,7 @@ export class ResourceManager {
           pending.options.wait === false &&
           ['waiting_resource', 'waiting_quota'].includes(lease.state)
         ) {
-          const reason = lease.reason ?? 'capacity_unavailable';
+          const reason = lease.reason ?? 'resource_locked';
           this.changed(this.db.admission.cancel(saved.projectId, saved.id, lease.revision, reason));
           this.finish(saved.id, new ResourceAdmissionUnavailable(reason));
         } else if (!['waiting_resource', 'waiting_quota'].includes(lease.state))
@@ -151,7 +149,7 @@ export class ResourceManager {
     if (!pending) return undefined;
     const lease = this.db.admission.get(projectId, pending.request.id);
     return lease && ['waiting_resource', 'waiting_quota'].includes(lease.state)
-      ? resourceWait(lease, this.budget, this.db.admission.all())
+      ? resourceWait(lease)
       : undefined;
   }
   /** Caller supplies confirmed external teardown, not just Promise completion or a TTL. */

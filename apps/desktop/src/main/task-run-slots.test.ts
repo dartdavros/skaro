@@ -28,8 +28,8 @@ async function startedTask(engine: TaskRunEngine, title: string): Promise<Active
   return active;
 }
 
-describe('slot per agent turn', () => {
-  it('holds a later message of a started task in the queue until a slot is free', async () => {
+describe('independent owner turns', () => {
+  it('starts independent owners immediately while messages of the same owner retain their order', async () => {
     const engine = await restartTaskEngine(1);
     try {
       // No agent process: the message reaches the point where it would be handed to one.
@@ -42,13 +42,14 @@ describe('slot per agent turn', () => {
 
       await engine.messages.send(projectId, first.taskId, { text: 'continue' });
       await engine.messages.send(projectId, second.taskId, { text: 'also continue' });
-      await vi.waitFor(() => expect(delivered).toEqual([`${first.taskId}: continue`]));
-      expect(db.getTaskRuntime(projectId).get(second.taskId)?.state).toBe('queued');
-      expect(engine.scheduling.slots()).toEqual({ total: 1, free: 0 });
+      await vi.waitFor(() =>
+        expect(delivered).toEqual([`${first.taskId}: continue`, `${second.taskId}: also continue`]),
+      );
+      expect(db.getTaskRuntime(projectId).get(second.taskId)?.state).toBe('running');
 
       // A message to the task whose turn runs joins that turn: it holds the slot already.
       await engine.messages.send(projectId, first.taskId, { text: 'one more thing' });
-      expect(delivered).toHaveLength(2);
+      expect(delivered).toHaveLength(3);
 
       await engine.events.onTurnCompleted(first, 'done');
       await vi.waitFor(() => expect(delivered).toContain(`${second.taskId}: also continue`), {

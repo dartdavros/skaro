@@ -26,7 +26,7 @@ interface Candidate {
 }
 const pending = new Map<string, Promise<unknown>>();
 
-/** Private immutable exports; one application-wide budget within the verification shell scope. */
+/** Private immutable exports; scoped retention targets never gate materialization. */
 export class HistoryFileCache {
   private readonly db: AppDb;
   private readonly dataDir: string;
@@ -206,7 +206,7 @@ export class HistoryFileCache {
   private async evict(inventories: Inventory[], incoming: number, count: number, keep?: string) {
     const candidates = await this.candidates(inventories),
       budget = cacheBudget(this.db, 'history');
-    // Reserve the incoming entry as well as bytes. The budget is shared, never reset per project.
+    // Plan optional retention cleanup; incoming work does not require the target to fit.
     const plan = cacheEviction(
       candidates.map((candidate) => ({
         ...candidate.policy,
@@ -249,13 +249,6 @@ export class HistoryFileCache {
     }
     const remaining = await this.candidates(inventories);
     const total = remaining.reduce((sum, candidate) => sum + candidate.policy.bytes, incoming);
-    if (
-      !Number.isSafeInteger(total) ||
-      total > budget.bytes ||
-      remaining.length + count > budget.entries
-    )
-      throw new Error(
-        'Historical export cache budget is exhausted; active or unknown consumers are retained',
-      );
+    if (!Number.isSafeInteger(total)) throw new Error('Historical export accounting overflow');
   }
 }

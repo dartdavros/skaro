@@ -31,6 +31,7 @@
     onselect,
     ontask,
     footerItem,
+    footerContent,
     onfooter,
   }: {
     title: string;
@@ -43,11 +44,12 @@
     /** "Активные": needs an answer, then in review, then in progress. */
     tasks?: NavTask[];
     taskCount?: number;
-    taskContent?: Snippet<[Snippet<[NavTask]>, boolean]>;
+    taskContent?: Snippet<[Snippet<[NavTask, Snippet?]>, boolean]>;
     onresize?: () => void;
     onselect: (id: string) => void;
     ontask?: (id: string) => void;
     footerItem?: NavItem;
+    footerContent?: Snippet<[boolean]>;
     onfooter?: () => void;
   } = $props();
   const id = $props.id();
@@ -89,13 +91,15 @@
         content={taskContent}
         onopen={(id) => ontask?.(id)}
       />{/if}
-    {#if footerItem}
+    {#if footerContent || footerItem}
       <div class="sep"></div>
-      <button type="button" class="item footer-item" onclick={onfooter}>
-        <span class="icon"><Icon name={footerItem.icon} size={16} /></span>
-        <span class="label">{footerItem.label}</span>
-        {#if footerItem.trailing}<span class="count">{footerItem.trailing}</span>{/if}
-      </button>
+      {#if footerContent}{@render footerContent(false)}{:else if footerItem}
+        <button type="button" class="item footer-item" onclick={onfooter}>
+          <span class="icon"><Icon name={footerItem.icon} size={16} /></span>
+          <span class="label">{footerItem.label}</span>
+          {#if footerItem.trailing}<span class="count">{footerItem.trailing}</span>{/if}
+        </button>
+      {/if}
     {/if}
   </nav>
   <PanelResizer
@@ -142,19 +146,21 @@
         rail
         onopen={(id) => ontask?.(id)}
       />{/if}
-    {#if footerItem}
+    {#if footerContent || footerItem}
       <div class="rail-sep"></div>
-      <button
-        type="button"
-        class="rail-item"
-        onclick={onfooter}
-        data-tip={footerItem.trailing
-          ? `${footerItem.label} · ${footerItem.trailing}`
-          : footerItem.label}
-        aria-label={footerItem.label}
-      >
-        <Icon name={footerItem.icon} size={16} />
-      </button>
+      {#if footerContent}{@render footerContent(true)}{:else if footerItem}
+        <button
+          type="button"
+          class="rail-item"
+          onclick={onfooter}
+          data-tip={footerItem.trailing
+            ? `${footerItem.label} · ${footerItem.trailing}`
+            : footerItem.label}
+          aria-label={footerItem.label}
+        >
+          <Icon name={footerItem.icon} size={16} />
+        </button>
+      {/if}
     {/if}
   </nav>
 {/if}

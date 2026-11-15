@@ -12,6 +12,7 @@ import { chatSessionOptions } from './chat-session-options';
 import { startBuiltinChatSession } from './builtin-chat-session';
 import { retireNativeSession } from './native/session-retirement';
 import { resourcesFor } from './resource-execution';
+import { restoreChatArchitecture } from './chat-architecture';
 
 export class ChatSessions {
   private readonly ctx: ChatEngine;
@@ -137,6 +138,12 @@ export class ChatSessions {
     try {
       for await (const event of session.events) {
         const projected = segmentTurns(live.chat.agent === 'skaro' ? 0 : segment, event);
+        if (projected.t === 'turn.completed')
+          void restoreChatArchitecture(this.ctx, live).catch((error: unknown) => {
+            console.error('Project chat architecture recovery failed:', error);
+            if (!this.ctx.closing && this.ctx.live.get(live.chat.id) === live)
+              this.ctx.history.notice(live, 'other', 'error', errorText(error));
+          });
         this.ctx.history.onEvent(live, projected);
         this.ctx.planningContinuation.onEvent(live, projected);
       }

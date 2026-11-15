@@ -37,7 +37,7 @@
     locked={false}
     sandboxHolds={controller.sandboxHolds}
     title={t('board.rd.title')}
-    subtitle={`${tn('board.rd.selected', tasks.length)} · ${tn('board.rd.slots', controller.slots.free, { total: controller.slots.total })}`}
+    subtitle={tn('board.rd.selected', tasks.length)}
     actionLabel={t('board.rd.action', { n: tasks.length })}
     onsave={controller.confirm}
   />

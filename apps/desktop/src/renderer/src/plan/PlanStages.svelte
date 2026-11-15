@@ -44,7 +44,6 @@
       canArchive={canArchive(stage)}
       canDelete={stage.canDelete}
       info={model.archiveView ? undefined : model.info(stage.milestone.id)}
-      slotsFree={model.p.data.slotsFree}
       onrun={(action) => model.run(stage.milestone.id, action)}
       ontoggle={() => model.toggle(stage.milestone.id)}
       onmenu={(action) => {

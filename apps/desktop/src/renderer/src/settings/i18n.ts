@@ -12,10 +12,6 @@ addMessages('ru', {
   'settings.branches.note': 'Значения по умолчанию; проект может задать свои в «Параметрах»',
   'settings.notify.note': 'Какие события задач показывают системное уведомление',
   'settings.runs': 'Выполнение',
-  'settings.runs.slots': 'Одновременных запусков',
-  'settings.runs.note': 'Задачи сверх лимита встают в очередь',
-  'settings.runs.less': 'Меньше',
-  'settings.runs.more': 'Больше',
   'settings.autoMerge': 'Вливать автоматически, когда критерии выполнены',
   'settings.autoMerge.note':
     'Skaro сам коммитит и вливает задачу, агент сообщает об этом в ответе. Выключено — слияние подтверждается карточкой в ленте задачи.',
@@ -66,10 +62,6 @@ addMessages('en', {
   'settings.branches.note': 'Defaults; a project can set its own in “Parameters”',
   'settings.notify.note': 'Which task events show a system notification',
   'settings.runs': 'Runs',
-  'settings.runs.slots': 'Parallel runs',
-  'settings.runs.note': 'Tasks over the limit wait in the queue',
-  'settings.runs.less': 'Fewer',
-  'settings.runs.more': 'More',
   'settings.autoMerge': 'Merge automatically when the criteria are met',
   'settings.autoMerge.note':
     'Skaro commits and merges the task itself, the agent reports it in its reply. Off — the merge is confirmed with a card in the task feed.',

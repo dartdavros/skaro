@@ -2,7 +2,7 @@ import type { AppDb, ResourceCost } from '@skaro/core';
 import type { EnvironmentDescription } from './task-environment-description';
 import { resourceVolume } from './resource-budget';
 import { resourceWorkCost } from './resource-policy';
-import { observeDockerResources, type DockerUsage } from './resource-docker-observation';
+import type { DockerUsage } from './resource-docker-observation';
 
 /** One environment estimate, with growth headroom over observed consumption, never limits. */
 export function measuredEnvironmentCost(
@@ -31,32 +31,10 @@ export function measuredEnvironmentCost(
 export async function environmentResourceCost(
   db: Pick<AppDb, 'getSetting' | 'resources'>,
   dataDir: string,
-  description: EnvironmentDescription,
-  projectId: string,
+  _description: EnvironmentDescription,
+  _projectId: string,
 ): Promise<ResourceCost> {
   const baseline = resourceWorkCost(db, 'environment', await resourceVolume(dataDir));
-  if (!description.compose) return baseline;
-  const source = description.config?.source;
-  const registered = db.resources.list(projectId);
-  const candidates = new Set([
-    description.identity.name,
-    ...(source ? [source.project] : []),
-    ...registered
-      .filter(
-        (r) =>
-          r.kind === 'environment' && r.purpose === 'project-dev' && r.ownership === 'registered',
-      )
-      .map((r) => r.identity.composeProject),
-  ]);
-  const { usage } = await observeDockerResources();
-  for (const project of candidates) {
-    const observed = usage.filter(
-      (u) =>
-        u.project === project &&
-        (project !== source?.project || !source || source.services.includes(u.service ?? '')),
-    );
-    if (observed.length) return measuredEnvironmentCost(baseline, observed);
-  }
-  // Cold starts reserve the configured envelope once. Unknown services do not multiply it.
+  // No host/Docker observations are prerequisites for authorized environment dispatch.
   return measuredEnvironmentCost(baseline, []);
 }

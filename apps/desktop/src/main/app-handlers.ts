@@ -101,7 +101,6 @@ export function appHandlers(
     'app.getSetting': (key) => appState.getSetting(key),
     'app.setSetting': (key, value) => {
       appState.setSetting(key, value);
-      if (key === 'runs.slots' && typeof value === 'number') runs.setSlots(value);
     },
     'app.projectDefaults': () => appDefaults(projects),
     'app.setProjectDefaults': (next) =>

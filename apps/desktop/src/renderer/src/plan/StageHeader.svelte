@@ -17,7 +17,6 @@
   const done = $derived(info ? info.finished : model.p.stage.done);
   const total = $derived(info ? info.total : model.p.stage.total);
   const pct = $derived(info ? (total ? Math.round((done / total) * 100) : 0) : model.pct);
-  const slotsFree = $derived(model.p.slotsFree ?? true);
   const run = (action: 'run' | 'stop') => model.p.onrun?.(action);
   const items = $derived(
     model.p.archived
@@ -81,7 +80,7 @@
   <span data-plan-stage class="id">{model.m.id}</span>
   <span data-plan-stage class="name" class:finished={model.finished}>{model.m.title}</span>
   {#if info}
-    <StageRun part="state" {info} {slotsFree} onrun={run} />
+    <StageRun part="state" {info} onrun={run} />
   {/if}
   <div data-plan-stage class="marks" class:hidden={!!info}>
     {#if model.p.stage.working}
@@ -122,7 +121,7 @@
     <span data-plan-stage class="count">{t('plan.progress', { done, total })}</span>
   </div>
   {#if info}
-    <StageRun part="button" {info} {slotsFree} onrun={run} />
+    <StageRun part="button" {info} onrun={run} />
   {/if}
   <!-- The menu neither toggles nor drags the milestone. -->
   {#if model.p.stage.loose && !model.p.archived}

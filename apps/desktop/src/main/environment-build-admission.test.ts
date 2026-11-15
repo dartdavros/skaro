@@ -2,9 +2,8 @@ import { expect, it } from 'vitest';
 import { AppDb } from '@skaro/core';
 import { ApplicationResources } from './application-resources';
 import { RESOURCE_POLICY_KEY } from './resource-policy';
-import { ResourceAdmissionUnavailable } from './resource-manager';
 
-it('returns a measured build-slot checkpoint without holding a worker or invoking the environment', async () => {
+it('runs authorized build work despite a zero legacy capacity setting', async () => {
   const db = AppDb.open(':memory:');
   const project = db.addProject({ name: 'Observed repository', path: process.cwd() });
   const resources = new ApplicationResources(db, process.cwd());
@@ -13,21 +12,19 @@ it('returns a measured build-slot checkpoint without holding a worker or invokin
     // Isolate the real slot policy, without replacing any host measurements or external executor.
     db.setSetting('resources.costs.v1', { build: { cpuMillis: 0, disk: 0 } });
     let entered = false;
-    await expect(
-      resources.scope(project.id, 'observed-environment', () =>
-        resources.phase(
-          'build',
-          async () => {
-            entered = true;
-          },
-          undefined,
-          { wait: false },
-        ),
+    await resources.scope(project.id, 'observed-environment', () =>
+      resources.phase(
+        'build',
+        async () => {
+          entered = true;
+        },
+        undefined,
+        { wait: false },
       ),
-    ).rejects.toBeInstanceOf(ResourceAdmissionUnavailable);
-    expect(entered).toBe(false);
+    );
+    expect(entered).toBe(true);
     expect(db.admission.all().find((row) => row.ownerId === 'observed-environment')?.reason).toBe(
-      'budget_build',
+      'teardown_confirmed',
     );
     expect(resources.holdings(project.id, 'observed-environment')).toEqual([]);
   } finally {

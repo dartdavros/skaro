@@ -3,7 +3,7 @@ import { projectC4Protocol } from './c4-protocol';
 import { randomUUID } from 'node:crypto';
 import { CommandCancelled } from './owner-commands';
 import { hasOwnerCommand } from './owner-command-history';
-import type { MessageInput, RunSlots, TaskAssignment } from '../shared/ipc';
+import type { MessageInput, TaskAssignment } from '../shared/ipc';
 import { createTaskRun } from './task-run-create';
 import { checkoutKey } from './task-stage';
 import { key, awaitingKey, findTask } from './task-run-helpers';
@@ -19,7 +19,6 @@ import { cancelTaskRun } from './task-run-cancel';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { restoreCleanedWorktree } from './task-worktree-retention';
 import { resourcesFor } from './resource-execution';
-import { resourceQueueSlots } from './resource-task-queue';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 
 /** scheduling: a focused part of the task-run controller. */
@@ -32,16 +31,6 @@ export class TaskRunScheduling {
     return queueBuiltinTask(this.ctx, request, (input, requireCurrent) =>
       this.enqueueLocked(request.projectId, request.taskId, input, requireCurrent),
     );
-  }
-
-  slots(): RunSlots {
-    return resourceQueueSlots(this.ctx);
-  }
-
-  setSlots(slots: number): void {
-    this.ctx.queue.setSlots(slots);
-    resourcesFor(this.ctx.deps.db)?.manager.poke();
-    this.ctx.limitEnvironments();
   }
 
   async launch(
@@ -157,7 +146,7 @@ export class TaskRunScheduling {
 
   /**
    * Every turn of an agent takes a slot (architecture.md 7.1): the message waits in the queue
-   * until one is free. Messages sent meanwhile join it and go to the agent in order. A task of a
+   * without a capacity cap. Messages for the same owner keep their order. A task of a
    * stage also waits while another task of the stage works in their checkout.
    */
   async enqueue(

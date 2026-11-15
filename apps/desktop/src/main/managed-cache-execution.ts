@@ -4,12 +4,7 @@ import type { ManagedCacheStore } from './managed-cache-store';
 import type { ManagedBuildkitCache } from './managed-buildkit-cache';
 import { managedSourceLock, type ManagedTaskSource } from './managed-cache-worktree';
 import { resourceExecution, resourcesFor } from './resource-execution';
-import { applicationResourcePolicy } from './resource-policy';
-import {
-  managedCacheCost,
-  requireManagedCacheBuildSlot,
-  type ManagedCacheBuildProfile,
-} from './managed-cache-admission';
+import { managedCacheCost, type ManagedCacheBuildProfile } from './managed-cache-admission';
 import { resourceVolume } from './resource-budget';
 import { ResourceAdmissionUnavailable } from './resource-manager';
 const owner = (kind: 'dependencies' | 'buildkit') => `managed-cache:${kind}`;
@@ -102,15 +97,6 @@ export class ManagedCacheExecution {
     const parent = resourceExecution.getStore(),
       resources = resourcesFor(this.store.db);
     if (!resources) throw new Error('managed_cache_application_admission_unavailable');
-    const envelopes = parent
-      ? resources
-          .holdings(parent.projectId, parent.ownerId)
-          .filter((x) => x.lease.checkpoint === 'worker-command-budget')
-      : [];
-    requireManagedCacheBuildSlot(
-      applicationResourcePolicy(this.store.db).build,
-      envelopes.reduce((sum, x) => sum + x.lease.cost.build, 0),
-    );
     return resources.scope(
       projectId,
       owner(kind),
@@ -137,7 +123,7 @@ export class ManagedCacheExecution {
           kind === 'buildkit'
             ? this.store.builders().find((x) => x.projectId === projectId)
             : undefined;
-        // Acquiring before serial is intentional: cleanup may need that same mutex to release disk pressure.
+        // Acquire ownership before serial so cleanup can settle the same exact resource.
         const held = await resources
           .acquire('build', scope, {
             cost,

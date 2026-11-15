@@ -33,7 +33,7 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 
 /** A candidate as the ones still in flight from before merges went per task. */
 async function candidate(ids: string[], target: string): Promise<void> {
-  engine = new TaskRunEngine(completionTaskDeps(f), 1);
+  engine = new TaskRunEngine(completionTaskDeps(f));
   await expect(
     engine.integrations.service.prepare({
       projectId: f.projectId,
@@ -172,7 +172,7 @@ it('merges a finished task at once and hands a conflict to its own agent, with n
   await f.commit();
   await writeFile(join(await f.checkout(first), 'shared.txt'), 'first behavior\n');
   await writeFile(join(await f.checkout(second), 'shared.txt'), 'second behavior\n');
-  engine = new TaskRunEngine(completionTaskDeps(f), 1);
+  engine = new TaskRunEngine(completionTaskDeps(f));
   const runs = engine;
   const tool = submitResultTool((args, scope) => runs.results.submitResult(args, scope));
   const submit = async (taskId: string) => {
@@ -235,7 +235,7 @@ it('does not resume a merge candidate left from before merges went per task', as
   const left = f.integrations.deps.store.all(f.projectId)[0]!;
   expect(left.state).toBe('resolving');
   // The start of Skaro retires it: no agent, environment or check is started for it again.
-  engine = new TaskRunEngine(completionTaskDeps(f), 1);
+  engine = new TaskRunEngine(completionTaskDeps(f));
   const store = engine.integrations.store;
   await waitFor(() => store.find(f.projectId, left.id)?.state === 'stale');
   expect(engine.queue.state()).toMatchObject({ running: [], queued: [] });

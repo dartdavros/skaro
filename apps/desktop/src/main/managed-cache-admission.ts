@@ -3,14 +3,7 @@ import type { CacheBudget } from './resource-cache-policy';
 
 export const MANAGED_BUILDER_MEMORY = 512 * 1024 ** 2;
 export type ManagedCacheBuildProfile = 'scratch' | 'trusted-run';
-export function requireManagedCacheBuildSlot(slots: number, ownEnvelopeBuilds: number) {
-  if (![slots, ownEnvelopeBuilds].every((value) => Number.isSafeInteger(value) && value >= 0))
-    throw new Error('managed_cache_build_capacity_unknown');
-  if (ownEnvelopeBuilds >= slots)
-    throw new Error('managed_cache_worker_envelope_requires_available_build_slot');
-}
-
-/** Unknown installation expansion is reserved conservatively, never silently costed at zero. */
+/** Diagnostic estimates only; they never reserve or gate host/VM capacity. */
 export function managedCacheCost(
   kind: 'dependencies' | 'buildkit',
   budget: CacheBudget,
@@ -29,7 +22,7 @@ export function managedCacheCost(
     sourceBytes > Number.MAX_SAFE_INTEGER / 2 ||
     !Number.isSafeInteger(budget.bytes) ||
     budget.bytes < 0 ||
-    budget.bytes > 8 * 1024 ** 3
+    budget.bytes > Number.MAX_SAFE_INTEGER / 4
   )
     throw new Error('managed_cache_cost_unknown');
   const diskBytes: Record<string, number> = {};

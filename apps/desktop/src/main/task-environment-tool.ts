@@ -53,7 +53,7 @@ export async function startTaskEnvironment(
             cause: 'environment',
             code:
               error instanceof ResourceAdmissionUnavailable
-                ? 'environment_waiting_resource'
+                ? 'environment_resource_conflict'
                 : 'environment_start_failed',
             condition: 'environment-ready',
           },
@@ -66,7 +66,7 @@ export async function startTaskEnvironment(
     }
     if (error instanceof ResourceAdmissionUnavailable)
       return {
-        text: `Environment is waiting for measured resources: ${error.reason}. Skaro recorded the checkpoint and will recheck admission after releasing the worker. Do not retry in a loop or start substitute services.`,
+        text: `Environment cannot acquire its current ownership lock: ${error.reason}. Wait for the existing owner or cleanup to settle. Do not retry in a loop or start substitute services.`,
         isError: true,
       };
     if (error instanceof EnvironmentUnavailable) {

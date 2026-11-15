@@ -15,12 +15,19 @@ export class NativeResources {
   private work?: Holding;
   private readonly commands = new Set<string>();
   private pending?: Promise<void>;
+  private waiters = 0;
+  private turnEpoch = 0;
+  private ended = false;
+  private idleListener?: () => void;
   private readonly turns = new Set<string>();
   get idle(): boolean {
-    return !this.turn && !this.pending && !this.commands.size;
+    return !this.turn && !this.pending && !this.waiters && !this.commands.size && !this.turns.size;
   }
   private readonly connectionId?: string;
-  constructor(options: SessionOptions, connectionId?: string) {
+  constructor(
+    options: Pick<SessionOptions, 'resourceAdmission' | 'signal'>,
+    connectionId?: string,
+  ) {
     this.connectionId = connectionId;
     this.admission = options.resourceAdmission;
     this.signal = AbortSignal.any([
@@ -31,6 +38,7 @@ export class NativeResources {
   async start(): Promise<void> {
     try {
       this.process = await this.admission?.process(this.signal);
+      this.requireOpen();
       // Do not create a provider thread while its first turn is still waiting for admission.
       if (this.admission) await this.acquireTurn();
     } catch (error) {
@@ -38,23 +46,75 @@ export class NativeResources {
       throw error;
     }
   }
-  before(method: string): Promise<void> {
-    if (!resourceMethod(method)) return Promise.resolve();
-    this.signal.throwIfAborted();
-    if (this.turn || !this.admission) return Promise.resolve();
-    return (this.pending ??= this.acquireTurn().finally(() => {
-      this.pending = undefined;
-    }));
+  onIdle(listener: () => void): void {
+    this.idleListener = listener;
   }
-  private async acquireTurn() {
-    const held = await this.admission!.turn(this.signal, this.connectionId, !this.work);
-    if (this.signal.aborted) {
-      held.release('model_dispatch_cancelled');
-      held.work?.release('worker_dispatch_cancelled');
-      this.signal.throwIfAborted();
+  /** Each waiter rechecks its own intent after shared admission; strict updates cannot lend a grant. */
+  async before(method: string, onlyActiveTurn = false): Promise<boolean> {
+    if (!resourceMethod(method)) return true;
+    this.requireOpen();
+    const epoch = this.turnEpoch;
+    const current = () => this.turns.size > 0 && this.turnEpoch === epoch;
+    if (onlyActiveTurn && !current()) return false;
+    this.waiters++;
+    try {
+      for (;;) {
+        this.requireOpen();
+        if (onlyActiveTurn && !current()) return false;
+        if (this.turn || !this.admission) return true;
+        // An ordinary caller joining a strict acquisition must retry if that strict grant expires.
+        if (!this.pending) {
+          const pending = this.acquireTurn(onlyActiveTurn ? current : undefined).finally(() => {
+            if (this.pending === pending) this.pending = undefined;
+          });
+          this.pending = pending;
+        }
+        await this.pending;
+      }
+    } finally {
+      this.waiters--;
+      this.notifyIdle();
+    }
+  }
+  private requireOpen(): void {
+    this.signal.throwIfAborted();
+    if (this.ended) throw new Error('Native resource owner is closed');
+  }
+  private async acquireTurn(current?: () => boolean) {
+    const previousWork = this.work;
+    const held = await this.admission!.turn(this.signal, this.connectionId, !previousWork);
+    const discard = (evidence: string) => {
+      try {
+        held.release(evidence);
+      } finally {
+        held.work?.release(evidence);
+      }
+    };
+    if (this.signal.aborted || this.ended) {
+      discard('model_dispatch_cancelled');
+      this.requireOpen();
+    }
+    if (current && !current()) {
+      discard('active_turn_ended_before_dispatch');
+      return;
+    }
+    // Work may have completed while acquiring the model lease; acquire its new envelope explicitly.
+    if (previousWork && !this.work) {
+      discard('worker_ownership_changed_before_dispatch');
+      return;
     }
     this.turn = held;
-    this.work ??= held.work;
+    if (this.work && held.work && held.work !== this.work)
+      held.work.release('worker_ownership_already_held');
+    else this.work ??= held.work;
+  }
+  private notifyIdle(): void {
+    if (this.ended || !this.idle) return;
+    try {
+      this.idleListener?.();
+    } catch (error) {
+      console.error('Native idle notification failed:', error);
+    }
   }
   event(event: TimelineEvent): void {
     if (event.t === 'limits')
@@ -65,9 +125,12 @@ export class NativeResources {
       else this.commands.delete(event.item.id);
       if (!this.turn && !this.commands.size) this.releaseWork('native_commands_completed');
     }
-    if (event.t === 'turn.started') this.turns.add(event.turnId);
+    if (event.t === 'turn.started' && !this.turns.has(event.turnId)) {
+      this.turns.add(event.turnId);
+      this.turnEpoch++;
+    }
     if (event.t === 'turn.completed') {
-      this.turns.delete(event.turnId);
+      if (this.turns.delete(event.turnId)) this.turnEpoch++;
       if (!event.continuing && !this.turns.size) this.suspend('native_turn_completed');
     }
     if (
@@ -75,6 +138,7 @@ export class NativeResources {
       ['approval', 'question', 'form', 'login'].includes(event.interaction.kind)
     )
       this.suspend('native_waiting_for_input');
+    this.notifyIdle();
   }
   private suspend(evidence: string): void {
     this.turn?.release(evidence);
@@ -90,6 +154,9 @@ export class NativeResources {
   }
   /** Only after owned process trees, worker and host ports have actually closed. */
   closed(): void {
+    this.ended = true;
+    this.turnEpoch++;
+    this.turns.clear();
     this.suspend('native_transport_closed');
     this.releaseWork('native_commands_stopped');
     this.process?.release('native_processes_closed');

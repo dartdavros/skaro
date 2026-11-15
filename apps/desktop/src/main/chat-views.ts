@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import type { TimelineState } from '@skaro/timeline';
 import { projectTaskProposalLifecycles } from './task-decision-lifecycle';
 import { ownerResourceWait } from './resource-wait-view';
+import { projectChatArchitecture } from './chat-architecture';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -66,7 +67,7 @@ export class ChatViews {
           decisionEpoch: saved.logPath,
           chat: this.summary(saved),
           settings: this.ctx.settings.settings(saved),
-          timeline: await this.projectTimeline(projectId, chatId, cached.view.timeline),
+          timeline: await this.projectTimeline(projectId, chatId, cached.view.timeline, true),
           history: cached.view.source,
           historyPage: cached.view.page,
           seq: cached.seq,
@@ -111,6 +112,7 @@ export class ChatViews {
         projectId,
         chatId,
         read?.timeline ?? presentationState(live.timeline.state),
+        !!read,
       ),
       resourceWait: ownerResourceWait(this.ctx.deps.db, projectId, `chat:${chatId}`),
       ...(read ? { history: read.source, historyPage: read.page } : {}),
@@ -118,8 +120,16 @@ export class ChatViews {
     };
   }
 
-  private async projectTimeline(projectId: string, chatId: string, state: TimelineState) {
-    const projected = new QuestionAnswers(this.ctx.deps.db, `live.${chatId}`).project(state);
+  private async projectTimeline(
+    projectId: string,
+    chatId: string,
+    state: TimelineState,
+    projectedC4 = false,
+  ) {
+    const canonical = projectedC4
+      ? state
+      : await projectChatArchitecture(this.ctx, projectId, chatId, state);
+    const projected = new QuestionAnswers(this.ctx.deps.db, `live.${chatId}`).project(canonical);
     return projectTaskProposalLifecycles(
       projected,
       (await this.ctx.project(projectId).summary()).tasks,

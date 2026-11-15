@@ -12,6 +12,7 @@ import {
   startBuilder,
 } from './managed-buildkit-identity';
 import { ManagedBuildkitRuntime } from './managed-buildkit-runtime';
+import { removeLegacyBuilderLimits } from './managed-buildkit-unrestricted';
 import { solveManagedBuild } from './managed-build-solve';
 import { managedBuildNetwork, type ManagedBuildApproval } from './managed-build-profile';
 import { cacheTree, canonicalCachePath, removeCacheTree } from './managed-cache-files';
@@ -68,6 +69,7 @@ export class ManagedBuildkitCache {
     return this.runtime.maintain(
       entry,
       async () => {
+        await removeLegacyBuilderLimits(store, entry);
         await bootstrapBuilder(store, entry, image);
         await startBuilder(store, entry);
         await this.applyPolicy(entry, share, budget);
@@ -97,7 +99,6 @@ export class ManagedBuildkitCache {
         );
         entry.usedAt = Date.now();
         store.saveBuilder(entry);
-        await this.gc(entry, share, budget);
         store.outcome(entry, 'observed', 'managed_buildkit_static_cached_solve_completed');
         return {
           state: 'verified-cached-solve',
@@ -172,7 +173,6 @@ export class ManagedBuildkitCache {
     const after = await this.runtime.usage(entry);
     entry.bytes = after.bytes;
     this.store.saveBuilder(entry);
-    if (after.bytes > share) throw new Error('managed_buildkit_budget_active_or_unreclaimable');
     this.store.outcome(entry, 'observed', 'managed_buildkit_gc_confirmed');
     if (before.bytes > 0 && after.bytes === 0)
       this.store.db.addEvent(entry.projectId, 'cache_evicted', {
@@ -192,6 +192,7 @@ export class ManagedBuildkitCache {
     if (entry.state !== 'ready')
       throw new Error('managed_buildkit_interrupted_operation_requires_explicit_reconciliation');
     await this.runtime.maintain(entry, async () => {
+      await removeLegacyBuilderLimits(store, entry);
       await startBuilder(store, entry);
       if (share > 0) await this.applyPolicy(entry, share, budget);
       await this.gc(entry, share, budget);

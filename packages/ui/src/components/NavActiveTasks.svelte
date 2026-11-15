@@ -27,12 +27,12 @@
     tasks: NavTask[];
     rail?: boolean;
     count?: number;
-    content?: Snippet<[Snippet<[NavTask]>, boolean]>;
+    content?: Snippet<[Snippet<[NavTask, Snippet?]>, boolean]>;
     onopen(id: string): void;
   } = $props();
 </script>
 
-{#snippet row(task: NavTask)}
+{#snippet row(task: NavTask, indicator?: Snippet)}
   {#if rail}
     <button
       type="button"
@@ -56,7 +56,12 @@
       data-tip-dot={task.kind}
       onclick={() => onopen(task.id)}
     >
-      <span class="nav-task-title">{task.title}</span><span class="nav-task-dot {task.kind}"></span>
+      <span class="nav-task-title">{task.title}</span>
+      {#if indicator && task.kind === 'working'}
+        {@render indicator()}
+      {:else}
+        <span class="nav-task-dot {task.kind}"></span>
+      {/if}
     </button>
   {/if}
 {/snippet}

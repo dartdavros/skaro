@@ -60,7 +60,6 @@ const READS = new Set<MethodName>([
   'tasks.page',
   'tasks.find',
   'tasks.selected',
-  'tasks.slots',
   'stages.list',
   'plan.catalog',
   'plan.relations',

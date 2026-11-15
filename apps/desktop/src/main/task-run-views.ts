@@ -167,7 +167,6 @@ export class TaskRunViews {
       seq: active?.seq ?? 0,
       ...waitsInStage(this.ctx, projectId, task, artifacts, runtime),
       queued: this.ctx.queue.state().queued.includes(key(projectId, taskId)),
-      slotsFree: this.ctx.queue.state().running.length < this.ctx.queue.state().slots,
       agentSwitchBlocked:
         integrationWorking(integrations, taskId) ||
         (!!active &&

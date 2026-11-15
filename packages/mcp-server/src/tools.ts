@@ -180,7 +180,9 @@ export function mergeTaskTool(
       'In a task chat the current task is implicit. This executes the merge and updates task statuses. ' +
       'An already merged or completed task returns its status without another card or Git changes. ' +
       'Do not call this tool to reconfirm a merge reported by submit_result. Do not push or switch ' +
-      'branches yourself. If the result reports blockers such as conflicts, tell the user.',
+      'branches yourself. Unrelated uncommitted changes in the main copy are preserved and do not ' +
+      'require a globally clean checkout; Skaro checks actual path overlaps and resolves them through ' +
+      'its existing local-change workflow. If the result reports blockers such as conflicts, tell the user.',
     inputSchema: {
       type: 'object',
       properties: {

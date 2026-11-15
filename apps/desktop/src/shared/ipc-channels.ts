@@ -129,7 +129,6 @@ export const METHODS = [
   'tasks.select',
   'tasks.selected',
   'tasks.reorder',
-  'tasks.slots',
   'tasks.run',
   'tasks.archive',
   'tasks.delete',

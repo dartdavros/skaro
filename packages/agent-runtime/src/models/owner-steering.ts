@@ -45,7 +45,7 @@ export class OwnerSteering {
         `cmd:${command.id}`,
         facts,
         {
-          value: { kind: 'owner-input', mode: 'steer', modelTurnId: this.modelId },
+          value: { kind: 'owner-input', mode: input.mode, modelTurnId: this.modelId },
         },
         fingerprint(command.action),
       )

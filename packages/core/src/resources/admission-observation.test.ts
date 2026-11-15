@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import type { ResourceBudget, ResourceLease } from './admission-model.ts';
 import { resourceAdmissionReason } from './admission-policy.ts';
 
-it('ignores RAM admission while preserving observed CPU accounting, FIFO and capacity gates', () => {
+it('keeps capacity observations informational for host, Docker, slots and stale metrics', () => {
   const now = Date.now();
   const request: ResourceLease = {
     id: 'next',
@@ -53,7 +53,7 @@ it('ignores RAM admission while preserving observed CPU accounting, FIFO and cap
     maxAgeMs: 5000,
     accounts: {},
   };
-  expect(resourceAdmissionReason(request, [holder], budget, now)).toBe('budget_cpuMillis');
+  expect(resourceAdmissionReason(request, [holder], budget, now)).toBeUndefined();
   budget.observedUsage = {
     live: { ramBytes: 300, cpuMillis: 300, pools: { dockerRamBytes: 300, dockerCpuMillis: 300 } },
   };
@@ -64,7 +64,7 @@ it('ignores RAM admission while preserving observed CPU accounting, FIFO and cap
     id: 'not-observed',
     cost: { ...holder.cost, ramBytes: 200, cpuMillis: 200 },
   };
-  expect(resourceAdmissionReason(request, [holder, pending], budget, now)).toBe('budget_cpuMillis');
+  expect(resourceAdmissionReason(request, [holder, pending], budget, now)).toBeUndefined();
   for (const ramBytes of [0, null]) {
     budget.ramBytes = ramBytes;
     budget.pools!.dockerRamBytes = ramBytes;
@@ -81,7 +81,8 @@ it('ignores RAM admission while preserving observed CPU accounting, FIFO and cap
   expect(resourceAdmissionReason(request, [olderRamOnly], budget, now)).toBeUndefined();
   budget.observedUsage.live!.cpuMillis = 999999;
   budget.cpuMillis = 299;
-  expect(resourceAdmissionReason(request, [holder], budget, now)).toBe('budget_cpuMillis');
+  expect(resourceAdmissionReason(request, [holder], budget, now)).toBeUndefined();
+  budget.measuredAt = 0;
   budget.cpuMillis = null;
-  expect(resourceAdmissionReason(request, [holder], budget, now)).toBe('unknown_cpuMillis');
+  expect(resourceAdmissionReason(request, [holder], budget, now)).toBeUndefined();
 });

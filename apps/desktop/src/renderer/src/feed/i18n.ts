@@ -5,6 +5,7 @@ import * as cards from './messages/cards';
 import * as task from './messages/task';
 import * as agent from './messages/agent';
 import * as diff from './messages/diff';
+import * as turnFiles from './messages/turn-files';
 
 addMessages('ru', {
   ...timeline.ru,
@@ -12,6 +13,7 @@ addMessages('ru', {
   ...task.ru,
   ...agent.ru,
   ...diff.ru,
+  ...turnFiles.ru,
 });
 
 addMessages('en', {
@@ -20,4 +22,5 @@ addMessages('en', {
   ...task.en,
   ...agent.en,
   ...diff.en,
+  ...turnFiles.en,
 });

@@ -100,7 +100,7 @@ it('stops a deterministic C4 failure without another resolver turn or a success 
   f.context.invalidate();
   op.attempts = 1;
   f.integrations.save(op);
-  engine = new TaskRunEngine(completionTaskDeps(f), 1);
+  engine = new TaskRunEngine(completionTaskDeps(f));
   engine.integrations.enqueue(op);
   const deadline = Date.now() + 30_000;
   for (;;) {

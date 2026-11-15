@@ -6,6 +6,7 @@ import { migrateCoordinatorProject } from './coordinator-migration';
 import { requireCoordinationDispatch, dispatchSafetyAction } from './coordination-dispatch';
 import { reconcileUnstartedEnvironments } from './environment-operation-recovery';
 import { recoverIncidentOperations } from './incident-operation-recovery';
+import { recoverTaskBlockerReports } from './task-blocker-receipt';
 export type { CoordinationExecution } from './coordinator-delivery';
 
 /** One logical controller per project. Models and executors do not own its durable identity. */
@@ -40,6 +41,7 @@ export class ProjectCoordinators {
       migrateCoordinatorProject(this.db, project.id);
       this.db.coordination.recover(project.id);
       recoverIncidentOperations(this.db, project.id);
+      recoverTaskBlockerReports(this.db, project.id);
       reconcileUnstartedEnvironments(this.db, project.id);
       for (const operation of this.db.coordination.pending(project.id)) {
         if (operation.state !== 'queued' || operation.action.startsWith('owner.')) continue;

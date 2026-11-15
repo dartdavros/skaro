@@ -23,7 +23,6 @@ export type StageProps = {
   canDelete: boolean;
   /** Where the stage stands; absent for "Без этапа" and in the archive. */
   info?: StageInfo | undefined;
-  slotsFree?: boolean;
   /** «Запустить», «Продолжить», «Остановить». */
   onrun?: (action: 'run' | 'stop') => void;
   ontoggle: () => void;

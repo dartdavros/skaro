@@ -29,7 +29,6 @@ import type {
   TaskAssignment,
 } from './ipc-entities';
 import type {
-  RunSlots,
   TaskView,
   MessageInput,
   MergeAction,
@@ -155,7 +154,6 @@ export interface Methods
   'tabs.get': () => TabsState;
   'tabs.set': (state: TabsState) => void;
   'tasks.list': (projectId: string) => TaskSummary[];
-  'tasks.slots': () => RunSlots;
   /** Mass launch: blocked tasks are skipped, the rest start or wait for a slot. No agent — each task's own. */
   'tasks.run': (
     projectId: string,

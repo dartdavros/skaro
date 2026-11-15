@@ -1,6 +1,21 @@
 import { expect, it } from 'vitest';
 import { limitWindow } from '@skaro/timeline';
-import { lowRemaining, lowPercentLabel } from './low-remaining';
+import { lowRemaining, lowPercentLabel, remainingLimit } from './low-remaining';
+
+it('uses the full known remaining quota for the gauge and leaves unavailable data unknown', () => {
+  expect(
+    remainingLimit({
+      checkedAt: '',
+      windows: [limitWindow('five_hour', 20, null), limitWindow('seven_day', 35, null)],
+    }),
+  ).toBe(65);
+  expect(remainingLimit({ checkedAt: '', windows: [limitWindow('seven_day', 0, null)] })).toBe(100);
+  expect(remainingLimit({ checkedAt: '', windows: [limitWindow('seven_day', 100, null)] })).toBe(0);
+  expect(
+    remainingLimit({ checkedAt: '', windows: [limitWindow('five_hour', null, null)] }),
+  ).toBeUndefined();
+  expect(remainingLimit(undefined)).toBeUndefined();
+});
 
 it('shows the smallest known remaining window strictly below 10%, including zero', () => {
   const snapshot = (five: unknown, week: unknown) => ({

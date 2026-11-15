@@ -34,7 +34,7 @@
 </script>
 
 {#if outcome === 'done'}
-  {#if row.files.length}<TurnFiles files={row.files} />{/if}
+  {#if row.files.length}<TurnFiles files={row.files} rowId={row.id} />{/if}
   {#if reply}
     <ReplyActions text={reply}
       ><span class="fd-turn-meta">{clock(row.durationMs)}</span></ReplyActions

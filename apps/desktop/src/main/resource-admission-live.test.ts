@@ -7,14 +7,14 @@ import { DatabaseSync } from 'node:sqlite';
 import { expect, it } from 'vitest';
 import { AppDb, type ResourceLeaseRequest } from '@skaro/core';
 import { ResourceManager } from './resource-manager';
-import { measureResourceBudget, resourceVolume } from './resource-budget';
+import { resourceVolume } from './resource-budget';
 
 const data = process.env.SKARO_ADMISSION_VERIFY_DATA;
 const execute = promisify(execFile);
 
 /** Explicit live acceptance: real registry, real SQLite, real permanent Cat-pilot service. */
 it.skipIf(!data)(
-  'gates a real Cat-pilot observation and fences owner cancellation',
+  'observes real Cat-pilot with ownership tracking and fences owner cancellation',
   async () => {
     const file = join(data!, 'skaro.db');
     const registry = new DatabaseSync(file, { readOnly: true });
@@ -81,24 +81,7 @@ it.skipIf(!data)(
     expect(resource.purpose).toBe('project-dev');
     expect(resource.owner).toEqual({ kind: 'project', id: project.id });
     expect(resource.preservation).toBe('persistent');
-    const policy = {
-      reserveRamBytes: 1024 ** 3,
-      reserveDiskBytes: 1024 ** 3,
-      reserveCpuMillis: 1000,
-      model: 0,
-      environment: 0,
-      build: 0,
-      review: 0,
-      accounts: {},
-    };
-    let notifyWaiting: (() => void) | undefined;
-    const manager = new ResourceManager(
-      db,
-      () => measureResourceBudget(policy, [project.path]),
-      (lease) => {
-        if (lease.reason === 'budget_review') notifyWaiting?.();
-      },
-    );
+    const manager = new ResourceManager(db, () => {});
     const input = (): ResourceLeaseRequest => ({
       id: randomUUID(),
       projectId: project.id,
@@ -121,22 +104,14 @@ it.skipIf(!data)(
       const first = input();
       requests.push(first);
       const stopped = new AbortController();
-      const waiting = new Promise<void>((resolve) => {
-        notifyWaiting = resolve;
-      });
-      const pending = manager.acquire(first, {
-        signal: stopped.signal,
-        requireCurrent: () => {
-          stopped.signal.throwIfAborted();
-        },
-      });
-      const rejected = expect(pending).rejects.toThrow('Owner stopped observation');
-      await waiting;
-      expect(db.admission.get(project.id, first.id)?.state).toBe('waiting_resource');
-      expect((await inspect()).ID).toBe(before.ID);
       stopped.abort(new Error('Owner stopped observation'));
-      await rejected;
-      policy.review = 1;
+      expect(() =>
+        manager.acquire(first, {
+          signal: stopped.signal,
+          requireCurrent: () => {},
+        }),
+      ).toThrow('Owner stopped observation');
+      expect((await inspect()).ID).toBe(before.ID);
       const next = input();
       requests.push(next);
       const lease = await manager.acquire(next, {
@@ -145,7 +120,7 @@ it.skipIf(!data)(
           await inspect();
         },
       });
-      expect(db.admission.get(project.id, first.id)?.state).toBe('stopped_by_owner');
+      expect(db.admission.get(project.id, first.id)).toBeUndefined();
       expect(
         db.resources.get(resource.id)?.consumers.some((c) => c.id === `lease:${lease.id}`),
       ).toBe(true);
@@ -158,7 +133,7 @@ it.skipIf(!data)(
         db.resources.get(resource.id)?.consumers.some((c) => c.id === `lease:${lease.id}`),
       ).toBe(false);
       console.info(
-        'RC-2 live: actual Cat-pilot HTTP, policy wait, owner stop, new admission, same container',
+        'RC-2 live: actual Cat-pilot HTTP, owner stop, new ownership grant, same container',
       );
     } finally {
       await manager.close();

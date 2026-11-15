@@ -86,7 +86,7 @@ it('serializes real observation leases across handles, preserves consumers and f
       locks: [],
     });
     expect(db.admission.admit(waiting.projectId, waiting.id, waiting.revision, budget).reason).toBe(
-      'budget_review',
+      'admitted',
     );
     expect(() =>
       db.admission.release(
@@ -138,78 +138,61 @@ it('serializes real observation leases across handles, preserves consumers and f
   }
 });
 
-it('keeps unknown budgets and quota closed, honors FIFO and never resumes a stopped intent', async () => {
+it('ignores exhausted, unknown and stale capacity, while a stopped intent stays stopped', async () => {
   const root = await realpath(process.cwd());
-  const bytes = (await stat(join(root, 'package.json'))).size;
   const db = AppDb.open(':memory:');
   try {
-    const input: ResourceLeaseRequest = {
-      id: randomUUID(),
-      projectId: root,
-      ownerId: root,
-      intentId: randomUUID(),
-      checkpoint: 'package_observation',
-      locks: [],
-      cost: {
-        ramBytes: bytes,
-        cpuMillis: 0,
-        model: 0,
-        environment: 0,
-        build: 1,
-        review: 0,
-        diskBytes: {},
-      },
-    };
+    const request = (id: string) =>
+      db.admission.request({
+        id,
+        projectId: root,
+        ownerId: root,
+        intentId: id,
+        checkpoint: 'current_repository_observation',
+        account: 'account',
+        locks: [],
+        cost: {
+          ramBytes: 1,
+          cpuMillis: 1,
+          model: 1,
+          environment: 1,
+          build: 1,
+          review: 1,
+          diskBytes: { disk: 1 },
+          pools: { dockerDiskBytes: 1 },
+        },
+      });
     const budget: ResourceBudget = {
-      ...input.cost,
-      measuredAt: Date.now(),
-      maxAgeMs: 60000,
-      accounts: {},
+      ramBytes: null,
+      cpuMillis: null,
+      model: 0,
+      environment: 0,
+      build: 0,
+      review: 0,
+      diskBytes: {},
+      pools: {},
+      accounts: { account: { slots: 0, blocked: true } },
+      measuredAt: 0,
+      maxAgeMs: 1,
     };
-    const older = db.admission.request({ ...input, cost: { ...input.cost, build: 2 } });
-    expect(db.admission.admit(root, older.id, older.revision, budget).reason).toBe('budget_build');
-    const newer = db.admission.request({ ...input, id: randomUUID() });
-    const queued = db.admission.admit(root, newer.id, newer.revision, budget);
-    expect(queued.reason).toBe('older_request');
-    const stop = db.admission.stop(root, older.id, db.admission.get(root, older.id)!.revision);
-    expect(db.admission.admit(root, older.id, stop.revision, { ...budget, build: 3 }).state).toBe(
+    const older = request('older');
+    const newer = request('newer');
+    // An older queued or retained owner cannot consume unrelated capacity or impose FIFO.
+    const granted = db.admission.admit(root, newer.id, newer.revision, budget);
+    expect(granted.state).toBe('granted');
+    expect(db.admission.admit(root, older.id, older.revision, budget).state).toBe('granted');
+    const pending = request('stopped');
+    const stopped = db.admission.stop(root, pending.id, pending.revision);
+    expect(db.admission.admit(root, stopped.id, stopped.revision, budget).state).toBe(
       'stopped_by_owner',
     );
-    const unknown = db.admission.admit(root, newer.id, queued.revision, {
-      ...budget,
-      build: null,
-    });
-    expect(unknown.reason).toBe('unknown_build');
-    const granted = db.admission.admit(root, newer.id, unknown.revision, budget);
-    expect(granted.state).toBe('granted');
-    const model = db.admission.request({
-      ...input,
-      id: randomUUID(),
-      account: 'observation-only',
-      cost: { ...input.cost, model: 1 },
-    });
-    expect(db.admission.admit(root, model.id, model.revision, budget).state).toBe('waiting_quota');
-    const availableAccount = {
-      ...budget,
-      model: 2,
-      accounts: { 'observation-only': { slots: 2, blocked: false } },
-    };
-    const light = db.admission.request({
-      ...input,
-      id: randomUUID(),
-      account: 'observation-only',
-      cost: { ...input.cost, model: 1, ramBytes: 0, build: 0 },
-    });
-    const deferred = db.admission.admit(root, light.id, light.revision, availableAccount);
-    expect(deferred.reason).toBe('older_request');
-    db.admission.stop(root, model.id, db.admission.get(root, model.id)!.revision);
-    // The existing build consumes RAM/build, but a model slot is an independent capacity.
-    expect(db.admission.admit(root, light.id, deferred.revision, availableAccount).state).toBe(
-      'granted',
-    );
     expect(() =>
-      db.admission.request({ ...input, cost: { ...input.cost, ramBytes: -1 } }),
-    ).toThrow();
+      db.admission.request({
+        ...request('invalid'),
+        id: 'invalid-cost',
+        cost: { ...pending.cost, cpuMillis: -1 },
+      }),
+    ).toThrow('Invalid resource admission request');
   } finally {
     db.close();
   }

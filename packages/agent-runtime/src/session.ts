@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { requireBuiltinCompatibility } from '@skaro/timeline';
 import type { RuntimeProcessIdentity } from '@skaro/timeline';
 import { RuntimeJournal } from './journal.ts';
-import { commandFacts } from './commands.ts';
+import { commandFacts, resumesAfterInput } from './commands.ts';
 import packageManifest from '../package.json' with { type: 'json' };
 import type { JournalRecord, RuntimeCommand, RuntimeStart } from './model.ts';
 import { ToolCoordinator } from './tools/coordinator.ts';
@@ -273,7 +273,7 @@ export class RuntimeSession {
       const record = await this.journal.append(id, facts, result, hash);
       if (!result.error && action.type === 'respond')
         this.tools?.answered(action.interactionId, action.answer);
-      if ((action.type === 'send' || action.type === 'steer') && !this.journal.state.stopped) {
+      if (resumesAfterInput(action, this.journal.state)) {
         this.tools?.resume();
         if (this.modelAbort.signal.aborted) this.modelAbort = new AbortController();
       }

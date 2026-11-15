@@ -5,13 +5,6 @@ import { CommandCancelled } from './owner-commands';
 import { requireStartupGeneration } from './task-startup-generation';
 import { requireIntegrationDispatch } from './integration-dispatch-fence';
 
-export function resourceQueueSlots(ctx: TaskRunEngine) {
-  const admitted = resourcesFor(ctx.deps.db)?.slots();
-  if (admitted) return admitted;
-  const { slots, running } = ctx.queue.state();
-  return { total: slots, free: Math.max(0, slots - running.length) };
-}
-
 /** Queue identity is bound afresh; an unrelated completion must not lend its async owner scope. */
 export async function executeResourceQueue(ctx: TaskRunEngine, key: string): Promise<void> {
   const [projectId, taskId] = key.split('\n') as [string, string];

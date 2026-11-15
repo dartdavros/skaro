@@ -1,4 +1,4 @@
-import { withoutSkaroNote } from './feed-input.ts';
+import { withoutSkaroNote, isSkaroContextInput } from './feed-input.ts';
 export { withSkaroNote, withoutSkaroNote } from './feed-input.ts';
 import { fileRow, mergeFile, turnEnd } from './feed-turns.ts';
 // Feed rows: how the timeline is shown (agent-output.md 5, "Лента агента" mockup). Pure and
@@ -136,7 +136,9 @@ export function feedRows(state: TimelineState, parentId?: string): FeedRow[] {
               id: item.id,
               item: text === item.text ? item : { ...item, text },
               images: [],
-              ...(cardAnswers.has(item.id) ? { hidden: true } : {}),
+              ...(cardAnswers.has(item.id) || isSkaroContextInput(item.text)
+                ? { hidden: true }
+                : {}),
             });
           } else {
             const question = questions.get(item.id);

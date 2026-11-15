@@ -9,11 +9,10 @@ import {
   type ResourceRecord,
 } from '@skaro/core';
 import { resourceHolding } from './resource-holding';
-import { applicationResourceMeasurements } from './resource-measurements';
 import { reserveModelWork } from './resource-model-work';
 import { ResourceManager } from './resource-manager';
 import { resourceVolume } from './resource-budget';
-import { applicationResourcePolicy, resourceWorkCost, type ResourceWork } from './resource-policy';
+import { resourceWorkCost, type ResourceWork } from './resource-policy';
 import {
   bindApplicationResources,
   resourceExecution,
@@ -21,33 +20,26 @@ import {
   type HeldResource,
 } from './resource-execution';
 
-/** Composition and owner cancellation; the durable ledger remains the only capacity authority. */
+/** Owner cancellation and durable resource identity; no resource scarcity admission. */
 export class ApplicationResources {
   readonly manager: ResourceManager;
   private readonly db: AppDb;
   private readonly dataDir: string;
   private readonly shutdown = new AbortController();
   private readonly owners = new Map<string, Set<AbortController>>();
-  private readonly accounts = new Set<string>();
-  private readonly paths = new Set<string>();
-  private docker = false;
   constructor(db: AppDb, dataDir: string) {
     this.db = db;
     this.dataDir = dataDir;
-    this.paths.add(dataDir);
     bindApplicationResources(db, this);
-    this.manager = new ResourceManager(
-      db,
-      () => applicationResourceMeasurements(db, this.accounts, this.paths, this.docker),
-      (lease) =>
-        db.addEvent(lease.projectId, 'resource_admission', {
-          id: lease.id,
-          owner: lease.ownerId,
-          checkpoint: lease.checkpoint,
-          state: lease.state,
-          reason: lease.reason,
-          revision: lease.revision,
-        }),
+    this.manager = new ResourceManager(db, (lease) =>
+      db.addEvent(lease.projectId, 'resource_admission', {
+        id: lease.id,
+        owner: lease.ownerId,
+        checkpoint: lease.checkpoint,
+        state: lease.state,
+        reason: lease.reason,
+        revision: lease.revision,
+      }),
     );
     const projects = new Set(db.shell.list().map((project) => project.id));
     for (const lease of db.admission.all()) {
@@ -125,12 +117,9 @@ export class ApplicationResources {
     scope = modelDispatchScope(this.db, kind, scope);
     if (!scope) throw new Error('Resource execution requires a bound owner');
     await scope.requireCurrent();
-    if (options.account) this.accounts.add(options.account);
-    if (options.cost?.pools) this.docker = true;
     const volume = await resourceVolume(this.dataDir);
     const cost = options.cost ?? resourceWorkCost(this.db, kind, volume);
     const project = this.db.getProject(scope.projectId);
-    if (project) this.paths.add(project.path);
     if (project && !options.cost && Object.keys(cost.diskBytes).length) {
       const rootVolume = await resourceVolume(project.path);
       cost.diskBytes[rootVolume] ??= Math.max(...Object.values(cost.diskBytes));
@@ -169,7 +158,7 @@ export class ApplicationResources {
       await scope.requireCurrent();
       return action();
     }
-    // An agent's command envelope already reserved this capacity before the model was admitted.
+    // Reuse the existing worker-command ownership envelope for its nested build phase.
     if (
       kind === 'build' &&
       scope &&
@@ -218,14 +207,6 @@ export class ApplicationResources {
     };
     this.db.setSetting('resources.accountLimits', saved);
     this.manager.poke();
-  }
-  slots(): { total: number; free: number } {
-    const total = applicationResourcePolicy(this.db).model;
-    const used = this.db.admission
-      .all()
-      .filter((lease) => ['granted', 'retained'].includes(lease.state))
-      .reduce((sum, lease) => sum + lease.cost.model, 0);
-    return { total, free: Math.max(0, total - used) };
   }
   releaseOwner(projectId: string, ownerId: string, evidence: string): void {
     for (const lease of this.db.admission.all())

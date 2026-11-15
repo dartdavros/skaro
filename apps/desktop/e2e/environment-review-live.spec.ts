@@ -71,7 +71,7 @@ async function fingerprint(root: string) {
 
 // Real AppDb records, task worktrees, Compose services, databases and native IPC only.
 // The shell opens the actual local URL; no browser or backend method is replaced.
-test('manual review queues, keeps its data and stops after finish or native restart', async ({
+test('independent manual reviews run in parallel, preserve data and stop after finish or native restart', async ({
   playwright: _playwright,
 }, testInfo) => {
   test.setTimeout(900_000);
@@ -121,26 +121,15 @@ test('manual review queues, keeps its data and stops after finish or native rest
 
     await openTask(page, second);
     await requestReview(page, second);
-    await expect(banner).toContainText('В очереди');
-    expect(await runningContainers(second.identity.name)).toEqual([]);
-    await page.screenshot({ path: testInfo.outputPath('review-queued.png') });
-    await banner.getByRole('button', { name: 'Завершить просмотр', exact: true }).click();
-    await expect.poll(() => reviewState(page, second), { timeout: 60_000 }).toBeUndefined();
-    expect(await runningContainers(second.identity.name)).toEqual([]);
-    expect(await volumeIdentity(second.identity.name)).toEqual(second.volumes);
-    expect(await runningContainers(first.identity.name)).not.toEqual([]);
-
-    // Review ownership uses capacity, not an exclusive project/stage lock.
-    await page.evaluate(() => window.skaro.invoke('app.setSetting', 'runs.slots', 2));
-    await requestReview(page, second);
     await expect(banner).toContainText('Окружение запущено для просмотра', { timeout: 600_000 });
     expect(await runningContainers(first.identity.name)).not.toEqual([]);
     expect(await runningContainers(second.identity.name)).not.toEqual([]);
     await page.screenshot({ path: testInfo.outputPath('review-parallel.png') });
     await banner.getByRole('button', { name: 'Завершить просмотр', exact: true }).click();
     await expect.poll(() => reviewState(page, second), { timeout: 60_000 }).toBeUndefined();
+    expect(await runningContainers(second.identity.name)).toEqual([]);
     expect(await volumeIdentity(second.identity.name)).toEqual(second.volumes);
-    await page.evaluate(() => window.skaro.invoke('app.setSetting', 'runs.slots', 1));
+    expect(await runningContainers(first.identity.name)).not.toEqual([]);
 
     await openTask(page, first);
     await banner.getByRole('button', { name: 'Завершить просмотр', exact: true }).click();
@@ -149,7 +138,7 @@ test('manual review queues, keeps its data and stops after finish or native rest
     expect(await volumeIdentity(first.identity.name)).toEqual(first.volumes);
     await page.screenshot({ path: testInfo.outputPath('review-finished.png') });
 
-    // Cancel a real warm start: its shell and services must not outlive the released slot.
+    // Cancel a real warm start: its shell and services must not outlive the review owner.
     await requestReview(page, first);
     await expect(banner).toContainText('Запускает окружение…', { timeout: 30_000 });
     await banner.getByRole('button', { name: 'Завершить просмотр', exact: true }).click();
