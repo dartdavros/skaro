@@ -51,8 +51,15 @@ const UNMANAGED =
 
 const IN_PLACE =
   "- You work in the project's main working copy: use its documented compose/dev setup and " +
-  'real services as they are. Check occupied ports and existing mounts before you start ' +
-  'anything; never invent an undocumented dev setup.';
+  'shared real services. This run intentionally has no separate checkout or task environment. ' +
+  'Do not use start_environment or configure_environment: they manage isolated task copies. ' +
+  'Do not require a worktree, create a task-specific Compose project, allocate task ports, ' +
+  'or run the task environment create/data-copy commands against the main working copy. ' +
+  'Inspect the project documentation, existing Compose configuration, occupied ports and mounts. ' +
+  'Use the documented main-copy commands and addresses for compose ps/logs/exec and verification; ' +
+  'do not apply task-specific environment variables. If required shared services are stopped, ' +
+  'use the documented main-copy startup procedure within owner restrictions. Verify actual ' +
+  'service readiness before dependent work; never invent an undocumented dev setup.';
 
 /** Skaro runs the environment, the task brings up its own, or the task works in the main copy. */
 export type TaskEnvironmentKind = 'managed' | 'own' | 'in-place';
@@ -69,9 +76,13 @@ export function taskEnvironmentInstructions(kind: TaskEnvironmentKind): string {
       '- Before browser verification make sure the frontend talks to the backend of this ' +
         "task's environment and that readiness includes the database and cache. A responding " +
         'localhost port, frontend HTTP 200 or backend liveness alone prove nothing.',
-      '- Do not stop, restart, reconfigure or replace services of another task or of the main ' +
-        'working copy. The only source-start path is Skaro starting declared existing main-checkout ' +
-        'containers for data copying; do not change shared services or accounts to make verification pass.',
+      kind === 'in-place'
+        ? '- The environment and data are shared. Do not stop, restart, recreate, reconfigure or ' +
+          "replace existing shared services or another task's services, reset data or accounts, " +
+          'or clean up their containers and volumes to make verification pass.'
+        : '- Do not stop, restart, reconfigure or replace services of another task or of the main ' +
+          'working copy. The only source-start path is Skaro starting declared existing main-checkout ' +
+          'containers for data copying; do not change shared services or accounts to make verification pass.',
       '- If the environment cannot be started or is not ready, report the exact failure as a ' +
         'blocker; ask through the structured question tool only when a concrete owner decision ' +
         'can resolve it. Do not turn every environment check into a permission request.',

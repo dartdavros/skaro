@@ -17,6 +17,8 @@ export function configureEnvironmentTool(
   return {
     name: 'configure_environment',
     description:
+      'For a run with an isolated worktree only. In-place runs use the documented shared ' +
+      'main-copy environment directly; this tool does not configure it. ' +
       'Read this task environment configuration with no arguments. To change its launch ' +
       'command, pass start and expected_start (the current command returned by this tool). ' +
       'Use this to include a documented service needed for the authorized task, such as a ' +

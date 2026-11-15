@@ -6,6 +6,7 @@ import type { Item, TimelineState } from '@skaro/timeline';
 import type { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { checkoutKey } from './task-stage';
+import { inPlaceEnvironmentResult } from './task-environment-mode';
 
 /** Public recorded evidence, never a model's private reasoning or raw protocol payloads. */
 export function historyText(state: TimelineState): string {
@@ -53,7 +54,10 @@ export async function handoffContext(
     git(cwd, ['rev-parse', 'HEAD'], { allowFail: true }),
     git(cwd, ['status', '--porcelain=v1', '--untracked-files=all'], { allowFail: true }),
   ]);
-  const environment = await ctx.environments.describe(checkoutKey(active)).catch(() => undefined);
+  const shared = inPlaceEnvironmentResult(ctx.project(active.projectId).root, active.run);
+  const environment = shared
+    ? undefined
+    : await ctx.environments.describe(checkoutKey(active)).catch(() => undefined);
   const recent = state.items
     .filter((i) => i.kind !== 'reasoning' && i.kind !== 'unknown')
     .slice(-16);
@@ -68,7 +72,7 @@ export async function handoffContext(
     'Use read_task_history to search and read the complete recorded conversation, command/tool results, decisions and image references. It pages by character offset, including long command output. Resolve missing context there before making assumptions. Never ask the previous agent to produce a summary.',
     `HEAD: ${repository[0]!.stdout.trim() || 'unavailable'}`,
     `Working copy status (not a diff):\n${repository[1]!.stdout || '(empty or unavailable)'}`,
-    environment ? `Environment: ${JSON.stringify(environment.identity)}` : '',
+    shared?.text ?? (environment ? `Environment: ${JSON.stringify(environment.identity)}` : ''),
     `Last recorded turn: ${JSON.stringify(state.turns.at(-1) ?? null)}`,
     `Previous plan: ${JSON.stringify(state.plan ?? [])}`,
     `Unresolved interactions (old permissions are expired): ${JSON.stringify(state.interactions.filter((i) => i.kind !== 'merge'))}`,
