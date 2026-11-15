@@ -5,6 +5,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { key, settingsKey } from './task-run-helpers';
 import { taskAgentPreferences, type TaskAgentPreferences } from './task-agent-preferences';
 import { builtinRunSettings } from './builtin-run-settings';
+import { taskRunIsolation } from './task-environment-mode';
 
 /** A running builtin task always displays its exact recorded permissions and checkout. */
 export function taskViewSettings(
@@ -43,6 +44,9 @@ export function taskViewSettings(
     permissionMode: saved?.permissionMode ?? artifacts.config.permissionMode,
     planFirst: saved?.planFirst ?? false,
     ...(agent === 'skaro' && saved?.budgetUsd !== undefined ? { budgetUsd: saved.budgetUsd } : {}),
-    isolation: saved?.isolation ?? artifacts.config.isolation,
+    isolation: taskRunIsolation(
+      running?.run ?? ctx.deps.db.listRuns(projectId, task.id)[0],
+      saved?.isolation ?? artifacts.config.isolation,
+    ),
   };
 }

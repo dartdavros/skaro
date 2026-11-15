@@ -2,6 +2,7 @@ import type { ConfigureEnvironmentArgs, SkaroScope, ToolResult } from '@skaro/mc
 import { errorText } from './session-log';
 import { checkoutKey } from './task-stage';
 import type { TaskRunEngine } from './task-run-engine';
+import { inPlaceEnvironmentResult } from './task-environment-mode';
 
 /** Called behind taskTool's current-session and handoff guard. */
 export async function configureTaskEnvironment(
@@ -11,6 +12,8 @@ export async function configureTaskEnvironment(
 ): Promise<ToolResult> {
   try {
     const active = ctx.requireActive(scope.projectId, scope.taskId!);
+    const shared = inPlaceEnvironmentResult(ctx.project(scope.projectId).root, active.run);
+    if (shared) return shared;
     const config = await ctx.environments.configure(checkoutKey(active), args);
     return {
       text:

@@ -103,6 +103,11 @@ describe('task instructions', () => {
       locale: 'ru',
     });
     expect(inPlace).toContain("You work in the project's main working copy");
+    expect(inPlace).toContain('Do not use start_environment or configure_environment');
+    expect(inPlace).toContain('documented main-copy startup procedure');
+    expect(inPlace).toContain('Verify actual service readiness');
+    expect(inPlace).toContain('Do not stop, restart, recreate');
+    expect(inPlace).not.toContain('The only source-start path');
     expect(inPlace).not.toContain('COMPOSE_PROJECT_NAME');
   });
 });

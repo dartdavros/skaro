@@ -6,6 +6,7 @@ import { checkoutKey } from './task-stage';
 import type { TaskRunEngine } from './task-run-engine';
 import { ResourceAdmissionUnavailable } from './resource-manager';
 import { EnvironmentNotDispatched } from './environment-dispatch-error';
+import { inPlaceEnvironmentResult } from './task-environment-mode';
 
 /** `start_environment`: the agent of a task asks Skaro for running services. */
 export async function startTaskEnvironment(
@@ -18,6 +19,8 @@ export async function startTaskEnvironment(
   if (!active || active.run.id !== scope.runId) {
     return { text: 'This session is no longer the current run of the task.', isError: true };
   }
+  const shared = inPlaceEnvironmentResult(ctx.project(scope.projectId).root, active.run);
+  if (shared) return shared;
   try {
     const info = await ctx.environments.start(checkoutKey(active), { waitForResources: false });
     const { variables } = await ctx.environments.describe(checkoutKey(active));

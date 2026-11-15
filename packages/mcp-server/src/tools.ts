@@ -146,6 +146,8 @@ export function startEnvironmentTool(
   return {
     name: 'start_environment',
     description:
+      'For a run with an isolated worktree only. In-place runs use the shared main-copy ' +
+      'environment through the documented project commands; they need no task checkout. ' +
       "Start this task's own environment: the project's services running on the task's sources, " +
       'with a disposable copy of the data of the main environment (its existing accounts ' +
       'included). Call it when you need running services: before browser verification, for ' +
