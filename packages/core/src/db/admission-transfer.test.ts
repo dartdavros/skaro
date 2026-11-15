@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import { AppDb } from './appdb.ts';
 import type { ResourceBudget, ResourceCost } from '../resources/admission-model.ts';
 
-it('charges Docker disk reservations to their actual host filesystem as well as the VM pool', async () => {
+it('retains Docker/host cost metadata without enforcing capacity or FIFO', async () => {
   const root = await realpath(process.cwd());
   const info = await stat(join(root, 'package.json'));
   const volume = String(info.dev);
@@ -38,7 +38,7 @@ it('charges Docker disk reservations to their actual host filesystem as well as 
       locks: [],
     });
     const waiting = db.admission.admit(root, request.id, request.revision, budget);
-    expect(waiting.reason).toBe('budget_disk');
+    expect(waiting.reason).toBe('admitted');
     const host = db.admission.request({
       id: randomUUID(),
       projectId: root,
@@ -48,7 +48,7 @@ it('charges Docker disk reservations to their actual host filesystem as well as 
       cost: { ...cost, environment: 0, pools: {} },
       locks: [],
     });
-    expect(db.admission.admit(root, host.id, host.revision, budget).reason).toBe('older_request');
+    expect(db.admission.admit(root, host.id, host.revision, budget).reason).toBe('admitted');
     expect(
       db.admission.admit(root, request.id, waiting.revision, {
         ...budget,
@@ -99,7 +99,7 @@ it('conserves split reservations, binds a real observation and cancels without r
       ...budget,
       pools: {},
     });
-    expect(unknown.reason).toBe('unknown_pool:observation');
+    expect(unknown.reason).toBe('admitted');
     const granted = db.admission.admit(root, original.id, unknown.revision, budget);
     const work = { ...cost, review: 0 };
     const view = { ...cost, ramBytes: 0, build: 0, pools: {} };
@@ -168,7 +168,7 @@ it('conserves split reservations, binds a real observation and cancels without r
   }
 });
 
-it('keeps FIFO for competing builds while an admitted worker obtains an independent preview slot', async () => {
+it('dispatches independent builds and previews without global slot limits', async () => {
   const root = await realpath(process.cwd());
   const db = AppDb.open(':memory:');
   try {
@@ -203,12 +203,12 @@ it('keeps FIFO for competing builds while an admitted worker obtains an independ
     const running = db.admission.admit(root, first.id, first.revision, budget);
     const second = request(cost);
     const waiting = db.admission.admit(root, second.id, second.revision, budget);
-    expect(waiting.reason).toBe('budget_build');
+    expect(waiting.reason).toBe('admitted');
     const preview = request({ ...cost, build: 0, review: 1, environment: 1 });
     expect(db.admission.admit(root, preview.id, preview.revision, budget).state).toBe('granted');
     const third = request(cost);
     db.admission.release(root, running.id, running.revision, {}, 'read_completed');
-    expect(db.admission.admit(root, third.id, third.revision, budget).reason).toBe('older_request');
+    expect(db.admission.admit(root, third.id, third.revision, budget).reason).toBe('admitted');
     expect(db.admission.admit(root, waiting.id, waiting.revision, budget).state).toBe('granted');
   } finally {
     db.close();

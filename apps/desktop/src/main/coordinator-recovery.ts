@@ -2,6 +2,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { projectRecords } from './project-records';
 import { dispatchState } from './coordination-dispatch';
 import { continueResolvedIncident } from './incident-continuation';
+import { retireCapacityWait } from './resource-wait-retirement';
 /** Recovery observes actual conditions first; legacy prose never becomes a repair or resume intent. */
 export async function recoverCoordinatorIncidents(ctx: TaskRunEngine) {
   for await (const project of projectRecords(ctx.deps.db)) {
@@ -10,6 +11,7 @@ export async function recoverCoordinatorIncidents(ctx: TaskRunEngine) {
     for (const row of ctx.incidents.store.list(project.id)) {
       if (ctx.closing) return;
       try {
+        if (await retireCapacityWait(ctx, row)) continue;
         if (row.state === 'open') await ctx.incidents.reconcile(project.id, row.id);
         else if (row.state === 'resolved') await continueResolvedIncident(ctx, row);
       } catch (error) {

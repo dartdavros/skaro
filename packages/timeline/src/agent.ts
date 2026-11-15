@@ -13,6 +13,8 @@ export interface UserInput {
   text: string;
   /** Absolute paths of attached images. */
   images?: string[];
+  /** Narrow delivery to an existing active turn; never start/resume one if it ended before admission. */
+  onlyActiveTurn?: boolean;
 }
 
 export type McpServer = (

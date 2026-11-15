@@ -1,10 +1,11 @@
-import type { TimelineState } from '@skaro/timeline';
+import { operationTimeout, type TimelineState } from '@skaro/timeline';
 import type { Events, EventName } from '../shared/ipc';
 import type { HistorySource, HistoryView, HistoryOrigin } from '../shared/history';
 import { background } from './background/client';
 import { captureHistory, uploadHistory } from './history-upload';
 import { TaskHistoryReads } from './history-task-reads';
 import { HISTORY_VERSION } from '../shared/history';
+import { chatC4Timeline } from './chat-c4-timeline';
 
 /** Serialize read-model updates per conversation, independently of command delivery. */
 export class HistoryReads {
@@ -92,7 +93,19 @@ export class HistoryReads {
   private async initial(view: HistoryView): Promise<HistoryView> {
     const last = Math.floor(Math.max(0, view.source.count - 1) / 16) * 16;
     const page = await this.page(view.source, Math.max(0, last - 16), 32);
-    return { ...view, page };
+    return this.projectChat({ ...view, page });
+  }
+  private async projectChat(view: HistoryView): Promise<HistoryView> {
+    const owner = /^([^:]+):chat:([^:]+)$/.exec(view.source.owner);
+    if (!owner) return view;
+    const projectId = owner[1]!;
+    const chatId = owner[2]!;
+    const records = await operationTimeout(
+      background(this.dataDir, 'c4.list', projectId, chatId),
+      5000,
+      'Project chat decision projection timed out',
+    );
+    return { ...view, timeline: chatC4Timeline(projectId, chatId, view.timeline, records) };
   }
   observe<E extends EventName>(name: E, value: Events[E]): void {
     this.tasks.observe(name, value);
@@ -115,7 +128,7 @@ export class HistoryReads {
       );
       if (!view) return;
       this.sequences.set(owner, next);
-      this.emit('history.changed', { owner, view });
+      this.emit('history.changed', { owner, view: await this.projectChat(view) });
     }).catch((error: unknown) => {
       console.error('History read model:', error);
       this.sequences.delete(owner);

@@ -115,7 +115,7 @@ export class DbResourceAdmission extends DbTable {
       .run(JSON.stringify(next), lease.id, lease.projectId);
     return rememberLiveResourceGrant(this.db, next);
   }
-  admit(project: string, id: string, revision: number, budget: ResourceBudget): ResourceLease {
+  admit(project: string, id: string, revision: number, budget?: ResourceBudget): ResourceLease {
     return this.atomic(() => {
       const lease = this.required(project, id, revision);
       const resources = new DbResources(this.db, this.now);
@@ -146,7 +146,7 @@ export class DbResourceAdmission extends DbTable {
       const reason = resourceAdmissionReason(lease, this.all(), budget, this.now());
       const result = this.write(
         lease,
-        reason ? (reason.startsWith('account_') ? 'waiting_quota' : 'waiting_resource') : 'granted',
+        reason ? 'waiting_resource' : 'granted',
         reason ?? 'admitted',
       );
       if (!reason)

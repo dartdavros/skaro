@@ -31,7 +31,6 @@ import { taskEnvironmentFinished } from './task-environment-finished';
 import { TaskRunContinuation } from './task-run-continuation';
 import { TaskResourceCleanup } from './task-resource-cleanup';
 import { executeResourceQueue } from './resource-task-queue';
-import { resourcesFor } from './resource-execution';
 import { LocalCandidates } from './local-candidates';
 import { TaskIncidents } from './task-incidents';
 import { captureStartupIncident } from './incident-startup';
@@ -73,7 +72,7 @@ export class TaskRunEngine {
   readonly handoff = new TaskRunHandoff(this);
   readonly processes: TaskRunProcesses;
   readonly architecture: C4TaskCoordination;
-  constructor(deps: TaskRunDeps, slots = 3) {
+  constructor(deps: TaskRunDeps) {
     this.deps = deps;
     this.architecture = new C4TaskCoordination(this);
     this.processes = new TaskRunProcesses(deps.db);
@@ -95,8 +94,6 @@ export class TaskRunEngine {
       removeEnvironment: (projectId, taskId) => this.removeEnvironment({ projectId, taskId }),
     });
     this.queue = new RunQueue({
-      slots,
-      externalAdmission: !!resourcesFor(deps.db),
       canRun: () => undefined,
       blocked: (key) => {
         if (isReviewQueueKey(key)) return this.reviews.blocked(key);

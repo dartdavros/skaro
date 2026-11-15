@@ -1,0 +1,79 @@
+.fd-turn-files {
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  border: 1px solid var(--sk-fill-27);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--sk-text-reply);
+}
+
+.fd-turn-files .line {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 6px 0 7px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fd-turn-files .line:hover {
+  background: var(--sk-surface);
+}
+
+.fd-turn-files .icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  margin-right: 6px;
+  color: var(--sk-diff-icon);
+}
+
+.fd-turn-files .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-turn-files .counts {
+  flex: none;
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 12px;
+}
+
+.fd-turn-files .plus {
+  color: var(--sk-diff-plus);
+}
+
+.fd-turn-files .minus {
+  color: var(--sk-diff-minus);
+}
+
+.fd-turn-files .chevron {
+  flex: none;
+  display: inline-flex;
+  margin-left: 10px;
+  color: var(--sk-diff-chevron);
+}
+
+.fd-turn-files .more-files {
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  margin-top: 3px;
+  border-top: 1px solid var(--sk-fill-27);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  color: var(--sk-text-21);
+  font-size: var(--sk-fs-3);
+}

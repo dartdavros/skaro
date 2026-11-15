@@ -33,7 +33,6 @@ export function sessionHandlers(
   | keyof import('../shared/c4-review').C4ReviewMethods
   | keyof import('../shared/task-catalog').TaskCatalogMethods
   | 'tasks.list'
-  | 'tasks.slots'
   | 'tasks.run'
   | 'tasks.archive'
   | 'tasks.delete'
@@ -130,7 +129,6 @@ export function sessionHandlers(
       'tasks.selected': (projectId, ids) => runs.catalog.selected(projectId, ids),
       'tasks.reorder': (source, id, column, index) =>
         runs.catalog.reorder(source, id, column, index),
-      'tasks.slots': () => runs.slots(),
       'tasks.run': (projectId, ids, message, assignment) =>
         runs.launch(projectId, ids, message, assignment),
       'tasks.archive': (projectId, ids, archived) => board.archive(projectId, ids, archived),

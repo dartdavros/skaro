@@ -6,7 +6,6 @@ import { taskSettings, detail, emit, boardChanged } from './bridge-state';
 
 export const tasksHandlers = {
   'tasks.list': () => tasks.map((t) => ({ ...t })),
-  'tasks.slots': () => ({ total: 3, free: 1 }),
   'tasks.run': (projectId, ids) => boardChanged(projectId, () => board.run(ids)),
   'tasks.archive': (projectId, ids, archived) =>
     boardChanged(projectId, () => board.archive(ids, archived)),
@@ -58,7 +57,6 @@ export const tasksHandlers = {
         }),
     seq: 0,
     queued: false,
-    slotsFree: true,
     sandboxHolds: false,
   }),
   'task.send': () => undefined,
@@ -71,7 +69,6 @@ export const tasksHandlers = {
 } satisfies Pick<
   PreviewHandlers,
   | 'tasks.list'
-  | 'tasks.slots'
   | 'tasks.run'
   | 'tasks.archive'
   | 'tasks.delete'

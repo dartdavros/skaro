@@ -1,0 +1,49 @@
+.limit-gauge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.limit-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: 220px;
+  max-width: calc(100vw - 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 7px;
+  background: var(--sk-fill-1);
+  box-shadow: 0 10px 26px var(--sk-black-a60);
+  color: var(--sk-text);
+  font-size: var(--sk-fs-3);
+  pointer-events: none;
+}
+
+.limit-tooltip-title {
+  color: var(--sk-text-21);
+  font-size: var(--sk-fs-2);
+  font-weight: 600;
+}
+
+.limit-tooltip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.limit-tooltip-percent {
+  color: var(--sk-text-1);
+  font-family: var(--sk-mono);
+  font-weight: 600;
+}
+
+.limit-tooltip-empty {
+  color: var(--sk-text-21);
+  line-height: 1.4;
+}

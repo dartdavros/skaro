@@ -197,23 +197,20 @@ export async function createServices(
     setting: (key) => (options.silentVerification ? false : appState.getSetting(key)),
     locale: () => appState.getLocale(app.getLocale()),
   });
-  const runs: TaskRuns = new TaskRuns(
-    {
-      coordinators,
-      notify: (kind, text, title) => notifier.notify(kind, text, title),
-      db,
-      dataDir,
-      projects,
-      agents,
-      attachments,
-      mcp,
-      emit,
-      locale: () => appState.getLocale(app.getLocale()),
-      ...(options.builtinEntries ? { builtinEntries: options.builtinEntries } : {}),
-      ...(models.builtinSessions ? { builtinSessions: models.builtinSessions } : {}),
-    },
-    Number(appState.getSetting('runs.slots')) || 3,
-  );
+  const runs: TaskRuns = new TaskRuns({
+    coordinators,
+    notify: (kind, text, title) => notifier.notify(kind, text, title),
+    db,
+    dataDir,
+    projects,
+    agents,
+    attachments,
+    mcp,
+    emit,
+    locale: () => appState.getLocale(app.getLocale()),
+    ...(options.builtinEntries ? { builtinEntries: options.builtinEntries } : {}),
+    ...(models.builtinSessions ? { builtinSessions: models.builtinSessions } : {}),
+  });
   runs.limitEnvironments();
   const localVersions = new LocalVersions(db, projects, dataDir, (project, integration) =>
     runs.localCandidates.verify(project, integration),

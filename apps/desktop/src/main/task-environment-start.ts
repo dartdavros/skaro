@@ -17,7 +17,7 @@ import { environmentReadinessProblems } from './task-environment-readiness';
 import { EnvironmentCommandFailed, EnvironmentNotDispatched } from './environment-dispatch-error';
 
 export interface EnvironmentStartOptions {
-  /** Worker tools checkpoint instead of retaining a model while waiting for physical capacity. */
+  /** Whether to wait for a concrete ownership/cleanup conflict; never physical capacity. */
   waitForResources?: boolean;
   signal?: AbortSignal;
   processStarted?: (pid: number) => void | Promise<void>;

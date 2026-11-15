@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { open } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { cacheBudget } from './resource-cache-policy';
 import { cacheDirectory, canonicalCachePath } from './managed-cache-files';
 import type { ManagedCacheStore, ManagedArtifact } from './managed-cache-store';
 import type { LockedTarball } from './managed-dependency-provenance';
@@ -9,12 +8,11 @@ import { npmArchiveExpansion, npmExpansionFits } from './managed-npm-archive';
 import { readNpmArchive } from './managed-npm-archive-reader';
 import { resourceExecution } from './resource-execution';
 
-/** Public streamed SHA512 CAS publication; capacity and bounded archive expansion precede sealing. */
+/** Public streamed SHA512 CAS publication; integrity and bounded archive expansion precede sealing. */
 export async function downloadManagedTarball(
   store: ManagedCacheStore,
   entry: ManagedArtifact,
   tarball: LockedTarball,
-  reservedBytes: number,
   sweep: (entries: number, bytes: number) => Promise<void>,
   options?: { path: string; runtime?: boolean; inventory?: 'pnpm-payload' },
 ) {
@@ -29,17 +27,10 @@ export async function downloadManagedTarball(
     throw new Error('managed_dependencies_public_download_failed');
   try {
     const length = Number(response.headers.get('content-length'));
-    const limit = Math.min(
-      cacheBudget(store.db, 'dependencies').bytes,
-      reservedBytes,
-      256 * 1024 ** 2,
-    );
+    const limit = 256 * 1024 ** 2; // Per-archive download safety bound, independent of retention targets.
     const expected = Number.isSafeInteger(length) && length > 0 ? length : limit;
-    if (expected > limit) throw new Error('managed_dependencies_download_budget_exceeded');
+    if (expected > limit) throw new Error('managed_dependencies_download_safety_limit');
     await sweep(0, expected);
-    const remaining =
-      Math.min(cacheBudget(store.db, 'dependencies').bytes, reservedBytes) -
-      store.artifacts().reduce((sum, x) => sum + x.bytes, 0);
     const path =
       options?.path ??
       join(
@@ -59,8 +50,7 @@ export async function downloadManagedTarball(
     try {
       for await (const chunk of response.body) {
         bytes += chunk.length;
-        if (bytes > Math.min(remaining, limit))
-          throw new Error('managed_dependencies_download_budget_exceeded');
+        if (bytes > limit) throw new Error('managed_dependencies_download_safety_limit');
         hash.update(chunk);
         await file.writeFile(chunk);
       }

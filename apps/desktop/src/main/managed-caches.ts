@@ -107,15 +107,6 @@ export class ManagedCaches {
             this.store.builders().find((x) => x.projectId === projectId)?.image,
             client,
           );
-          const incoming = this.store.builders().some((x) => x.projectId === projectId) ? 0 : 1;
-          const budget = cacheBudget(this.store.db, 'buildkit');
-          if (
-            !budget.entries ||
-            !budget.bytes ||
-            this.store.builders().length + incoming > budget.entries
-          )
-            throw new Error('managed_buildkit_builder_entries_budget_retained');
-          await this.sweepBuilders(incoming, plan);
           return this.execution.admitted(
             projectId,
             'buildkit',
@@ -124,18 +115,6 @@ export class ManagedCaches {
               this.store.serial(async () => {
                 this.currentBudget('buildkit', budget);
                 this.currentInventory(plan);
-                const entries = this.store.builders(),
-                  share = Math.floor(budget.bytes / Math.max(1, entries.length + incoming));
-                if (
-                  entries.some(
-                    (x) =>
-                      x.state !== 'ready' ||
-                      x.bytes === undefined ||
-                      x.bytes > share ||
-                      this.store.db.resources.cleanup.read(x.resourceId),
-                  )
-                )
-                  throw new Error('managed_buildkit_global_inventory_or_budget_retained');
                 await selected.requireCurrent();
                 return this.buildkit.build(
                   projectId,
@@ -172,21 +151,9 @@ export class ManagedCaches {
       throw new Error('managed_cache_policy_changed_retry');
   }
   private async sweepBuilders(incoming = 0, plan = this.inventory()) {
-    const entries = this.store.builders(),
-      share = Math.floor(
-        cacheBudget(this.store.db, 'buildkit').bytes / Math.max(1, entries.length + incoming),
-      );
+    const entries = this.store.builders();
     for (const entry of entries) {
-      if (!this.store.scoped(entry.projectId)) {
-        if (
-          entry.state !== 'ready' ||
-          entry.bytes === undefined ||
-          entry.bytes > share ||
-          this.store.db.resources.cleanup.read(entry.resourceId)
-        )
-          throw new Error('managed_buildkit_other_project_budget_retained');
-        continue;
-      }
+      if (!this.store.scoped(entry.projectId)) continue;
       const project = this.store.db.getProject(entry.projectId);
       if (!project) throw new Error('managed_buildkit_project_metadata_unavailable');
       await this.execution.admitted(entry.projectId, 'buildkit', project.path, (budget) =>
@@ -198,8 +165,6 @@ export class ManagedCaches {
       );
     }
     this.currentInventory(plan);
-    if (entries.length > cacheBudget(this.store.db, 'buildkit').entries)
-      throw new Error('managed_buildkit_builder_retirement_requires_explicit_reconciliation');
   }
   async sweep(): Promise<void> {
     if (this.closed) return;

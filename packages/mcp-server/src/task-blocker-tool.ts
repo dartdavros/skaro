@@ -1,5 +1,6 @@
 import type { Tool, ToolResult } from './server.ts';
 import type { SkaroScope } from './tools.ts';
+import type { ToolCallContext } from './tool-call-identity.ts';
 import { INCIDENT_CAUSES, type IncidentCause, type IncidentProtocol } from '@skaro/core';
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -10,7 +11,12 @@ export interface TaskBlockerDetails {
 
 /** A real external blocker is a durable execution state, not an empty question. */
 export function taskBlockerTool(
-  handler: (reason: string, scope: SkaroScope, details?: TaskBlockerDetails) => Promise<ToolResult>,
+  handler: (
+    reason: string,
+    scope: SkaroScope,
+    details?: TaskBlockerDetails,
+    context?: ToolCallContext,
+  ) => Promise<ToolResult>,
 ): Tool<SkaroScope> {
   return {
     name: 'report_task_blocker',
@@ -21,6 +27,9 @@ export function taskBlockerTool(
       'Do not repeatedly repair a shared resource or poll the model while blocked. This does not accept criteria, ' +
       'complete or merge the task. Missing owner decisions use the blocking question tool instead. ' +
       'Missing owner API keys/passwords use request_secret; its protected question is the waiting state. ' +
+      'Claim registration only after a successful recorded acknowledgement. A queued or uncertain ' +
+      'operation is not a recorded blocker; inspect the actual project incident state instead of ' +
+      'inventing confirmation or blindly repeating an unknown effect. ' +
       'Ordinary chat follow-ups already suspend automatic continuation; answer a question and end ' +
       'the turn without inventing a task blocker. An explicit owner pause may be recorded here.',
     inputSchema: {
@@ -39,7 +48,7 @@ export function taskBlockerTool(
       additionalProperties: false,
     },
     available: (scope) => scope.kind === 'task' && !!scope.taskId,
-    call: async (args, scope) => {
+    call: async (args, scope, context) => {
       if (
         scope.kind !== 'task' ||
         !scope.taskId ||
@@ -83,6 +92,7 @@ export function taskBlockerTool(
                 ? { condition: args['condition'] as IncidentProtocol['condition'] }
                 : {}),
             },
+        context,
       );
     },
   };

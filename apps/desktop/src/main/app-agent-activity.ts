@@ -14,10 +14,9 @@ export function agentActivity(db: AppDb, runs: TaskRuns, chats: ChatSessions): A
   const chat = chats.activity();
   const working = tasks.running + chat.working + runs.publicationAgents();
   const waiting = tasks.waiting + chat.waiting;
-  const slots = runs.slots();
   return {
     working,
     waiting,
-    busy: working + waiting + tasks.queued > 0 || slots.free < slots.total,
+    busy: working + waiting + tasks.queued > 0 || runs.updateBusy(),
   };
 }

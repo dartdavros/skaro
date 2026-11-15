@@ -70,7 +70,6 @@ describe('explicit update application guard', () => {
       'task.open',
       'chat.open',
       'tasks.query',
-      'tasks.slots',
       'agents.list',
       'projects.overview',
       'incidents.list',

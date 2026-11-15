@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { withSkaroNote, withoutSkaroNote } from './feed-input.ts';
 import { feedRows } from './feed.ts';
 import { emptyTimeline, Timeline } from './state.ts';
+import type { Item } from './model.ts';
 
 it('hides every leading service note in live and restored messages without changing canonical input', () => {
   const text = withSkaroNote(
@@ -39,4 +40,30 @@ it('keeps an incomplete owner block after removing complete leading notes', () =
   const owner = '<skaro-note>unfinished owner example';
   expect(withoutSkaroNote(withSkaroNote('delivery', owner))).toBe(owner);
   expect(withoutSkaroNote(owner)).toBe(owner);
+});
+
+it('hides host-only decision feedback without hiding the real owner message', () => {
+  const state = emptyTimeline();
+  const input: Extract<Item, { kind: 'message' }> = {
+    id: 'context-only-input',
+    turnId: 'active-turn',
+    kind: 'message',
+    role: 'user',
+    text: withSkaroNote('context_update: c4\nPackage applied.', ''),
+    status: 'done',
+    startedAt: 0,
+    native: { agent: 'codex', type: 'userMessage', ref: 'context-only-input' },
+  };
+  state.items.push(input);
+  const rows = feedRows(state);
+  expect(rows[0]?.type === 'user' && rows[0].hidden).toBe(true);
+  state.items[0] = { ...input, text: withSkaroNote('command_id: host-feedback', input.text) };
+  const wrappedRows = feedRows(state);
+  expect(wrappedRows[0]?.type === 'user' && wrappedRows[0].hidden).toBe(true);
+  state.items[0] = {
+    ...input,
+    text: withSkaroNote('context_update: c4\nPackage applied.', 'Owner instruction'),
+  };
+  const ownerRows = feedRows(state);
+  expect(ownerRows[0]?.type === 'user' && ownerRows[0].hidden).toBeUndefined();
 });

@@ -12,6 +12,7 @@ import { RuntimeHostServer, requireModelBaseline } from '@skaro/agent-runtime';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
 import { requireNativeSessionHost, type NativeSessionHost } from './host-binding';
 import { NativeResources, resourceMethod } from './resources';
+import { NativeIdleCleanup } from './idle-cleanup';
 
 const workers = new Set<NativeSession>();
 let closing = false;
@@ -21,7 +22,7 @@ class NativeSession implements AgentSession {
   private readonly worker: Worker;
   private readonly options: SessionOptions;
   private readonly resources: NativeResources;
-  private idleTimer?: NodeJS.Timeout;
+  private readonly idleCleanup: NativeIdleCleanup;
   private readonly processes: OwnedProcess[] = [];
   private readonly pending = new Map<
     number,
@@ -48,6 +49,11 @@ class NativeSession implements AgentSession {
     this.bundled = 'bundled' in config;
     this.options = options;
     this.resources = resources;
+    this.idleCleanup = new NativeIdleCleanup(
+      () => this.resources.idle,
+      () => this.close(),
+    );
+    this.resources.onIdle(() => this.idleCleanup.observe());
     this.hosts = new RuntimeHostServer(
       host,
       (reply) => this.worker.postMessage(reply),
@@ -122,14 +128,7 @@ class NativeSession implements AgentSession {
         ((reply.event.t === 'turn.completed' && !reply.event.continuing) ||
           (reply.event.t === 'item.upsert' && reply.event.item.kind === 'command'))
       ) {
-        clearTimeout(this.idleTimer);
-        this.idleTimer = setTimeout(() => {
-          if (this.resources.idle)
-            void this.close().catch((error: unknown) =>
-              console.error('Idle native cleanup:', error),
-            );
-        }, 30000);
-        this.idleTimer.unref();
+        this.idleCleanup.observe();
       }
     } else if (reply.type === 'ended') {
       if (reply.error) this.fail(new Error(reply.error));
@@ -152,7 +151,10 @@ class NativeSession implements AgentSession {
       void this.close().catch((failure: unknown) => console.error('Native cleanup:', failure));
   }
   async call<T = void>(method: SessionMethod | 'start', args: unknown[] = []): Promise<T> {
-    await this.resources.before(method);
+    const input = args[0] as import('@skaro/timeline').UserInput | undefined;
+    const activeOnlyInput =
+      ['send', 'steer', 'deliverInput'].includes(method) && input?.onlyActiveTurn === true;
+    if (!(await this.resources.before(method, activeOnlyInput))) return undefined as T;
     if (resourceMethod(method)) {
       try {
         await this.requireOwner(new AbortController().signal);
@@ -193,7 +195,7 @@ class NativeSession implements AgentSession {
   close(): Promise<void> {
     if (this.stopping) return this.stopping;
     this.resources.stop();
-    clearTimeout(this.idleTimer);
+    this.idleCleanup.stop();
     const extensionsClosed = this.hosts.close();
     void extensionsClosed?.catch(() => undefined);
     this.stopping = (async () => {

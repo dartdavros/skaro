@@ -37,7 +37,19 @@ export class IncidentStore {
     subscription: IncidentSubscription,
     evidence: string,
     source: 'worker' | 'controller',
+    reportOperationId?: string,
   ) {
+    const admitted = reportOperationId
+      ? this.db.coordination.getOperation(projectId, reportOperationId)
+      : undefined;
+    if (
+      reportOperationId &&
+      (admitted?.action !== 'mcp.report_task_blocker' ||
+        admitted.state !== 'dispatching' ||
+        admitted.subject.kind !== 'task' ||
+        admitted.subject.id !== subscription.taskId)
+    )
+      throw new Error('Blocker report is outside its admitted task operation');
     const fingerprint = incidentIdentity(projectId, subject.id, protocol);
     const open = this.list(projectId).find(
       (b) => b.inputHash === fingerprint && b.state === 'open',
@@ -65,6 +77,31 @@ export class IncidentStore {
       });
     }
     const id = randomUUID();
+    const create = (eventId: string) =>
+      this.db.coordination.blockers.create({
+        id,
+        projectId,
+        eventId,
+        category:
+          protocol.cause === 'rate-limit'
+            ? 'quota'
+            : protocol.cause === 'context'
+              ? 'resource'
+              : protocol.cause,
+        subject,
+        inputHash: fingerprint,
+        resolution: {
+          code: protocol.condition,
+          refs: [subject],
+          fingerprint: incidentHash(evidence),
+        },
+        subscribers: [{ kind: 'task', id: subscription.taskId }],
+        protocol: { ...protocol, subscriptions: [subscription] },
+      });
+    if (admitted) {
+      // Already admitted by coordinatedTools; do not create a second queue/claim to record it.
+      return create(admitted.eventId);
+    }
     return this.coordinators.execute(
       {
         id: `incident:${id}`,
@@ -85,26 +122,7 @@ export class IncidentStore {
             subscriptions: incidentSubscribers(concurrent.protocol!.subscriptions, subscription),
           });
         const operation = this.db.coordination.getOperation(projectId, `incident:${id}`)!;
-        return this.db.coordination.blockers.create({
-          id,
-          projectId,
-          eventId: operation.eventId,
-          category:
-            protocol.cause === 'rate-limit'
-              ? 'quota'
-              : protocol.cause === 'context'
-                ? 'resource'
-                : protocol.cause,
-          subject,
-          inputHash: fingerprint,
-          resolution: {
-            code: protocol.condition,
-            refs: [subject],
-            fingerprint: incidentHash(evidence),
-          },
-          subscribers: [{ kind: 'task', id: subscription.taskId }],
-          protocol: { ...protocol, subscriptions: [subscription] },
-        });
+        return create(operation.eventId);
       },
     );
   }

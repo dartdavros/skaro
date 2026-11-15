@@ -129,6 +129,10 @@ export function taskInstructions(options: {
           'updates task statuses. Each task is merged independently after its own accepted result; ' +
           'do not wait for every task of its milestone. There is no separate milestone agent or chat. Never merge into ' +
           'the base branch yourself. Report review as awaiting merge, and done only after confirmed publication.',
+        '- Unrelated uncommitted work in the main copy is not a reason to stop publication of your ' +
+          'verified result. Use Skaro merge and immutable candidate/release operations with exact inputs; ' +
+          'preserve unrelated files and staging. If paths overlap, use the existing local-change resolver. ' +
+          "Do not require a globally clean main copy, stash, commit or remove another task's work.",
         '- After submit_result, automatic mode merges this accepted task; manual mode shows a confirmation card in a real task chat. ' +
           'If Skaro reports that publication succeeded, ' +
           'do not call merge_task again to confirm it.',

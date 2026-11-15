@@ -1,26 +1,23 @@
 import { expect, it } from 'vitest';
 import { AppDb } from '@skaro/core';
 import { resolve } from 'node:path';
-import { ResourceManager, ResourceAdmissionUnavailable } from './resource-manager';
-import { applicationResourceMeasurements } from './resource-measurements';
+import { ResourceManager } from './resource-manager';
+import { ApplicationResources } from './application-resources';
 import { RESOURCE_POLICY_KEY } from './resource-policy';
 
-it('cancels only the still-waiting cache request after one actual host/SQLite admission decision', async () => {
+it('dispatches cache work regardless of a zero configured build capacity', async () => {
   const db = AppDb.open(':memory:');
   const project = db.addProject({
     name: 'Current repository admission metadata',
     path: resolve('.'),
   });
   db.setSetting(RESOURCE_POLICY_KEY, { build: 0 });
-  const manager = new ResourceManager(
-    db,
-    () => applicationResourceMeasurements(db, new Set(), new Set([resolve('.')]), false),
-    (lease) =>
-      db.addEvent(lease.projectId, 'resource_admission', {
-        id: lease.id,
-        state: lease.state,
-        reason: lease.reason,
-      }),
+  const manager = new ResourceManager(db, (lease) =>
+    db.addEvent(lease.projectId, 'resource_admission', {
+      id: lease.id,
+      state: lease.state,
+      reason: lease.reason,
+    }),
   );
   try {
     const request = {
@@ -40,40 +37,30 @@ it('cancels only the still-waiting cache request after one actual host/SQLite ad
       },
       locks: [],
     };
-    await expect(
-      manager.acquire(request, {
-        signal: new AbortController().signal,
-        wait: false,
-        requireCurrent: () => {
-          if (!db.getProject(project.id)) throw new Error('project removed');
-        },
-      }),
-    ).rejects.toMatchObject({
-      name: 'Error',
-      message: 'resource_admission_unavailable',
-      reason: 'budget_build',
-    } satisfies Partial<ResourceAdmissionUnavailable>);
-    const current = db.admission.get(project.id, request.id)!;
-    expect(current.state).toBe('cancelled');
-    expect(current.reason).toBe('budget_build');
-    expect(db.admission.all().some((x) => ['granted', 'retained'].includes(x.state))).toBe(false);
+    const lease = await manager.acquire(request, {
+      signal: new AbortController().signal,
+      wait: false,
+      requireCurrent: () => {
+        if (!db.getProject(project.id)) throw new Error('project removed');
+      },
+    });
+    expect(lease.state).toBe('granted');
+    expect(manager.waiting(project.id, request.ownerId)).toBeUndefined();
+    manager.release(lease, 'metadata_observation_finished');
   } finally {
     await manager.close();
     db.close();
   }
 });
 
-it('keeps the default admitted path and exact release evidence unchanged with real measurements', async () => {
+it('keeps the default admitted path and exact release evidence without measurement prerequisites', async () => {
   const db = AppDb.open(':memory:');
   const project = db.addProject({
     name: 'Current repository default admission',
     path: resolve('.'),
   });
-  const manager = new ResourceManager(
-    db,
-    () => applicationResourceMeasurements(db, new Set(), new Set([resolve('.')]), false),
-    (lease) =>
-      db.addEvent(lease.projectId, 'resource_admission', { id: lease.id, state: lease.state }),
+  const manager = new ResourceManager(db, (lease) =>
+    db.addEvent(lease.projectId, 'resource_admission', { id: lease.id, state: lease.state }),
   );
   try {
     const lease = await manager.acquire(
@@ -106,6 +93,53 @@ it('keeps the default admitted path and exact release evidence unchanged with re
     expect(db.admission.get(project.id, lease.id)?.state).toBe('released');
   } finally {
     await manager.close();
+    db.close();
+  }
+});
+
+it('retires unstarted leases on restart and admits only a fresh current owner despite cached quota', async () => {
+  const db = AppDb.open(':memory:');
+  const root = resolve('.');
+  const project = db.addProject({ name: 'Current repository restart observation', path: root });
+  const request = (id: string) => ({
+    id,
+    projectId: project.id,
+    ownerId: 'owner',
+    intentId: id,
+    account: 'account',
+    checkpoint: 'model',
+    cost: {
+      ramBytes: 1,
+      cpuMillis: 1,
+      model: 1,
+      environment: 1,
+      build: 1,
+      review: 1,
+      diskBytes: {},
+    },
+    locks: [],
+  });
+  const old = db.admission.request(request('old-waiter'));
+  const stopped = db.admission.request(request('stopped-owner'));
+  db.admission.stop(project.id, stopped.id, stopped.revision);
+  db.setSetting('resources.accountLimits', { account: { exhausted: true } });
+  db.setSetting(RESOURCE_POLICY_KEY, { model: 0, environment: 0, build: 0, review: 0 });
+  const resources = new ApplicationResources(db, root);
+  try {
+    expect(db.admission.get(project.id, old.id)?.state).toBe('cancelled');
+    expect(db.admission.get(project.id, stopped.id)?.state).toBe('stopped_by_owner');
+    const lease = await resources.manager.acquire(request('fresh-intent'), {
+      signal: new AbortController().signal,
+      requireCurrent: () => {
+        if (!db.getProject(project.id)) throw new Error('Project removed');
+      },
+    });
+    expect(lease.state).toBe('granted');
+    resources.manager.release(lease, 'metadata_observation_finished');
+    expect(db.admission.get(project.id, old.id)?.state).toBe('cancelled');
+    expect(db.admission.get(project.id, stopped.id)?.state).toBe('stopped_by_owner');
+  } finally {
+    await resources.close();
     db.close();
   }
 });

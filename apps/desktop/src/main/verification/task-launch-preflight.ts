@@ -25,7 +25,6 @@ export async function verifyTaskLaunchPreflight(services: Services) {
     runs: services.db.listRuns(projectId, task.id),
     startup: services.db.getSetting(startup, null),
     review: services.db.getSetting(review, null),
-    slots: services.runs.slots(),
   };
   assert.equal(before.runs.length, 0);
   assert.equal(before.startup, null);
@@ -69,7 +68,6 @@ export async function verifyTaskLaunchPreflight(services: Services) {
   assert.deepEqual(services.db.listRuns(projectId, task.id), before.runs);
   assert.deepEqual(services.db.getSetting(startup, null), before.startup);
   assert.deepEqual(services.db.getSetting(review, null), before.review);
-  assert.deepEqual(services.runs.slots(), before.slots);
   assert.deepEqual(services.modelConfiguration.read(), configuration);
   return {
     project: 'Cat-pilot',

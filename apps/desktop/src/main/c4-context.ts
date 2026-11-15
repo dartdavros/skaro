@@ -63,30 +63,45 @@ export async function c4Context(
           '0',
         ),
         packages: await Promise.all(
-          records.slice(-30).map(async ({ item, package: pkg, fileIndex }) => ({
-            id: item.id,
-            title: pkg.title,
-            state: item.state,
-            error: item.result?.error,
-            baseRevision: pkg.baseRevision,
-            files:
-              ['pending', 'accepted'].includes(item.state) && readPackage
-                ? (await readPackage(item.id)).files.map((f) => ({
-                    path: f.path,
-                    beforeHash: f.before === null ? null : c4Hash(f.before),
-                    afterHash: c4Hash(f.after),
-                    content: f.path.endsWith('.json') ? f.after : authoredBody(f.after),
-                  }))
-                : (fileIndex ??
-                  pkg.files.map((f) => ({
-                    path: f.path,
-                    beforeHash: f.before === null ? null : c4Hash(f.before),
-                    afterHash: c4Hash(f.after),
-                    ...(['pending', 'accepted'].includes(item.state)
-                      ? { content: f.path.endsWith('.json') ? f.after : authoredBody(f.after) }
-                      : {}),
-                  }))),
-          })),
+          records
+            .filter(
+              (record, index) =>
+                ['pending', 'accepted'].includes(record.item.state) || index >= records.length - 30,
+            )
+            .map(async ({ item, package: pkg, fileIndex, scope: owner }) => ({
+              id: item.id,
+              title: pkg.title,
+              state: item.state,
+              owner: {
+                kind: owner.kind,
+                ...(owner.chatId ? { chatId: owner.chatId } : {}),
+                ...(owner.taskId ? { taskId: owner.taskId, runId: owner.runId } : {}),
+              },
+              inCurrentConversation:
+                owner.kind === scope.kind &&
+                (scope.kind === 'project_chat'
+                  ? owner.chatId === scope.chatId
+                  : owner.taskId === scope.taskId && owner.runId === scope.runId),
+              error: item.result?.error,
+              baseRevision: pkg.baseRevision,
+              files:
+                ['pending', 'accepted'].includes(item.state) && readPackage
+                  ? (await readPackage(item.id)).files.map((f) => ({
+                      path: f.path,
+                      beforeHash: f.before === null ? null : c4Hash(f.before),
+                      afterHash: c4Hash(f.after),
+                      content: f.path.endsWith('.json') ? f.after : authoredBody(f.after),
+                    }))
+                  : (fileIndex ??
+                    pkg.files.map((f) => ({
+                      path: f.path,
+                      beforeHash: f.before === null ? null : c4Hash(f.before),
+                      afterHash: c4Hash(f.after),
+                      ...(['pending', 'accepted'].includes(item.state)
+                        ? { content: f.path.endsWith('.json') ? f.after : authoredBody(f.after) }
+                        : {}),
+                    }))),
+            })),
         ),
         ...(baseHead
           ? {

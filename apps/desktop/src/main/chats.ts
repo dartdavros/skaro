@@ -31,6 +31,7 @@ import { ChatEngine } from './chat-engine';
 import { chatDecisionSources } from './chat-decision-sources';
 import { clearChat } from './chat-clear';
 import { historyText, historyPage } from './task-history-context';
+import { publishChatArchitecture } from './chat-architecture';
 export { titleOf } from './chat-settings-helpers';
 export { projectContextText } from './chat-context-text';
 
@@ -45,21 +46,7 @@ export class ChatSessions implements ProjectToolHandlers {
   ): Promise<void> {
     if (!scope.chatId) throw new Error('Missing architecture chat');
     const live = await this.engine.history.restore(scope.projectId, scope.chatId);
-    const previous = live.timeline.state.items.find((i) => i.id === item.id);
-    if (
-      previous?.kind === 'proposal' &&
-      previous.proposal.type === 'architecture' &&
-      item.proposal.type === 'architecture' &&
-      previous.proposal.packageId === item.proposal.packageId &&
-      previous.state === item.state &&
-      previous.result?.error === item.result?.error &&
-      previous.proposal.contentRef === item.proposal.contentRef
-    )
-      return;
-    this.engine.history.skaroEvent(live, {
-      t: 'item.upsert',
-      item: { ...item, turnId: previous?.turnId ?? live.timeline.state.turns.at(-1)?.id ?? '' },
-    });
+    if (!publishChatArchitecture(this.engine, live, item)) return;
     if (item.state === 'applied' || item.state === 'rejected') {
       await this.engine.planDecisions.drain(live);
       this.engine.planningContinuation.schedule(live);

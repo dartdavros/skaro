@@ -5,7 +5,7 @@ import { resourcesFor } from './resource-execution';
 import { RESOURCE_CAPACITIES, type AppDb } from '@skaro/core';
 import type { C4SemanticJob } from './c4-semantic-store';
 
-/** Reserve model+process atomically before spawning, so quota wait cannot retain a reviewer OS process. */
+/** Bind model/process ownership before spawning; scarcity observations never gate review. */
 export async function c4ReviewAdmission(
   db: AppDb,
   dataDir: string,

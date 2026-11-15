@@ -129,10 +129,10 @@ export function resetTaskRuns(): void {
 }
 
 /** Replace the whole host scope, preserving SQLite records without a second live controller. */
-export async function restartTaskEngine(slots = 3): Promise<TaskRunEngine> {
+export async function restartTaskEngine(_legacySlots?: number): Promise<TaskRunEngine> {
   await closeRuns?.();
   reopenDatabase();
-  const engine = new TaskRunEngine(taskRunDeps(), slots);
+  const engine = new TaskRunEngine(taskRunDeps());
   closeRuns = () => engine.sessions.close();
   return engine;
 }

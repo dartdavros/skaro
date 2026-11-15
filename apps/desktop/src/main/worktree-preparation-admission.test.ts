@@ -5,8 +5,8 @@ import { ApplicationResources } from './application-resources';
 import { RESOURCE_POLICY_KEY } from './resource-policy';
 import { admitWorktreePreparation } from './worktree-preparation-admission';
 
-/** Real host measurement and SQLite; no repository/task/filesystem fixture or external effect. */
-it('holds preparation before any ledger generation/effect and reuses one admitted reservation', async () => {
+/** Real SQLite over the current repository; no external work or fabricated environment. */
+it('prepares without a CPU capacity prerequisite and reuses one ownership reservation', async () => {
   const root = resolve(process.cwd()),
     db = AppDb.open(':memory:');
   const project = db.addProject({ name: 'Current Skaro repository', path: root });
@@ -25,15 +25,6 @@ it('holds preparation before any ledger generation/effect and reuses one admitte
     );
   try {
     db.setSetting(RESOURCE_POLICY_KEY, { reserveCpuMillis: 2 ** 50 });
-    const pending = prepare().catch((error) => String(error));
-    await expect
-      .poll(() => db.admission.all().find((l) => l.ownerId === owner)?.reason)
-      .toBe('budget_cpuMillis');
-    expect(executions).toBe(0);
-    expect(db.resources.list(project.id)).toEqual([]);
-    resources.stopOwner(project.id, owner);
-    expect(await pending).toContain('Stopped by owner');
-    db.setSetting(RESOURCE_POLICY_KEY, {});
     await prepare();
     expect(executions).toBe(1);
     expect(resources.holdings(project.id, owner)).toEqual([]);

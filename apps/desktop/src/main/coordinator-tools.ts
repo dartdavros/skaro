@@ -11,7 +11,9 @@ export function coordinatorTools(
 ): Tool<SkaroScope>[] {
   return [
     projectMemoryTool(memory),
-    taskBlockerTool((reason, scope, details) => runs().reportBlocker(reason, scope, details)),
+    taskBlockerTool((reason, scope, details, context) =>
+      runs().reportBlocker(reason, scope, details, context?.id),
+    ),
     taskResumeTool((commandId, instruction, scope) =>
       runs().resumeTask(commandId, instruction, scope),
     ),

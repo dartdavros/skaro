@@ -1,12 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import { validateQuestionAnswer } from '@skaro/timeline';
-import type { RuntimeAction, RuntimeFact, RuntimeState } from './model.ts';
+import type { RuntimeAction, RuntimeCommand, RuntimeFact, RuntimeState } from './model.ts';
+
+/** A skipped active-only notification cannot revive tools or reset a stopped session. */
+export const resumesAfterInput = (action: RuntimeCommand['action'], state: RuntimeState) =>
+  (action.type === 'send' || action.type === 'steer') &&
+  !action.input.onlyActiveTurn &&
+  !state.stopped;
 
 /** Pure decisions; the journal commits every decision before it can become observable. */
 export function commandFacts(
   state: RuntimeState,
   action: RuntimeAction,
 ): { facts: RuntimeFact[]; error?: string } {
+  // The unconnected fallback has no active owner-input channel. Do not invent input/turn facts.
+  if ((action.type === 'send' || action.type === 'steer') && action.input.onlyActiveTurn)
+    return { facts: [] };
   const config = state.config;
   if (!config) throw new Error('Runtime not initialized');
   if (state.closed && !['send', 'steer', 'close', 'interrupt'].includes(action.type))

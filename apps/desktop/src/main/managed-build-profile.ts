@@ -64,101 +64,30 @@ export function managedBuildEstimate(
     dockerCpuMillis: source.base === 'scratch' ? 1000 : 2000,
   };
 }
-export const managedRunResourceArguments = () => [
-  '--resource=memory=512m',
-  '--resource=memory-swap=512m',
-  '--resource=cpu-quota=100000',
-  '--resource=cpu-period=100000',
-];
-
-/** Inspect the built-in frontend's actual generated LLB, since older frontends silently omit unsupported limits. */
+/** Verify the actual execution graph and sandbox; Skaro adds no CPU/RAM constraints. */
 export function verifyManagedRunPlan(value: unknown, expectedRuns: number) {
   const result = value as {
-    def?: Record<
-      string,
-      {
-        exec?: {
-          network?: string;
-          security?: string;
-        };
-      }
-    >;
-    metadata?: Record<
-      string,
-      {
-        caps?: Record<string, boolean>;
-        linux_resources?: {
-          memory?: unknown;
-          memorySwap?: unknown;
-          cpuQuota?: unknown;
-          cpuPeriod?: unknown;
-        };
-      }
-    >;
+    def?: Record<string, { exec?: { network?: string; security?: string } }>;
   };
-  if (!result?.def || !result.metadata)
-    unsupportedManagedBuild('run_resources_capability_unverified');
-  let runs = 0;
-  const verified: {
-    vertex: string;
-    memory: number;
-    memorySwap: number;
-    cpuQuota: number;
-    cpuPeriod: number;
-  }[] = [];
-  const exact = (value: unknown, expected: number) =>
-    (typeof value === 'number' && Number.isSafeInteger(value) && value === expected) ||
-    (typeof value === 'string' &&
-      value.length <= 20 &&
-      /^[0-9]+$/.test(value) &&
-      BigInt(value) === BigInt(expected));
-  for (const [digest, op] of Object.entries(result.def)) {
+  if (!result?.def) unsupportedManagedBuild('run_execution_plan_unverified');
+  const verified: { vertex: string }[] = [];
+  for (const [vertex, op] of Object.entries(result.def)) {
     if (!op.exec) continue;
-    runs++;
-    // convertllb serializes llb.OpMetadata with encoding/json, not ExecOp.Meta/protojson.
-    const resources = result.metadata[digest]?.linux_resources;
     if (
-      !resources ||
-      !exact(resources.memory, 512 * 1024 ** 2) ||
-      !exact(resources.memorySwap, 512 * 1024 ** 2) ||
-      !exact(resources.cpuQuota, 100000) ||
-      !exact(resources.cpuPeriod, 100000) ||
-      result.metadata[digest]?.caps?.['exec.meta.linux.resources'] !== true ||
       (op.exec.network && op.exec.network !== 'UNSET') ||
       (op.exec.security && op.exec.security !== 'SANDBOX')
     )
-      unsupportedManagedBuild('run_resources_capability_unverified');
-    verified.push({
-      vertex: digest,
-      memory: Number(resources.memory),
-      memorySwap: Number(resources.memorySwap),
-      cpuQuota: Number(resources.cpuQuota),
-      cpuPeriod: Number(resources.cpuPeriod),
-    });
+      unsupportedManagedBuild('run_execution_plan_unverified');
+    verified.push({ vertex });
   }
-  if (runs !== expectedRuns)
-    unsupportedManagedBuild('unexpected_inherited_exec_or_missing_resources');
+  if (verified.length !== expectedRuns)
+    unsupportedManagedBuild('unexpected_inherited_exec_or_missing_runs');
   return verified;
 }
+
+/** This pinned builder targets Linux amd64; cgroup resource-limit capabilities are irrelevant. */
 export function verifyManagedBuildHost(value: unknown) {
-  const host = value as {
-    OSType?: string;
-    Architecture?: string;
-    CgroupVersion?: string;
-    MemoryLimit?: boolean;
-    SwapLimit?: boolean;
-    CpuCfsQuota?: boolean;
-    CpuCfsPeriod?: boolean;
-  };
-  if (
-    !host ||
-    host.OSType !== 'linux' ||
-    !['amd64', 'x86_64'].includes(host.Architecture ?? '') ||
-    host.CgroupVersion !== '2' ||
-    host.MemoryLimit !== true ||
-    host.SwapLimit !== true ||
-    host.CpuCfsQuota !== true ||
-    host.CpuCfsPeriod !== true
-  )
-    unsupportedManagedBuild('linux_cgroup_v2_resource_capabilities_required');
+  const host = value as { OSType?: string; Architecture?: string };
+  if (!host || host.OSType !== 'linux' || !['amd64', 'x86_64'].includes(host.Architecture ?? ''))
+    unsupportedManagedBuild('linux_amd64_builder_required');
 }

@@ -38,7 +38,6 @@ export class ManagedPnpmPublisher extends ManagedDependencyMaintenance {
   protected async published(provenance: PnpmProvenance, projectId: string, node: string) {
     const { store } = this,
       budget = cacheBudget(store.db, 'dependencies');
-    if (!budget.bytes || !budget.entries) throw new Error('managed_dependencies_cache_disabled');
     const allocation = await statfs(store.root);
     if (allocation.bsize < 1 || allocation.bsize > 65536)
       throw new Error('managed_dependencies_unsupported_allocation_unit');
@@ -95,7 +94,6 @@ export class ManagedPnpmPublisher extends ManagedDependencyMaintenance {
         store,
         entry,
         PNPM_RUNTIME_TARBALL,
-        budget.bytes,
         (entries, bytes) => this.sweep(entries, bytes),
         { path: runtimeArchive, runtime: true },
       );
@@ -109,7 +107,7 @@ export class ManagedPnpmPublisher extends ManagedDependencyMaintenance {
       const runtimeBytes = await extractPnpmRuntime(store.root, runtimeArchive, runtime);
       if (runtimeBytes !== inspected.expandedBytes)
         throw new Error('managed_pnpm_runtime_expansion_changed');
-      entry.bytes = (await cacheTree(store.root, path, budget.bytes)).bytes;
+      entry.bytes = (await cacheTree(store.root, path)).bytes;
       store.save(entry);
       const cli = join(runtime, 'bin', 'pnpm.cjs');
       await verifyPnpmRuntime(store, entry, node, cli, home, env);
@@ -122,7 +120,6 @@ export class ManagedPnpmPublisher extends ManagedDependencyMaintenance {
           store,
           entry,
           tarball,
-          budget.bytes,
           (entries, bytes) => this.sweep(entries, bytes),
           { path: tarPath, inventory: 'pnpm-payload' },
         );
@@ -190,7 +187,7 @@ export class ManagedPnpmPublisher extends ManagedDependencyMaintenance {
       await removeCacheTree(store.root, work);
       await removeCacheTree(store.root, runtimeArchive);
       await removeCacheTree(store.root, join(path, 'tarballs'));
-      const tree = await cacheTree(store.root, path, budget.bytes);
+      const tree = await cacheTree(store.root, path);
       if (!tree.files.some((file) => file.path.startsWith('store/v10/index/')))
         throw new Error('managed_pnpm_store_index_missing');
       entry.bytes = tree.bytes;

@@ -1,18 +1,17 @@
 import type { CacheBudget } from './resource-cache-policy';
 import type { ManagedBuilder } from './managed-cache-store';
-import { MANAGED_BUILDER_MEMORY } from './managed-cache-admission';
 
 export function buildkitGcConfiguration(budget: CacheBudget): string {
   if (
     !Number.isSafeInteger(budget.bytes) ||
-    budget.bytes < 1 ||
+    budget.bytes < 0 ||
     !Number.isSafeInteger(budget.idleMs) ||
     budget.idleMs < 0
   )
     throw new Error('managed_buildkit_cache_disabled');
   const seconds = Math.max(1, Math.floor(budget.idleMs / 1000));
   const limits = `  reservedSpace = 0\n  maxUsedSpace = ${budget.bytes}\n  minFreeSpace = 0\n`;
-  return `insecure-entitlements = []\n[cdi]\n  disabled = true\n[worker.oci]\n  max-parallelism = 1\n  gc = true\n${limits}[[worker.oci.gcpolicy]]\n  keepDuration = "${seconds}s"\n${limits}  all = true\n[[worker.oci.gcpolicy]]\n${limits}  all = true\n`;
+  return `insecure-entitlements = []\n[cdi]\n  disabled = true\n[worker.oci]\n  gc = true\n${limits}[[worker.oci.gcpolicy]]\n  keepDuration = "${seconds}s"\n${limits}  all = true\n[[worker.oci.gcpolicy]]\n${limits}  all = true\n`;
 }
 export interface BuilderInspection {
   Name?: string;
@@ -92,11 +91,7 @@ export function verifyBuildkitContainer(
     container.Id !== entry.container ||
     container.Image !== entry.image ||
     !/^sha256:[a-f0-9]{64}$/.test(container.Image ?? '') ||
-    host?.Memory !== MANAGED_BUILDER_MEMORY ||
-    host.MemorySwap !== MANAGED_BUILDER_MEMORY ||
-    host.CpuQuota !== 100000 ||
-    host.CpuPeriod !== 100000 ||
-    host.Privileged !== true ||
+    host?.Privileged !== true ||
     host.Init !== true ||
     host.RestartPolicy?.Name !== 'no' ||
     (host.RestartPolicy.MaximumRetryCount ?? 0) !== 0 ||

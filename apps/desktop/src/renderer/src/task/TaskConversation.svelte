@@ -89,7 +89,7 @@
         <span class="empty-text">{t('task.stage.waiting', { n: left })}</span>
       </div>
     {:else if view.queued || view.task.resourceWait}
-      <TaskQueued stage={!!stage} after={view.after} resourceWait={view.task.resourceWait} />
+      <TaskQueued after={view.after} resourceWait={view.task.resourceWait} />
     {:else if controller.starting}
       <div class="empty"><TaskStarting /></div>
     {:else if controller.running}
@@ -115,16 +115,14 @@
           <button
             type="button"
             class="start"
-            data-tip={view.slotsFree ? t('task.start.tip') : t('task.start.queue.tip')}
+            data-tip={t('task.start.tip')}
             onclick={() =>
               void (
-                stage || !view.slotsFree
-                  ? controller.send({ text: t('task.start.message') })
-                  : controller.start()
+                stage ? controller.send({ text: t('task.start.message') }) : controller.start()
               ).catch(() => undefined)}
           >
             <Icon name="play" size={13} stroke={2} />
-            {view.slotsFree ? t('task.start') : t('task.start.queue')}
+            {t('task.start')}
           </button>
         {/if}
       </div>

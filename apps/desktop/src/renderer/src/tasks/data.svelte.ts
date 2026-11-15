@@ -18,8 +18,6 @@ export class ProjectTasks {
   milestones = $state<MilestoneInfo[]>([]);
   /** Where each stage stands: a milestone is run as a whole. */
   stages = $state<StageInfo[]>([]);
-  /** A stage started now would run at once rather than wait for a slot. */
-  slotsFree = $state(true);
   loaded = $state(false);
   private readonly projectId: string;
   private readonly stop: () => void;
@@ -57,17 +55,15 @@ export class ProjectTasks {
   }
 
   private async load(): Promise<void> {
-    const [catalog, stages, slots] = await Promise.all([
+    const [catalog, stages] = await Promise.all([
       window.skaro.invoke('tasks.catalog', this.projectId),
       window.skaro.invoke('stages.list', this.projectId).catch(() => []),
-      window.skaro.invoke('tasks.slots').catch(() => undefined),
     ]);
     if (this.disposed) return;
     this.catalog = catalog;
     this.version++;
     this.milestones = catalog.milestones;
     this.stages = stages;
-    this.slotsFree = !slots || slots.free > 0;
     this.loaded = true;
   }
 

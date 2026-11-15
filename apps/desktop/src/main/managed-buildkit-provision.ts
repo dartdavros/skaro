@@ -86,6 +86,11 @@ export async function bootstrapBuilder(
   ) as unknown[];
   if (volumes.length !== 1) throw new Error('managed_buildkit_volume_identity_unverified');
   verifyBuildkitVolume(entry, volumes[0]);
+  await createOwnedBuilderContainer(store, entry);
+}
+
+/** Also used to replace our verified idle legacy daemon while preserving its exact named volume. */
+export async function createOwnedBuilderContainer(store: ManagedCacheStore, entry: ManagedBuilder) {
   const container = await builderExternal(store, entry, [
     'container',
     'create',
@@ -95,10 +100,6 @@ export async function bootstrapBuilder(
     '--init',
     '--restart=no',
     '--network=bridge',
-    '--memory=512m',
-    '--memory-swap=512m',
-    '--cpu-quota=100000',
-    '--cpu-period=100000',
     '--env',
     `SKARO_MANAGED_CACHE_TOKEN=${entry.token}`,
     ...builderLabelArguments(entry),

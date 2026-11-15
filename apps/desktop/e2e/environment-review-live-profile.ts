@@ -212,7 +212,6 @@ export async function prepareLiveReviewProfile(profile: string, taskIds: string[
     try {
       for (const task of tasks) await assertNoMergeCard(db, userData, task);
       db.setSetting('environments', kept);
-      db.setSetting('runs.slots', 1);
       db.setSetting('ui.locale', 'ru');
       db.setSetting('ui.navCollapsed', false);
       db.setOpenTabs([...projects], tasks[0]!.projectId);

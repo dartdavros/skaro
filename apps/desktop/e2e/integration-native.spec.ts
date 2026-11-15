@@ -79,7 +79,6 @@ test('the native resolver verifies both accepted behaviors and publishes automat
     f.db.setOpenTabs([f.projectId], f.projectId);
     f.db.setSetting('ui.locale', 'ru');
     f.db.setSetting('ui.navCollapsed', false);
-    f.db.setSetting('runs.slots', 1);
     await f.coordinator.close();
     f.projects.close();
     f.db.close();

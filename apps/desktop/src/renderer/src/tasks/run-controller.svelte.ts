@@ -1,11 +1,10 @@
-import type { AgentSettings, RunSlots } from '../../../shared/ipc';
+import type { AgentSettings } from '../../../shared/ipc';
 import type { RunProps } from './run-props';
 import { runSettings } from './run-settings';
 
 export function createRunController(p: RunProps) {
   let settings = $state<AgentSettings>();
   let sandboxHolds = $state<boolean>();
-  let slots = $state<RunSlots>({ total: 0, free: 0 });
 
   $effect(() => {
     const projectId = p.projectId;
@@ -15,13 +14,11 @@ export function createRunController(p: RunProps) {
     void Promise.all([
       window.skaro.invoke('project.settings', projectId),
       window.skaro.invoke('task.open', projectId, taskId, { paged: true }),
-      window.skaro.invoke('tasks.slots'),
     ])
-      .then(([project, view, available]) => {
+      .then(([project, view]) => {
         if (cancelled) return;
         settings = runSettings(project, view.settings, !!view.run);
         sandboxHolds = view.sandboxHolds;
-        slots = available;
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -45,9 +42,6 @@ export function createRunController(p: RunProps) {
     },
     get sandboxHolds() {
       return sandboxHolds;
-    },
-    get slots() {
-      return slots;
     },
     confirm,
   };

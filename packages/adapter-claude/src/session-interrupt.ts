@@ -7,6 +7,16 @@ export class ClaudeInterrupt {
   private readonly ending = new Set<() => void>();
   private readonly background = new Set<string>();
 
+  get currentTurn(): string | undefined {
+    return this.active;
+  }
+
+  reset(): void {
+    this.active = undefined;
+    for (const resolve of this.ending) resolve();
+    this.ending.clear();
+  }
+
   observe(event: TimelineEvent): void {
     if (event.t === 'turn.started') this.active = event.turnId;
     if (event.t === 'turn.completed' && this.active === event.turnId) {

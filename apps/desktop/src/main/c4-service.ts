@@ -168,6 +168,12 @@ export class C4Service implements C4Handlers {
       text: JSON.stringify({
         packageId: item.id,
         state: 'pending',
+        decision: {
+          id: item.id,
+          kind: scope.kind,
+          ...(scope.chatId ? { chatId: scope.chatId } : {}),
+          ...(scope.taskId ? { taskId: scope.taskId } : {}),
+        },
         applied: [],
         documents: facts.documents.map((d) => d.path),
         architecture: facts.model.map((c) => ({

@@ -11,7 +11,6 @@ import {
 } from './managed-build-recipe';
 import {
   managedBuildNetwork,
-  managedRunResourceArguments,
   verifyManagedBuildHost,
   verifyManagedRunPlan,
   type ManagedBuildApproval,
@@ -53,7 +52,6 @@ export async function solveManagedBuild(
     '--provenance=false',
     '--sbom=false',
     `--network=${network}`,
-    ...(source.base === 'scratch' ? [] : managedRunResourceArguments()),
   ];
   const options = {
     cwd: builderDirectory(store, entry.projectId),
@@ -73,7 +71,7 @@ export async function solveManagedBuild(
   );
   let runPlan: { digest: string; runs: ReturnType<typeof verifyManagedRunPlan> } | undefined;
   if (source.base !== 'scratch') {
-    // Frontends may silently omit unsupported resource constraints: inspect the actual LLB first.
+    // Inspect the actual execution graph before a trusted RUN; preserve sandbox/network validation.
     store.db.resources.cleanup.effect(entry.resourceId, true);
     const plan = await managedCacheCommand(
       entry.client!.docker,
@@ -90,9 +88,9 @@ export async function solveManagedBuild(
         digest: managedBuildHash(plan),
         runs: verifyManagedRunPlan(JSON.parse(plan), runs.length),
       };
-      store.outcome(entry, 'observed', 'managed_buildkit_run_resource_plan_verified');
+      store.outcome(entry, 'observed', 'managed_buildkit_run_execution_plan_verified');
     } catch (error) {
-      store.outcome(entry, 'failed', 'managed_buildkit_run_resource_plan_rejected');
+      store.outcome(entry, 'failed', 'managed_buildkit_run_execution_plan_rejected');
       throw error;
     }
     await current();

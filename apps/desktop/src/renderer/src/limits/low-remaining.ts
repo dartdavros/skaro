@@ -1,17 +1,23 @@
 import type { AgentLimits } from '@skaro/timeline';
 
-/** The most restrictive known subscription window; exactly 10% is not low. */
-export function lowRemaining(snapshot: AgentLimits | undefined): number | undefined {
+/** The most restrictive known subscription window; missing values stay unknown. */
+export function remainingLimit(snapshot: AgentLimits | undefined): number | undefined {
   const values =
     snapshot?.windows.flatMap(({ remainingPercent }) =>
       remainingPercent !== null &&
       Number.isFinite(remainingPercent) &&
       remainingPercent >= 0 &&
-      remainingPercent < 10
+      remainingPercent <= 100
         ? [remainingPercent]
         : [],
     ) ?? [];
   return values.length ? Math.min(...values) : undefined;
+}
+
+/** Exactly 10% is not low. */
+export function lowRemaining(snapshot: AgentLimits | undefined): number | undefined {
+  const remaining = remainingLimit(snapshot);
+  return remaining !== undefined && remaining < 10 ? remaining : undefined;
 }
 
 export function lowPercentLabel(remaining: number, locale: string): string {

@@ -11,6 +11,8 @@
   import { NavigationWidth } from './navigation-width.svelte';
   import { ProjectLimits } from '../limits/project-limits.svelte';
   import { lowPercentLabel } from '../limits/low-remaining';
+  import ProjectLimitNav from '../limits/ProjectLimitNav.svelte';
+  import ActivityMark from '../activity/ActivityMark.svelte';
   let {
     project,
     data,
@@ -69,10 +71,14 @@
     { id: 'params', label: t('nav.params'), tip: t('nav.params.tip'), icon: 'params' },
   ]);
   function navTask(task: TaskSummary): NavTask {
+    const id = task.id.replace(
+      /^T-?0*(\d+)$/,
+      (_, number: string) => `T${number.padStart(3, '0')}`,
+    );
     return {
       id: task.id,
-      title: task.title,
-      tip: `${task.id.replace(/^T-0*(\d+)$/, 'T$1')} · ${task.title}`,
+      title: `${id} · ${task.title}`,
+      tip: `${id} · ${task.title}`,
       sub: `${statusLabel(task.status)} · ${task.milestone ? `${task.milestone.id} · ${task.milestone.title}` : t('board.loose')}`,
       kind: activeKind(task) ?? 'working',
     };
@@ -99,16 +105,14 @@
   {taskContent}
   {ontask}
   {onselect}
-  footerItem={{
-    id: 'limits',
-    label: t('limits.title'),
-    icon: 'circleGauge',
-    trailing: limitPercent,
-  }}
-  onfooter={onlimits}
+  {footerContent}
 />
 
-{#snippet taskContent(row: Snippet<[NavTask]>, rail: boolean)}
+{#snippet footerContent(rail: boolean)}
+  <ProjectLimitNav {rail} snapshot={limits.snapshot} warning={limitPercent} onclick={onlimits} />
+{/snippet}
+
+{#snippet taskContent(row: Snippet<[NavTask, Snippet?]>, rail: boolean)}
   <WindowedContent
     count={data.catalog?.active.count ?? 0}
     revision={data.version}
@@ -117,6 +121,15 @@
     gap={2}
     estimate={rail ? 24 : 30}
   >
-    {#snippet children(task)}{@render row(navTask(task))}{/snippet}
+    {#snippet children(task)}
+      {#snippet indicator()}<ActivityMark
+          kind={task.activity ?? 'waiting_model'}
+          size={12}
+        />{/snippet}
+      {@render row(
+        navTask(task),
+        task.status === 'in_progress' || task.merge === 'running' ? indicator : undefined,
+      )}
+    {/snippet}
   </WindowedContent>
 {/snippet}

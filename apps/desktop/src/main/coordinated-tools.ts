@@ -5,6 +5,8 @@ import { coordinationHash } from './project-coordinator-request';
 import { resourcesFor } from './resource-execution';
 import { auditToolsAllowed, isAuditChat } from './c4-audit-admission';
 import { environmentToolPolicy } from './coordinated-tool-policy';
+import { coordinationToolReceipt, coordinationToolScopeKey } from './coordination-tool-receipt';
+import { taskBlockerReceipt, confirmTaskBlockerReport } from './task-blocker-receipt';
 
 const reads = new Set([
   'read_project_incidents',
@@ -102,57 +104,74 @@ export function coordinatedTools(
         const previous = db.coordination.getOperation(scope.projectId, identity.id);
         const policy = environmentToolPolicy(db, tool.name, args, scope);
         const mode = policy?.mode ?? (controls.has(tool.name) ? 'control' : 'mutation');
-        return coordinators.execute(
-          {
-            id: identity.id,
-            projectId: scope.projectId,
-            action: `mcp.${tool.name}`,
-            source: { kind: 'worker', id: identity.sourceId },
-            subject,
-            inputHash: coordinationHash({ args, scope }),
-            mode,
-            scopeKey:
-              policy?.scopeKey ??
-              (mode === 'mutation' ? 'project' : `control:${subject.kind}:${subject.id}`),
-            ...(mode === 'mutation'
-              ? { expectedVersion: previous?.expectedVersion ?? version }
-              : {}),
-          },
-          () => {
-            const resources = resourcesFor(db);
-            const effect = () => tool.call(args, scope, identity);
-            return resources
-              ? resources.scope(scope.projectId, `${subject.kind}:${subject.id}`, effect, {
-                  intentId: identity.id,
-                  requireCurrent: () => identity.requireActive(),
-                })
-              : effect();
-          },
-          {
-            validate: () => identity.requireActive(),
-            // A returned error is a terminal handler receipt, NOT proof of rollback/no effect.
-            // No same-ID retry is allowed; a thrown/lost result remains uncertain in the dispatcher.
-            outcome: (result) => (result.isError ? 'failed' : 'succeeded'),
-            evidence: (result) => ({
-              code: result.isError ? 'handler_failed_partial_effects_possible' : 'handler_receipt',
-              refs: [subject],
-              fingerprint: coordinationHash(result),
-            }),
-            replay: () => {
-              const operation = db.coordination.getOperation(scope.projectId, identity.id)!;
-              return {
-                text: 'This operation already completed. The saved receipt is returned; the handler was not repeated. Read the project context for current results.',
-                structuredContent: {
-                  coordination: {
-                    operationId: operation.id,
-                    state: operation.state,
-                    evidence: operation.evidence,
-                    replayedReceipt: true,
-                  },
+        return coordinationToolReceipt(
+          tool.name,
+          () =>
+            coordinators.execute(
+              {
+                id: identity.id,
+                projectId: scope.projectId,
+                action: `mcp.${tool.name}`,
+                source: { kind: 'worker', id: identity.sourceId },
+                subject,
+                inputHash: coordinationHash({ args, scope }),
+                mode,
+                scopeKey: coordinationToolScopeKey(
+                  tool.name,
+                  identity.id,
+                  policy?.scopeKey ??
+                    (mode === 'mutation' ? 'project' : `control:${subject.kind}:${subject.id}`),
+                ),
+                ...(mode === 'mutation'
+                  ? { expectedVersion: previous?.expectedVersion ?? version }
+                  : {}),
+              },
+              () => {
+                const resources = resourcesFor(db);
+                const effect = () => tool.call(args, scope, identity);
+                return resources
+                  ? resources.scope(scope.projectId, `${subject.kind}:${subject.id}`, effect, {
+                      intentId: identity.id,
+                      requireCurrent: () => identity.requireActive(),
+                    })
+                  : effect();
+              },
+              {
+                validate: () => identity.requireActive(),
+                // A returned error is a terminal handler receipt, NOT proof of rollback/no effect.
+                // No same-ID retry is allowed; a thrown/lost result remains uncertain in the dispatcher.
+                outcome: (result) => (result.isError ? 'failed' : 'succeeded'),
+                evidence: (result) => ({
+                  code: result.isError
+                    ? 'handler_failed_partial_effects_possible'
+                    : 'handler_receipt',
+                  refs: [subject],
+                  fingerprint: coordinationHash(result),
+                }),
+                replay: () => {
+                  const operation = db.coordination.getOperation(scope.projectId, identity.id)!;
+                  if (tool.name === 'report_task_blocker') {
+                    const receipt = taskBlockerReceipt(db, scope.projectId, identity.id);
+                    if (receipt) return receipt;
+                  }
+                  return {
+                    text: 'This operation already completed. The saved receipt is returned; the handler was not repeated. Read the project context for current results.',
+                    structuredContent: {
+                      coordination: {
+                        operationId: operation.id,
+                        state: operation.state,
+                        evidence: operation.evidence,
+                        replayedReceipt: true,
+                      },
+                    },
+                  };
                 },
-              };
-            },
-          },
+              },
+            ),
+          () =>
+            tool.name === 'report_task_blocker'
+              ? confirmTaskBlockerReport(db, scope.projectId, identity.id)
+              : undefined,
         );
       },
     };

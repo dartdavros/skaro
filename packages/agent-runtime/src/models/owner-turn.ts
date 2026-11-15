@@ -8,6 +8,7 @@ import { runPreparedHostModelTurn } from './host-turn.ts';
 import { preparedModelTurn } from './host-schemas.ts';
 import { ownerInputRecord } from './owner-input-record.ts';
 import { OwnerSteering } from './owner-steering.ts';
+import { ownerInputDisposition } from './owner-input-policy.ts';
 import { refreshOwnerContext } from '../context/owner-context.ts';
 
 /** Input admission uses RuntimeSession's queue; there is no new task scheduler or executor. */
@@ -34,11 +35,24 @@ export class OwnerModelTurns {
     const { action } = command;
     this.host.signal?.throwIfAborted();
     if (action.type !== 'send' && action.type !== 'steer') throw new Error('Not an owner input');
-    if (this.work) {
-      if (action.type === 'send') throw new Error('An owner model turn is already active');
-      if (!this.steering?.sealed) return this.steering!.accept(command);
-      await this.work;
-    }
+    const delivery = ownerInputDisposition(
+      action.input,
+      action.type,
+      !!this.work,
+      !this.steering || this.steering.sealed,
+    );
+    if (delivery === 'skip')
+      return this.session.journal.append(
+        `cmd:${command.id}`,
+        [],
+        {
+          value: { kind: 'owner-input-skipped', reason: 'no-active-turn' },
+        },
+        fingerprint(action),
+      );
+    if (delivery === 'busy') throw new Error('An owner model turn is already active');
+    if (delivery === 'steer') return this.steering!.accept(command);
+    if (delivery === 'wait') await this.work;
     const { state } = this.session.journal;
     if (
       Object.keys(state.interactions).length ||

@@ -20,19 +20,19 @@ function controlledRuns() {
 }
 
 describe('RunQueue', () => {
-  it('runs up to the slot count and starts queued tasks in order as slots free up', async () => {
+  it('starts every independent owner immediately without a capacity limit', async () => {
     const runs = controlledRuns();
-    const queue = new RunQueue({ slots: 2, canRun: () => undefined, start: runs.start });
+    const queue = new RunQueue({ canRun: () => undefined, start: runs.start });
     const events: QueueEvent[] = [];
     queue.on((e) => events.push(e));
 
     expect(queue.enqueue(['A', 'B', 'C', 'D']).accepted).toEqual(['A', 'B', 'C', 'D']);
-    expect(queue.state()).toEqual({ slots: 2, running: ['A', 'B'], queued: ['C', 'D'] });
+    expect(queue.state()).toEqual({ running: ['A', 'B', 'C', 'D'], queued: [] });
 
     await runs.finish('B');
-    expect(queue.state().running).toEqual(['A', 'C']);
+    expect(queue.state().running).toEqual(['A', 'C', 'D']);
     await runs.finish('A', new Error('agent crashed'));
-    expect(queue.state()).toEqual({ slots: 2, running: ['C', 'D'], queued: [] });
+    expect(queue.state()).toEqual({ running: ['C', 'D'], queued: [] });
     expect(events.filter((e) => e.type === 'finished')).toEqual([
       { type: 'finished', taskId: 'B' },
       { type: 'finished', taskId: 'A', error: new Error('agent crashed') },
@@ -42,13 +42,6 @@ describe('RunQueue', () => {
     await runs.finish('C');
     await runs.finish('D');
     await expect(idle).resolves.toBeUndefined();
-  });
-
-  it('defaults to three slots', () => {
-    const runs = controlledRuns();
-    const queue = new RunQueue({ canRun: () => undefined, start: runs.start });
-    queue.enqueue(['A', 'B', 'C', 'D']);
-    expect(queue.state().running).toHaveLength(3);
   });
 
   it('rejects blocked and duplicate tasks', () => {
@@ -87,7 +80,6 @@ describe('RunQueue', () => {
     const index = indexTasks(tasks);
     const runs = controlledRuns();
     const queue = new RunQueue({
-      slots: 1,
       canRun: (id) => startBlocker(index.get(id)!, index),
       start: runs.start,
     });
@@ -100,34 +92,41 @@ describe('RunQueue', () => {
 
   it('drops a queued task that became unrunnable before its turn', async () => {
     const blocked = new Set<string>();
+    const held = new Set(['B']);
     const runs = controlledRuns();
     const queue = new RunQueue({
-      slots: 1,
       canRun: (id) => (blocked.has(id) ? 'archived' : undefined),
+      blocked: (id) => held.has(id),
       start: runs.start,
     });
     const events: QueueEvent[] = [];
     queue.on((e) => events.push(e));
     queue.enqueue(['A', 'B', 'C']);
     blocked.add('B');
+    held.clear();
     await runs.finish('A');
     expect(queue.state().running).toEqual(['C']);
     expect(events).toContainEqual({ type: 'dropped', taskId: 'B', reason: 'archived' });
   });
 
-  it('cancels queued tasks and grows slots on the fly', () => {
+  it('cancels only held-back owners and starts the rest after their condition clears', () => {
     const runs = controlledRuns();
-    const queue = new RunQueue({ slots: 1, canRun: () => undefined, start: runs.start });
+    const held = new Set(['C', 'D']);
+    const queue = new RunQueue({
+      canRun: () => undefined,
+      blocked: (id) => held.has(id),
+      start: runs.start,
+    });
     queue.enqueue(['A', 'B', 'C', 'D']);
     expect(queue.cancel('C')).toBe(true);
     expect(queue.cancel('A')).toBe(false); // running, not queued
-    queue.setSlots(3);
-    expect(queue.state()).toEqual({ slots: 3, running: ['A', 'B', 'D'], queued: [] });
+    held.clear();
+    queue.poke();
+    expect(queue.state()).toEqual({ running: ['A', 'B', 'D'], queued: [] });
   });
 
-  it('frees the slot when start throws synchronously', async () => {
+  it('settles a synchronously failed owner and lets independent work finish', async () => {
     const queue = new RunQueue({
-      slots: 1,
       canRun: () => undefined,
       start: (id) => {
         if (id === 'A') throw new Error('no worktree');
@@ -136,26 +135,25 @@ describe('RunQueue', () => {
     });
     queue.enqueue(['A', 'B']);
     await queue.idle();
-    expect(queue.state()).toEqual({ slots: 1, running: [], queued: [] });
+    expect(queue.state()).toEqual({ running: [], queued: [] });
   });
 
   it('a held-back task keeps its place while later ones start, and starts after a poke', async () => {
     const held = new Set(['B']);
     const runs = controlledRuns();
     const queue = new RunQueue({
-      slots: 2,
       canRun: () => undefined,
       blocked: (id) => held.has(id),
       start: runs.start,
     });
     queue.enqueue(['A', 'B', 'C']);
-    expect(queue.state()).toEqual({ slots: 2, running: ['A', 'C'], queued: ['B'] });
+    expect(queue.state()).toEqual({ running: ['A', 'C'], queued: ['B'] });
 
     await runs.finish('A');
-    expect(queue.state()).toEqual({ slots: 2, running: ['C'], queued: ['B'] });
+    expect(queue.state()).toEqual({ running: ['C'], queued: ['B'] });
 
     held.clear();
     queue.poke();
-    expect(queue.state()).toEqual({ slots: 2, running: ['C', 'B'], queued: [] });
+    expect(queue.state()).toEqual({ running: ['C', 'B'], queued: [] });
   });
 });

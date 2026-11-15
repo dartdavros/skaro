@@ -113,14 +113,12 @@ export async function allocateBuilder(
   store: ManagedCacheStore,
   projectId: string,
   byteLimit: number,
-  entryLimit: number,
+  _entryLimit: number,
   image: ManagedBuilderImage,
   client: ManagedDockerClient,
 ): Promise<ManagedBuilder> {
   const builders = store.builders(),
     old = builders.find((entry) => entry.projectId === projectId);
-  if (!entryLimit || (!old && builders.length + 1 > entryLimit))
-    throw new Error('managed_buildkit_builder_entries_budget_retained');
   if (old) {
     if (
       old.state !== 'ready' ||

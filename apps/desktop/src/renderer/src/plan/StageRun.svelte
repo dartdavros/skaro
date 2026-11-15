@@ -11,13 +11,11 @@
   let {
     part,
     info,
-    slotsFree,
     onrun,
   }: {
     /** The line stands before the progress of the milestone, the button after it. */
     part: 'state' | 'button';
     info: StageInfo;
-    slotsFree: boolean;
     onrun: (action: 'run' | 'stop') => void;
   } = $props();
 
@@ -25,7 +23,7 @@
   // The words, the id and what follows it are separate words: a block keeps no space of its own.
   const lead = $derived(line?.task ? `${line.lead} ` : line?.lead);
   const tail = $derived(line?.tail ? ` ${line.tail}` : '');
-  const button = $derived(stageAction(info, slotsFree));
+  const button = $derived(stageAction(info));
   // Not started and its first task waits for a task of another stage.
   const waits = $derived(info.state === 'idle' ? info.waitsFor : undefined);
   const tip = $derived(

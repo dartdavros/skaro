@@ -109,7 +109,7 @@ export class CodexSession implements AgentSession {
   }
 
   send(input: UserInput): Promise<void> {
-    return this.turns.run(() => this.startTurn(input));
+    return input.onlyActiveTurn ? this.steer(input) : this.turns.run(() => this.startTurn(input));
   }
 
   private async startTurn(input: UserInput): Promise<void> {
@@ -136,16 +136,19 @@ export class CodexSession implements AgentSession {
     this.turns.accepted(str(obj(result?.['turn'])?.['id']));
   }
 
-  /** Adds to the running turn; without one, `turn/steer` fails, so it becomes a new turn. */
+  /** Ordinary steering can start a turn; an active-only update never falls back after completion. */
   steer(input: UserInput): Promise<void> {
-    return this.turns.run(async () => {
-      if (!this.turns.active) return this.startTurn(input);
-      await this.rpc().request('turn/steer', {
-        threadId: this.threadId,
-        input: toInput(input),
-        expectedTurnId: this.turns.active,
-      });
-    });
+    return this.turns.steer(
+      input.onlyActiveTurn === true,
+      async (turnId) => {
+        await this.rpc().request('turn/steer', {
+          threadId: this.threadId,
+          input: toInput(input),
+          expectedTurnId: turnId,
+        });
+      },
+      () => this.startTurn(input),
+    );
   }
 
   async respond(interactionId: string, answer: InteractionAnswer): Promise<void> {

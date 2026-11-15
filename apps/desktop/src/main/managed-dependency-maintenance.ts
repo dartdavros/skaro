@@ -190,14 +190,6 @@ export class ManagedDependencyMaintenance {
           `managed_dependencies_${retained.reason.replaceAll('-', '_')}`,
         );
     }
-    // Recompute after executor results: a policy plan is not evidence that deletion actually happened.
-    const remaining = store.artifacts();
-    const budget = cacheBudget(store.db, 'dependencies');
-    if (
-      (incomingEntries || incomingBytes) &&
-      (remaining.length + incomingEntries > budget.entries ||
-        remaining.reduce((sum, x) => sum + x.bytes, incomingBytes) > budget.bytes)
-    )
-      throw new Error('managed_dependencies_budget_retained');
+    // Retained entries may exceed GC targets; that never blocks new authorized work.
   }
 }

@@ -73,7 +73,6 @@ test('dirty_base card starts the native agent and publishes without losing local
     );
     f.db.setSetting(AUTO_MERGE_KEY, false);
     f.db.setSetting('ui.locale', 'ru');
-    f.db.setSetting('runs.slots', 1);
     f.db.setOpenTabs([f.projectId], f.projectId);
     await f.coordinator.close();
     f.projects.close();

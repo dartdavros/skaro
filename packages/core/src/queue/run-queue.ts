@@ -1,15 +1,11 @@
-// Parallel task runs (docs/architecture.md, 7.1): N slots, FIFO queue, only runnable tasks.
+// Owner queue: independent tasks start immediately; only explicit ownership/readiness conflicts wait.
 
 export interface RunQueueOptions {
-  /** Parallel runs; 3 by default. */
-  slots?: number;
-  /** The application resource ledger admits expensive work; this queue only serializes owners. */
-  externalAdmission?: boolean;
   /** Why a task cannot run now (blocked, archived...), or undefined if it can. Checked on enqueue and on start. */
   canRun: (taskId: string) => string | undefined;
   /**
    * The task cannot start right now and keeps its place: another task of its stage works in
-   * the checkout they share. Checked each time a slot is free; `poke` asks again.
+   * the checkout they share. `poke` rechecks the explicit ownership/readiness condition.
    */
   blocked?: (taskId: string) => boolean;
   /** Starts the run; resolves when the run ends (done, failed or interrupted). */
@@ -30,7 +26,6 @@ export interface EnqueueResult {
 }
 
 export class RunQueue {
-  private slots: number;
   private readonly running = new Set<string>();
   private readonly waiting: string[] = [];
   private readonly listeners = new Set<(event: QueueEvent) => void>();
@@ -39,10 +34,9 @@ export class RunQueue {
 
   constructor(options: RunQueueOptions) {
     this.options = options;
-    this.slots = Math.max(1, options.slots ?? 3);
   }
 
-  /** Queues tasks in order; they start as slots free up. Mass launch uses this too. */
+  /** Queues tasks in order; every currently runnable owner starts immediately. */
   enqueue(taskIds: string[]): EnqueueResult {
     const result: EnqueueResult = { accepted: [], rejected: {} };
     for (const id of taskIds) {
@@ -72,13 +66,8 @@ export class RunQueue {
     return true;
   }
 
-  setSlots(slots: number): void {
-    this.slots = Math.max(1, slots);
-    this.pump();
-  }
-
-  state(): { slots: number; running: string[]; queued: string[] } {
-    return { slots: this.slots, running: [...this.running], queued: [...this.waiting] };
+  state(): { running: string[]; queued: string[] } {
+    return { running: [...this.running], queued: [...this.waiting] };
   }
 
   on(listener: (event: QueueEvent) => void): () => void {
@@ -98,7 +87,7 @@ export class RunQueue {
   }
 
   private pump(): void {
-    while (this.options.externalAdmission || this.running.size < this.slots) {
+    for (;;) {
       const next = this.waiting.findIndex((id) => !this.options.blocked?.(id));
       if (next < 0) break;
       const id = this.waiting.splice(next, 1)[0]!;

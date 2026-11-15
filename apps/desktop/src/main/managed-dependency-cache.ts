@@ -1,7 +1,6 @@
 import { lstat, mkdir, rename, statfs, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { processBirth } from '@skaro/agent-runtime/process-identity';
-import { cacheBudget } from './resource-cache-policy';
 import {
   cacheDirectory,
   cacheTree,
@@ -52,13 +51,11 @@ export class ManagedDependencyCache extends ManagedDependencyMaintenance {
       throw new Error('managed_dependencies_npm_version_invalid');
     const tool = `npm:${version};node:${nodeVersion}`;
     const provenance = await dependencyProvenance(projectId, cwd, tool, sourceContext);
-    const budget = cacheBudget(store.db, 'dependencies');
     npmExpansionFits(
       0,
       provenance.tarballs.reduce((sum, x) => sum + x.installNodes, 0),
       1,
     );
-    if (!budget.bytes || !budget.entries) throw new Error('managed_dependencies_cache_disabled');
     await this.sweep(store.artifacts().some((x) => x.key === provenance.key) ? 0 : 1);
     let entry = store.artifacts().find((x) => x.key === provenance.key);
     if (entry && entry.state !== 'ready')
@@ -90,12 +87,8 @@ export class ManagedDependencyCache extends ManagedDependencyMaintenance {
         await cacheDirectory(store.root, path);
         for (const tarball of provenance.tarballs) {
           await scope.requireCurrent();
-          const downloaded = await downloadManagedTarball(
-            store,
-            entry,
-            tarball,
-            budget.bytes,
-            (entries, bytes) => this.sweep(entries, bytes),
+          const downloaded = await downloadManagedTarball(store, entry, tarball, (entries, bytes) =>
+            this.sweep(entries, bytes),
           );
           entry.bytes += downloaded.bytes;
           Object.assign(
@@ -110,7 +103,7 @@ export class ManagedDependencyCache extends ManagedDependencyMaintenance {
           );
           store.save(entry);
         }
-        const tree = await cacheTree(store.root, path, budget.bytes);
+        const tree = await cacheTree(store.root, path);
         entry = {
           ...entry,
           bytes: tree.bytes,

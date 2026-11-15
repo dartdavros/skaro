@@ -25,6 +25,18 @@ export class TurnControl {
     return result;
   }
 
+  /** Resolve this inside the command queue; a completion racing an earlier command must win. */
+  steer(
+    onlyActiveTurn: boolean,
+    deliver: (turnId: string) => Promise<void>,
+    start: () => Promise<void>,
+  ): Promise<void> {
+    return this.run(() => {
+      const turn = this.active;
+      return turn ? deliver(turn) : onlyActiveTurn ? Promise.resolve() : start();
+    });
+  }
+
   observe(event: TimelineEvent): TimelineEvent {
     if (event.t === 'turn.started') {
       this.active = event.turnId;

@@ -1,13 +1,11 @@
 // Claude Code session over the pinned Agent SDK; raw process IO remains the source of truth.
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import {
   query,
   type CanUseTool,
   type OnElicitation,
   type PermissionResult,
   type Query,
-  type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import {
   EventChannel,
@@ -24,7 +22,7 @@ import {
 import { ClaudeProjector } from './projector.ts';
 import { type ClaudeSessionConfig, nativeMode, EDIT_TOOLS, SHELL_TOOLS } from './session-config.ts';
 import { InputQueue } from './session-queue.ts';
-import { imageType } from './session-helpers.ts';
+import { claudeUserMessage } from './session-input.ts';
 import { queryOptions } from './session-options.ts';
 import { spawnTapped } from './session-tap.ts';
 import { SessionProcesses } from './session-processes.ts';
@@ -94,30 +92,21 @@ export class ClaudeSession implements AgentSession {
 
   async send(input: UserInput): Promise<void> {
     if (this.closed) throw new Error('Claude session is closed');
-    this.answers.resume();
+    const turn = this.interruption.currentTurn;
+    if (input.onlyActiveTurn && (!turn || this.answers.cancelled)) return;
+    if (!input.onlyActiveTurn) this.answers.resume();
     const uuid = randomUUID();
     if (this.lastAssistant) this.resumePoints.set(uuid, this.lastAssistant);
     else this.resumePoints.set(uuid, '');
-    const content = [
-      { type: 'text' as const, text: input.text },
-      ...(input.images ?? []).map((path) => ({
-        type: 'image' as const,
-        source: {
-          type: 'base64' as const,
-          media_type: imageType(path),
-          data: readFileSync(path).toString('base64'),
-        },
-      })),
-    ];
-    this.input.push({
-      type: 'user',
-      message: { role: 'user', content },
-      parent_tool_use_id: null,
-      uuid,
-    } as SDKUserMessage);
+    this.input.push(
+      claudeUserMessage(input, uuid),
+      input.onlyActiveTurn
+        ? () => this.interruption.currentTurn === turn && !this.answers.cancelled
+        : undefined,
+    );
   }
 
-  /** Claude picks up messages between steps, so steering is just another message. */
+  /** Ordinary steering queries; active-only context uses the SDK transcript-only input contract. */
   steer(input: UserInput): Promise<void> {
     return this.send(input);
   }
@@ -179,6 +168,7 @@ export class ClaudeSession implements AgentSession {
     this.input.end();
     this.q?.close();
     this.q = undefined;
+    this.interruption.reset();
   }
 
   private async drain(q: Query): Promise<void> {
@@ -192,6 +182,8 @@ export class ClaudeSession implements AgentSession {
         dir: 'meta',
         line: { event: 'query-error', error: String(error) },
       });
+    } finally {
+      if (this.q === q) this.interruption.reset();
     }
   }
 
