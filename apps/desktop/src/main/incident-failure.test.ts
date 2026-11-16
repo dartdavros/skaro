@@ -11,4 +11,8 @@ it('keeps provider limits, spend, context, authentication and progress failures 
   ])
     expect(incidentFailure({ code, message: 'The request failed' }).cause).toBe(cause);
   expect(incidentFailure(new Error('Unknown failure')).cause).toBe('external');
+  expect(incidentFailure({ category: 'other', message: 'Codex stopped (1)' })).toEqual({
+    cause: 'external',
+    code: 'agent_process_exited',
+  });
 });

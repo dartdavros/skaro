@@ -8,6 +8,7 @@ import { incidentResourceVersion } from './incident-condition';
 import { checkoutKey } from './task-stage';
 import { rememberEnvironmentWait } from './incident-environment-wait';
 import { recordTaskBlocker } from './task-blocker-receipt';
+import { assertIncidentCondition } from './incident-verification-policy';
 
 export async function reportTaskIncident(
   ctx: TaskRunEngine,
@@ -32,6 +33,7 @@ export async function reportTaskIncident(
     () => incidentHash(['unavailable', active.run.id]),
   );
   const failure = details ?? incidentFailure(reason);
+  if (details?.condition) assertIncidentCondition({ ...failure, condition: details.condition });
   const resource = details?.resourceId
     ? ctx.deps.db.resources.get(details.resourceId)
     : failure.cause === 'environment'
@@ -53,7 +55,7 @@ export async function reportTaskIncident(
         : (details?.condition ??
           (resource && resource.kind === 'environment'
             ? 'environment-ready'
-            : ['quota', 'rate-limit', 'authentication'].includes(failure.cause)
+            : ['quota', 'authentication'].includes(failure.cause)
               ? 'provider-evidence'
               : 'owner-evidence')),
     phase: 'diagnosing',

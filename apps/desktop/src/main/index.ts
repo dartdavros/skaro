@@ -156,6 +156,11 @@ if (!locked) {
       }),
       (sender) => sender === mainWindow()?.webContents,
     );
+    const picked = new Set<string>();
+    registerMedia(async () => {
+      await ready;
+      return services;
+    }, picked);
     createMainWindow();
     // Services and the renderer are independent: history requests must not wait for first paint.
     const { createServices } = await import('./app-services');
@@ -176,8 +181,6 @@ if (!locked) {
     const updates = result.updates;
     hasUpdate = () => updates.snapshot().components.length > 0;
     if (updates.canRunAgents()) void services.agents.refresh();
-    const picked = new Set<string>();
-    registerMedia(services, picked);
     const commands = services.commands;
     shutdown = () =>
       shutdownApp(services, commands, updates, historyReads!, shutdownWindow.progress);

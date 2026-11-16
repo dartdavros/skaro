@@ -82,6 +82,7 @@ export class TaskRuns {
   projectChanged(projectId: string): void {
     this.engine.merges.coordinator.changed(projectId);
     this.catalog.invalidate(projectId);
+    this.engine.incidents.projectChanged(projectId);
   }
   scopedTool(scope: SkaroScope, action: () => Promise<ToolResult>): Promise<ToolResult> {
     return taskTool(this.engine, scope, action);

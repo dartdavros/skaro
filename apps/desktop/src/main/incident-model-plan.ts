@@ -1,4 +1,5 @@
 import { incidentHash, type AppDb, type CoordinationBlocker, type ProjectCheck } from '@skaro/core';
+import { assertIncidentVerification } from './incident-verification-policy';
 
 export interface IncidentModelPlan {
   explanation: string;
@@ -6,11 +7,27 @@ export interface IncidentModelPlan {
   options: { label: string; description: string }[];
   verification?: ProjectCheck;
   verificationEnvironment?: { id: string; version: string };
+  verificationSession?: import('./incident-session-verification').IncidentSessionVerification;
   resourceVersion: string;
   policyRevision: number;
   subscriptions: string;
 }
 export const incidentPlanKey = (id: string) => `incident.model-plan.${id}`;
+export function incidentPlanVerifiable(plan: IncidentModelPlan, row: CoordinationBlocker) {
+  if (!row.protocol) return false;
+  const methods = [
+    plan.verification,
+    plan.verificationEnvironment,
+    plan.verificationSession,
+  ].filter(Boolean);
+  if (methods.length > 1) return false;
+  try {
+    assertIncidentVerification(row.protocol, methods.length === 1);
+    return true;
+  } catch {
+    return false;
+  }
+}
 export function incidentModelPlan(db: AppDb, row: CoordinationBlocker) {
   const plan = db.getSetting<IncidentModelPlan | undefined>(incidentPlanKey(row.id), undefined, {
     strict: true,
@@ -19,7 +36,8 @@ export function incidentModelPlan(db: AppDb, row: CoordinationBlocker) {
     row.protocol &&
     plan.resourceVersion === row.protocol.resourceVersion &&
     plan.policyRevision === row.protocol.ownerPolicyRevision &&
-    plan.subscriptions === incidentHash(row.protocol.subscriptions)
+    plan.subscriptions === incidentHash(row.protocol.subscriptions) &&
+    incidentPlanVerifiable(plan, row)
     ? plan
     : undefined;
 }
@@ -43,4 +61,4 @@ export function parseIncidentOptions(value: unknown): IncidentModelPlan['options
   return options;
 }
 export const incidentDiagnosisId = (row: CoordinationBlocker) =>
-  `diagnose-incident-${incidentHash([row.id, row.protocol?.resourceVersion, row.protocol?.ownerPolicyRevision, row.protocol?.subscriptions])}`;
+  `diagnose-incident-${incidentHash(['checkable-resolution-v2', row.id, row.protocol?.resourceVersion, row.protocol?.ownerPolicyRevision, row.protocol?.subscriptions])}`;

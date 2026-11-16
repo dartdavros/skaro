@@ -7,6 +7,7 @@ import { checkConfiguredIncident } from './incident-configured-check';
 import { incidentModelPlan } from './incident-model-plan';
 import { checkIncidentEnvironment } from './incident-environment-verification';
 import { DecisionNotDispatched } from './decision-not-dispatched';
+import { checkIncidentSession } from './incident-session-verification';
 
 export async function prepareModelIncident(ctx: TaskRunEngine, scope: SkaroScope, id: string) {
   try {
@@ -36,13 +37,14 @@ async function readModelIncident(ctx: TaskRunEngine, scope: SkaroScope, id: stri
 }
 export async function verifyModelIncident(ctx: TaskRunEngine, scope: SkaroScope, id: string) {
   const row = await prepareModelIncident(ctx, scope, id);
-  const environment = incidentModelPlan(ctx.deps.db, row)?.verificationEnvironment;
-  const verified =
-    row.protocol!.condition === 'owner-evidence'
-      ? environment
-        ? await checkIncidentEnvironment(ctx, row, environment)
-        : await checkConfiguredIncident(ctx, row)
-      : await checkIncident(ctx, row);
+  const plan = incidentModelPlan(ctx.deps.db, row);
+  const verified = plan?.verificationSession
+    ? await checkIncidentSession(ctx, row, plan.verificationSession)
+    : plan?.verificationEnvironment
+      ? await checkIncidentEnvironment(ctx, row, plan.verificationEnvironment)
+      : plan?.verification
+        ? await checkConfiguredIncident(ctx, row)
+        : await checkIncident(ctx, row);
   if (!verified)
     throw new DecisionNotDispatched(
       'The recorded condition is still unsatisfied; the incident remains open',

@@ -3,6 +3,7 @@ import type { SkaroScope, Tool } from '@skaro/mcp-server';
 import type { TaskRuns } from './tasks';
 import type { ChatSessions } from './chats';
 import { incidentPlanKey, parseIncidentOptions } from './incident-model-plan';
+import { assertIncidentVerification } from './incident-verification-policy';
 
 /** Model reasoning is data; verification and continuation remain controller operations. */
 export function incidentModelTools(
@@ -16,7 +17,9 @@ export function incidentModelTools(
       description:
         'Diagnose a current project incident. Supply actionable owner options with consequences. ' +
         'For an already authorized repair, set requires_owner_decision=false and bind an existing configured ' +
-        'project check by name. This grants no new permission and does not resolve or resume the task.',
+        'project check by name, registered task environment, or verification_agent=true for a recorded process exit. ' +
+        'Bind the verifier before offering owner options too: an answer alone is not recovery evidence. ' +
+        'This grants no new permission and does not resolve or resume the task.',
       available: (s) => s.kind === 'project_chat' || s.kind === 'task',
       inputSchema: {
         type: 'object',
@@ -37,6 +40,11 @@ export function incidentModelTools(
             },
           },
           verification_check: { type: 'string' },
+          verification_agent: {
+            type: 'boolean',
+            description:
+              'Verify recovery of a recorded agent process exit through a later live native turn; does not verify project services.',
+          },
           verification_environment: {
             type: 'string',
             description:
@@ -75,13 +83,13 @@ export function incidentModelTools(
           typeof args.verification_environment === 'string'
             ? await controller.incidents.bindEnvironment(row, args.verification_environment)
             : undefined;
-        if (
-          !args.requires_owner_decision &&
-          row.protocol!.condition === 'owner-evidence' &&
-          !check &&
-          !environment
-        )
-          throw new Error('Bind a configured verification check or offer concrete owner options');
+        const session =
+          args.verification_agent === true
+            ? await controller.incidents.bindSession(row)
+            : undefined;
+        if ([check, environment, session].filter(Boolean).length > 1)
+          throw new Error('Bind exactly one verification method');
+        assertIncidentVerification(row.protocol!, !!(check || environment || session));
         const fresh = await controller.prepareIncident(scope, row.id);
         if (fresh.revision !== row.revision) throw new Error('Incident changed during diagnosis');
         controller.incidents.store.db.setSetting(incidentPlanKey(row.id), {
@@ -90,6 +98,7 @@ export function incidentModelTools(
           options,
           ...(check ? { verification: check } : {}),
           ...(environment ? { verificationEnvironment: environment } : {}),
+          ...(session ? { verificationSession: session } : {}),
           resourceVersion: row.protocol!.resourceVersion,
           policyRevision: row.protocol!.ownerPolicyRevision,
           subscriptions: incidentHash(row.protocol!.subscriptions),
