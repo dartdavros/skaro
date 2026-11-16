@@ -1,0 +1,5 @@
+version: 2.2.38
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.38/Skaro-2.2.38-linux-arm64.AppImage
+    sha512: J79Ik/0yHAVwwB/9fYJ+HM6BY12MQT1cfIE/VunbPIr7ljiKFy1r58Bv6nHzAXB7C6g8Lb+pStfzlxVNnbI/pA==
+    size: 142068063
