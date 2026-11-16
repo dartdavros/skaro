@@ -8,6 +8,7 @@ import { c4ChangeHash } from './c4-fingerprint';
 import { checkoutKey } from './task-stage';
 import type { EnvironmentRecord } from './task-environment-registry';
 import type { MessageInput } from '../shared/ipc';
+import { OWNER_PERMISSION_INSTRUCTIONS } from './agent-interaction-instructions';
 
 const CONTINUE =
   'Continue the authorized task to its verified result. The preceding model turn ended, ' +
@@ -15,6 +16,8 @@ const CONTINUE =
   'Read the actual remaining criteria and tool results, complete implementation and affected ' +
   'verification, then call submit_result. Resolve routine setup with Skaro tools. ' +
   'For a genuinely missing owner decision, invoke the blocking question tool and act on its answer. ' +
+  OWNER_PERMISSION_INSTRUCTIONS +
+  ' ' +
   'For required owner credentials, call Skaro request_secret and wait for its protected answer; ' +
   'do not report the missing key as an external blocker before offering that input. ' +
   'If an external prerequisite really cannot be recovered within the authorized project setup, ' +

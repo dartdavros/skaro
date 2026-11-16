@@ -1,4 +1,5 @@
 import { OwnerMessages } from '../feed/owner-messages.svelte';
+import { SessionDispatch } from '../feed/session-dispatch.svelte';
 import { cleanError } from '../feed/action-error';
 import type { AgentModel, InteractionAnswer, PermissionMode } from '@skaro/timeline';
 import { questionAcceptsMessage } from '@skaro/timeline';
@@ -39,7 +40,13 @@ export function createTaskController(
   const startRequest = new TaskStartState(startState);
 
   const view = $derived(session.view);
-  const timeline = $derived(ownerMessages.timeline(session.timeline, session.view?.history));
+  const dispatch = new SessionDispatch(session, guard);
+  const timeline = $derived(
+    dispatch.timeline(
+      ownerMessages.timeline(session.timeline, session.view?.history),
+      view?.dispatchPending || startState.pending,
+    ),
+  );
   const hasFeed = $derived(
     !!timeline &&
       (timeline.items.length > 0 ||
@@ -52,7 +59,10 @@ export function createTaskController(
   const running = $derived(timeline !== undefined && timeline.status !== 'idle');
   $effect(() => {
     startRequest.update({
-      hasFeed,
+      hasFeed:
+        !!session.timeline?.items.length ||
+        !!view?.history?.count ||
+        !!session.timeline?.interactions.length,
       queued: view?.queued === true,
       error: !!(actionError || session.error),
     });
@@ -142,9 +152,7 @@ export function createTaskController(
     }
   }
 
-  function respond(id: string, answer: InteractionAnswer): Promise<void> {
-    return guard(() => window.skaro.invoke('task.respond', projectId, taskId, id, answer));
-  }
+  const respond = dispatch.respond;
 
   async function saveSettings(next: AgentSettings): Promise<void> {
     await guard(() => window.skaro.invoke('task.setSettings', projectId, taskId, next));

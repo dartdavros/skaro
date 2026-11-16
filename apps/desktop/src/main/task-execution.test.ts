@@ -51,7 +51,7 @@ it('deduplicates terminal events and bounds consecutive turns without progress',
   expect(execution.read().stalls).toBe(0);
 });
 
-it('records an actual task blocker through the MCP contract without accepting or completing work', async () => {
+it('rejects missing owner permission without blocking execution and records actual external failures', async () => {
   const execution = new TaskExecution(db, 'blocked-task');
   execution.start();
   const tool = taskBlockerTool(async (reason) => {
@@ -74,7 +74,24 @@ it('records an actual task blocker through the MCP contract without accepting or
     ).isError,
   ).toBe(true);
   expect(execution.read().blocked).toBeUndefined();
-  await tool.call({ reason: 'External endpoint unavailable' }, scope);
+  for (const permission of [true, undefined, 'false']) {
+    const result = await tool.call(
+      {
+        reason: 'The shared environment needs an update and restart.',
+        cause: 'environment',
+        code: 'runtime_candidate_unavailable',
+        requires_owner_permission: permission,
+      },
+      scope,
+    );
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toMatchObject({ failure: { blockerRecorded: false } });
+    expect(execution.read()).toEqual({ enabled: true, stalls: 0 });
+  }
+  await tool.call(
+    { reason: 'External endpoint unavailable', requires_owner_permission: false },
+    scope,
+  );
   expect(new TaskExecution(db, 'blocked-task').read()).toMatchObject({
     enabled: true,
     blocked: 'External endpoint unavailable',

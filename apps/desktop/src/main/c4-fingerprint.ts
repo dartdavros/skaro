@@ -1,22 +1,32 @@
-import { readFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { authoredBody, c4Hash, git, type ProjectArtifacts } from '@skaro/core';
+import { authoredBody, c4Hash, git, gitStream, type ProjectArtifacts } from '@skaro/core';
 import type { C4TaskScope } from './c4-task-scope';
 
 export const c4ReviewKey = (projectId: string, taskId: string) =>
   `c4.review.${projectId}.${taskId}`;
 
+/** Preserve the existing JSON fingerprint byte-for-byte across arbitrary stream boundaries. */
+export function c4DiffHash() {
+  const hash = createHash('sha256').update('{"diff":"');
+  return {
+    write: (chunk: string) => {
+      hash.update(JSON.stringify(chunk).slice(1, -1));
+    },
+    finish: (files: string[][]) =>
+      hash.update('","files":').update(JSON.stringify(files)).update('}').digest('hex'),
+  };
+}
+
 /** Includes staged, unstaged and untracked code, using the task's real Git checkout. */
 export async function c4ChangeHash(root: string, baseHead: string, head?: string): Promise<string> {
-  const diff = await git(root, [
-    'diff',
-    '--binary',
-    baseHead,
-    ...(head ? [head] : []),
-    '--',
-    '.',
-    ':(exclude).skaro',
-  ]);
+  const hash = c4DiffHash();
+  await gitStream(
+    root,
+    ['diff', '--binary', baseHead, ...(head ? [head] : []), '--', '.', ':(exclude).skaro'],
+    hash.write,
+  );
   const others = head
     ? { stdout: '' }
     : await git(root, [
@@ -33,9 +43,14 @@ export async function c4ChangeHash(root: string, baseHead: string, head?: string
       .split('\0')
       .filter(Boolean)
       .sort()
-      .map(async (path) => [path, c4Hash((await readFile(join(root, path))).toString('base64'))]),
+      .map(async (path) => {
+        const fileHash = createHash('sha256');
+        for await (const chunk of createReadStream(join(root, path), { encoding: 'base64' }))
+          fileHash.update(chunk);
+        return [path, fileHash.digest('hex')];
+      }),
   );
-  return c4Hash(JSON.stringify({ diff: diff.stdout, files }));
+  return hash.finish(files);
 }
 
 export function c4ArchitectureHash(artifacts: ProjectArtifacts, scope?: C4TaskScope): string {

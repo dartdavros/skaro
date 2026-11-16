@@ -91,6 +91,7 @@ const safetyActions = new Set([
   'ipc.incidents.revoke',
   'ipc.incidents.cancel',
   'mcp.report_task_blocker',
+  'mcp.reconcile_task_submission',
   'incident.report',
 ]);
 export const dispatchSafetyAction = (action: string) => safetyActions.has(action);

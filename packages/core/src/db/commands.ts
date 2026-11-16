@@ -78,4 +78,12 @@ export class DbCommands extends DbTable {
       .all(owner);
     return ids.map((row) => this.update(String(row['id']), 'cancelled'));
   }
+  /** Active delivery only; failures and uncertain receipts need attention instead of a spinner. */
+  hasPendingInput(owner: string): boolean {
+    return !!this.db
+      .prepare(
+        "SELECT 1 FROM owner_commands WHERE owner=? AND method IN ('task.send','chat.send') AND state IN ('accepted','delivering') LIMIT 1",
+      )
+      .get(owner);
+  }
 }

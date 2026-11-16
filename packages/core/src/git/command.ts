@@ -11,9 +11,16 @@ export class GitError extends Error {
   readonly code: number;
   readonly stderr: string;
 
-  constructor(args: string[], result: GitResult) {
+  constructor(args: string[], result: GitResult, cause?: Error) {
+    const text = result.stderr.trim() || result.stdout.trim();
+    const diagnostic =
+      text.length > 8192
+        ? text.slice(0, 4096) + '\n[Git diagnostic truncated]\n' + text.slice(-4096)
+        : text;
+    const code = (cause as NodeJS.ErrnoException | undefined)?.code;
     super(
-      `git ${args.join(' ')} failed (${result.code}): ${result.stderr.trim() || result.stdout.trim()}`,
+      `git ${args.join(' ')} failed (${result.code}${code ? `; ${code}` : ''}): ${diagnostic}`,
+      { cause },
     );
     this.args = args;
     this.code = result.code;
@@ -40,7 +47,8 @@ export function git(
       (error, stdout, stderr) => {
         const code = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
         const result = { stdout: String(stdout), stderr: String(stderr), code };
-        if (code !== 0 && !options.allowFail) reject(new GitError(args, result));
+        if (code !== 0 && !options.allowFail)
+          reject(new GitError(args, result, error ?? undefined));
         else resolve(result);
       },
     );

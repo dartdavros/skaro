@@ -3,8 +3,9 @@ import { watchDecisionImport } from '../decisions/source-navigation.svelte';
 import { chatDefaults } from './chat-defaults';
 import { chatModalSettings } from './chat-modal-settings';
 import { OwnerMessages } from '../feed/owner-messages.svelte';
+import { SessionDispatch } from '../feed/session-dispatch.svelte';
 import { cleanError } from '../feed/action-error';
-import type { AgentModel, InteractionAnswer, PermissionMode } from '@skaro/timeline';
+import type { AgentModel, PermissionMode } from '@skaro/timeline';
 import { questionAcceptsMessage } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 import { onDestroy } from 'svelte';
@@ -62,7 +63,13 @@ export function createChatController(
   let actionError = $state<string | undefined>();
 
   const view = $derived(session?.view);
-  const timeline = $derived(ownerMessages.timeline(session?.timeline, session?.view?.history));
+  const dispatch = new SessionDispatch(session, guard);
+  const timeline = $derived(
+    dispatch.timeline(
+      ownerMessages.timeline(session?.timeline, session?.view?.history),
+      view?.dispatchPending,
+    ),
+  );
   const settings = $derived(view?.settings ?? draft);
   const archived = $derived(view?.chat.archived === true);
   const running = $derived(timeline !== undefined && timeline.status !== 'idle');
@@ -132,11 +139,7 @@ export function createChatController(
     );
   }
 
-  function respond(id: string, answer: InteractionAnswer): Promise<void> {
-    const chat = chatId;
-    if (!chat) return Promise.resolve();
-    return guard(() => window.skaro.invoke('chat.respond', projectId, chat, id, answer));
-  }
+  const respond = dispatch.respond;
 
   async function saveSettings(next: ChatSettings): Promise<void> {
     const value: ChatSettings = {

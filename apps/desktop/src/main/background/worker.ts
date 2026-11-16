@@ -26,6 +26,8 @@ import { saveSessionCache } from './session-cache';
 import { taskCatalogWork } from './task-catalog-work';
 import { ChatCatalogReader } from './chat-catalog';
 import { aggregateModelUsage } from './model-usage-work';
+import { readSubmissionHistoryFailure } from '../submission-history-proof';
+import { resolve, relative, isAbsolute } from 'node:path';
 
 let c4: ReturnType<typeof c4Work> | undefined;
 let store: PayloadStore | undefined;
@@ -49,6 +51,25 @@ parentPort!.on(
       return;
     }
     void (async () => {
+      if (request.method === 'submission.proof') {
+        const input = request
+          .args[0] as import('../submission-history-proof').SubmissionHistoryRequest;
+        if (projectScope && projectScope !== input.projectId)
+          throw new Error('Submission proof is outside the worker scope');
+        if (
+          input.run.projectId !== input.projectId ||
+          input.operation.projectId !== input.projectId ||
+          input.operation.subject.kind !== 'task' ||
+          input.operation.subject.id !== input.run.taskId
+        )
+          throw new Error('Submission log does not belong to the requested task');
+        const data = (workerData as { dataDir: string }).dataDir;
+        const file = resolve(data, input.run.logPath),
+          path = relative(data, file);
+        if (path.startsWith('..') || isAbsolute(path))
+          throw new Error('Submission log is outside the profile');
+        return readSubmissionHistoryFailure(file, input);
+      }
       if (request.method === 'models.usage') {
         const projectId = request.args[0];
         if (typeof projectId !== 'string' || (projectScope && projectScope !== projectId))

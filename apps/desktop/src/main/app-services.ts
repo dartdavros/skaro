@@ -54,6 +54,7 @@ import { coordinatorTools } from './coordinator-tools';
 import { LocalVersions } from './local-versions';
 import { managedCacheServices } from './managed-cache-services';
 import { startProjectWriters } from './project-recovery-startup';
+import { submissionRecoveryTool } from './task-submission-recovery';
 
 export async function createServices(
   appState: AppState,
@@ -121,6 +122,7 @@ export async function createServices(
     version: app.getVersion(),
     tools: coordinatedTools(db, coordinators, [
       ...coordinatorTools(memory, currentRuns, currentChats),
+      submissionRecoveryTool(db, dataDir),
       ...cacheTools,
       ...c4AuditTools(() => c4Audits),
       ...c4Tools({

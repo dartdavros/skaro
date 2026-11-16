@@ -26,6 +26,9 @@ export function taskBlockerTool(
       'Skaro coordinates a bounded repair once under project permissions, then verifies it before resuming subscribers. ' +
       'Do not repeatedly repair a shared resource or poll the model while blocked. This does not accept criteria, ' +
       'complete or merge the task. Missing owner decisions use the blocking question tool instead. ' +
+      'If a known recovery action only lacks owner permission (including shared-service updates/restarts), ' +
+      'immediately request the exact action and its consequences in that card and wait. ' +
+      'This tool rejects missing permission without recording a blocker. ' +
       'Missing owner API keys/passwords use request_secret; its protected question is the waiting state. ' +
       'Claim registration only after a successful recorded acknowledgement. A queued or uncertain ' +
       'operation is not a recorded blocker; inspect the actual project incident state instead of ' +
@@ -36,6 +39,13 @@ export function taskBlockerTool(
       type: 'object',
       properties: {
         reason: { type: 'string', minLength: 1 },
+        requires_owner_permission: {
+          type: 'boolean',
+          description:
+            'Does the known next action require owner consent that has not been granted? ' +
+            'If true, use the structured question tool instead. Set false only for an external ' +
+            'prerequisite failure that permission cannot resolve, or an explicit owner pause.',
+        },
         cause: { type: 'string', enum: INCIDENT_CAUSES },
         code: { type: 'string', pattern: '^[a-z0-9_-]+$' },
         resource_id: { type: 'string' },
@@ -44,7 +54,7 @@ export function taskBlockerTool(
           enum: ['environment-ready', 'inputs-current', 'provider-evidence', 'owner-evidence'],
         },
       },
-      required: ['reason'],
+      required: ['reason', 'requires_owner_permission'],
       additionalProperties: false,
     },
     available: (scope) => scope.kind === 'task' && !!scope.taskId,
@@ -58,6 +68,26 @@ export function taskBlockerTool(
         return {
           text: 'A current task and an evidenced blocker reason are required.',
           isError: true,
+        };
+      if (args['requires_owner_permission'] !== false)
+        return {
+          text:
+            'No blocker was recorded. If the known next action requires owner permission, ' +
+            'immediately invoke the structured question tool with the exact action, affected ' +
+            'services/data, consequences and concrete allow/decline options, then wait. ' +
+            'Do not ask the owner to invent a resolution or finish with a blocker summary. ' +
+            'For an actual external prerequisite failure or explicit owner pause, confirm ' +
+            'requires_owner_permission=false before reporting it.',
+          isError: true,
+          structuredContent: {
+            failure: {
+              category:
+                args['requires_owner_permission'] === true
+                  ? 'owner_permission_required'
+                  : 'blocker_resolution_required',
+              blockerRecorded: false,
+            },
+          },
         };
       if (
         (args['cause'] === undefined &&

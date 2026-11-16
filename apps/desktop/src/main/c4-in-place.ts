@@ -11,6 +11,8 @@ import type { ProjectContext } from './projects';
 import { assertC4TaskReview, c4ChangeHash } from './c4-review';
 import { prepareC4Publication } from './c4-publication';
 import { readSubject, updateSubject } from './task-subject';
+import { captureInPlaceResult, type InPlaceSubmission } from './completion-in-place';
+import { CompletionStore } from './completion-store';
 
 /** In-place code is already in the owner's checkout; complete its verified architecture there. */
 export async function completeInPlaceC4(
@@ -18,6 +20,7 @@ export async function completeInPlaceC4(
   context: ProjectContext,
   taskId: string,
   runId: string,
+  submission: InPlaceSubmission = {},
 ): Promise<void> {
   const review = await assertC4TaskReview(db, context, taskId, context.root, runId);
   context.invalidate();
@@ -25,6 +28,17 @@ export async function completeInPlaceC4(
   const pkg = await prepareC4Publication(context, artifacts, review.realized);
   if (review.changeHash !== (await c4ChangeHash(context.root, review.baseHead)))
     throw new Error(`${taskId}: code changed during in-place completion; review C4 again`);
+  const result = /^T-\d+$/.test(taskId)
+    ? await captureInPlaceResult(
+        db,
+        context,
+        await readSubject(context, taskId),
+        review,
+        submission,
+      )
+    : undefined;
+  if (review.changeHash !== (await c4ChangeHash(context.root, review.baseHead)))
+    throw new Error(`${taskId}: code changed before in-place completion; review C4 again`);
   if (pkg && /^T-\d+$/.test(taskId)) {
     const task = await readSubject(context, taskId);
     const path = task.path.replace(/^\.skaro\//, '');
@@ -37,6 +51,12 @@ export async function completeInPlaceC4(
   } else {
     if (pkg) await applyC4Package(context.root, pkg);
     await updateSubject(context, taskId, { status: 'done' });
+  }
+  if (result) {
+    const store = new CompletionStore(db, context.id);
+    store.saveResult({ ...result, pendingReview: false });
+    store.issue(taskId);
+    store.conflict(taskId, false);
   }
   context.invalidate();
 }

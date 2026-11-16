@@ -12,6 +12,8 @@ export interface CoordinationExecution<T> {
   outcome?: (value: T) => 'succeeded' | 'failed' | 'uncertain';
   /** Authoritative read/projection only. Never the original external executor. */
   replay?: () => T | Promise<T>;
+  /** Only domains with an exact persisted terminal failure receipt may opt in. */
+  replayFailed?: boolean;
 }
 
 /** Durable dispatch boundary shared by the host and genuine SQLite verification. */
@@ -23,7 +25,10 @@ export async function dispatchProjectOperation<T>(
 ): Promise<T> {
   const { projectId, id } = accepted;
   let current = ledger.getOperation(projectId, id)!;
-  if (current.state === 'succeeded' && options.replay) {
+  if (
+    (current.state === 'succeeded' || (current.state === 'failed' && options.replayFailed)) &&
+    options.replay
+  ) {
     await options.validate?.();
     return options.replay();
   }

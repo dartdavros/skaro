@@ -12,6 +12,11 @@ export interface BackgroundMethods
     ReturnType<typeof import('./task-catalog-work').taskCatalogWork>,
     ChatCatalogMethods,
     C4ReviewMethods {
+  'submission.proof': (
+    request: import('../submission-history-proof').SubmissionHistoryRequest,
+  ) => Promise<
+    Awaited<ReturnType<typeof import('../submission-history-proof').readSubmissionHistoryFailure>>
+  >;
   'models.usage': (
     projectId: string,
     sources: import('../../shared/model-usage').ModelUsageSource[],

@@ -1,4 +1,5 @@
 import { requireAgentId } from '@skaro/agents';
+import { ownerDispatchPending } from './session-dispatch-pending';
 import { type ChatRecord } from '@skaro/core';
 import type { ChatSettings, ChatSummary, ChatView } from '../shared/ipc';
 import { lastKey } from './chat-settings-helpers';
@@ -105,6 +106,8 @@ export class ChatViews {
       );
     return {
       projectId,
+      dispatchPending:
+        ownerDispatchPending(this.ctx.deps.db, projectId, chatId) || !!live.attaching,
       decisionEpoch: live.chat.logPath,
       chat: this.summary(live.chat),
       settings: this.ctx.settings.settings(live.chat),
