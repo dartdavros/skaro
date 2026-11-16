@@ -1,8 +1,9 @@
-import { clipboard, dialog, nativeImage, shell, type BrowserWindow } from 'electron';
+import { dialog, shell, type BrowserWindow } from 'electron';
 import type { PickedFile } from '../shared/ipc';
 import { isImagePath } from './files';
 import type { Handlers } from './ipc';
 import type { Services } from './app-services';
+import { saveClipboardImage } from './clipboard-image';
 
 export function fileHandlers(
   { runs, attachments }: Services,
@@ -35,23 +36,7 @@ export function fileHandlers(
       });
     },
     'files.diff': async (projectId, taskId, path) => runs.files.diff(projectId, taskId, path),
-    'files.pasteImage': async () => {
-      const items = await clipboard.read();
-      const item = items.find((entry) => entry.types.includes('image/png'));
-      if (!item) return undefined;
-      const blob = await item.getType('image/png');
-      if (!('arrayBuffer' in blob)) return undefined;
-      const image = nativeImage.createFromBuffer(Buffer.from(await blob.arrayBuffer()));
-      if (image.isEmpty()) return undefined;
-      const { width, height } = image.getSize();
-      const ref = attachments.save({
-        base64: image.toPNG().toString('base64'),
-        mime: 'image/png',
-        width,
-        height,
-      });
-      return { path: attachments.file(ref), kind: 'image', image: ref };
-    },
+    'files.pasteImage': (bytes) => saveClipboardImage(attachments, bytes),
     'files.pick': async (kind) => {
       const options: Electron.OpenDialogOptions = {
         properties: kind === 'folder' ? ['openDirectory'] : ['openFile', 'multiSelections'],

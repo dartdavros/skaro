@@ -1,13 +1,24 @@
 import type { CoordinationOperation } from '@skaro/core';
 import type { ToolResult } from '@skaro/mcp-server';
 import { CoordinationPending } from './project-coordinator-errors';
+import { coordinationHash } from './project-coordinator-request';
 
 /** Reporting a blocker must remain available while unrelated task controls await reconciliation. */
 export function coordinationToolScopeKey(
   tool: string,
   operationId: string,
   ordinary: string,
+  args: Record<string, unknown> = {},
+  project?: string,
 ): string {
+  if (tool === 'cancel_question') return `question-cancel:${operationId}`;
+  if (tool === 'resume_task' && typeof args.command_id === 'string')
+    return `owner-resume:${coordinationHash([project, ordinary, args.command_id])}`;
+  if (
+    ['plan_project_incident', 'verify_project_incident'].includes(tool) &&
+    typeof args.incident_id === 'string'
+  )
+    return `incident-control:${coordinationHash([project, args.incident_id])}`;
   return tool === 'report_task_blocker' ? `blocker-report:${operationId}` : ordinary;
 }
 

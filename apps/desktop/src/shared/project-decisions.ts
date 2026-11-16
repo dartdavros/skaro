@@ -41,12 +41,19 @@ export function decisionAnswerOutcome(answer: DecisionAnswer): 'answered' | 'den
     : 'answered';
 }
 export interface ProjectDecisionMethods {
+  'decisions.count': (projectId: string) => Promise<number>;
   'decisions.list': (projectId: string) => Promise<ProjectDecision[]>;
   'decisions.answer': (
     projectId: string,
     id: string,
     revision: string,
     answer: DecisionAnswer,
+  ) => Promise<void>;
+  'decisions.cancel': (
+    projectId: string,
+    id: string,
+    revision: string,
+    reason: string,
   ) => Promise<void>;
   'decisions.status': (
     projectId: string,

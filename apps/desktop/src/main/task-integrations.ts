@@ -10,6 +10,7 @@ import type {
 import { IntegrationStore } from './integration-store';
 import { IntegrationService } from './integration-service';
 import { IntegrationHistory } from './integration-history';
+import { QuestionAnswers } from './question-answers';
 import {
   integrationQueueKey,
   integrationEnvironmentKey,
@@ -49,6 +50,7 @@ export class TaskIntegrations {
       this.store,
       (p, t) => ctx.changed(p, t),
       (batch) => ctx.deps.emit('integration.events', batch),
+      (op, state) => new QuestionAnswers(ctx.deps.db, `integration.${op.id}`).project(state),
     );
     this.service = new IntegrationService({
       store: this.store,
@@ -199,6 +201,23 @@ export class TaskIntegrations {
     )
       throw new Error('This integration session is no longer its current worker.');
     return session;
+  }
+
+  async cancelQuestion(id: string, reason: string, scope: SkaroScope): Promise<void> {
+    const { operation: op, worker } = this.admitted(scope);
+    const local = id.startsWith(`integration-${op.id}:`)
+      ? id.slice(`integration-${op.id}:`.length)
+      : id;
+    const raw = local.startsWith(`${worker}:`) ? local : `${worker}:${local}`;
+    if (
+      !(await this.controls.cancelQuestion(
+        op.projectId,
+        op.taskId,
+        `integration-${op.id}:${raw}`,
+        reason,
+      ))
+    )
+      throw new Error('The integration question is no longer open');
   }
 
   async verify(checks: IntegrationCheck[], scope: SkaroScope): Promise<ToolResult> {

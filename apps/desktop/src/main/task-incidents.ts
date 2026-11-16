@@ -23,6 +23,7 @@ import { IncidentWork } from './incident-work';
 import { canRenewIncidentApproval } from './incident-approval-renewal';
 import { reportTaskIncident } from './task-incident-report';
 import { retireCapacityWait } from './resource-wait-retirement';
+import { bindIncidentEnvironment } from './incident-environment-verification';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -52,6 +53,12 @@ export class TaskIncidents {
   }
   get policy() {
     return new IncidentPolicy(this.ctx.deps.db, this.ctx.deps.coordinators!);
+  }
+  escalate(row: CoordinationBlocker) {
+    return escalateIncident(this.ctx, row);
+  }
+  bindEnvironment(row: CoordinationBlocker, id: string) {
+    return bindIncidentEnvironment(this.ctx, row, id);
   }
 
   report(
@@ -172,8 +179,7 @@ export class TaskIncidents {
     });
     if (!action) {
       this.store.update(row, { phase: 'waiting' });
-      if (['environment-ready', 'owner-evidence'].includes(row.protocol!.condition))
-        await escalateIncident(this.ctx, row);
+      await escalateIncident(this.ctx, row);
       return;
     }
     let authority = this.policy.authority(action);

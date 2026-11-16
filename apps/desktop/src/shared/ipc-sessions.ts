@@ -70,6 +70,8 @@ export interface TaskView {
 }
 
 export interface MessageInput {
+  /** Exact questions visible on submission; a queued message cannot cancel a newer request. */
+  supersededQuestions?: import('@skaro/timeline').QuestionMessageReference[];
   /** Main-process orchestration; retained for delivery recovery, hidden from the conversation. */
   internal?: boolean;
   /** Main-process encrypted continuation of a restored secret question. Never plaintext in IPC. */

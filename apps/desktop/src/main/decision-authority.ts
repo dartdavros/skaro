@@ -12,7 +12,7 @@ export function decisionIsSafety(action: DecisionAnswer): boolean {
   );
 }
 export function safetyDecisionMethod(method: string, args: unknown[]): boolean {
-  if (method === 'c4.auditStop') return true;
+  if (method === 'c4.auditStop' || method === 'decisions.cancel') return true;
   if (['task.respond', 'chat.respond', 'incidents.answer'].includes(method)) {
     const answer = args[method === 'incidents.answer' ? 2 : 3] as InteractionAnswer | undefined;
     return !!answer && decisionIsSafety({ kind: 'respond', answer });

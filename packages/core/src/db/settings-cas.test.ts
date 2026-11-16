@@ -4,6 +4,34 @@ import { tmpdir } from 'node:os';
 import { expect, it } from 'vitest';
 import { AppDb } from './appdb.ts';
 
+it('uses savepoints for nested acceptance, retaining outer writes after inner failure and rolling back all writes after outer failure', () => {
+  const db = AppDb.open(':memory:');
+  try {
+    db.settings.atomic(() => {
+      db.setSetting('outer', 'committed');
+      expect(() =>
+        db.settings.atomic(() => {
+          db.setSetting('inner', 'discarded');
+          throw new Error('Inner acceptance rejected');
+        }),
+      ).toThrow('Inner acceptance rejected');
+      expect(db.getSetting('outer', null)).toBe('committed');
+      expect(db.getSetting('inner', null)).toBeNull();
+    });
+    expect(() =>
+      db.settings.atomic(() => {
+        db.setSetting('outer', 'discarded');
+        db.settings.atomic(() => db.setSetting('inner', 'also discarded'));
+        throw new Error('Outer incident commit rejected');
+      }),
+    ).toThrow('Outer incident commit rejected');
+    expect(db.getSetting('outer', null)).toBe('committed');
+    expect(db.getSetting('inner', null)).toBeNull();
+  } finally {
+    db.close();
+  }
+});
+
 it('claims and replaces an actual persisted setting atomically across independent SQLite connections', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'skaro-setting-cas-'));
   if (

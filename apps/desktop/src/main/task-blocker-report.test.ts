@@ -54,6 +54,31 @@ async function metadata(db: AppDb) {
   return { project, run, execution, subscription, protocol, request };
 }
 
+it('records an explicit owner pause with disabled intent so diagnosis and late repair cannot resume it', async () => {
+  const db = AppDb.open(':memory:');
+  try {
+    const m = await metadata(db);
+    const store = new IncidentStore(db, new ProjectCoordinators(db));
+    const row = await store.report(
+      m.project.id,
+      { kind: 'run', id: m.run.id },
+      { ...m.protocol, cause: 'owner-decision', code: 'explicit-owner-pause' },
+      m.subscription,
+      'Owner selected stop in the actual question protocol',
+      'worker',
+    );
+    recordTaskBlocker(db, row, m.subscription, 'Owner selected stop');
+    expect(m.execution.read()).toMatchObject({ enabled: false, blockedIncident: row.id });
+    expect(m.execution.intentVersion()).toBeGreaterThan(m.subscription.intent);
+    expect(m.execution.clearIncident(row.id, m.subscription.intent)).toBe(false);
+    recoverTaskBlockerReports(db, m.project.id);
+    expect(m.execution.read().enabled).toBe(false);
+    expect(db.commands.pending()).toEqual([]);
+  } finally {
+    db.close();
+  }
+});
+
 it('records a blocker independently of an uncertain task control and acknowledges its exact durable effect', async () => {
   const db = AppDb.open(':memory:');
   try {

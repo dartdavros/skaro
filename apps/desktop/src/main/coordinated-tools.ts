@@ -19,6 +19,9 @@ const reads = new Set([
   'read_chat_history',
 ]);
 const controls = new Set([
+  'plan_project_incident',
+  'verify_project_incident',
+  'cancel_question',
   'finish_c4_audit',
   'decide_project_incident',
   'report_task_blocker',
@@ -124,6 +127,8 @@ export function coordinatedTools(
                   identity.id,
                   policy?.scopeKey ??
                     (mode === 'mutation' ? 'project' : `control:${subject.kind}:${subject.id}`),
+                  args,
+                  scope.projectId,
                 ),
                 ...(mode === 'mutation'
                   ? { expectedVersion: previous?.expectedVersion ?? version }

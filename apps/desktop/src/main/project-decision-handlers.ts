@@ -9,6 +9,7 @@ import { validateQuestionAnswer } from '@skaro/timeline';
 import { decisionIsSafety } from './decision-authority';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 import { DecisionNotDispatched } from './decision-not-dispatched';
+import { dispatchQuestionReply } from './question-reply-dispatch';
 
 /** Wrap the existing executors. The window and original feed enter this same gate. */
 export function projectDecisionHandlers<T extends Partial<Handlers>>(
@@ -59,7 +60,9 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
         if (entry.kind === 'interaction' && action.kind === 'respond') {
           if (entry.interaction.kind === 'merge') throw new Error('decision_answer_kind_invalid');
           const method = entry.origin.kind === 'task' ? 'task.respond' : 'chat.respond';
-          await original[method]!(p, id, entry.interaction.id, action.answer);
+          await dispatchQuestionReply(entry, action.answer, () =>
+            original[method]!(p, id, entry.interaction.id, action.answer),
+          );
         } else if (
           entry.kind === 'interaction' &&
           entry.interaction.kind === 'merge' &&
@@ -126,6 +129,20 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
         : ('stale' as const);
     },
     'decisions.list': (project: string) => reader.list(project),
+    'decisions.count': async (project: string) => (await reader.list(project)).length,
+    'decisions.cancel': async (project: string, id: string, revision: string, reason: string) => {
+      const entry = (await reader.list(project)).find((row) => row.id === id);
+      if (
+        !entry ||
+        entry.revision !== revision ||
+        entry.kind !== 'interaction' ||
+        entry.interaction.kind !== 'question'
+      )
+        throw new DecisionNotDispatched('decision_stale');
+      const cancel = entry.origin.kind === 'task' ? services.runs : services.chats;
+      await cancel.cancelQuestion(project, entry.origin.id, entry.interaction.id, reason);
+      reader.invalidate(project, entry.origin.kind, entry.origin.id);
+    },
     'decisions.answer': async (
       project: string,
       id: string,

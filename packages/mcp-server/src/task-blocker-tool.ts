@@ -2,6 +2,7 @@ import type { Tool, ToolResult } from './server.ts';
 import type { SkaroScope } from './tools.ts';
 import type { ToolCallContext } from './tool-call-identity.ts';
 import { INCIDENT_CAUSES, type IncidentCause, type IncidentProtocol } from '@skaro/core';
+import { isIncidentOwnerPause } from './incident-owner-pause.ts';
 export interface TaskBlockerDetails {
   cause: IncidentCause;
   code: string;
@@ -34,7 +35,8 @@ export function taskBlockerTool(
       'operation is not a recorded blocker; inspect the actual project incident state instead of ' +
       'inventing confirmation or blindly repeating an unknown effect. ' +
       'Ordinary chat follow-ups already suspend automatic continuation; answer a question and end ' +
-      'the turn without inventing a task blocker. An explicit owner pause may be recorded here.',
+      'the turn without inventing a task blocker. An explicit owner pause uses cause="owner-decision" ' +
+      'and code="owner_pause"; it disables execution intent and never starts model diagnosis.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -88,6 +90,14 @@ export function taskBlockerTool(
               blockerRecorded: false,
             },
           },
+        };
+      if (
+        ['owner-decision', 'permission', 'secret'].includes(String(args['cause'])) &&
+        !isIncidentOwnerPause(String(args['cause']), String(args['code']))
+      )
+        return {
+          text: 'No blocker was recorded. Use the structured question tool for a missing owner decision or permission, with concrete options and consequences. Use request_secret for protected inputs.',
+          isError: true,
         };
       if (
         (args['cause'] === undefined &&

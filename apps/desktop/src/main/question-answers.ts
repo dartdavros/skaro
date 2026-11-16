@@ -15,6 +15,8 @@ import { openPrivate, sealPrivate } from './private-input';
 import type { MessageInput } from '../shared/ipc';
 import { TaskExecution } from './task-execution';
 import { QuestionRetirements } from './question-retirements';
+import { recordQuestionAcceptance } from './question-answer-proof';
+import { DecisionNotDispatched } from './decision-not-dispatched';
 
 type Question = Extract<Interaction, { kind: 'question' }>;
 interface SavedAnswer {
@@ -31,8 +33,10 @@ export class QuestionAnswers {
   private readonly db: AppDb;
   private readonly key: string;
   private readonly retired: QuestionRetirements;
+  private readonly owner: string;
   constructor(db: AppDb, owner: string) {
     this.db = db;
+    this.owner = owner;
     this.key = `question.answers.${owner}`;
     this.retired = new QuestionRetirements(db, owner);
   }
@@ -42,8 +46,13 @@ export class QuestionAnswers {
     emit: (event: TimelineEvent) => void,
     requestEpoch?: string,
     executionGuard?: SavedAnswer['executionGuard'],
+    afterCommit?: () => void,
   ): void {
-    validateQuestionAnswer(question, answer);
+    try {
+      validateQuestionAnswer(question, answer);
+    } catch (error) {
+      throw new DecisionNotDispatched(error);
+    }
     const previous = this.pending({ items: [], turns: [], interactions: [], status: 'idle' });
     if (
       previous &&
@@ -52,7 +61,12 @@ export class QuestionAnswers {
     )
       this.delivered();
     const sanitized = withoutSecrets(question, answer);
-    const encrypted = question.questions.some((q) => q.secret) ? sealPrivate(answer) : undefined;
+    let encrypted: string | undefined;
+    try {
+      encrypted = question.questions.some((q) => q.secret) ? sealPrivate(answer) : undefined;
+    } catch (error) {
+      throw new DecisionNotDispatched(error);
+    }
     const saved = this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? [];
     if (
       saved.some(
@@ -61,7 +75,7 @@ export class QuestionAnswers {
           (!entry.deliveryId || entry.requestEpoch !== requestEpoch),
       )
     )
-      throw new Error(
+      throw new DecisionNotDispatched(
         'An earlier answer with this adapter ID still awaits delivery; review is required.',
       );
     const existing = saved.find(
@@ -75,7 +89,9 @@ export class QuestionAnswers {
       coordinationHash(existing.encrypted ? openPrivate(existing.encrypted) : existing.answer) !==
         coordinationHash(answer)
     )
-      throw new Error('This answer was already accepted; its delivery cannot be replaced.');
+      throw new DecisionNotDispatched(
+        'This answer was already accepted; its delivery cannot be replaced.',
+      );
     const entry: SavedAnswer = {
       interaction: question,
       answer: sanitized,
@@ -86,7 +102,18 @@ export class QuestionAnswers {
       ...(encrypted ? { encrypted } : {}),
     };
     const entries = [...saved.filter((entry) => entry.interaction.id !== question.id), entry];
-    this.db.setSetting(this.key, entries);
+    this.db.settings.atomic(() => {
+      this.db.setSetting(this.key, entries);
+      recordQuestionAcceptance(
+        this.db,
+        this.owner,
+        question,
+        sanitized,
+        requestEpoch,
+        entry.deliveryId!,
+      );
+    });
+    afterCommit?.();
     this.replay(entry, emit);
   }
   private replay(entry: SavedAnswer, emit: (event: TimelineEvent) => void, close = true): void {

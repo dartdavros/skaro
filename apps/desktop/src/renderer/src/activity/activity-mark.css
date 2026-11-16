@@ -24,6 +24,34 @@
   animation: sk-hammer-tap 1s infinite;
 }
 
+.activity-compacting_context .chevron-top {
+  --compression-travel: 3px;
+}
+
+.activity-compacting_context .chevron-bottom {
+  --compression-travel: -3px;
+}
+
+.activity-compacting_context .chevron-top,
+.activity-compacting_context .chevron-bottom {
+  animation: sk-context-compress 2.4s ease-in-out infinite;
+}
+
+@keyframes sk-context-compress {
+  0%,
+  15%,
+  100% {
+    transform: translateY(0);
+  }
+  45%,
+  60% {
+    transform: translateY(var(--compression-travel));
+  }
+  90% {
+    transform: translateY(0);
+  }
+}
+
 .activity-starting_environment > svg > * {
   transform-box: fill-box;
   transform-origin: center;
@@ -97,6 +125,8 @@
   }
 
   .agent-activity > svg,
+  .activity-compacting_context .chevron-top,
+  .activity-compacting_context .chevron-bottom,
   .activity-starting_environment > svg > * {
     animation: none;
   }

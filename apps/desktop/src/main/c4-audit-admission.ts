@@ -5,6 +5,7 @@ import { C4AuditStore } from './c4-audit-store';
 export const isAuditChat = (db: AppDb, chat: string) =>
   !!db.getSetting(`c4.audit.chat.${chat}`, undefined);
 export const auditToolsAllowed = new Set([
+  'cancel_question',
   'get_c4_context',
   'get_project_context',
   'read_project_memory',

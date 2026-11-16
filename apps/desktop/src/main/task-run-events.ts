@@ -42,7 +42,10 @@ export class TaskRunEvents {
         }
         return;
       case 'turn.started':
-        this.ctx.setRuntime(projectId, taskId, 'running', active.run.id);
+        this.settleRuntime(active);
+        return;
+      case 'item.upsert':
+        if (event.item.kind === 'proposal') this.settleRuntime(active);
         return;
       case 'interaction.opened':
         // The merge card is "На ревью", not a question: it does not make the task wait.

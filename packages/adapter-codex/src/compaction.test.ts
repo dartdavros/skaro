@@ -1,4 +1,4 @@
-import { feedRows, Timeline, type TimelineEvent } from '@skaro/timeline';
+import { currentActivity, feedRows, Timeline, type TimelineEvent } from '@skaro/timeline';
 import { expect, it } from 'vitest';
 import { CodexProjector } from './projector.ts';
 
@@ -16,11 +16,19 @@ function feed(completed: boolean, turn: 'completed' | 'failed') {
   );
   projector.output({ method: 'turn/started', params: { turn: { id: 't1' } } });
   projector.output({ method: 'item/started', params: { turnId: 't1', item: compaction } });
-  const running = feedRows(Timeline.from(events).state).map((row) => row.type);
-  if (completed)
+  const active = Timeline.from(events).state;
+  const running = feedRows(active).map((row) => row.type);
+  expect(currentActivity(active)).toBe('compacting_context');
+  expect(currentActivity(Timeline.restore(structuredClone(active)).state)).toBe(
+    'compacting_context',
+  );
+  if (completed) {
     projector.output({ method: 'item/completed', params: { turnId: 't1', item: compaction } });
+    expect(currentActivity(Timeline.from(events).state)).toBe('waiting_model');
+  }
   projector.output({ method: 'turn/completed', params: { turn: { id: 't1', status: turn } } });
   const state = Timeline.from(events).state;
+  expect(currentActivity(state)).toBeUndefined();
   return { running, rows: feedRows(state).map((row) => row.type), status: state.items[0]?.status };
 }
 

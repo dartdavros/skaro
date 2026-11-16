@@ -4,6 +4,7 @@ import {
   pendingOwnerCommand,
   retiredOwnerCommand,
   restoredCommandError,
+  visibleOwnerCommand,
 } from './owner-command-state';
 
 it('restores unresolved input but keeps the live echo after delivery until history loads', () => {
@@ -15,6 +16,24 @@ it('restores unresolved input but keeps the live echo after delivery until histo
     expect(retiredOwnerCommand({ state })).toBe(false);
   for (const state of ['failed', 'cancelled'] as const)
     expect(retiredOwnerCommand({ state })).toBe(true);
+});
+
+it('keeps internal diagnosis assignments out of live and restored owner echoes', () => {
+  const command: OwnerCommand = {
+    id: 'diagnose-incident',
+    owner: 'project:task',
+    method: 'task.send',
+    args: ['project', 'task', { internal: true, text: 'Controller diagnosis' }],
+    state: 'uncertain',
+    error: 'Internal delivery interrupted',
+  };
+  expect(visibleOwnerCommand(command)).toBe(false);
+  expect(pendingOwnerCommand(command)).toBe(false);
+  expect(restoredCommandError([command])).toBeUndefined();
+  const owner = { ...command, args: ['project', 'task', { text: 'Owner follow-up' }] };
+  expect(visibleOwnerCommand(owner)).toBe(true);
+  expect(pendingOwnerCommand(owner)).toBe(true);
+  expect(restoredCommandError([owner])).toBe(command.error);
 });
 
 it('does not resurrect a failed command banner but preserves an unresolved delivery warning', () => {

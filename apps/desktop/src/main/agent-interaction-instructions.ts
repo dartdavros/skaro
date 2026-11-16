@@ -29,6 +29,15 @@ export function agentInteractionInstructions(): string {
         'discovered, or explicit owner consent required by project instructions. Explain the ' +
         'specific unresolved choice and its consequences; suspend this session until every question has been answered.',
       '- ' + OWNER_PERMISSION_INSTRUCTIONS,
+      '- An owner message can supersede earlier question cards. Skaro cancels only the exact requests ' +
+        'visible at submission; this is not a filled secret field or permission. Interpret the new message, ' +
+        'honor existing restrictions and do not repeat obsolete requests. Use cancel_question for an explicitly ' +
+        'cancelled or demonstrably obsolete request. Never use cancellation to invent consent.',
+      '- For an external blocker, investigate the actual cause and available authorized remedies. ' +
+        'After report_task_blocker, use plan_project_incident to provide a concrete resolution question ' +
+        'with two or three actions and consequences when an owner decision is needed. For an already ' +
+        'authorized repair, perform it through normal tools and call verify_project_incident. ' +
+        'A blocker code, generic free-text field or owner choice is not evidence of a repaired prerequisite.',
       '- For each required decision, show two or three concrete options with their consequences ' +
         'through the structured question tool. Ask the smallest actionable question first ' +
         'instead of listing unexplained requirements in chat. Keep free text available for details. ' +

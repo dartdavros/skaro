@@ -1,12 +1,14 @@
 import type { AppDb, TaskRuntime } from '@skaro/core';
 import type { TimelineState } from '@skaro/timeline';
+import { pendingProposals } from '../shared/feed-actions';
 
 /** Owner questions, active work and resource waits retain their distinct existing statuses. */
 export function taskTimelineRuntime(
-  timeline: Pick<TimelineState, 'status' | 'interactions'>,
+  timeline: Pick<TimelineState, 'status' | 'interactions'> & Partial<Pick<TimelineState, 'items'>>,
   recovery: 'queued' | 'running' | undefined,
 ): TaskRuntime {
   if (timeline.interactions.some((interaction) => interaction.kind !== 'merge')) return 'waiting';
+  if (pendingProposals(timeline.items ?? []).length) return 'waiting';
   if (timeline.status !== 'idle') return 'running';
   return recovery ?? 'idle';
 }

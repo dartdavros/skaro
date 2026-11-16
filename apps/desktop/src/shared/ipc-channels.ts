@@ -17,6 +17,8 @@ export const METHODS = [
   'coordinator.setDispatch',
   'activity.page',
   'decisions.list',
+  'decisions.count',
+  'decisions.cancel',
   'decisions.answer',
   'decisions.status',
   'incidents.list',

@@ -9,6 +9,10 @@ import { withoutSecrets } from './session-log';
 import { linkC4DecisionReply } from './c4-decision-recovery';
 import { DecisionNotDispatched } from './decision-not-dispatched';
 import { incidentReplyProof } from './incident-reply-proof';
+import { questionReplyProof } from './question-answer-proof';
+
+const replyProof = (db: AppDb, entry: ProjectDecision, hash: string) =>
+  incidentReplyProof(db, entry, hash) ?? questionReplyProof(db, entry, hash);
 
 interface Receipt {
   revision: string;
@@ -23,7 +27,7 @@ export function decisionReplyStatus(db: AppDb, entry: ProjectDecision) {
   );
   if (!receipt) return;
   if (receipt.state === 'done') return receipt.outcome;
-  const proof = incidentReplyProof(db, entry, receipt.answer);
+  const proof = replyProof(db, entry, receipt.answer);
   return proof === 'answered' || proof === 'denied' ? proof : undefined;
 }
 export function decisionReplyUncertain(db: AppDb, entry: ProjectDecision): boolean {
@@ -35,7 +39,7 @@ export function decisionReplyUncertain(db: AppDb, entry: ProjectDecision): boole
   return (
     !!receipt &&
     ['dispatching', 'uncertain'].includes(receipt.state) &&
-    !incidentReplyProof(db, entry, receipt.answer)
+    !replyProof(db, entry, receipt.answer)
   );
 }
 /** Same durable receipt and in-flight promise for every presentation; unknown effects never retry blindly. */
@@ -98,7 +102,7 @@ export class DecisionReplies {
   ) {
     const previous = this.db.getSetting<Receipt | undefined>(key, undefined, { strict: true });
     if (previous) {
-      const proof = incidentReplyProof(this.db, entry, previous.answer);
+      const proof = replyProof(this.db, entry, previous.answer);
       const notDispatched = previous.state === 'not_dispatched' || proof === 'not_dispatched';
       if (previous.revision !== entry.revision || (previous.answer !== hash && !notDispatched))
         throw new DecisionNotDispatched('decision_answer_conflict');
@@ -129,7 +133,7 @@ export class DecisionReplies {
       if (!this.db.settings.compareAndSet(key, receipt, { ...receipt, state: 'done' }))
         throw new Error('decision_reply_uncertain');
     } catch (error) {
-      const proof = incidentReplyProof(this.db, entry, hash);
+      const proof = replyProof(this.db, entry, hash);
       const committed = proof === 'answered' || proof === 'denied';
       this.db.settings.compareAndSet(key, receipt, {
         ...receipt,

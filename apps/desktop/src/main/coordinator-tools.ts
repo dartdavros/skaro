@@ -1,15 +1,31 @@
-import { taskBlockerTool, taskResumeTool } from '@skaro/mcp-server';
+import { taskBlockerTool, taskResumeTool, questionCancelTool } from '@skaro/mcp-server';
 import type { SkaroScope, Tool } from '@skaro/mcp-server';
 import type { ProjectMemory } from './project-memory';
 import { projectMemoryTool } from './project-memory-tools';
 import type { TaskRuns } from './tasks';
 import type { ChatSessions } from './chats';
+import { incidentModelTools } from './incident-model-tools';
+import { TaskExecution } from './task-execution';
+import { incidentModelPlan } from './incident-model-plan';
 export function coordinatorTools(
   memory: ProjectMemory,
   runs: () => TaskRuns,
   chats: () => ChatSessions,
 ): Tool<SkaroScope>[] {
   return [
+    ...incidentModelTools(runs, chats),
+    questionCancelTool(async (id, reason, scope) => {
+      if (scope.kind === 'integration') await runs().cancelIntegrationQuestion(id, reason, scope);
+      else if (scope.kind === 'task' && scope.taskId && scope.runId)
+        await runs().cancelQuestion(scope.projectId, scope.taskId, id, reason, scope.runId);
+      else if (scope.kind === 'project_chat' && scope.chatId)
+        await chats().cancelQuestion(scope.projectId, scope.chatId, id, reason);
+      else
+        return { text: 'Question cancellation requires its current conversation.', isError: true };
+      return {
+        text: 'The question card was cancelled. No fields were answered and no permission was granted.',
+      };
+    }),
     projectMemoryTool(memory),
     taskBlockerTool((reason, scope, details, context) =>
       runs().reportBlocker(reason, scope, details, context?.id),
@@ -24,8 +40,22 @@ export function coordinatorTools(
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       call: async (_args, scope) => ({
         text: JSON.stringify({
-          incidents: runs().incidents.store.list(scope.projectId),
+          incidents: runs()
+            .incidents.store.list(scope.projectId)
+            .map((row) => ({
+              ...row,
+              diagnosis: incidentModelPlan(runs().incidents.store.db, row),
+              failures: row.protocol!.subscriptions.map((s) => ({
+                task: s.taskId,
+                run: s.runId,
+                reason: new TaskExecution(runs().incidents.store.db, s.runId).read().blocked,
+              })),
+            })),
           policy: runs().incidents.policy.read(scope.projectId),
+          environments: runs()
+            .incidents.store.db.resources.list(scope.projectId)
+            .filter((r) => r.kind === 'environment' && r.ownership === 'registered')
+            .map((r) => ({ id: r.id, owner: r.owner, state: r.state })),
         }),
       }),
     },

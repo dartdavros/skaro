@@ -43,12 +43,12 @@ it('delivers a clarification without answering protected fields or unlocking too
   ).toThrow('Answer every question');
 });
 
-it('keeps one ordinary composer answer and synchronous request validation intact', () => {
+it('allows every question to be superseded while retaining native validation until cancellation', () => {
   const single = { ...question, questions: [{ ...question.questions[0]!, secret: false }] };
-  expect(questionAcceptsMessage(single)).toBe(false);
+  expect(questionAcceptsMessage(single)).toBe(true);
   expect(questionAcceptsMessage({ ...question, questions: [question.questions[0]!] })).toBe(true);
   const native = { ...question, delivery: undefined };
-  expect(questionAcceptsMessage(native)).toBe(false);
+  expect(questionAcceptsMessage(native)).toBe(true);
   const state = Timeline.from([{ t: 'interaction.opened', interaction: native }]).state;
   expect(() => assertQuestionMessageAllowed(state)).toThrow('Answer the open questions');
 });
