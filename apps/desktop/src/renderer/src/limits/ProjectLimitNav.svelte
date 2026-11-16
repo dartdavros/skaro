@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { AgentLimits } from '@skaro/timeline';
   import { i18n, t } from '@skaro/ui';
-  import { remainingLimit } from './low-remaining';
+  import { limitGaugeColor, remainingLimit } from './low-remaining';
   import './project-limit-nav.css';
 
   let {
@@ -24,7 +24,8 @@
   let position = $state({ left: 0, top: 0 });
   const visible = $derived((hovered || focused) && !dismissed);
   const remaining = $derived(remainingLimit(snapshot));
-  const dash = $derived(`${((37.7 * (remaining ?? 0)) / 100).toFixed(1)} 37.7`);
+  const color = $derived(limitGaugeColor(remaining));
+  const dash = $derived(`${remaining ?? 0} 100`);
   const windows = $derived(
     (['five_hour', 'seven_day'] as const).flatMap((kind) => {
       const window = snapshot?.windows.find((value) => value.kind === kind);
@@ -86,17 +87,26 @@
   }}
 >
   <span class="limit-gauge" aria-hidden="true">
-    <svg width="20" height="20" viewBox="0 0 16 16" style="transform: rotate(-90deg)">
-      <circle cx="8" cy="8" r="6" fill="none" stroke="var(--sk-fill-35)" stroke-width="2.2" />
+    <svg width="23" height="23" viewBox="0 0 16 16" style="transform: rotate(-90deg)">
+      <circle
+        cx="8"
+        cy="8"
+        r="6"
+        fill="none"
+        stroke={remaining === 0 ? color : 'var(--sk-fill-35)'}
+        stroke-opacity={remaining === 0 ? 0.45 : 1}
+        stroke-width="2.2"
+      />
       {#if remaining !== undefined && remaining > 0}
         <circle
           cx="8"
           cy="8"
           r="6"
           fill="none"
-          stroke="var(--sk-text-1)"
+          stroke={color}
           stroke-width="2.2"
-          stroke-linecap="round"
+          stroke-linecap="butt"
+          pathLength="100"
           stroke-dasharray={dash}
         />
       {/if}

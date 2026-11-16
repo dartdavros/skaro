@@ -106,7 +106,11 @@ export class TaskRunResults {
       return 'open';
     }
     if (!active.run.worktree || !active.run.branch) {
-      await completeInPlaceC4(this.ctx.deps.db, context, taskId, active.run.id);
+      await completeInPlaceC4(this.ctx.deps.db, context, taskId, active.run.id, {
+        message: active.commitMessage,
+        summary: active.mergeSummary,
+        verification: active.verification,
+      });
       context.invalidate();
       this.statusChanged(projectId, taskId);
       await this.ctx.stages.sync(projectId, taskId);

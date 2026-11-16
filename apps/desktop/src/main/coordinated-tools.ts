@@ -7,6 +7,8 @@ import { auditToolsAllowed, isAuditChat } from './c4-audit-admission';
 import { environmentToolPolicy } from './coordinated-tool-policy';
 import { coordinationToolReceipt, coordinationToolScopeKey } from './coordination-tool-receipt';
 import { taskBlockerReceipt, confirmTaskBlockerReport } from './task-blocker-receipt';
+import { submissionOperation } from './task-submission-operation';
+import { confirmSubmissionReceipt, submissionReceipt } from './task-submission-receipt';
 
 const reads = new Set([
   'read_project_incidents',
@@ -20,6 +22,7 @@ const controls = new Set([
   'finish_c4_audit',
   'decide_project_incident',
   'report_task_blocker',
+  'reconcile_task_submission',
   'request_secret',
   'resume_task',
   'control_plan',
@@ -128,7 +131,12 @@ export function coordinatedTools(
               },
               () => {
                 const resources = resourcesFor(db);
-                const effect = () => tool.call(args, scope, identity);
+                const effect = () =>
+                  tool.name === 'submit_result'
+                    ? submissionOperation(db, scope, identity.id, () =>
+                        tool.call(args, scope, identity),
+                      )
+                    : tool.call(args, scope, identity);
                 return resources
                   ? resources.scope(scope.projectId, `${subject.kind}:${subject.id}`, effect, {
                       intentId: identity.id,
@@ -138,6 +146,9 @@ export function coordinatedTools(
               },
               {
                 validate: () => identity.requireActive(),
+                replayFailed:
+                  tool.name === 'submit_result' &&
+                  !!submissionReceipt(db, scope.projectId, identity.id),
                 // A returned error is a terminal handler receipt, NOT proof of rollback/no effect.
                 // No same-ID retry is allowed; a thrown/lost result remains uncertain in the dispatcher.
                 outcome: (result) => (result.isError ? 'failed' : 'succeeded'),
@@ -150,6 +161,10 @@ export function coordinatedTools(
                 }),
                 replay: () => {
                   const operation = db.coordination.getOperation(scope.projectId, identity.id)!;
+                  if (tool.name === 'submit_result') {
+                    const receipt = confirmSubmissionReceipt(db, scope.projectId, identity.id);
+                    if (receipt) return receipt;
+                  }
                   if (tool.name === 'report_task_blocker') {
                     const receipt = taskBlockerReceipt(db, scope.projectId, identity.id);
                     if (receipt) return receipt;
@@ -171,7 +186,9 @@ export function coordinatedTools(
           () =>
             tool.name === 'report_task_blocker'
               ? confirmTaskBlockerReport(db, scope.projectId, identity.id)
-              : undefined,
+              : tool.name === 'submit_result'
+                ? confirmSubmissionReceipt(db, scope.projectId, identity.id)
+                : undefined,
         );
       },
     };

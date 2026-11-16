@@ -1,7 +1,6 @@
 <script lang="ts">
   import {
     feedRows,
-    liveActivity,
     startingEnvironment as hasStartingEnvironment,
     type Interaction,
     type TimelineState,
@@ -19,6 +18,7 @@
   import { provideFeedLoading } from './feed-loading.svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import type { ResourceWait } from '../../../shared/resource-wait';
+  import { feedActivity } from './dispatch-feedback';
 
   /**
    * The agent history and live line. Pending actions live above the composer. Sticks to the bottom while the
@@ -63,7 +63,7 @@
   );
   // Skaro's start_environment runs for minutes: the agent waits for it, not for the model.
   const startingEnvironment = $derived(hasStartingEnvironment(timeline));
-  const activity = $derived(liveActivity(timeline));
+  const activity = $derived(feedActivity(timeline));
   // A running reasoning row already says "Думает…".
   const showLive = $derived(
     !!resourceWait ||

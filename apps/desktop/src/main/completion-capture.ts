@@ -9,6 +9,7 @@ import { dependencySnapshot, preparedDependencies } from './completion-dependenc
 import { taskSections, withSummary } from './task-body';
 import { assertC4TaskReview, c4ChangeHash, c4ReviewKey, type C4TaskReview } from './c4-review';
 import { stageIdOf } from './task-stage';
+import { submissionIdentity } from './submission-context';
 
 export interface CapturedWork {
   projectId: string;
@@ -41,6 +42,7 @@ export async function captureResult(hooks: CompletionHooks, work: CapturedWork):
   const head = await context.git.head('HEAD', worktree);
   const store = new CompletionStore(hooks.deps.db, projectId);
   const result: TaskResult = {
+    submission: submissionIdentity(projectId, taskId),
     taskId,
     branch,
     worktree,

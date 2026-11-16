@@ -14,6 +14,13 @@ export function remainingLimit(snapshot: AgentLimits | undefined): number | unde
   return values.length ? Math.min(...values) : undefined;
 }
 
+/** The gauge includes exactly 10%; unknown quota retains its neutral appearance. */
+export function limitGaugeColor(remaining: number | undefined): string {
+  return remaining !== undefined && remaining >= 0 && remaining <= 10
+    ? 'var(--sk-red-4)'
+    : 'var(--sk-text-1)';
+}
+
 /** Exactly 10% is not low. */
 export function lowRemaining(snapshot: AgentLimits | undefined): number | undefined {
   const remaining = remainingLimit(snapshot);

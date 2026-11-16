@@ -19,6 +19,7 @@ export * from './resources/admission-policy.ts';
 export * from './coordination/model.ts';
 export { coordinationRequest, coordinationEvidence } from './coordination/validation.ts';
 export * from './git/git.ts';
+export * from './git/stream.ts';
 export * from './git/completed-worktree.ts';
 export * from './git/completed-integration-worktree.ts';
 export * from './git/local-changes.ts';

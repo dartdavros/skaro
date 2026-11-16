@@ -12,6 +12,7 @@ import {
   reconcileOperation,
   recoverOperations,
   rejectOperation,
+  migrateQueuedConversation,
 } from './coordination-operations.ts';
 import {
   acceptRequest,
@@ -61,9 +62,25 @@ export class DbCoordination {
       .all(projectId)
       .map((row) => this.getOperation(projectId, String(row.id))!);
   }
+  matching(projectId: string, action: string, inputHash: string) {
+    metadataId(projectId);
+    return this.context.db
+      .prepare(
+        `SELECT id FROM coordination_operations WHERE project_id=?
+       AND json_extract(value,'$.action')=? AND json_extract(value,'$.inputHash')=?
+       ORDER BY created_at,rowid`,
+      )
+      .all(projectId, action, inputHash)
+      .map((row) => this.getOperation(projectId, String(row.id))!);
+  }
   claim(projectId: string, id: string, input: { expectedRevision: number; claimId: string }) {
     return coordinationAtomic(this.context.db, () =>
       claimOperation(this.context, projectId, id, input),
+    );
+  }
+  migrateConversation(projectId: string, id: string, expectedRevision: number) {
+    return coordinationAtomic(this.context.db, () =>
+      migrateQueuedConversation(this.context, projectId, id, expectedRevision),
     );
   }
   finish(projectId: string, id: string, input: CoordinationCompletion) {

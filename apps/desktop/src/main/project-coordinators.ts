@@ -7,6 +7,7 @@ import { requireCoordinationDispatch, dispatchSafetyAction } from './coordinatio
 import { reconcileUnstartedEnvironments } from './environment-operation-recovery';
 import { recoverIncidentOperations } from './incident-operation-recovery';
 import { recoverTaskBlockerReports } from './task-blocker-receipt';
+import { recoverSubmissionReceipts } from './task-submission-receipt';
 export type { CoordinationExecution } from './coordinator-delivery';
 
 /** One logical controller per project. Models and executors do not own its durable identity. */
@@ -42,9 +43,22 @@ export class ProjectCoordinators {
       this.db.coordination.recover(project.id);
       recoverIncidentOperations(this.db, project.id);
       recoverTaskBlockerReports(this.db, project.id);
+      recoverSubmissionReceipts(this.db, project.id);
       reconcileUnstartedEnvironments(this.db, project.id);
       for (const operation of this.db.coordination.pending(project.id)) {
         if (operation.state !== 'queued' || operation.action.startsWith('owner.')) continue;
+        if (operation.action === 'ipc.chat.create' && operation.subject.kind === 'command') {
+          if (operation.mode === 'mutation' && operation.scopeKey === 'project') {
+            this.db.coordination.migrateConversation(project.id, operation.id, operation.revision);
+            continue;
+          }
+          // No executor/arguments are replayed. A fresh owner retry keeps its stable command ID.
+          if (
+            operation.mode === 'control' &&
+            operation.scopeKey === `control:command:${operation.subject.id}`
+          )
+            continue;
+        }
         this.db.coordination.reject(project.id, operation.id, {
           expectedRevision: operation.revision,
           evidence: { code: 'restart_requires_new_request', refs: [operation.subject] },

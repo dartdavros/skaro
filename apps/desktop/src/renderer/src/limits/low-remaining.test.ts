@@ -1,6 +1,13 @@
 import { expect, it } from 'vitest';
 import { limitWindow } from '@skaro/timeline';
-import { lowRemaining, lowPercentLabel, remainingLimit } from './low-remaining';
+import { limitGaugeColor, lowRemaining, lowPercentLabel, remainingLimit } from './low-remaining';
+
+it('uses muted red through exactly 10% and keeps positive normal or unknown quota neutral', () => {
+  for (const remaining of [0, 5, 9.99, 10])
+    expect(limitGaugeColor(remaining)).toBe('var(--sk-red-4)');
+  for (const remaining of [10.01, 95, 100, undefined, NaN])
+    expect(limitGaugeColor(remaining)).toBe('var(--sk-text-1)');
+});
 
 it('uses the full known remaining quota for the gauge and leaves unavailable data unknown', () => {
   expect(

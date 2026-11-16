@@ -1,4 +1,5 @@
 import { TaskListViews } from './task-list-views';
+import { taskDispatchPending } from './session-dispatch-pending';
 import { taskResourceWait } from './resource-wait-view';
 import { presentationState } from './timeline-presentation';
 import { historyReads } from './history-read-service';
@@ -128,6 +129,7 @@ export class TaskRunViews {
       : undefined;
     return {
       projectId,
+      dispatchPending: taskDispatchPending(this.ctx, projectId, taskId),
       c4Diagnostic:
         active && !['done', 'cancelled'].includes(task.status)
           ? this.ctx.deps.db.getSetting(c4DiagnosticKey(active.run.id), undefined)

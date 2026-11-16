@@ -164,3 +164,50 @@ export function recoverOperations(
     });
   });
 }
+
+/** Only an unclaimed conversation registration may move out of the source-mutation lane. */
+export function migrateQueuedConversation(
+  context: CoordinationDb,
+  projectId: string,
+  id: string,
+  expectedRevision: number,
+) {
+  const current = operationRequired(context, projectId, id);
+  revision(current, expectedRevision);
+  if (
+    current.state !== 'queued' ||
+    current.claimId ||
+    current.action !== 'ipc.chat.create' ||
+    current.mode !== 'mutation' ||
+    current.scopeKey !== 'project' ||
+    current.subject.kind !== 'command'
+  )
+    throw new Error('Only an undispatched legacy conversation can change lanes');
+  const { expectedVersion: _version, ...rest } = current;
+  const next = {
+    ...rest,
+    mode: 'control' as const,
+    scopeKey: `control:command:${current.subject.id}`,
+  };
+  // The immutable command, arguments hash and causal records are preserved. No effect ran.
+  const input = {
+    id: next.id,
+    projectId: next.projectId,
+    eventId: next.eventId,
+    intentId: next.intentId,
+    idempotencyKey: next.idempotencyKey,
+    action: next.action,
+    subject: next.subject,
+    scopeKey: next.scopeKey,
+    mode: next.mode,
+    inputHash: next.inputHash,
+  };
+  const changed = context.db
+    .prepare(
+      `UPDATE coordination_operations SET value=?,scope_key=?,revision=revision+1,updated_at=?
+    WHERE project_id=? AND id=? AND state='queued' AND claim_id IS NULL AND revision=?`,
+    )
+    .run(JSON.stringify(input), next.scopeKey, context.now(), projectId, id, expectedRevision);
+  if (changed.changes !== 1) throw new Error('Conversation admission changed');
+  return operationRequired(context, projectId, id);
+}

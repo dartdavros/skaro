@@ -75,7 +75,9 @@
       />
     </div>
 
-    {#if timeline && hasFeed}
+    {#if controller.starting && !view.queued && !view.task.resourceWait}
+      <div class="empty"><TaskStarting /></div>
+    {:else if timeline && hasFeed}
       <Feed
         {timeline}
         history={view.history}
@@ -90,8 +92,6 @@
       </div>
     {:else if view.queued || view.task.resourceWait}
       <TaskQueued after={view.after} resourceWait={view.task.resourceWait} />
-    {:else if controller.starting}
-      <div class="empty"><TaskStarting /></div>
     {:else if controller.running}
       <div class="empty"><span class="fd-pulse"></span></div>
     {:else}

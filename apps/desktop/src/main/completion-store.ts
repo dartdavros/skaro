@@ -8,12 +8,16 @@ export interface ResultDependency {
 }
 
 export interface TaskResult {
+  /** Exact admitted submission that produced this SHA; never inferred from checked criteria. */
+  submission?: import('./submission-context').SubmissionIdentity;
   c4?: import('./c4-review').C4TaskReview;
   taskId: string;
   head: string;
   branch: string;
   worktree?: string;
   sharedCheckout?: boolean;
+  /** Accepted in the owner's main checkout; pending projection must finish as done, not review. */
+  inPlace?: boolean;
   criteria: string;
   message: string;
   summary?: string;

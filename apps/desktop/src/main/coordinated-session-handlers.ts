@@ -28,7 +28,14 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
         if (!descriptor) return handler(...args);
         const { projectId, subject, mode } = descriptor;
         const version = coordinators.version(projectId);
-        const existing = db.coordination.getOperation(projectId, id);
+        let existing = db.coordination.getOperation(projectId, id);
+        if (
+          method === 'chat.create' &&
+          existing?.state === 'queued' &&
+          existing.mode === 'mutation' &&
+          existing.inputHash === coordinationHash(args)
+        )
+          existing = db.coordination.migrateConversation(projectId, id, existing.revision);
         return coordinators.execute(
           {
             id,

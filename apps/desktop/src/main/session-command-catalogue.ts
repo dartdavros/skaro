@@ -57,7 +57,8 @@ export const SESSION_COMMANDS = {
   'task.revertMerge': { mode: 'mutation', subject: 'task' },
   'task.toggleCriterion': { mode: 'mutation', subject: 'task' },
   'chat.open': { mode: 'observation', subject: 'chat', returnsValue: true },
-  'chat.create': { mode: 'mutation', returnsValue: true },
+  // Creating a conversation/inbox entry does not mutate project sources or acceptance.
+  'chat.create': { mode: 'control', returnsValue: true },
   'chat.respond': { mode: 'control', subject: 'chat' },
   'chat.interrupt': { mode: 'control', subject: 'chat', priorityStop: true },
   'chat.setSettings': { mode: 'mutation', subject: 'chat' },

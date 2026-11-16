@@ -31,7 +31,9 @@ function pendingReceipt(operation: string, saved: CoordinationOperation): ToolRe
   const pending = ['queued', 'dispatching'].includes(saved.state);
   const nextStep =
     saved.state === 'uncertain'
-      ? 'Read the actual project state and saved evidence before any new action. The controller must reconcile the outcome; do not repeat an unknown effect or claim it succeeded.'
+      ? operation === 'submit_result'
+        ? `Call reconcile_task_submission with operation_id="${saved.id}" to inspect the original durable outcome. Do not repeat submit_result or infer acceptance from checked criteria.`
+        : 'Read the actual project state and saved evidence before any new action. The controller must reconcile the outcome; do not repeat an unknown effect or claim it succeeded.'
       : pending
         ? 'The handler has no confirmed completion receipt. Read the project context for the actual result; do not claim the requested effect or repeat this operation blindly.'
         : 'Inspect the saved evidence and actual project state. This receipt grants no retry permission.';

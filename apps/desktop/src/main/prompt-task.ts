@@ -93,6 +93,10 @@ export function taskInstructions(options: {
           'you actually ran, so Skaro can repeat them when integrating accepted results. Use real project ' +
           'services; do not add mock services or tests for unrelated behavior. If Skaro reports pending ' +
           'integration, end the turn and leave the accepted checkout untouched: it continues automatically.',
+        '- If submit_result has an uncertain outcome, call reconcile_task_submission with its original ' +
+          'operation_id. It inspects saved evidence without resubmitting. Checked criteria alone do not ' +
+          'prove acceptance. After reconciliation inspect current task state before a fresh submission; ' +
+          'never repeat an unknown effect or ask the owner to repair coordinator metadata manually.',
         '- Skaro supplies a task-local Playwright MCP server. Use its browser tools for UI ' +
           'verification; a Codex desktop browser or personal Chrome connection is not required. ' +
           'The browser uses an isolated profile. If Chrome is missing, report the blocker.',

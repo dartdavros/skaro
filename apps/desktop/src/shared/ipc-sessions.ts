@@ -35,6 +35,8 @@ export interface StageView {
 }
 
 export interface TaskView {
+  /** Accepted input is queued/preparing, before the native agent emits its first event. */
+  dispatchPending?: boolean;
   /** Latest host-validated data rejection; separate from agent/service failures. */
   c4Diagnostic?: import('@skaro/core/c4-view').C4Diagnostic;
   history?: import('./history').HistorySource;
@@ -118,6 +120,7 @@ export interface ChatSummary {
 
 /** Everything the chat screen needs to open a chat. */
 export interface ChatView {
+  dispatchPending?: boolean;
   resourceWait?: import('./resource-wait').ResourceWait;
   decisionEpoch?: string;
   historyPage?: import('./history').HistoryPage;
