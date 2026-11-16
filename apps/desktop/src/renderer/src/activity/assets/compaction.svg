@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="14 4 8 16" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="chevron-top" d="m15 5 3 3 3-3"/>
+  <path class="chevron-bottom" d="m15 19 3-3 3 3"/>
+</svg>

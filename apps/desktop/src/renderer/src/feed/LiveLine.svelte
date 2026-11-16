@@ -24,10 +24,11 @@
     resourceWait?: ResourceWait;
   } = $props();
 
+  const kind = $derived(activityKind(activity, environment));
   const tip = $derived(
     resourceWait
       ? resourceWaitDetail(resourceWait)
-      : environment
+      : kind === 'starting_environment'
         ? t('feed.live.environment.tip')
         : activity?.state === 'waiting_model'
           ? t('feed.live.model.tip')
@@ -36,13 +37,15 @@
 </script>
 
 <div class="fd-live" data-tip={tip}>
-  <ActivityMark kind={resourceWait ? 'waiting_model' : activityKind(activity, environment)} />
+  <ActivityMark kind={resourceWait ? 'waiting_model' : kind} />
   <ActivityText>
     {#if resourceWait}
       {resourceWaitLabel(resourceWait)}{#if resourceWaitAmount(resourceWait)}
         · {resourceWaitAmount(resourceWait)}{/if} ·
       <span class="time">{formatClock(clock.now - since)}</span>
-    {:else if environment}
+    {:else if kind === 'compacting_context'}
+      {t('feed.live.compaction')}
+    {:else if kind === 'starting_environment'}
       {t('feed.live.environment')} · <span class="time">{formatClock(clock.now - since)}</span>
     {:else if activity?.state === 'thinking'}
       {t('feed.live.thinking')}

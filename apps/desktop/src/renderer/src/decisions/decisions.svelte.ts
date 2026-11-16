@@ -9,6 +9,8 @@ class ProjectDecisions {
   loading = $state(false);
   error = $state(false);
   count = $state(0);
+  readonly counts = new SvelteMap<string, number>();
+  private readonly countRequests = new Map<string, number>();
   private generation = 0;
   private watching = false;
   private timer?: ReturnType<typeof setTimeout>;
@@ -20,15 +22,34 @@ class ProjectDecisions {
   set open(value: boolean) {
     projectDialog.view = value ? 'decisions' : 'none';
   }
-  activate(project?: { id: string; name: string }) {
+  watch() {
     if (!this.watching) {
       this.watching = true;
       window.skaro.on('decisions.changed', ({ projectId }) => {
-        if (this.project?.id !== projectId) return;
+        if (this.project?.id !== projectId) {
+          void this.refreshCount(projectId);
+          return;
+        }
         clearTimeout(this.timer);
         this.timer = setTimeout(() => void this.refresh(), 120);
       });
+      void window.skaro.invoke('tabs.get').then(({ projects }) => {
+        for (const id of projects) void this.refreshCount(id);
+      });
     }
+  }
+  private async refreshCount(project: string) {
+    const request = (this.countRequests.get(project) ?? 0) + 1;
+    this.countRequests.set(project, request);
+    try {
+      const count = await window.skaro.invoke('decisions.count', project);
+      if (this.countRequests.get(project) === request) this.counts.set(project, count);
+    } catch {
+      // Retain known attention during a failed refresh; no false all-clear.
+    }
+  }
+  activate(project?: { id: string; name: string }) {
+    this.watch();
     if (this.project?.id === project?.id) {
       this.project = project;
       return;
@@ -48,12 +69,14 @@ class ProjectDecisions {
       generation = this.generation,
       request = ++this.request;
     if (!project) return;
+    this.countRequests.set(project.id, (this.countRequests.get(project.id) ?? 0) + 1);
     this.loading = !this.cards.length;
     this.error = false;
     try {
       const entries = await window.skaro.invoke('decisions.list', project.id);
       if (generation !== this.generation || request !== this.request) return;
       this.count = entries.length;
+      this.counts.set(project.id, entries.length);
       clearTimeout(this.expiryTimer);
       const deadline = Math.min(
         ...entries.flatMap((entry) => (entry.expiresAt ? [entry.expiresAt] : [])),

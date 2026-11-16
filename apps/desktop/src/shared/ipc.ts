@@ -241,8 +241,8 @@ export interface Methods
   /** Current uncommitted changes of a file in the task's (or the project's) working folder. */
   'files.diff': (projectId: string, taskId: string, path: string) => FileDiff;
   'files.pick': (kind: 'images' | 'files' | 'folder') => PickedFile[];
-  /** Saves the native clipboard image to the attachment store. */
-  'files.pasteImage': () => PickedFile | undefined;
+  /** Saves the image captured by the paste event, or reads the native clipboard for main callers. */
+  'files.pasteImage': (bytes?: Uint8Array) => PickedFile | undefined;
   'shell.openExternal': (url: string) => void;
 }
 

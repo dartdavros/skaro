@@ -1,14 +1,17 @@
 import type { TimelineEvent } from './model.ts';
 import type { TimelineState } from './state.ts';
 
-/** The five live indicators shared by agent feeds and task cards. */
+/** Live indicators shared by agent feeds and task cards. */
 export type AgentActivity =
-  Extract<TimelineEvent, { t: 'activity' }>['state'] | 'starting_environment';
+  | Extract<TimelineEvent, { t: 'activity' }>['state']
+  | 'starting_environment'
+  | 'compacting_context';
 
 export function activityKind(
   activity: TimelineState['activity'],
   environment = false,
 ): AgentActivity {
+  if (activity?.state === 'compacting_context') return 'compacting_context';
   if (environment) return 'starting_environment';
   switch (activity?.state) {
     case 'thinking':
@@ -33,9 +36,21 @@ export function startingEnvironment(timeline: TimelineState): boolean {
   );
 }
 
-/** A running edit takes priority over model deltas, until its tool completes. */
+/** Native compaction and running edits take priority over model deltas until completion. */
 export function liveActivity(timeline: TimelineState): TimelineState['activity'] {
   const turn = timeline.turns.findLast((t) => !t.outcome)?.id;
+  if (
+    turn &&
+    timeline.items.some(
+      (item) =>
+        !item.parentId &&
+        item.turnId === turn &&
+        item.status === 'running' &&
+        item.kind === 'notice' &&
+        item.code === 'compaction',
+    )
+  )
+    return { state: 'compacting_context' };
   const edit = timeline.items.findLast(
     (item) =>
       !item.parentId &&

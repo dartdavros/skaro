@@ -1,4 +1,10 @@
-import type { Emit, ProjectionContext } from '@skaro/timeline';
+import {
+  currentActivity,
+  feedRows,
+  Timeline,
+  type Emit,
+  type ProjectionContext,
+} from '@skaro/timeline';
 import { project } from '@skaro/timeline/tolerance';
 import { expect, it } from 'vitest';
 import { ClaudeProjector } from './projector.ts';
@@ -28,3 +34,38 @@ it('reports broken servers of the session but not unsigned claude.ai account con
   );
   expect(notices).toEqual(['skaro: failed', 'project-docs: needs-auth']);
 });
+
+it.each(['completed', 'failed'] as const)(
+  'tracks native compaction while running and clears it when %s',
+  (outcome) => {
+    const timeline = new Timeline();
+    const projector = new ClaudeProjector(
+      {
+        now: () => 1,
+        attachImage: () => {
+          throw new Error('Unexpected image');
+        },
+      },
+      (event) => timeline.apply(event),
+    );
+    projector.input({ type: 'user', uuid: 'owner', message: { content: '/compact' } });
+    projector.output({ type: 'system', subtype: 'status', status: 'compacting' });
+    expect(currentActivity(timeline.state)).toBe('compacting_context');
+    expect(feedRows(timeline.state).some((row) => row.type === 'notice')).toBe(false);
+    expect(currentActivity(Timeline.restore(structuredClone(timeline.state)).state)).toBe(
+      'compacting_context',
+    );
+    projector.output(
+      outcome === 'completed'
+        ? { type: 'system', subtype: 'compact_boundary', uuid: 'boundary' }
+        : { type: 'system', subtype: 'status', compact_result: 'failed', compact_error: 'timeout' },
+    );
+    expect(currentActivity(timeline.state)).not.toBe('compacting_context');
+    expect(timeline.state.items.find((item) => item.kind === 'notice')).toMatchObject({
+      code: outcome === 'completed' ? 'compaction' : 'other',
+      status: outcome === 'completed' ? 'done' : 'failed',
+    });
+    projector.output({ type: 'result', subtype: 'success', is_error: false });
+    expect(currentActivity(timeline.state)).toBeUndefined();
+  },
+);

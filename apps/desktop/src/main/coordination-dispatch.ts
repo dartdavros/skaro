@@ -83,6 +83,8 @@ export function setCoordinationDispatch(
   return next;
 }
 const safetyActions = new Set([
+  'mcp.cancel_question',
+  'ipc.decisions.cancel',
   'ipc.task.interrupt',
   'ipc.chat.interrupt',
   'ipc.task.stop_background',

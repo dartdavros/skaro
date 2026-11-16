@@ -115,12 +115,13 @@ export async function checkIncident(
   ctx: TaskRunEngine,
   row: CoordinationBlocker,
 ): Promise<boolean> {
-  if (row.subject.kind === 'task' || row.protocol!.condition === 'owner-evidence') return false;
+  if (row.subject.kind === 'task') return false;
   if (
     (await incidentResourceVersion(ctx, row.projectId, row.subject.id)) !==
     row.protocol!.resourceVersion
   )
     return false;
+  if (row.protocol!.condition === 'owner-evidence') return false;
   if (row.protocol!.condition === 'provider-evidence') return checkIncidentProvider(ctx, row);
   if (row.protocol!.condition === 'environment-ready') {
     const resource = ctx.deps.db.resources.get(row.subject.id);

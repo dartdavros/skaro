@@ -3,12 +3,43 @@ import { assertQuestionsAnswered } from './question-barrier.ts';
 import type { Interaction } from './model.ts';
 import type { TimelineState } from './state.ts';
 
-/** Multi-question and protected async cards use their fields; the composer can ask for context. */
-export function questionAcceptsMessage(interaction: Interaction): boolean {
+export interface QuestionMessageReference {
+  id: string;
+  request: string;
+  epoch?: string;
+}
+
+export function questionRequestEpoch(
+  state: TimelineState,
+  question: Extract<Interaction, { kind: 'question' }>,
+): string | undefined {
+  // Async item IDs survive pagination even when their original turn/item is no longer in the header.
+  if (question.delivery === 'async') return question.itemId;
+  return state.items.find((item) => item.id === question.itemId)?.turnId ?? state.turns.at(-1)?.id;
+}
+
+/** Capture only questions actually visible when the owner submits their message. */
+export function questionMessageReferences(
+  state?: TimelineState,
+  sources?: TimelineState[],
+): QuestionMessageReference[] {
   return (
-    isAsyncQuestion(interaction) &&
-    (interaction.questions.length !== 1 || interaction.questions.some((q) => q.secret))
+    state?.interactions
+      .filter((i) => i.kind === 'question')
+      .map((question) => ({
+        id: question.id,
+        request: JSON.stringify(question),
+        epoch: questionRequestEpoch(
+          sources?.find((source) => source.interactions.some((i) => i.id === question.id)) ?? state,
+          question,
+        ),
+      })) ?? []
   );
+}
+
+/** Composer input is a new owner instruction; protected values still use the form fields. */
+export function questionAcceptsMessage(interaction: Interaction): boolean {
+  return interaction.kind === 'question';
 }
 
 /** Owner conversation can continue around async cards; tool and automatic-work gates stay strict. */
@@ -23,8 +54,8 @@ export function assertQuestionMessageAllowed(state: TimelineState, internal = fa
 export function questionMessageNote(state: TimelineState, internal = false): string {
   if (internal || !state.interactions.some(isAsyncQuestion)) return '';
   return (
-    'The owner sent a message while question cards remain unanswered. ' +
+    'The owner sent a message while newer question cards remain unanswered. ' +
     'Address their message without treating it as completed form fields, credentials or consent. ' +
-    'The existing cards remain open. Keep secret values in their protected fields.'
+    'Only requests explicitly superseded by that message are cancelled. Keep secret values in their protected fields.'
   );
 }

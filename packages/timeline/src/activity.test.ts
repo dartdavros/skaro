@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { activityKind, currentActivity } from './activity.ts';
+import { activityKind, currentActivity, liveActivity } from './activity.ts';
 import { Timeline } from './state.ts';
 
 it('shares native activity mapping, environment priority and model-wait fallback', () => {
@@ -71,3 +71,59 @@ it('shows the edit until completion despite model deltas and ignores old/subagen
   timeline.apply({ t: 'item.upsert', item: edit });
   expect(currentActivity(timeline.state)).toBe('waiting_model');
 });
+
+it('shows root compaction through model deltas and restoration, then restores the actual activity', () => {
+  const timeline = new Timeline();
+  timeline.apply({ t: 'turn.started', turnId: 'compact' });
+  timeline.apply({ t: 'activity', state: 'thinking' });
+  const notice = {
+    id: 'compaction',
+    turnId: 'compact',
+    startedAt: 1,
+    kind: 'notice' as const,
+    level: 'info' as const,
+    code: 'compaction' as const,
+    text: 'compacting',
+    status: 'running' as const,
+    native: { agent: 'codex', type: 'contextCompaction', ref: 'compaction' },
+  };
+  timeline.apply({ t: 'item.upsert', item: { ...notice, parentId: 'subagent' } });
+  expect(currentActivity(timeline.state)).toBe('thinking');
+  timeline.apply({ t: 'item.upsert', item: notice });
+  timeline.apply({ t: 'activity', state: 'waiting_model' });
+  expect(liveActivity(timeline.state)).toEqual({ state: 'compacting_context' });
+  expect(currentActivity(timeline.state)).toBe('compacting_context');
+  expect(activityKind(liveActivity(timeline.state), true)).toBe('compacting_context');
+  const restored = Timeline.restore(structuredClone(timeline.state));
+  expect(currentActivity(restored.state)).toBe('compacting_context');
+  restored.apply({ t: 'item.upsert', item: { ...notice, status: 'done' } });
+  expect(currentActivity(restored.state)).toBe('waiting_model');
+  restored.apply({ t: 'turn.completed', turnId: 'compact', outcome: 'done' });
+  expect(currentActivity(restored.state)).toBeUndefined();
+});
+
+it.each(['failed', 'interrupted'] as const)(
+  'does not retain compaction after a %s turn or leak it into the next turn',
+  (outcome) => {
+    const timeline = new Timeline();
+    timeline.apply({ t: 'turn.started', turnId: 'compact' });
+    const notice = {
+      id: 'compaction',
+      turnId: 'compact',
+      startedAt: 1,
+      kind: 'notice' as const,
+      level: 'info' as const,
+      code: 'compaction' as const,
+      text: 'compacting',
+      status: 'running' as const,
+      native: { agent: 'claude-code', type: 'notice', ref: 'compaction' },
+    };
+    timeline.apply({ t: 'item.upsert', item: notice });
+    expect(currentActivity(timeline.state)).toBe('compacting_context');
+    timeline.apply({ t: 'turn.completed', turnId: 'compact', outcome });
+    expect(currentActivity(timeline.state)).toBeUndefined();
+    timeline.apply({ t: 'turn.started', turnId: 'next' });
+    timeline.apply({ t: 'item.upsert', item: notice });
+    expect(currentActivity(timeline.state)).toBe('waiting_model');
+  },
+);

@@ -8,6 +8,8 @@ export * from './environment-setup-tool.ts';
 export * from './task-blocker-tool.ts';
 export * from './task-resume-tool.ts';
 export * from './secret-input-tool.ts';
+export * from './question-cancel-tool.ts';
+export * from './incident-owner-pause.ts';
 export * from './integration-tool.ts';
 export * from './history-tool.ts';
 export * from './ci-tool.ts';

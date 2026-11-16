@@ -6,7 +6,7 @@ import { OwnerMessages } from '../feed/owner-messages.svelte';
 import { SessionDispatch } from '../feed/session-dispatch.svelte';
 import { cleanError } from '../feed/action-error';
 import type { AgentModel, PermissionMode } from '@skaro/timeline';
-import { questionAcceptsMessage } from '@skaro/timeline';
+import { questionMessageReferences } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 import { onDestroy } from 'svelte';
 import type {
@@ -119,23 +119,15 @@ export function createChatController(
       });
       return;
     }
-    // One ordinary question accepts a composer answer; other async forms allow clarification.
-    if (openQuestion?.kind === 'question' && !questionAcceptsMessage(openQuestion)) {
-      if (openQuestion.questions.length !== 1) {
-        actionError = t('card.question.notReady');
-        throw new Error(actionError);
-      }
-      return respond(openQuestion.id, {
-        kind: 'question',
-        answers: Object.fromEntries(openQuestion.questions.map((q) => [q.id, [input.text]])),
-      });
-    }
     if (!openQuestion && openApproval?.kind === 'approval') {
       return respond(openApproval.id, { kind: 'approval', choice: 'deny', message: input.text });
     }
     const id = chatId;
     await guard(() =>
-      ownerMessages.send(input, (value) => window.skaro.invoke('chat.send', projectId, id, value)),
+      ownerMessages.send(
+        { ...input, supersededQuestions: questionMessageReferences(timeline) },
+        (value) => window.skaro.invoke('chat.send', projectId, id, value),
+      ),
     );
   }
 

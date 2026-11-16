@@ -92,6 +92,7 @@ export const ru = {
   'feed.live.edit': 'Готовит правку',
   'feed.live.editNoTarget': 'Готовит правку…',
   'feed.live.model': 'Ждёт ответа модели',
+  'feed.live.compaction': 'Сжимает контекст',
   'feed.live.model.tip': 'Модель долго не отвечает — это нормально для больших правок',
   'feed.live.environment': 'Запускает окружение',
   'feed.live.environment.tip':
@@ -210,6 +211,7 @@ export const en = {
   'feed.live.edit': 'Preparing an edit to',
   'feed.live.editNoTarget': 'Preparing an edit…',
   'feed.live.model': 'Waiting for the model',
+  'feed.live.compaction': 'Compacting context',
   'feed.live.model.tip': 'The model takes a while — normal for large edits',
   'feed.live.environment': 'Starting the environment',
   'feed.live.environment.tip':

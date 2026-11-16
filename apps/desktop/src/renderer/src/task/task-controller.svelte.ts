@@ -1,8 +1,8 @@
 import { OwnerMessages } from '../feed/owner-messages.svelte';
 import { SessionDispatch } from '../feed/session-dispatch.svelte';
 import { cleanError } from '../feed/action-error';
-import type { AgentModel, InteractionAnswer, PermissionMode } from '@skaro/timeline';
-import { questionAcceptsMessage } from '@skaro/timeline';
+import type { AgentModel, PermissionMode } from '@skaro/timeline';
+import { questionMessageReferences } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 import { onDestroy } from 'svelte';
 import type { AgentInfo, AgentSettings, MergeAction, MessageInput } from '../../../shared/ipc';
@@ -120,24 +120,24 @@ export function createTaskController(
   }
 
   async function send(input: MessageInput): Promise<void> {
-    // One ordinary question accepts a composer answer; other async forms allow clarification.
-    if (openQuestion?.kind === 'question' && !questionAcceptsMessage(openQuestion)) {
-      if (openQuestion.questions.length !== 1) {
-        actionError = t('card.question.notReady');
-        throw new Error(actionError);
-      }
-      const answer: InteractionAnswer = {
-        kind: 'question',
-        answers: Object.fromEntries(openQuestion.questions.map((q) => [q.id, [input.text]])),
-      };
-      return respond(openQuestion.id, answer);
-    }
     if (!openQuestion && openApproval?.kind === 'approval') {
       return respond(openApproval.id, { kind: 'approval', choice: 'deny', message: input.text });
     }
     await guard(() =>
-      ownerMessages.send(input, (value) =>
-        window.skaro.invoke('task.send', projectId, taskId, value),
+      ownerMessages.send(
+        {
+          ...input,
+          supersededQuestions: questionMessageReferences(
+            timeline,
+            view?.timelineSources
+              ? [
+                  ...(view.timelineSources.base ? [view.timelineSources.base] : []),
+                  ...view.timelineSources.integrations.map((source) => source.timeline),
+                ]
+              : undefined,
+          ),
+        },
+        (value) => window.skaro.invoke('task.send', projectId, taskId, value),
       ),
     );
   }

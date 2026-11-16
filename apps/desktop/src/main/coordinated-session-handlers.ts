@@ -7,6 +7,7 @@ import { coordinationHash } from './project-coordinator-request';
 import { sessionCommand, sessionCommandScope } from './session-command-catalogue';
 import { resourcesFor } from './resource-execution';
 import { safetyDecisionMethod } from './decision-authority';
+import { currentQuestionReply, settleQuestionReplyError } from './question-reply-dispatch';
 
 /** Transport admission only; the existing handler remains the sole executor. */
 export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
@@ -27,6 +28,9 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
         const descriptor = sessionCommand(method, args, id);
         if (!descriptor) return handler(...args);
         const { projectId, subject, mode } = descriptor;
+        const question = ['task.respond', 'chat.respond'].includes(method)
+          ? currentQuestionReply(projectId, subject)
+          : undefined;
         const version = coordinators.version(projectId);
         let existing = db.coordination.getOperation(projectId, id);
         if (
@@ -36,49 +40,55 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
           existing.inputHash === coordinationHash(args)
         )
           existing = db.coordination.migrateConversation(projectId, id, existing.revision);
-        return coordinators.execute(
-          {
-            id,
-            projectId,
-            action: `ipc.${method.replace(/[A-Z]/g, (value) => `_${value.toLowerCase()}`)}`,
-            source: { kind: 'owner', id: 'renderer' },
-            subject,
-            inputHash: coordinationHash(args),
-            mode,
-            scopeKey: sessionCommandScope(descriptor, id),
-            ...(mode === 'mutation'
-              ? { expectedVersion: existing?.expectedVersion ?? version }
-              : {}),
-          },
-          () => {
-            const resources = resourcesFor(db);
-            const effect = async () => handler(...args);
-            return resources
-              ? resources.scope(projectId, `${subject.kind}:${subject.id}`, effect, {
-                  intentId: id,
-                })
-              : effect();
-          },
-          {
-            whileSuspended: safetyDecisionMethod(method, args),
-            evidence: () => ({ code: 'handler_returned', refs: [subject] }),
-            ...(!descriptor.returnsValue ? { replay: () => undefined } : {}),
-            ...(method === 'chat.create' && command
-              ? {
-                  replay: async () => {
-                    const accepted = db.commands.get(command);
-                    if (accepted?.method !== 'chat.send' || accepted.args[0] !== projectId)
-                      throw new Error('The created chat has no matching delivery record');
-                    const chat = (await handlers['chats.list']?.(projectId))?.find(
-                      (item) => item.id === accepted.args[1],
-                    );
-                    if (!chat) throw new Error('The created chat is no longer available');
-                    return chat;
-                  },
-                }
-              : {}),
-          },
-        );
+        return coordinators
+          .execute(
+            {
+              id,
+              projectId,
+              action: `ipc.${method.replace(/[A-Z]/g, (value) => `_${value.toLowerCase()}`)}`,
+              source: { kind: 'owner', id: 'renderer' },
+              subject,
+              inputHash: coordinationHash(args),
+              mode,
+              scopeKey: question
+                ? `question-reply:${question.entry.revision}`
+                : sessionCommandScope(descriptor, id),
+              ...(mode === 'mutation'
+                ? { expectedVersion: existing?.expectedVersion ?? version }
+                : {}),
+            },
+            () => {
+              const resources = resourcesFor(db);
+              const effect = async () => handler(...args);
+              return resources
+                ? resources.scope(projectId, `${subject.kind}:${subject.id}`, effect, {
+                    intentId: id,
+                  })
+                : effect();
+            },
+            {
+              whileSuspended: safetyDecisionMethod(method, args),
+              evidence: () => ({ code: 'handler_returned', refs: [subject] }),
+              ...(!descriptor.returnsValue ? { replay: () => undefined } : {}),
+              ...(method === 'chat.create' && command
+                ? {
+                    replay: async () => {
+                      const accepted = db.commands.get(command);
+                      if (accepted?.method !== 'chat.send' || accepted.args[0] !== projectId)
+                        throw new Error('The created chat has no matching delivery record');
+                      const chat = (await handlers['chats.list']?.(projectId))?.find(
+                        (item) => item.id === accepted.args[1],
+                      );
+                      if (!chat) throw new Error('The created chat is no longer available');
+                      return chat;
+                    },
+                  }
+                : {}),
+            },
+          )
+          .catch((error: unknown) =>
+            settleQuestionReplyError(db, coordinators, question, projectId, id, subject, error),
+          );
       };
     },
   });

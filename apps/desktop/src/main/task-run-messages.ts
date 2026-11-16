@@ -18,6 +18,11 @@ import { prepareTaskFollowUp } from './task-follow-up';
 import { terminalTaskHistory, retireTerminalTaskRequests } from './terminal-task-requests';
 import { taskPreflight, requireTaskInputsCurrent } from './task-preflight';
 import { stopManagedTask } from './managed-task-stop';
+import { supersedeQuestionInput } from './question-cancellation';
+import { taskQuestionContext } from './question-cancel-handlers';
+import { acceptQuestionReply } from './accept-question-reply';
+import { recordQuestionAcceptance } from './question-answer-proof';
+import { DecisionNotDispatched } from './decision-not-dispatched';
 
 /** messages: a focused part of the task-run controller. */
 export class TaskRunMessages {
@@ -47,7 +52,6 @@ export class TaskRunMessages {
       (event) => this.ctx.history.skaroEvent(active, event),
     );
     requireTaskNotStopping(active);
-    assertQuestionMessageAllowed(active.timeline.state, input.internal);
     if (!input.internal) {
       const answer = new QuestionAnswers(this.ctx.deps.db, `active.${active.run.id}`).pending(
         active.timeline.state,
@@ -59,6 +63,8 @@ export class TaskRunMessages {
         answer,
       );
     }
+    input = await supersedeQuestionInput(taskQuestionContext(this.ctx, active), input);
+    assertQuestionMessageAllowed(active.timeline.state, input.internal);
     await this.turn(active, input);
   }
 
@@ -131,7 +137,7 @@ export class TaskRunMessages {
     if (await this.ctx.integrations.controls.respond(projectId, taskId, interactionId, answer))
       return;
     const active = await this.ctx.history.restore(projectId, taskId);
-    if (!active) throw new Error('The agent session has ended');
+    if (!active) throw new DecisionNotDispatched('The agent session has ended');
     return trackRun(active, () => this.answer(active, interactionId, answer));
   }
 
@@ -148,7 +154,11 @@ export class TaskRunMessages {
         active.taskId,
       );
     const interaction = active.timeline.state.interactions.find((i) => i.id === interactionId);
-    validateQuestionAnswer(interaction, answer);
+    try {
+      validateQuestionAnswer(interaction, answer);
+    } catch (error) {
+      throw new DecisionNotDispatched(error);
+    }
     if (interaction?.kind === 'question' && answer.kind === 'question')
       active.secrets.remember(
         interaction.questions.filter((q) => q.secret).flatMap((q) => answer.answers[q.id] ?? []),
@@ -166,22 +176,39 @@ export class TaskRunMessages {
         !active.session ||
         !active.timeline.state.turns.some((turn) => !turn.outcome))
     ) {
-      const mailbox = new QuestionAnswers(this.ctx.deps.db, `active.${active.run.id}`);
-      mailbox.accept(
+      acceptQuestionReply(
+        this.ctx.deps.db,
+        `active.${active.run.id}`,
         interaction,
         answer,
+        active.timeline.state,
         (event) => this.ctx.history.skaroEvent(active, event),
-        active.timeline.state.turns.at(-1)?.id,
+        'task.send',
+        active.projectId,
+        active.taskId,
       );
-      mailbox.queue('task.send', active.projectId, active.taskId, active.timeline.state);
       return;
     } else {
-      if (!active.session) throw new Error('The agent session has ended');
+      if (!active.session) throw new DecisionNotDispatched('The agent session has ended');
       const nativeId = active.run.previousRunId
         ? interactionId.replace(`${active.run.id}:`, '')
         : interactionId;
-      await requireTaskInputsCurrent(this.ctx, active);
+      try {
+        await requireTaskInputsCurrent(this.ctx, active);
+      } catch (error) {
+        throw new DecisionNotDispatched(error);
+      }
+      const epoch = active.timeline.state.turns.at(-1)?.id;
       await active.session.respond(nativeId, answer);
+      if (interaction?.kind === 'question')
+        recordQuestionAcceptance(
+          this.ctx.deps.db,
+          `active.${active.run.id}`,
+          interaction,
+          answer,
+          epoch,
+          decisionItemId(active.run.id, epoch, interaction.id),
+        );
     }
     if (interaction) this.decision(active, interaction, answer);
   }

@@ -11,10 +11,19 @@ import { resourcesFor } from './resource-execution';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ResolverSession } from './integration-worker';
 import { QuestionAnswers } from './question-answers';
+import { recordQuestionAcceptance } from './question-answer-proof';
+import { decisionItemId } from './decision-item-id';
+import { DecisionNotDispatched } from './decision-not-dispatched';
+import { taskQuestionContext } from './question-cancel-handlers';
 import { hasOwnerCommand } from './owner-command-history';
 import { renewIntegrationDispatch, requireIntegrationDispatch } from './integration-dispatch-fence';
 import { decisionIsSafety } from './decision-authority';
 import type { TimelineEvent } from '@skaro/timeline';
+import { cancelQuestionRequests, supersedeQuestionInput } from './question-cancellation';
+import {
+  integrationQuestionContext,
+  integrationQuestionReferences,
+} from './integration-question-context';
 import {
   currentIntegration,
   integrationQueueKey,
@@ -48,7 +57,33 @@ export class IntegrationControls {
   async send(projectId: string, taskId: string, input: MessageInput): Promise<boolean> {
     const op = this.current(projectId, taskId);
     if (!op) return false;
+    if (
+      !input.internal &&
+      input.supersededQuestions?.some((ref) => !ref.id.startsWith(`integration-${op.id}:`))
+    ) {
+      const base = await this.ctx.history.restore(projectId, taskId);
+      if (base) input = await supersedeQuestionInput(taskQuestionContext(this.ctx, base), input);
+    }
     await this.deliver(op, input, !input.internal);
+    return true;
+  }
+
+  async cancelQuestion(
+    project: string,
+    task: string,
+    id: string,
+    reason: string,
+  ): Promise<boolean> {
+    const op = this.ctx.integrations.store
+      .all(project)
+      .find((value) => participatesIn(value, task) && id.startsWith(`integration-${value.id}:`));
+    if (!op) return false;
+    const context = await integrationQuestionContext(this.ctx, op, this.sessions.get(op.id));
+    const question = context.state.interactions.find(
+      (q) => q.id === id.slice(`integration-${op.id}:`.length),
+    );
+    if (question?.kind !== 'question') throw new Error('Question is no longer open');
+    await cancelQuestionRequests(context, [question], reason);
     return true;
   }
 
@@ -71,7 +106,12 @@ export class IntegrationControls {
     input: MessageInput,
     freshOwner = false,
   ): Promise<void> {
-    const timeline = (await this.ctx.integrations.history.state(op)).state;
+    const context = await integrationQuestionContext(this.ctx, op, this.sessions.get(op.id));
+    input = await supersedeQuestionInput(context, {
+      ...input,
+      supersededQuestions: integrationQuestionReferences(input.supersededQuestions, op.id),
+    });
+    const timeline = context.state;
     assertQuestionMessageAllowed(timeline, input.internal);
     if (hasOwnerCommand(timeline, input.commandId)) return;
     if (freshOwner) renewIntegrationDispatch(this.ctx.deps.db, op.projectId, op.id);
@@ -114,8 +154,13 @@ export class IntegrationControls {
     const scoped = id.slice(`integration-${op.id}:`.length);
     const timeline = await this.ctx.integrations.history.state(op);
     const interaction = timeline.state.interactions.find((value) => value.id === scoped);
-    if (!interaction) throw new Error('This integration interaction is no longer open.');
-    validateQuestionAnswer(interaction, answer);
+    if (!interaction)
+      throw new DecisionNotDispatched('This integration interaction is no longer open.');
+    try {
+      validateQuestionAnswer(interaction, answer);
+    } catch (error) {
+      throw new DecisionNotDispatched(error);
+    }
     if (!decisionIsSafety({ kind: 'respond', answer }))
       renewIntegrationDispatch(this.ctx.deps.db, projectId, op.id);
     if (interaction.kind === 'question' && answer.kind === 'question')
@@ -144,8 +189,20 @@ export class IntegrationControls {
       return true;
     } else {
       if (!live)
-        throw new Error('The old approval expired; the current agent will request it again.');
+        throw new DecisionNotDispatched(
+          'The old approval expired; the current agent will request it again.',
+        );
+      const epoch = timeline.state.turns.at(-1)?.id;
       await live.session.respond(scoped.replace(`${live.worker}:`, ''), answer);
+      if (interaction.kind === 'question')
+        recordQuestionAcceptance(
+          this.ctx.deps.db,
+          `integration.${op.id}`,
+          interaction,
+          answer,
+          epoch,
+          decisionItemId(op.id, epoch, scoped),
+        );
     }
     // Reload to avoid replacing a newly saved continuation with a historical snapshot.
     const current = live?.operation ?? this.ctx.integrations.store.find(projectId, op.id)!;

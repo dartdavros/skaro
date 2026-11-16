@@ -10,6 +10,7 @@ interface CommandDefinition {
 
 /** Explicit project commands. Send delivery belongs exclusively to OwnerCommands. */
 export const SESSION_COMMANDS = {
+  'decisions.cancel': { mode: 'control', subject: 'decision', priorityStop: true },
   'c4.audit': { mode: 'observation', returnsValue: true },
   'c4.auditStart': { mode: 'mutation', returnsValue: true },
   'c4.auditStop': { mode: 'control', priorityStop: true, returnsValue: true },

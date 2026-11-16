@@ -4,6 +4,18 @@ import { type Row } from './rows.ts';
 export class DbSettings extends DbTable {
   /** Synchronous metadata writes on the shared connection, never external work or awaits. */
   atomic<T>(action: () => T): T {
+    if (this.db.isTransaction) {
+      this.db.exec('SAVEPOINT settings_atomic');
+      try {
+        const result = action();
+        this.db.exec('RELEASE settings_atomic');
+        return result;
+      } catch (error) {
+        this.db.exec('ROLLBACK TO settings_atomic');
+        this.db.exec('RELEASE settings_atomic');
+        throw error;
+      }
+    }
     let result!: T;
     this.transaction(() => {
       result = action();

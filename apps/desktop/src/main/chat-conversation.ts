@@ -1,4 +1,3 @@
-import { QuestionAnswers } from './question-answers';
 import { hasOwnerCommand } from './owner-command-history';
 import {
   cancelOwnerMessages,
@@ -29,6 +28,11 @@ import type { ChatEngine } from './chat-engine';
 import { stopChat } from './chat-stop';
 import { projectMemory } from './project-memory-binding';
 import { parseBuiltinChatSettings, saveBuiltinChatSettings } from './builtin-chat-settings';
+import { supersedeQuestionInput } from './question-cancellation';
+import { chatQuestionContext } from './question-cancel-handlers';
+import { acceptQuestionReply } from './accept-question-reply';
+import { recordQuestionAcceptance } from './question-answer-proof';
+import { DecisionNotDispatched } from './decision-not-dispatched';
 
 export class ChatConversation {
   private readonly ctx: ChatEngine;
@@ -111,13 +115,14 @@ export class ChatConversation {
 
   async send(projectId: string, chatId: string, input: MessageInput): Promise<void> {
     const live = await this.ctx.history.restore(projectId, chatId);
-    if (live.chat.archived) throw new Error('The chat is archived');
+    if (live.chat.archived) throw new DecisionNotDispatched('The chat is archived');
     this.ctx.history.touch(live);
     await this.deliver(live, input);
   }
 
   /** Sends a message; decisions on proposals since the last message go in front of it. */
   async deliver(live: LiveChat, input: MessageInput): Promise<void> {
+    input = await supersedeQuestionInput(chatQuestionContext(this.ctx, live), input);
     assertQuestionMessageAllowed(live.timeline.state, input.internal);
     this.ctx.planningContinuation.userMessage(live);
     return this.queueDelivery(live, input);
@@ -202,7 +207,11 @@ export class ChatConversation {
     const live = await this.ctx.history.restore(projectId, chatId);
     if (live.chat.archived) throw new Error('The chat is archived');
     const interaction = live.timeline.state.interactions.find((i) => i.id === interactionId);
-    validateQuestionAnswer(interaction, answer);
+    try {
+      validateQuestionAnswer(interaction, answer);
+    } catch (error) {
+      throw new DecisionNotDispatched(error);
+    }
     if (interaction?.kind === 'question' && answer.kind === 'question')
       live.secrets.remember(
         interaction.questions.filter((q) => q.secret).flatMap((q) => answer.answers[q.id] ?? []),
@@ -213,18 +222,31 @@ export class ChatConversation {
         !live.session ||
         !live.timeline.state.turns.some((turn) => !turn.outcome))
     ) {
-      const mailbox = new QuestionAnswers(this.ctx.deps.db, `live.${live.chat.id}`);
-      mailbox.accept(
+      acceptQuestionReply(
+        this.ctx.deps.db,
+        `live.${live.chat.id}`,
         interaction,
         answer,
+        live.timeline.state,
         (event) => this.ctx.history.skaroEvent(live, event),
-        live.timeline.state.turns.at(-1)?.id,
+        'chat.send',
+        projectId,
+        chatId,
       );
-      mailbox.queue('chat.send', projectId, chatId, live.timeline.state);
       return;
     } else {
-      if (!live.session) throw new Error('The agent session has ended');
+      if (!live.session) throw new DecisionNotDispatched('The agent session has ended');
+      const epoch = live.timeline.state.turns.at(-1)?.id;
       await live.session.respond(interactionId, answer);
+      if (interaction?.kind === 'question')
+        recordQuestionAcceptance(
+          this.ctx.deps.db,
+          `live.${chatId}`,
+          interaction,
+          answer,
+          epoch,
+          decisionItemId(chatId, epoch, interactionId),
+        );
     }
     if (!interaction) return;
     this.ctx.history.skaroEvent(live, {

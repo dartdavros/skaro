@@ -33,6 +33,8 @@ import { taskArchitectureEvent } from './task-architecture-events';
 import { requestTaskSecret } from './task-secret-input';
 import { resumeTaskExecution } from './task-resume';
 import { reportTaskBlocker } from './task-blocker-report';
+import { cancelTaskQuestion } from './question-cancel-handlers';
+import { prepareModelIncident, verifyModelIncident } from './incident-model-access';
 import { prepareBuiltinTaskReview } from './builtin-task-review';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
@@ -40,6 +42,21 @@ export { requirementsOf } from './task-run-helpers';
 
 /** Public API: composes focused task-run services without owning their workflows. */
 export class TaskRuns {
+  cancelIntegrationQuestion(id: string, reason: string, scope: SkaroScope) {
+    return this.engine.integrations.cancelQuestion(id, reason, scope);
+  }
+  prepareIncident(scope: SkaroScope, id: string) {
+    return prepareModelIncident(this.engine, scope, id);
+  }
+  verifyIncident(scope: SkaroScope, id: string) {
+    return verifyModelIncident(this.engine, scope, id);
+  }
+  incidentArtifacts(project: string) {
+    return this.engine.project(project).summary();
+  }
+  cancelQuestion(project: string, task: string, id: string, reason: string, runId?: string) {
+    return cancelTaskQuestion(this.engine, project, task, id, reason, runId);
+  }
   get incidents() {
     return this.engine.incidents;
   }

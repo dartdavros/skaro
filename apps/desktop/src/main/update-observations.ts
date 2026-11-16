@@ -7,6 +7,7 @@ const READS = new Set<MethodName>([
   'coordinator.state',
   'activity.page',
   'decisions.list',
+  'decisions.count',
   'decisions.status',
   'models.settings',
   'models.catalog',

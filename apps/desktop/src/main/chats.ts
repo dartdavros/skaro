@@ -26,6 +26,7 @@ import type { Deps } from './chat-model';
 import type { ChatRange } from '../shared/chat-catalog';
 import { background } from './background/client';
 import { updateSessionBusy } from './update-session-activity';
+import { cancelChatQuestion } from './question-cancel-handlers';
 
 import { ChatEngine } from './chat-engine';
 import { chatDecisionSources } from './chat-decision-sources';
@@ -36,6 +37,9 @@ export { titleOf } from './chat-settings-helpers';
 export { projectContextText } from './chat-context-text';
 
 export class ChatSessions implements ProjectToolHandlers {
+  cancelQuestion(project: string, chat: string, id: string, reason: string) {
+    return cancelChatQuestion(this.engine, project, chat, id, reason);
+  }
   assertMayWork(chatId: string): void {
     const live = this.engine.live.get(chatId);
     if (live) assertQuestionsAnswered(live.timeline.state);

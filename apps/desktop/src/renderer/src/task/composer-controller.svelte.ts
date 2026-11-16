@@ -122,14 +122,23 @@ export function createComposerController(options: {
 
   async function onpaste(event: ClipboardEvent): Promise<void> {
     const items = Array.from(event.clipboardData?.items ?? []);
-    if (!items.some((item) => item.kind === 'file' && item.type.startsWith('image/'))) return;
+    // Capture File objects during the event, before Chromium clears its data-transfer store.
+    const images = items
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => !!file);
+    if (!images.length) return;
     event.preventDefault();
     if (sending) return;
     pasting++;
     try {
-      const image = await window.skaro.invoke('files.pasteImage');
-      if (image && !attachments.some((a) => a.path === image.path)) {
-        attachments = [...attachments, image];
+      for (const file of images) {
+        const image = await window.skaro.invoke(
+          'files.pasteImage',
+          new Uint8Array(await file.arrayBuffer()),
+        );
+        if (image && !attachments.some((a) => a.path === image.path))
+          attachments = [...attachments, image];
       }
     } finally {
       pasting--;

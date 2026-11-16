@@ -8,7 +8,6 @@ import {
   Timeline,
   runEvent,
   currentActivity,
-  type Item,
   type TimelineEvent,
   type TimelineState,
   type RawLine,
@@ -22,6 +21,7 @@ import type { IntegrationStore } from './integration-store';
 import { IntegrationRawLog } from './integration-raw-log';
 import { composeTaskTimeline, type IntegrationTimeline } from '../shared/task-timeline';
 import type { Events } from '../shared/ipc';
+import { inBackground, abandoned } from './integration-history-state';
 
 interface Journal {
   secrets: SessionSecrets;
@@ -39,14 +39,23 @@ export class IntegrationHistory {
   private readonly store: IntegrationStore;
   private readonly changed: (projectId: string, taskId: string) => void;
   private readonly emit?: (batch: Events['integration.events']) => void;
+  private readonly projectQuestions: (
+    op: IntegrationOperation,
+    state: TimelineState,
+  ) => TimelineState;
   constructor(
     store: IntegrationStore,
     changed: (projectId: string, taskId: string) => void,
     emit?: (batch: Events['integration.events']) => void,
+    projectQuestions: (op: IntegrationOperation, state: TimelineState) => TimelineState = (
+      _op,
+      state,
+    ) => state,
   ) {
     this.store = store;
     this.changed = changed;
     this.emit = emit;
+    this.projectQuestions = projectQuestions;
   }
 
   private path(op: IntegrationOperation): string {
@@ -240,7 +249,10 @@ export class IntegrationHistory {
         live: !!op.worker,
         ...(op.nativeAgent ? { agent: op.nativeAgent } : {}),
         ...(op.nativeEffort ? { effort: op.nativeEffort } : {}),
-        timeline: scopeTimeline(snapshot.timeline.state, `integration-${op.id}`),
+        timeline: scopeTimeline(
+          this.projectQuestions(op, snapshot.timeline.state),
+          `integration-${op.id}`,
+        ),
       });
     }
     return {
@@ -279,20 +291,4 @@ export class IntegrationHistory {
   secrets(op: IntegrationOperation): SessionSecrets {
     return this.journal(op).secrets;
   }
-}
-
-function inBackground(item: Item): boolean {
-  return item.kind === 'command' && item.background?.state === 'running';
-}
-
-/** An item of a resolver that no longer runs. */
-function abandoned(item: Item): Item {
-  if (item.kind !== 'command' || item.background?.state !== 'running')
-    return { ...item, status: 'interrupted' };
-  return {
-    ...item,
-    status: 'interrupted',
-    endedAt: Date.now(),
-    background: { ...item.background, state: 'stopped' },
-  };
 }

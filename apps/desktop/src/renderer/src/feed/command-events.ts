@@ -3,6 +3,7 @@ import {
   pendingOwnerCommand,
   retiredOwnerCommand,
   restoredCommandError,
+  visibleOwnerCommand,
 } from './owner-command-state';
 
 /** Durable delivery state is separate from a screen's transient action error. */
@@ -30,6 +31,7 @@ export function watchOwnerCommands(
       });
   const unsubscribe = window.skaro.on('command.changed', (command) => {
     if (command.owner !== `${projectId}:${ownerId}`) return;
+    if (!visibleOwnerCommand(command)) return;
     changed.add(command.id);
     if (pendingOwnerCommand(command)) messages.restore([command]);
     else if (retiredOwnerCommand(command)) messages.cancel(command.id);

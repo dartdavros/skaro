@@ -7,6 +7,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { ResourceAdmissionUnavailable } from './resource-manager';
 import { EnvironmentNotDispatched } from './environment-dispatch-error';
 import { inPlaceEnvironmentResult } from './task-environment-mode';
+import { incidentStartProhibition } from './incident-worker-repair';
 
 /** `start_environment`: the agent of a task asks Skaro for running services. */
 export async function startTaskEnvironment(
@@ -21,6 +22,8 @@ export async function startTaskEnvironment(
   }
   const shared = inPlaceEnvironmentResult(ctx.project(scope.projectId).root, active.run);
   if (shared) return shared;
+  const prohibited = await incidentStartProhibition(ctx, active);
+  if (prohibited) return { text: prohibited, isError: true };
   try {
     const info = await ctx.environments.start(checkoutKey(active), { waitForResources: false });
     const { variables } = await ctx.environments.describe(checkoutKey(active));

@@ -9,6 +9,7 @@ import { checkoutKey } from './task-stage';
 import type { EnvironmentRecord } from './task-environment-registry';
 import type { MessageInput } from '../shared/ipc';
 import { OWNER_PERMISSION_INSTRUCTIONS } from './agent-interaction-instructions';
+import { incidentDiagnosisCurrent } from './incident-model-diagnosis';
 
 const CONTINUE =
   'Continue the authorized task to its verified result. The preceding model turn ended, ' +
@@ -34,6 +35,10 @@ export class TaskRunContinuation {
     return new TaskExecution(this.ctx.deps.db, active.run.id);
   }
   canDeliver(active: ActiveRun, input: MessageInput): boolean {
+    if (input.internal && input.commandId?.startsWith('diagnose-incident-'))
+      return (
+        !this.ctx.closing && incidentDiagnosisCurrent(this.ctx, active.run.id, input.commandId)
+      );
     if (!input.internal || !input.commandId?.startsWith('continue-')) return true;
     const execution = this.execution(active).read();
     return !this.ctx.closing && execution.enabled && !execution.blocked;

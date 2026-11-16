@@ -1,6 +1,7 @@
 import type { AppDb, CoordinationBlocker, IncidentSubscription } from '@skaro/core';
 import type { ToolResult } from '@skaro/mcp-server';
 import { TaskExecution } from './task-execution';
+import { isIncidentOwnerPause } from '@skaro/mcp-server';
 
 interface BlockerReportProof {
   blockerId: string;
@@ -23,6 +24,8 @@ export function recordTaskBlocker(
     if (execution.intentVersion() !== subscription.intent)
       throw new Error('Task execution intent changed before blocker registration');
     execution.block(reason, row.id);
+    if (row.protocol && isIncidentOwnerPause(row.protocol.cause, row.protocol.code))
+      execution.stop();
     if (operationId)
       db.setSetting(proofKey(operationId), {
         blockerId: row.id,

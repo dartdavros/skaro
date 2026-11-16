@@ -18,6 +18,7 @@ export async function reportTaskIncident(
   source: 'worker' | 'controller' = 'worker',
   operationId?: string,
 ): Promise<CoordinationBlocker> {
+  reason = active.secrets.redact(reason);
   const execution = ctx.continuation.execution(active);
   const intent = execution.intentVersion();
   const context = ctx.project(active.projectId);
@@ -77,7 +78,7 @@ export async function reportTaskIncident(
   if (source === 'controller' && failure.code === 'environment_waiting_resource')
     await rememberEnvironmentWait(ctx, row);
   recordTaskBlocker(ctx.deps.db, row, subscription, reason, operationId);
-  ctx.history.notice(active, 'other', 'error', reason);
+  ctx.history.flush(active);
   ctx.events.settleRuntime(active);
   return row;
 }
