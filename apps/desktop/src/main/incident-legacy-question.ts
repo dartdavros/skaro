@@ -1,11 +1,24 @@
 import type { CoordinationBlocker } from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
 import { cancelIncidentApproval } from './incident-feed';
+import {
+  incidentPlanKey,
+  incidentPlanVerifiable,
+  type IncidentModelPlan,
+} from './incident-model-plan';
 
 /** Upgrade the old controller-generated empty form through canonical cancellation. */
 export async function retireLegacyIncidentQuestion(ctx: TaskRunEngine, row: CoordinationBlocker) {
   const id = row.protocol?.decisionId;
   if (!id || ctx.deps.db.coordination.decisions.get(row.projectId, id)?.kind !== 'question') return;
+  const plan = ctx.deps.db.getSetting<IncidentModelPlan | undefined>(
+    incidentPlanKey(row.id),
+    undefined,
+  );
+  if (plan && !incidentPlanVerifiable(plan, row)) {
+    await cancelIncidentApproval(ctx, row, id, 'incident_verification_plan_invalid');
+    return;
+  }
   for (const subscription of row.protocol!.subscriptions) {
     const active = await ctx.history.restore(row.projectId, subscription.taskId);
     const question = active?.timeline.state.interactions.find((i) => i.id === `coordinator:${id}`);

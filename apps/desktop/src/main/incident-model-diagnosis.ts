@@ -43,6 +43,8 @@ export async function diagnoseIncident(ctx: TaskRunEngine, row: CoordinationBloc
           'and two or three real actions with consequences; Skaro will show that existing question card. ' +
           'Never emit a generic blocker code or ask the owner to invent a solution. For a checkable external ' +
           'prerequisite, bind an existing configured project check by name using plan_project_incident; do not invent a check. ' +
+          'For a recorded agent process exit, bind verification_agent=true: Skaro verifies a later live native turn. ' +
+          'Bind a supported verifier even when asking an owner question. Do not report another blocker for an invalid verifier; correct the plan for this same incident. ' +
           'Repair alone is not success: verify_project_incident must confirm the recorded condition before continuation. ' +
           'Do not call submit_result or resume_task to bypass this incident. End after the plan or verified repair.',
       });

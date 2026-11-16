@@ -34,6 +34,8 @@ it('requires actionable distinct options with consequences and invalidates plans
     const row = {
       id: 'incident',
       protocol: {
+        cause: 'dependency',
+        condition: 'inputs-current',
         resourceVersion: incidentHash('resource'),
         ownerPolicyRevision: 1,
         subscriptions: [
@@ -51,6 +53,24 @@ it('requires actionable distinct options with consequences and invalidates plans
     };
     db.setSetting(incidentPlanKey(row.id), plan);
     expect(incidentModelPlan(db, row)).toEqual(plan);
+    const uncheckable = {
+      ...row,
+      protocol: {
+        ...row.protocol!,
+        cause: 'external' as const,
+        condition: 'owner-evidence' as const,
+      },
+    };
+    expect(incidentModelPlan(db, uncheckable)).toBeUndefined();
+    db.setSetting(incidentPlanKey(row.id), {
+      ...plan,
+      verificationSession: { runId: 'run', failedTurnId: 'exit' },
+    });
+    expect(incidentModelPlan(db, uncheckable)).toHaveProperty(
+      'verificationSession.failedTurnId',
+      'exit',
+    );
+    db.setSetting(incidentPlanKey(row.id), plan);
     for (const protocol of [
       { ...row.protocol!, resourceVersion: incidentHash('different') },
       { ...row.protocol!, ownerPolicyRevision: 2 },

@@ -68,6 +68,8 @@
   }
 </script>
 
+<svelte:window onkeydown={controller.onWindowKeydown} onpaste={controller.onWindowPaste} />
+
 <div class="composer" bind:this={controller.root}>
   <ComposerHints {controller} />
   <ComposerAttachments {controller} {imagesSupported} />

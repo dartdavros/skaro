@@ -8,6 +8,8 @@ export function incidentFailure(error: unknown): { cause: IncidentCause; code: s
       : {};
   const code = String(e.code ?? e.category ?? '').toLowerCase();
   const text = String(e.message ?? error).toLowerCase();
+  if (/^(?:codex stopped \([^)]*\)|the agent process exited)$/.test(text))
+    return { cause: 'external', code: 'agent_process_exited' };
   if (
     /context_length|context_window|context_limit/.test(code) ||
     /context (window|length).*(exceed|limit)/.test(text)

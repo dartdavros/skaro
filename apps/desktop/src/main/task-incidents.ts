@@ -24,6 +24,8 @@ import { canRenewIncidentApproval } from './incident-approval-renewal';
 import { reportTaskIncident } from './task-incident-report';
 import { retireCapacityWait } from './resource-wait-retirement';
 import { bindIncidentEnvironment } from './incident-environment-verification';
+import { bindIncidentSession } from './incident-session-verification';
+import { retireTerminalIncident } from './incident-retirement';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -34,6 +36,7 @@ export interface TaskBlockerDetails {
 
 export class TaskIncidents {
   private readonly running = new Map<string, Promise<void>>();
+  private readonly retirements = new Map<string, Promise<void>>();
   readonly decisions: IncidentDecisions;
   readonly work: IncidentWork;
   private readonly ctx: TaskRunEngine;
@@ -59,6 +62,25 @@ export class TaskIncidents {
   }
   bindEnvironment(row: CoordinationBlocker, id: string) {
     return bindIncidentEnvironment(this.ctx, row, id);
+  }
+  bindSession(row: CoordinationBlocker) {
+    return bindIncidentSession(this.ctx, row);
+  }
+  projectChanged(projectId: string): void {
+    if (this.ctx.deps.coordinators && !this.ctx.closing)
+      void this.retireTerminal(projectId).catch((error: unknown) =>
+        console.error('Terminal incident retirement:', error),
+      );
+  }
+  retireTerminal(projectId: string): Promise<void> {
+    const existing = this.retirements.get(projectId);
+    if (existing) return existing;
+    const pending = (async () => {
+      for (const row of this.store.list(projectId))
+        if (row.state === 'open') await retireTerminalIncident(this.ctx, row);
+    })().finally(() => this.retirements.delete(projectId));
+    this.retirements.set(projectId, pending);
+    return pending;
   }
 
   report(
@@ -93,11 +115,12 @@ export class TaskIncidents {
     return pending;
   }
   async idle(): Promise<void> {
-    await Promise.allSettled(this.running.values());
+    await Promise.allSettled([...this.running.values(), ...this.retirements.values()]);
   }
   private async advance(projectId: string, id: string): Promise<void> {
     let row = this.store.get(projectId, id);
     if (row.state !== 'open' || this.ctx.closing) return;
+    if (await retireTerminalIncident(this.ctx, row)) return;
     if (await retireCapacityWait(this.ctx, row)) return;
     const subscribers = [];
     for (const s of row.protocol!.subscriptions)

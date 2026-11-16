@@ -1,5 +1,6 @@
 import type { AgentCommand } from '@skaro/timeline';
 import type { MessageInput, PathSuggestion, PickedFile } from '../../../shared/ipc';
+import { createComposerPaste, pasteTargetsComposer } from './composer-paste';
 export function createComposerController(options: {
   commands: () => Promise<AgentCommand[]>;
   suggest: (query: string) => Promise<PathSuggestion[]>;
@@ -16,6 +17,15 @@ export function createComposerController(options: {
   let highlighted = $state(0);
   let sending = $state(false);
   let pasting = $state(0);
+  const paste = createComposerPaste({
+    add: (image) => {
+      if (!attachments.some((a) => a.path === image.path)) attachments = [...attachments, image];
+    },
+    pending: (change) => {
+      pasting += change;
+    },
+    sending: () => sending,
+  });
 
   const has = $derived(text.trim().length > 0 || attachments.length > 0);
   const slashRows = $derived.by(() => {
@@ -120,32 +130,8 @@ export function createComposerController(options: {
     }
   }
 
-  async function onpaste(event: ClipboardEvent): Promise<void> {
-    const items = Array.from(event.clipboardData?.items ?? []);
-    // Capture File objects during the event, before Chromium clears its data-transfer store.
-    const images = items
-      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-      .map((item) => item.getAsFile())
-      .filter((file): file is File => !!file);
-    if (!images.length) return;
-    event.preventDefault();
-    if (sending) return;
-    pasting++;
-    try {
-      for (const file of images) {
-        const image = await window.skaro.invoke(
-          'files.pasteImage',
-          new Uint8Array(await file.arrayBuffer()),
-        );
-        if (image && !attachments.some((a) => a.path === image.path))
-          attachments = [...attachments, image];
-      }
-    } finally {
-      pasting--;
-    }
-  }
-
   function onkeydown(event: KeyboardEvent): void {
+    if (event.currentTarget === textarea) paste.onkeydown(event);
     const rows = menu === 'slash' ? slashRows.length : menu === 'at' ? atRows.length : 0;
     if (rows && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
       event.preventDefault();
@@ -234,7 +220,13 @@ export function createComposerController(options: {
     },
     oninput,
     onkeydown,
-    onpaste,
+    onpaste: paste.onpaste,
+    onWindowKeydown: (event: KeyboardEvent) => {
+      if (pasteTargetsComposer(event, root)) paste.onkeydown(event);
+    },
+    onWindowPaste: (event: ClipboardEvent) => {
+      if (pasteTargetsComposer(event, root)) void paste.onpaste(event);
+    },
     refreshAt,
     pickCommand,
     pickPath,
