@@ -81,6 +81,36 @@ it('holds zero-consumer stop exclusion through verification without permitting r
   }
 });
 
+it('preserves the last outcome when concurrent inventory observes an environment during stop', async () => {
+  const { db, resource } = await currentEnvironmentLedger();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopping = db.resources.cleanup.runStop(resource, randomUUID(), () => gate);
+  const observe = () =>
+    db.resources.recordOutcome({
+      resourceId: resource.id,
+      generation: resource.generation,
+      operationId: randomUUID(),
+      action: 'inspect',
+      state: 'observed',
+      reason: 'inventory_observed',
+    });
+  try {
+    expect(db.resources.cleanup.read(resource.id)).toBeDefined();
+    expect(observe).toThrow('Resource cleanup excludes new consumers and mutations');
+    expect(db.resources.get(resource.id)?.lastOutcome).toEqual(resource.lastOutcome);
+    release();
+    await stopping;
+    expect(observe().state).toBe('observed');
+  } finally {
+    release();
+    await stopping;
+    db.close();
+  }
+});
+
 it('keeps the exact owned shared review lease held and rejects every other consumer or shared authority', async () => {
   const { db, resource, reserve } = await currentEnvironmentLedger();
   try {

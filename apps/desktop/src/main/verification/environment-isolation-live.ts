@@ -11,6 +11,7 @@ import { sessionHandlers } from '../session-handlers';
 import { coordinatorSourceAudit } from './coordinator-source-audit';
 import { eventually } from './resource-workflow-observation';
 import {
+  callEnvironmentTool,
   isolationContainers,
   isolationFiles,
   isolationTask,
@@ -155,6 +156,26 @@ export async function verifyEnvironmentIsolation(
       );
       assert.deepEqual(await isolationFiles(run.worktree), filesBefore);
       await handlers['task.interrupt'](project, task.id);
+      await engine.environments.stop(key);
+      await assert.rejects(fetch(url, { signal: AbortSignal.timeout(4000) }));
+      const receipt = await callEnvironmentTool(s, project, task.id, 'report_task_blocker', {
+        reason: `HTTP readiness failed for the stopped audit environment at ${url}`,
+        requires_owner_permission: false,
+        cause: 'environment',
+        code: 'service_unavailable',
+        condition: 'environment-ready',
+      });
+      const blocker = receipt.structuredContent?.blocker;
+      assert(blocker?.recorded && blocker.runId === run.id);
+      const row = engine.incidents.store.get(project, blocker.id);
+      try {
+        assert.equal(row.subject.kind, 'resource');
+        assert.equal(s.db.resources.get(row.subject.id)?.identity.composeProject, worktreeName);
+        assert.equal(row.protocol?.condition, 'environment-ready');
+        proof.blocker = { id: row.id, registered: true, resource: row.subject.id, task: task.id };
+      } finally {
+        await handlers['incidents.cancel'](project, row.id);
+      }
       proof.worktreeAfterTurn = {
         files: await isolationFiles(run.worktree),
         containers: await isolationContainers(worktreeName),

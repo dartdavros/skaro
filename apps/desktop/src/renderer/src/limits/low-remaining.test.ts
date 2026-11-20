@@ -2,10 +2,10 @@ import { expect, it } from 'vitest';
 import { limitWindow } from '@skaro/timeline';
 import { limitGaugeColor, lowRemaining, lowPercentLabel, remainingLimit } from './low-remaining';
 
-it('uses muted red through exactly 10% and keeps positive normal or unknown quota neutral', () => {
-  for (const remaining of [0, 5, 9.99, 10])
+it('uses muted red strictly below 15% and keeps positive normal or unknown quota neutral', () => {
+  for (const remaining of [0, 5, 10, 14.99])
     expect(limitGaugeColor(remaining)).toBe('var(--sk-red-4)');
-  for (const remaining of [10.01, 95, 100, undefined, NaN])
+  for (const remaining of [15, 15.01, 95, 100, undefined, NaN])
     expect(limitGaugeColor(remaining)).toBe('var(--sk-text-1)');
 });
 
@@ -24,12 +24,13 @@ it('uses the full known remaining quota for the gauge and leaves unavailable dat
   expect(remainingLimit(undefined)).toBeUndefined();
 });
 
-it('shows the smallest known remaining window strictly below 10%, including zero', () => {
+it('shows the smallest known remaining window strictly below 15%, including zero', () => {
   const snapshot = (five: unknown, week: unknown) => ({
     checkedAt: new Date().toISOString(),
     windows: [limitWindow('five_hour', five, null), limitWindow('seven_day', week, null)],
   });
-  expect(lowRemaining(snapshot(90, 40))).toBeUndefined();
+  expect(lowRemaining(snapshot(85, 40))).toBeUndefined();
+  expect(lowRemaining(snapshot(86, 40))).toBe(14);
   expect(lowRemaining(snapshot(91, 99))).toBe(1);
   expect(lowRemaining(snapshot(20, 100))).toBe(0);
   expect(lowRemaining(snapshot(null, 95))).toBe(5);

@@ -1,6 +1,13 @@
 import type { ResourceRecord, ResourceRegistration, TaskKey } from '@skaro/core';
 import type { EnvironmentObservation } from './environment-resource-inventory';
 
+export function environmentCleanupOperation(
+  resource: ResourceRecord,
+  action: 'stop' | 'remove',
+): string {
+  return `environment.${action}:${resource.id}:${resource.generation}`;
+}
+
 /** Missing current observations do not permanently classify a previously unregistered resource. */
 export function deferEnvironmentRegistration(observation: EnvironmentObservation): boolean {
   return [

@@ -14,21 +14,21 @@ export function remainingLimit(snapshot: AgentLimits | undefined): number | unde
   return values.length ? Math.min(...values) : undefined;
 }
 
-/** The gauge includes exactly 10%; unknown quota retains its neutral appearance. */
-export function limitGaugeColor(remaining: number | undefined): string {
-  return remaining !== undefined && remaining >= 0 && remaining <= 10
-    ? 'var(--sk-red-4)'
-    : 'var(--sk-text-1)';
+function isLow(remaining: number | undefined): remaining is number {
+  return remaining !== undefined && remaining >= 0 && remaining < 15;
 }
 
-/** Exactly 10% is not low. */
+export function limitGaugeColor(remaining: number | undefined): string {
+  return isLow(remaining) ? 'var(--sk-red-4)' : 'var(--sk-text-1)';
+}
+
 export function lowRemaining(snapshot: AgentLimits | undefined): number | undefined {
   const remaining = remainingLimit(snapshot);
-  return remaining !== undefined && remaining < 10 ? remaining : undefined;
+  return isLow(remaining) ? remaining : undefined;
 }
 
 export function lowPercentLabel(remaining: number, locale: string): string {
-  // A value below 10 must not round up to the non-warning threshold.
+  // A value below 15 must not round up to the non-warning threshold.
   return (
     new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(
       Math.floor(remaining * 10) / 10,

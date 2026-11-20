@@ -12,6 +12,18 @@ import { eventually } from './resource-workflow-observation';
 const exec = promisify(execFile);
 /** Exercise the actual scoped MCP fallback without asking the agent to violate its instructions. */
 export async function isolationTool(s: Services, projectId: string, taskId: string, name: string) {
+  const result = await callEnvironmentTool(s, projectId, taskId, name, {});
+  assert(JSON.stringify(result).includes('No separate checkout is required'));
+  return result;
+}
+
+export async function callEnvironmentTool(
+  s: Services,
+  projectId: string,
+  taskId: string,
+  name: string,
+  args: Record<string, unknown>,
+) {
   const run = s.db.latestRun(projectId, taskId)!;
   const grant = s.mcp.grant({ kind: 'task', projectId, taskId, runId: run.id });
   try {
@@ -26,14 +38,13 @@ export async function isolationTool(s: Services, projectId: string, taskId: stri
         jsonrpc: '2.0',
         id: randomUUID(),
         method: 'tools/call',
-        params: { name, arguments: {} },
+        params: { name, arguments: args },
       }),
       signal: AbortSignal.timeout(30000),
     });
     assert(response.ok);
     const receipt = await response.json();
     assert(!receipt.error && !receipt.result.isError, JSON.stringify(receipt));
-    assert(JSON.stringify(receipt.result).includes('No separate checkout is required'));
     return receipt.result;
   } finally {
     grant.revoke();

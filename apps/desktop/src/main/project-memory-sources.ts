@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { realpath } from 'node:fs/promises';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { ProjectArtifacts } from '@skaro/core';
 
 export const memoryVersion = (value: unknown): string =>
@@ -18,11 +18,15 @@ export function memoryDocuments(artifacts: ProjectArtifacts) {
   ].filter((entry) => entry !== undefined);
 }
 
+export function isMemorySourcePath(base: string, path: string): boolean {
+  const suffix = relative(base, path);
+  return !!suffix && suffix !== '..' && !suffix.startsWith('..' + sep) && !isAbsolute(suffix);
+}
+
 export async function requireMemoryPath(root: string, path: string): Promise<string> {
   const base = await realpath(root);
   const actual = await realpath(resolve(base, path));
-  const suffix = relative(base, actual);
-  if (!suffix || suffix.startsWith('..') || isAbsolute(suffix))
+  if (!isMemorySourcePath(base, actual))
     throw new Error('Memory source is outside its registered scope');
   return actual;
 }

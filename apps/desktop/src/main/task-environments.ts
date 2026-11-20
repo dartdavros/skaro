@@ -5,9 +5,10 @@ import type { Projects } from './projects';
 import { EnvironmentRegistry } from './task-environment-registry';
 import { systemDocker, type EnvironmentDocker } from './task-environment-docker';
 import type { ConfigureEnvironmentArgs } from '@skaro/mcp-server';
-import { configureEnvironment } from './task-environment-config';
+import { configureEnvironment, recordedEnvironmentConfig } from './task-environment-config';
 import {
   describeTaskEnvironment,
+  recordedEnvironmentIdentity,
   type EnvironmentDescription,
 } from './task-environment-description';
 import { refreshEnvironmentPorts } from './task-environment-ports';
@@ -172,10 +173,24 @@ export class TaskEnvironments {
     });
   }
 
+  /** Read the existing allocation without creating a checkout, Docker ports or Compose overrides. */
+  async recorded(key: TaskKey) {
+    this.scope.require(key);
+    const record = this.registry.find(key);
+    if (!record) return undefined;
+    const context = this.deps.projects.get(key.projectId);
+    const base = (await context.load()).config.environment;
+    return {
+      identity: recordedEnvironmentIdentity(context.root, this.deps.dataDir, record),
+      config: base && recordedEnvironmentConfig(record, base),
+    };
+  }
+
   /** Resolve a blocker to the actual scoped resource, without starting or adopting unknown data. */
   async incidentResource(key: TaskKey) {
     this.scope.require(key);
-    const { identity } = await this.describe(key);
+    const record = this.registry.find(key);
+    if (!record) return undefined;
     try {
       await this.lifecycle.resources.observe(await this.docker.inspect());
     } catch {
@@ -186,7 +201,7 @@ export class TaskEnvironments {
       .find(
         (r) =>
           r.kind === 'environment' &&
-          r.identity.composeProject === identity.name &&
+          r.identity.composeProject === record.name &&
           r.owner.id === key.taskId,
       );
   }

@@ -16,6 +16,7 @@ export const AGENT = 'codex';
 export const SILENT = new Set([
   'thread/started',
   'thread/name/updated',
+  'thread/readState/changed',
   'thread/settings/updated',
   'thread/queue/changed',
   'thread/goal/updated',

@@ -1,10 +1,11 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { Document, YAMLSeq } from 'yaml';
 import type { EnvironmentIdentity } from '@skaro/core';
 import { assertManagedPorts, managedPortPlan, type ComposeModel } from './task-compose-ports';
+import { composeSourceFiles } from './compose-source-files';
 import { composePortVariables } from './task-compose-env';
 
 export interface ManagedCompose {
@@ -12,14 +13,6 @@ export interface ManagedCompose {
   baseVariables: Record<string, string>;
   override: string;
 }
-
-const DEFAULTS = ['compose.yaml', 'compose.yml', 'docker-compose.yaml', 'docker-compose.yml'];
-const OVERRIDES = [
-  'compose.override.yaml',
-  'compose.override.yml',
-  'docker-compose.override.yaml',
-  'docker-compose.override.yml',
-];
 
 /** Stable service-owned path also reaches already attached agent shells through COMPOSE_FILE. */
 export async function describeCompose(
@@ -31,18 +24,10 @@ export async function describeCompose(
   if (!/^[a-z0-9][a-z0-9_-]*$/.test(identity.name))
     throw new Error('Invalid managed Compose project name');
   const separator = variables.COMPOSE_PATH_SEPARATOR ?? delimiter;
-  const first = DEFAULTS.find((name) => existsSync(join(identity.worktree, name)));
-  if (!variables.COMPOSE_FILE && !first) return undefined;
+  const files = composeSourceFiles(identity.worktree, variables);
+  if (!variables.COMPOSE_FILE && !files.length) return undefined;
   const override = join(dataDir, 'environments', identity.name, 'ports.yaml');
-  const files = variables.COMPOSE_FILE
-    ? variables.COMPOSE_FILE.split(separator).filter(Boolean)
-    : [
-        first!,
-        ...OVERRIDES.filter((name) => existsSync(join(identity.worktree, name))).slice(0, 1),
-      ];
-  const base = files
-    .map((file) => resolve(identity.worktree, file))
-    .filter((file) => file !== override);
+  const base = files.filter((file) => file !== override);
   if (!base.length) throw new Error('Compose has no source files');
   await mkdir(dirname(override), { recursive: true });
   try {

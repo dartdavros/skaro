@@ -7,7 +7,7 @@ import {
   type TaskKey,
 } from '@skaro/core';
 import type { ProjectContext } from './projects';
-import type { EnvironmentRegistry } from './task-environment-registry';
+import type { EnvironmentRegistry, EnvironmentRecord } from './task-environment-registry';
 import type { EnvironmentDocker } from './task-environment-docker';
 import { environmentConfig } from './task-environment-config';
 import { describeCompose, type ManagedCompose } from './task-compose';
@@ -17,6 +17,19 @@ export interface EnvironmentDescription {
   config?: EnvironmentConfig;
   variables: Record<string, string>;
   compose?: ManagedCompose;
+}
+
+export function recordedEnvironmentIdentity(
+  root: string,
+  dataDir: string,
+  record: EnvironmentRecord,
+): EnvironmentIdentity {
+  return {
+    name: record.name,
+    root,
+    worktree: record.worktree ?? join(dataDir, 'worktrees', record.projectId, record.taskId),
+    ports: record.ports,
+  };
 }
 
 /** Allocation and shell identity have one owner; configuration changes do not create services. */
@@ -44,12 +57,7 @@ export async function describeTaskEnvironment(
       },
     })!;
   }
-  const identity: EnvironmentIdentity = {
-    name: record.name,
-    root: deps.context.root,
-    worktree: record.worktree ?? join(deps.dataDir, 'worktrees', key.projectId, key.taskId),
-    ports: record.ports,
-  };
+  const identity = recordedEnvironmentIdentity(deps.context.root, deps.dataDir, record);
   const variables = environmentVariables(identity, config);
   const compose = config ? await describeCompose(deps.dataDir, identity, variables) : undefined;
   return { identity, config, variables: compose?.variables ?? variables, compose };

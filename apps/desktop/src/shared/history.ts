@@ -6,8 +6,8 @@ import type {
   actionGroupSummary,
   actionGroupDiffStats,
 } from '@skaro/timeline';
-// Rebuild derived rows that previously exposed the second leading service note.
-export const HISTORY_VERSION = 5;
+// Raw logs and derived views must agree after the notification projector changes.
+export const HISTORY_VERSION = 6;
 
 /** A stable read projection; pages may be evicted without losing the conversation. */
 export interface HistorySource {

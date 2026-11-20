@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '@skaro/ui';
   import logo from '../../../../build/icon.png';
+  import BetaLabel from '../BetaLabel.svelte';
   import AboutLinks from './AboutLinks.svelte';
   import AboutVersion from './AboutVersion.svelte';
   import Section from './Section.svelte';
@@ -12,7 +13,7 @@
   <div class="about">
     <div class="identity">
       <img src={logo} alt="Skaro" width="88" height="88" />
-      <h1>Skaro</h1>
+      <h1>Skaro<BetaLabel /></h1>
       <AboutVersion />
     </div>
     <AboutLinks />

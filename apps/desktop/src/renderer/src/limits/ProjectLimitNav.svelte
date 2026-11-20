@@ -87,7 +87,7 @@
   }}
 >
   <span class="limit-gauge" aria-hidden="true">
-    <svg width="23" height="23" viewBox="0 0 16 16" style="transform: rotate(-90deg)">
+    <svg width="21" height="21" viewBox="0 0 16 16" style="transform: rotate(-90deg)">
       <circle
         cx="8"
         cy="8"
@@ -95,7 +95,7 @@
         fill="none"
         stroke={remaining === 0 ? color : 'var(--sk-fill-35)'}
         stroke-opacity={remaining === 0 ? 0.45 : 1}
-        stroke-width="2.2"
+        stroke-width="1.8"
       />
       {#if remaining !== undefined && remaining > 0}
         <circle
@@ -104,7 +104,7 @@
           r="6"
           fill="none"
           stroke={color}
-          stroke-width="2.2"
+          stroke-width="1.8"
           stroke-linecap="butt"
           pathLength="100"
           stroke-dasharray={dash}

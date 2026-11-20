@@ -15,7 +15,11 @@ import {
   type CacheReconciliationAuthority,
 } from './resource-cache-reconciliation.ts';
 import type { ResourceRecord, ResourceRegistration } from '../resources/model.ts';
-import { resourceCleanupContext, type ResourceCleanupFence } from '../resources/cleanup-context.ts';
+import {
+  ResourceCleanupBlocked,
+  resourceCleanupContext,
+  type ResourceCleanupFence,
+} from '../resources/cleanup-context.ts';
 
 /** Durable exclusion, not a capacity estimate/TTL. Admission and consumer mutations share its SQLite gate. */
 export class DbResourceCleanup {
@@ -43,7 +47,10 @@ export class DbResourceCleanup {
     const fence = this.blocking(resource);
     const context = resourceCleanupContext.getStore()?.fence;
     if (fence && (fence.resourceId !== id || context?.token !== fence.token))
-      throw new Error('Resource cleanup excludes overlapping registrations');
+      throw new ResourceCleanupBlocked(
+        'cleanup_in_progress',
+        'Resource cleanup excludes overlapping registrations',
+      );
   }
 
   assertMutation(previous: ResourceRecord, next: ResourceRegistration): void {
@@ -69,7 +76,10 @@ export class DbResourceCleanup {
       current.owner !== fence.owner ||
       fence.generation !== current.generation
     )
-      throw new Error('Resource cleanup excludes new consumers and mutations');
+      throw new ResourceCleanupBlocked(
+        'cleanup_in_progress',
+        'Resource cleanup excludes new consumers and mutations',
+      );
     if (
       next.consumers.some((consumer) => !previous.consumers.some((old) => old.id === consumer.id))
     )
