@@ -1,3 +1,5 @@
+<script lang="ts"></script>
+
 <sup class="beta">β</sup>
 
 <style>
