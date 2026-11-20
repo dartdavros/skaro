@@ -10,6 +10,7 @@ import { errorText } from './session-log';
 import { showEnvironmentStart } from './integration-check-feed';
 import { IntegrationAgentUnavailable, integrationFailure } from './integration-failure';
 import { C4PublicationError } from './c4-candidate';
+import { EnvironmentInUse } from './environment-resource-guard';
 
 /** Execute one queue lease; continuation is emitted only after the candidate is verified. */
 export async function executeIntegration(
@@ -101,9 +102,11 @@ export async function executeIntegration(
     if (!op.publish)
       await integration.history.notice(op, 'Интеграция проверена. Skaro продолжает выполнение.');
     integration.setRuntime(op, 'idle');
-    await ctx.environments
-      .stop(integrationEnvironmentKey(op))
-      .catch((error) => integration.history.notice(op, errorText(error), true));
+    await ctx.environments.stop(integrationEnvironmentKey(op)).catch((error: unknown) => {
+      // The guard has retained the environment. Maintenance retries after the other user leaves.
+      if (!(error instanceof EnvironmentInUse))
+        return integration.history.notice(op, errorText(error), true);
+    });
     if (integration.closing) return;
     if (op.purpose === 'dependencies') ctx.queue.enqueue([`${op.projectId}\n${op.taskId}`]);
     else if (op.publish) {

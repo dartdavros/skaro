@@ -36,6 +36,7 @@ export function stopManagedTask(
   const work = (async () => {
     try {
       record('requested');
+      await ctx.architecture.stop(projectId, taskId);
       await ctx.integrations.controls.interrupt(projectId, taskId);
       ctx.queue.cancel(key(projectId, taskId));
       const session = active.session;

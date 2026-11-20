@@ -1,4 +1,4 @@
-import { git } from '@skaro/core';
+import { git, type ProjectArtifacts } from '@skaro/core';
 import { withSkaroNote } from '@skaro/timeline';
 import type { MessageInput } from '../shared/ipc';
 import type { ActiveRun } from './task-run-model';
@@ -13,24 +13,24 @@ import { projectMemory } from './project-memory-binding';
 import { publicMemoryText } from './project-memory-sources';
 
 /** Every delivery, including an existing native session, refreshes immutable inputs before dispatch. */
+export async function readTaskInputs(ctx: TaskRunEngine, active: ActiveRun) {
+  const context = ctx.project(active.projectId);
+  const artifacts = await context.store.load();
+  const snapshot = await taskInputSnapshot(ctx.deps.db, context, artifacts, active.taskId);
+  return { artifacts, snapshot };
+}
+
 export async function taskPreflight(
   ctx: TaskRunEngine,
   active: ActiveRun,
   input: MessageInput,
+  { artifacts, snapshot }: { artifacts: ProjectArtifacts; snapshot: TaskInputSnapshot },
+  previous: TaskInputSnapshot | null,
 ): Promise<MessageInput> {
   const context = ctx.project(active.projectId);
-  const artifacts = await context.store.load();
-  const snapshot = await taskInputSnapshot(ctx.deps.db, context, artifacts, active.taskId);
   const key = `coordination.inputs.${active.run.id}`;
-  const previous = ctx.deps.db.getSetting<TaskInputSnapshot | null>(key, null);
   const changed = !!previous && previous.version !== snapshot.version;
   const cwd = active.run.worktree ?? context.root;
-  if (changed && active.timeline.state.status === 'working') {
-    await ctx.sessions.detach(active);
-    throw new Error(
-      `${active.taskId}: inputs changed during the active turn; execution stopped, work preserved. Send a new instruction to recheck inputs.`,
-    );
-  }
   // Dirty work is never overwritten by a newly accepted dependency, even on native resume.
   const dependencyChanged =
     previous && JSON.stringify(previous.dependencies) !== JSON.stringify(snapshot.dependencies);
@@ -68,7 +68,7 @@ export async function taskPreflight(
   const note = [
     'Input snapshot: ' + snapshot.version,
     changed
-      ? 'Requirements or inputs changed. Use this current task and re-read changed project documents before acting.'
+      ? `Task inputs changed (${changedTaskInputs(previous, snapshot).join(', ')}). Read the current task, architecture, accepted ADRs and applicable specification before acting.`
       : '',
     publicMemoryText(task.body),
     'Accepted code inputs: ' + JSON.stringify(snapshot.dependencies),
@@ -78,6 +78,12 @@ export async function taskPreflight(
     .filter(Boolean)
     .join('\n\n');
   return { ...input, text: withSkaroNote(note, input.text) };
+}
+
+function changedTaskInputs(previous: TaskInputSnapshot, current: TaskInputSnapshot) {
+  return (
+    ['requirements', 'dependencies', 'environment', 'checks', 'workflow', 'authority'] as const
+  ).filter((field) => JSON.stringify(previous[field]) !== JSON.stringify(current[field]));
 }
 
 /** Native admission can wait; compare again immediately before the expensive resumed operation. */

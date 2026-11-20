@@ -6,6 +6,7 @@ import { parseBuiltinTaskStart, type BuiltinTaskStart } from './builtin-task-sta
 
 interface Startup {
   inputs: MessageInput[];
+  transition?: { runId: string; commandId: string };
   dispatchRevision?: number;
   c4Protocol?: import('@skaro/core').C4Protocol;
   error?: string;
@@ -63,8 +64,10 @@ export class TaskStartup {
     inputs: MessageInput[],
     dispatchRevision?: number,
     c4Protocol?: import('@skaro/core').C4Protocol,
+    transition?: Startup['transition'],
   ): MessageInput[] {
     const saved = this.read(project, task);
+    transition ??= saved?.transition;
     if (
       saved?.inputs.length &&
       dispatchRevision !== undefined &&
@@ -79,6 +82,7 @@ export class TaskStartup {
         combined.push(input);
     this.db.setSetting(this.key(project, task), {
       inputs: combined,
+      ...(transition && { transition }),
       ...((c4Protocol ?? saved?.c4Protocol) ? { c4Protocol: c4Protocol ?? saved?.c4Protocol } : {}),
       ...((dispatchRevision ?? saved?.dispatchRevision) !== undefined
         ? { dispatchRevision: dispatchRevision ?? saved?.dispatchRevision }
@@ -92,6 +96,17 @@ export class TaskStartup {
   delivered(project: string, task: string): void {
     this.db.setSetting(this.key(project, task), null);
   }
+  consumeTransition(project: string, task: string, runId: string, commandId?: string): void {
+    const saved = this.read(project, task);
+    if (!saved?.transition || saved.transition.commandId !== commandId) return;
+    if (saved.transition.runId !== runId)
+      throw new Error('The interrupted turn belongs to a different task run');
+    const inputs = saved.inputs.filter((input) => input.commandId !== commandId);
+    this.db.setSetting(
+      this.key(project, task),
+      inputs.length ? { ...saved, inputs, transition: undefined } : null,
+    );
+  }
   cancel(project: string, task: string): void {
     this.epochs.set(this.key(project, task), this.cancellationEpoch(project, task) + 1);
     this.delivered(project, task);
@@ -100,6 +115,7 @@ export class TaskStartup {
     const saved = this.read(project, task);
     this.db.setSetting(this.key(project, task), {
       inputs: saved?.inputs ?? [],
+      ...(saved?.transition && { transition: saved.transition }),
       ...(saved?.c4Protocol ? { c4Protocol: saved.c4Protocol } : {}),
       ...(saved?.dispatchRevision !== undefined
         ? { dispatchRevision: saved.dispatchRevision }

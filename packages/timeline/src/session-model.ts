@@ -11,6 +11,8 @@ export type AgentErrorCategory =
 
 export interface AgentError {
   category: AgentErrorCategory;
+  /** The adapter observed its process exiting while a turn was still open. */
+  source?: 'process_exit';
   /** Original agent text. */
   message: string;
 }

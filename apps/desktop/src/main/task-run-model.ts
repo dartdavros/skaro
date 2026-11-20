@@ -1,7 +1,7 @@
 import { type WriteStream } from 'node:fs';
 import { SessionSecrets } from './private-input';
 import { type AppDb, type AttachmentStore, type RunRecord, type ProjectCheck } from '@skaro/core';
-import type { Grant, McpHttpServer, SkaroScope } from '@skaro/mcp-server';
+import type { Grant, McpHttpServer, SkaroScope, ToolResult } from '@skaro/mcp-server';
 import { Timeline, type AgentSession, type TimelineEvent } from '@skaro/timeline';
 import type { Events, EventName } from '../shared/ipc';
 import type { AgentManager } from './agents';
@@ -10,6 +10,7 @@ import type { NotifyKind } from './notifier';
 import type { EnvironmentDocker } from './task-environment-docker';
 import type { NativeAdmissions } from './native/admissions';
 import type { BuiltinTaskModels } from './builtin-task-models';
+import type { InputTurnBoundary } from './input-turn-boundary';
 
 export interface TaskRunDeps {
   coordinators?: import('./project-coordinators').ProjectCoordinators;
@@ -51,6 +52,8 @@ export class ActiveRun {
   builtinStartup?: AbortController;
   /** Invalidates a delivery/attachment already awaiting I/O when the owner stops the task. */
   deliveryEpoch = 0;
+  delivery?: Promise<void>;
+  inputTransition?: InputTurnBoundary;
   stopping?: Promise<void>;
   suspending?: Promise<void>;
   stopError?: string;
@@ -82,6 +85,7 @@ export class ActiveRun {
   switching = false;
   handoffError: string | undefined;
   readonly operations = new Set<Promise<unknown>>();
+  readonly toolOperations = new Set<Promise<ToolResult>>();
   pumping: Promise<void> | undefined;
 
   constructor(projectId: string, taskId: string, run: RunRecord, timeline: Timeline) {

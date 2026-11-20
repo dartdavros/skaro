@@ -51,7 +51,7 @@ export async function taskArchitectureEvent(
   }
   if (task && !['done', 'cancelled'].includes(task.status))
     await ctx.messages
-      .continueAfter(active, architectureDecision(item))
+      .continueAfter(active, architectureDecision(item), `${item.id}-${item.state}`)
       .catch((error: unknown) =>
         console.error(`${scope.taskId} continue after C4 decision:`, error),
       );

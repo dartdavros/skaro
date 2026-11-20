@@ -26,6 +26,18 @@ export const dockerObservationKey = (resource: ResourceRecord) =>
 
 type Store = Pick<AppDb, 'getSetting' | 'resources'>;
 
+export function unresolvedDockerProvenance(
+  db: Store,
+  resource: ResourceRecord,
+  blocked: DockerObjectIdentity,
+  inventory: DockerObjectIdentity[],
+): boolean {
+  return (
+    inventory.some((object) => sameDockerObject(object, blocked)) &&
+    dockerObjectOwnershipBlocker(db, resource, blocked) === 'docker_object_provenance_unverified'
+  );
+}
+
 /** An exact created object must match a non-external declaration, not just a project label. */
 export function declaredNewDockerObject(
   object: DockerObjectIdentity,

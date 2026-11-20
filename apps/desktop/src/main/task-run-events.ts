@@ -65,6 +65,7 @@ export class TaskRunEvents {
         this.settleRuntime(active);
         return;
       case 'turn.completed': {
+        if (active.inputTransition?.consumes(event)) return;
         const recorded =
           event.outcome === 'failed' && event.error
             ? this.ctx.incidents

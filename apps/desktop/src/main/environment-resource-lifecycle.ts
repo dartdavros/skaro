@@ -212,6 +212,13 @@ export class EnvironmentResourceLifecycle {
       schedule,
       (key) => this.destroy(key),
       (key) => this.stop(key),
+      async (key) => {
+        const name = this.registry.find(key)?.name;
+        if (!name || namedContainers(all, name).length) return false;
+        return this.provenance.cleanupStillBlocked(
+          this.deps.db.resources.get(this.resources.id(key.projectId, name)),
+        );
+      },
     );
     await this.pruning.run(
       this.docker,

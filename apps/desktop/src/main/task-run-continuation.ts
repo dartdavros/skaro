@@ -40,7 +40,13 @@ export class TaskRunContinuation {
         !this.ctx.closing && incidentDiagnosisCurrent(this.ctx, active.run.id, input.commandId)
       );
     if (!input.internal || !input.commandId?.startsWith('continue-')) return true;
-    const execution = this.execution(active).read();
+    const intent = this.execution(active);
+    if (
+      input.commandId.startsWith('continue-c4-decision-') &&
+      !input.commandId.endsWith(`-${intent.intentVersion()}`)
+    )
+      return false;
+    const execution = intent.read();
     return !this.ctx.closing && execution.enabled && !execution.blocked;
   }
   stop(projectId: string, taskId: string): void {

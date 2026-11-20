@@ -18,6 +18,7 @@ import {
 } from './environment-resource-inventory';
 import {
   environmentResourceBlocker,
+  EnvironmentInUse,
   environmentCleanupOperation,
   deferEnvironmentRegistration,
   stickyEnvironmentReason,
@@ -166,7 +167,7 @@ export class EnvironmentResources {
         (owner) => owner.projectId === key.projectId && owner.taskId === key.taskId,
       )
     )
-      throw new Error('Environment retained: resource_in_use.');
+      throw new EnvironmentInUse();
     let saved =
       observation && fence?.state !== 'retry' ? this.save(observation, stoppedReview) : savedBefore;
     // Check current Docker/registry evidence across projects without writing unrelated records.
@@ -206,6 +207,7 @@ export class EnvironmentResources {
     if (reason) {
       if (saved && !fence)
         this.outcome(saved, action === 'start' ? 'inspect' : action, 'retained', reason);
+      if (reason === 'resource_in_use') throw new EnvironmentInUse();
       throw new Error(`Environment retained: ${reason}.`);
     }
     if (action === 'start' && saved!.state === 'released') {
