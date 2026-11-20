@@ -1,0 +1,5 @@
+version: 2.2.45
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.45/Skaro-2.2.45-win-x64.exe
+    sha512: gL/Hmn/7FotEmq80KG6y5QkxWxrfQ/GlDg1/h9pgCrqJu2fXRuqM71zCn0WHzoQzOjh6lsk3f+oxmG+wMzco0Q==
+    size: 124310207
