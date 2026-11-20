@@ -3,6 +3,8 @@ import { AppDb } from '@skaro/core';
 import { Timeline, type Interaction, type InteractionAnswer } from '@skaro/timeline';
 import { QuestionAnswers } from './question-answers';
 import { decisionItemId } from './decision-item-id';
+import { replacementQuestion } from './task-interaction-delivery';
+import { DecisionNotDispatched } from './decision-not-dispatched';
 
 const question: Extract<Interaction, { kind: 'question' }> = {
   id: 'req-0',
@@ -19,6 +21,15 @@ const question: Extract<Interaction, { kind: 'question' }> = {
   ],
 };
 const answer: InteractionAnswer = { kind: 'question', answers: { choice: ['Continue'] } };
+
+it('routes stale questions and sibling answers through replacement while binding approval to its inputs', () => {
+  const plan: Interaction = { kind: 'plan_approval', id: 'plan', plan: 'Continue' };
+  expect(replacementQuestion(question, true, false)).toBeUndefined();
+  expect(replacementQuestion(question, false, false)).toBe(question);
+  expect(replacementQuestion(question, true, true)).toBe(question);
+  expect(() => replacementQuestion(plan, false, true)).toThrow(DecisionNotDispatched);
+  expect(replacementQuestion(plan, true, false)).toBeUndefined();
+});
 
 it('reconciles a saved async answer by its exact native item across later turns without closing a reused ID', () => {
   const db = AppDb.open(':memory:');
@@ -61,8 +72,13 @@ it('persists acceptance identity across recovery and separates repeated adapter 
   try {
     const timeline = waiting('first');
     const mailbox = new QuestionAnswers(db, 'actual-owner');
-    mailbox.accept(question, answer, (event) => timeline.apply(event), 'first');
+    mailbox.accept(question, answer, (event) => timeline.apply(event), 'first', undefined, {
+      replaceNativeTurn: true,
+    });
     const first = mailbox.pending(timeline.state)!;
+    expect(mailbox.replacesNativeTurn(first.commandId, 'first')).toBe(true);
+    expect(mailbox.replacesNativeTurn(first.commandId, 'second')).toBe(false);
+    expect(mailbox.replacesNativeTurn('answers-unrelated', 'first')).toBe(false);
     const restored = waiting('first');
     const projected = mailbox.project(restored.state);
     expect(projected.interactions).toEqual([]);
@@ -80,8 +96,10 @@ it('persists acceptance identity across recovery and separates repeated adapter 
       'earlier answer',
     );
     mailbox.delivered();
+    expect(mailbox.replacesNativeTurn(first.commandId, 'first')).toBe(false);
     mailbox.accept(question, answer, (event) => timeline.apply(event), 'second');
     const second = mailbox.pending(timeline.state)!;
+    expect(mailbox.replacesNativeTurn(second.commandId, 'second')).toBe(false);
     expect(second.commandId).not.toBe(first.commandId);
     expect(timeline.state.items.filter((item) => item.kind === 'decision')).toHaveLength(2);
     const other = new QuestionAnswers(db, 'other-owner');

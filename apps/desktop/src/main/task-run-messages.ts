@@ -16,12 +16,10 @@ import { stopBuiltinTask, requireTaskNotStopping } from './builtin-task-stop';
 import { deliverTaskInput } from './task-input-transition';
 import { prepareTaskFollowUp } from './task-follow-up';
 import { terminalTaskHistory, retireTerminalTaskRequests } from './terminal-task-requests';
-import { requireTaskInputsCurrent } from './task-preflight';
 import { stopManagedTask } from './managed-task-stop';
 import { supersedeQuestionInput } from './question-cancellation';
 import { taskQuestionContext } from './question-cancel-handlers';
-import { acceptQuestionReply } from './accept-question-reply';
-import { recordQuestionAcceptance } from './question-answer-proof';
+import { dispatchTaskReply } from './task-interaction-delivery';
 import { DecisionNotDispatched } from './decision-not-dispatched';
 
 /** messages: a focused part of the task-run controller. */
@@ -163,56 +161,26 @@ export class TaskRunMessages {
       answer.answers['criteria']?.includes(ACCEPT_AS_IS)
     )
       return this.acceptAsIs(active, interaction, answer);
+    const turnId = active.timeline.state.turns.at(-1)?.id;
     if (
-      interaction?.kind === 'question' &&
-      (isAsyncQuestion(interaction) ||
-        !active.session ||
-        !active.timeline.state.turns.some((turn) => !turn.outcome))
-    ) {
-      acceptQuestionReply(
-        this.ctx.deps.db,
-        `active.${active.run.id}`,
-        interaction,
-        answer,
-        active.timeline.state,
-        (event) => this.ctx.history.skaroEvent(active, event),
-        'task.send',
-        active.projectId,
-        active.taskId,
-      );
-      return;
-    } else {
-      if (!active.session) throw new DecisionNotDispatched('The agent session has ended');
-      const nativeId = active.run.previousRunId
-        ? interactionId.replace(`${active.run.id}:`, '')
-        : interactionId;
-      try {
-        await requireTaskInputsCurrent(this.ctx, active);
-      } catch (error) {
-        throw new DecisionNotDispatched(error);
-      }
-      const epoch = active.timeline.state.turns.at(-1)?.id;
-      await active.session.respond(nativeId, answer);
-      if (interaction?.kind === 'question')
-        recordQuestionAcceptance(
-          this.ctx.deps.db,
-          `active.${active.run.id}`,
-          interaction,
-          answer,
-          epoch,
-          decisionItemId(active.run.id, epoch, interaction.id),
-        );
-    }
-    if (interaction) this.decision(active, interaction, answer);
+      interaction &&
+      (await dispatchTaskReply(this.ctx, active, interaction, answer)) === 'native'
+    )
+      this.decision(active, interaction, answer, turnId);
   }
 
   /** The decision stays in the feed (and the log) after the card closes. */
-  private decision(active: ActiveRun, interaction: Interaction, answer: InteractionAnswer): void {
+  private decision(
+    active: ActiveRun,
+    interaction: Interaction,
+    answer: InteractionAnswer,
+    turnId: string | undefined,
+  ): void {
     this.ctx.history.skaroEvent(active, {
       t: 'item.upsert',
       item: {
-        id: decisionItemId(active.run.id, active.timeline.state.turns.at(-1)?.id, interaction.id),
-        turnId: isAsyncQuestion(interaction) ? '' : (active.timeline.state.turns.at(-1)?.id ?? ''),
+        id: decisionItemId(active.run.id, turnId, interaction.id),
+        turnId: isAsyncQuestion(interaction) ? '' : (turnId ?? ''),
         kind: 'decision',
         interaction,
         answer: withoutSecrets(interaction, answer),
@@ -235,7 +203,7 @@ export class TaskRunMessages {
       id: interaction.id,
       resolution: 'answered',
     });
-    this.decision(active, interaction, answer);
+    this.decision(active, interaction, answer, active.timeline.state.turns.at(-1)?.id);
     const context = this.ctx.project(projectId);
     const task = await readSubject(context, taskId);
     await updateSubject(context, taskId, { body: acceptedBody(task.body) });

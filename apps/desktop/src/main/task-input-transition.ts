@@ -10,6 +10,7 @@ import { taskAgentInput } from './task-agent-input';
 import { assertQuestionMessageAllowed } from '@skaro/timeline';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { hasOwnerCommand } from './owner-command-history';
+import { QuestionAnswers } from './question-answers';
 
 /** One serialized delivery owns the old turn, its queue slot and its replacement. */
 export async function deliverTaskInput(
@@ -45,7 +46,16 @@ export async function deliverTaskInput(
   let replacing = false;
   let checkpointed = false;
   try {
-    if (previous && previous.version !== inputs.snapshot.version && turn && !turn.outcome) {
+    if (
+      previous &&
+      turn &&
+      !turn.outcome &&
+      (previous.version !== inputs.snapshot.version ||
+        new QuestionAnswers(ctx.deps.db, `active.${run.id}`).replacesNativeTurn(
+          original.commandId,
+          turn.id,
+        ))
+    ) {
       replacing = true;
       if (active.afterTurn) throw new Error('Task completion is already in progress');
       // Persist the original, still sealed input. Startup recovery validates dispatch and the
