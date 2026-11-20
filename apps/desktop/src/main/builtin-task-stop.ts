@@ -19,6 +19,7 @@ export function stopBuiltinTask(
   const unblock = blockOwnerMessages(projectId, taskId, 'Task is stopping. Wait for confirmation.');
   const work = (async () => {
     try {
+      await ctx.architecture.stop(projectId, taskId);
       await ctx.integrations.controls.interrupt(projectId, taskId);
       ctx.queue.cancel(key(projectId, taskId));
       const session = active.session;

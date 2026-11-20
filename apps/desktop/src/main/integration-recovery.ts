@@ -29,6 +29,20 @@ export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void
         if (startup?.inputs.length && !startup.error) {
           try {
             requireStartupGeneration(ctx.deps.db, project.id, startup.dispatchRevision);
+            if (startup.transition) {
+              const run = ctx.deps.db.latestRun(project.id, task.id);
+              if (run?.id !== startup.transition.runId)
+                throw new Error('The interrupted turn belongs to a different task run');
+              const active = ctx.active.get(`${project.id}\n${task.id}`);
+              if (active?.session || active?.attaching || active?.delivery) continue;
+              // Retire the previous writer before queued preparation can touch its worktree.
+              await ctx.processes.stop(run.id);
+              if (
+                ctx.startup.read(project.id, task.id)?.transition?.commandId !==
+                startup.transition.commandId
+              )
+                continue;
+            }
           } catch (error) {
             ctx.startup.fail(project.id, task.id, errorText(error));
             ctx.setRuntime(project.id, task.id, 'failed');

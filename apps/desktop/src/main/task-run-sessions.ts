@@ -92,7 +92,7 @@ export class TaskRunSessions {
       if (resume) this.ctx.history.notice(active, 'session_lost', 'error', errorText(error));
       throw error;
     }
-    return this.publish(active, session, segment, !!resume);
+    return this.publish(active, session, segment, !!resume, epoch);
   }
 
   private async publish(
@@ -136,10 +136,9 @@ export class TaskRunSessions {
     try {
       for await (const event of session.events) {
         const scoped = segmentTurns(active.run.agent === 'skaro' ? 0 : segment, event);
-        this.ctx.events.onEvent(
-          active,
-          active.run.previousRunId ? runEvent(scoped, active.run.id) : scoped,
-        );
+        const entry = active.run.previousRunId ? runEvent(scoped, active.run.id) : scoped;
+        if (active.session !== session && active.inputTransition?.expectedExit(entry)) continue; // Confirmed teardown will close this turn in the durable timeline.
+        this.ctx.events.onEvent(active, entry);
       }
     } catch (error) {
       this.ctx.events.failTurn(active, error);
@@ -167,7 +166,7 @@ export class TaskRunSessions {
     }
   }
 
-  async detach(active: ActiveRun): Promise<void> {
+  async detach(active: ActiveRun, keepSlot = false): Promise<void> {
     // An attachment already in flight must not publish a new process after cleanup has run.
     active.builtinStartup?.abort(new Error('Builtin task detached during startup'));
     await active.attaching?.catch(() => undefined);
@@ -185,11 +184,16 @@ export class TaskRunSessions {
           else await session?.close().catch(() => undefined);
         }
       });
+    } catch (error) {
+      active.stopError = errorText(error);
+      throw error;
     } finally {
       this.ctx.history.flush(active);
       // A closed session ends no turn by itself: its slot must not stay taken.
-      active.release?.();
-      active.release = undefined;
+      if (!keepSlot) {
+        active.release?.();
+        active.release = undefined;
+      }
     }
   }
 

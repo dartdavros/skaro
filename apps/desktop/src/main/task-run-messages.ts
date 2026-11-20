@@ -1,7 +1,7 @@
 import { QuestionAnswers } from './question-answers';
 import { decisionItemId } from './decision-item-id';
 import { resourcesFor } from './resource-execution';
-import { stopOwnerMessages, CommandCancelled } from './owner-commands';
+import { stopOwnerMessages, CommandCancelled, queueOwnerMessage } from './owner-commands';
 import { assertQuestionMessageAllowed, validateQuestionAnswer } from '@skaro/timeline';
 import { isAsyncQuestion, type Interaction, type InteractionAnswer } from '@skaro/timeline';
 import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
@@ -13,10 +13,10 @@ import { ActiveRun } from './task-run-model';
 import { trackRun } from './task-run-access';
 import type { TaskRunEngine } from './task-run-engine';
 import { stopBuiltinTask, requireTaskNotStopping } from './builtin-task-stop';
-import { taskAgentInput } from './task-agent-input';
+import { deliverTaskInput } from './task-input-transition';
 import { prepareTaskFollowUp } from './task-follow-up';
 import { terminalTaskHistory, retireTerminalTaskRequests } from './terminal-task-requests';
-import { taskPreflight, requireTaskInputsCurrent } from './task-preflight';
+import { requireTaskInputsCurrent } from './task-preflight';
 import { stopManagedTask } from './managed-task-stop';
 import { supersedeQuestionInput } from './question-cancellation';
 import { taskQuestionContext } from './question-cancel-handlers';
@@ -87,7 +87,7 @@ export class TaskRunMessages {
   }
 
   /** Skaro's own message: the agent continues; the feed shows the decision, not this text. */
-  async continueAfter(active: ActiveRun, text: string): Promise<void> {
+  async continueAfter(active: ActiveRun, text: string, decisionId: string): Promise<void> {
     // The owner's package decision also resumes runs created before execution intent existed.
     this.ctx.continuation.execution(active).start();
     // Skaro's own waiting card asked for this very step; it is answered by continuing.
@@ -98,34 +98,27 @@ export class TaskRunMessages {
           id: open.id,
           resolution: 'cancelled',
         });
-    await this.turn(active, { text, internal: true });
+    const commandId = `continue-c4-decision-${decisionId}-${this.ctx.continuation.execution(active).intentVersion()}`;
+    queueOwnerMessage('task.send', active.projectId, active.taskId, {
+      text,
+      internal: true,
+      commandId,
+    });
   }
 
   /** Straight to the agent: only for a turn that holds its slot. */
   async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
-    requireTaskNotStopping(active);
     const epoch = active.deliveryEpoch;
-    if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
-    input = active.secrets.input(input);
-    assertQuestionMessageAllowed(active.timeline.state, input.internal);
-    input = await taskPreflight(this.ctx, active, input);
-    if (active.deliveryEpoch !== epoch) throw new CommandCancelled();
-    const session = await this.ctx.sessions.attach(active);
-    requireTaskNotStopping(active);
-    if (active.deliveryEpoch !== epoch) throw new CommandCancelled();
-    if (!this.ctx.continuation.canDeliver(active, input)) throw new CommandCancelled();
-    assertQuestionMessageAllowed(active.timeline.state, input.internal);
-    if (input.commandId && this.ctx.deps.db.commands.get(input.commandId)?.state === 'cancelled')
-      throw new CommandCancelled();
-    const followUp = this.ctx.continuation.execution(active).read().followUp;
-    const message = taskAgentInput(
-      input,
-      active.timeline.state,
-      !!followUp && followUp.commandId === input.commandId,
-    );
-    if (!active.timeline.state.turns.at(-1) || active.timeline.state.turns.at(-1)?.outcome)
-      await session.send(message, input.commandId);
-    else await session.steer(message, input.commandId);
+    const previous = active.delivery ?? Promise.resolve();
+    const delivery = previous
+      .catch(() => undefined)
+      .then(() => deliverTaskInput(this.ctx, active, input, epoch));
+    active.delivery = delivery;
+    try {
+      await delivery;
+    } finally {
+      if (active.delivery === delivery) active.delivery = undefined;
+    }
   }
 
   async respond(
@@ -255,7 +248,6 @@ export class TaskRunMessages {
     if (this.ctx.handoff.changing(this.ctx.active.get(key(projectId, taskId))))
       throw new Error('Wait for the agent handoff to finish before stopping the task.');
     this.ctx.continuation.stop(projectId, taskId);
-    await this.ctx.architecture.stop(projectId, taskId);
     const commands = stopOwnerMessages(projectId, taskId);
     // A task feed can address an integration resolver. Its interrupt acknowledgement does not
     // prove transport retirement, so a task-runtime stop must not certify that delivery.
@@ -277,6 +269,7 @@ export class TaskRunMessages {
     if (current?.run.agent === 'skaro')
       return stopBuiltinTask(this.ctx, current, integrationOwnsDelivery ? [] : commands);
     if (current) return stopManagedTask(this.ctx, current, commands, integrationOwnsDelivery);
+    await this.ctx.architecture.stop(projectId, taskId);
     await this.ctx.integrations.controls.interrupt(projectId, taskId);
     if (this.ctx.queue.cancel(k)) {
       this.ctx.queuedInputs.delete(k);

@@ -23,6 +23,14 @@ export async function taskTool(
   const active = scope.taskId && ctx.active.get(key(scope.projectId, scope.taskId));
   if (!active || active.run.id !== scope.runId || active.switching)
     return { text: 'This session is no longer the current run of the task.', isError: true };
+  if (active.inputTransition)
+    return { text: 'Task inputs changed. The current turn is being interrupted.', isError: true };
   assertQuestionsAnswered(active.timeline.state);
-  return trackRun(active, action);
+  const operation = trackRun(active, action);
+  active.toolOperations.add(operation);
+  try {
+    return await operation;
+  } finally {
+    active.toolOperations.delete(operation);
+  }
 }
