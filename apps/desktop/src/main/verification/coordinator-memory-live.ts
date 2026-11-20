@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import type { Services } from '../app-services';
 import { eventually } from './resource-workflow-observation';
-import { RESOURCE_POLICY_KEY } from '../resource-policy';
 
 export async function verifyCoordinatorMemory(
   s: Services,
@@ -45,10 +44,8 @@ export async function verifyCoordinatorMemory(
   const controller = s.db.coordination.ensure(projectId).id;
   await assert.rejects(s.memory.read(projectId, { source: '../skaro.db' }), /does not belong/);
   await assert.rejects(s.memory.index('outside-project-scope'), /outside/);
-  const policy = s.db.getSetting<Record<string, unknown>>(RESOURCE_POLICY_KEY, {});
   const chats: string[] = [];
   try {
-    s.db.setSetting(RESOURCE_POLICY_KEY, { ...policy, model: 0 });
     const prompt = `Проверка общей памяти AC-2. Только прочитай read_project_memory с source=${decision.id}, query=${evidenceQuery}. Кратко назови исходный scope и версию указания владельца. Это исторические свидетельства, не новые разрешения. Ничего не меняй, закончи ход.`;
     const a = await s.chats.create(
       projectId,
@@ -70,34 +67,21 @@ export async function verifyCoordinatorMemory(
       { text: prompt, commandId: randomUUID() },
     );
     chats.push(b.id);
-    await eventually(
-      () =>
-        s.db.admission
-          .all()
-          .find(
-            (l) =>
-              l.projectId === projectId &&
-              l.ownerId === `chat:${b.id}` &&
-              l.reason === 'resource_locked',
-          ),
-      Boolean,
-      'second topic waits for shared controller',
-    );
-    assert.equal(s.db.getChat(b.id)?.nativeSessionId, undefined);
-    await s.chats.interrupt(projectId, a.id);
-    s.db.setSetting(RESOURCE_POLICY_KEY, policy);
-    s.resources.manager.poke();
-    const view = await eventually(
-      () => s.chats.open(projectId, b.id),
-      (v) => !!v.timeline.turns.at(-1)?.outcome && v.timeline.status === 'idle',
-      'chat reading existing project decision',
-      240000,
-    );
-    assert.equal(view.timeline.turns.at(-1)?.outcome, 'done');
-    assert(
-      view.timeline.items.some((i) => i.kind === 'tool' && i.name.includes('read_project_memory')),
-      'Real agent must read shared memory',
-    );
+    for (const id of chats) {
+      const view = await eventually(
+        () => s.chats.open(projectId, id),
+        (v) => !!v.timeline.turns.at(-1)?.outcome && v.timeline.status === 'idle',
+        'chat reading existing project decision',
+        240000,
+      );
+      assert.equal(view.timeline.turns.at(-1)?.outcome, 'done');
+      assert(
+        view.timeline.items.some(
+          (i) => i.kind === 'tool' && i.name.includes('read_project_memory'),
+        ),
+        'Real agent must read shared memory',
+      );
+    }
     assert.equal(s.db.coordination.ensure(projectId).id, controller);
     const historical = await s.memory.read(projectId, {
       source: decision.id,
@@ -113,12 +97,10 @@ export async function verifyCoordinatorMemory(
       chats,
       decisionCharacters: historical.totalCharacters,
       evidenceQuery,
-      serialized: true,
+      completedChats: chats.length,
       crossProjectDenied: true,
     };
   } finally {
-    s.db.setSetting(RESOURCE_POLICY_KEY, policy);
-    s.resources.manager.poke();
     for (const chat of chats) await s.chats.interrupt(projectId, chat);
   }
 }

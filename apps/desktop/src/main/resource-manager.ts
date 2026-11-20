@@ -17,6 +17,7 @@ export class ResourceAdmissionUnavailable extends Error {
   }
 }
 interface Pending {
+  sequence: number;
   request: ResourceLeaseRequest;
   options: ResourceAdmissionOptions;
   resolve(lease: ResourceLease): void;
@@ -69,7 +70,14 @@ export class ResourceManager {
         this.changed(this.db.admission.stop(request.projectId, request.id, current.revision));
         this.finish(request.id, options.signal.reason ?? new Error('Resource admission cancelled'));
       };
-      this.pending.set(request.id, { request, options, resolve, reject, cancelled });
+      this.pending.set(request.id, {
+        sequence: lease.sequence,
+        request,
+        options,
+        resolve,
+        reject,
+        cancelled,
+      });
       options.signal.addEventListener('abort', cancelled, { once: true });
       if (options.signal.aborted) cancelled();
     });
@@ -98,10 +106,10 @@ export class ResourceManager {
     });
   }
   private async pump(): Promise<void> {
-    const ordered = this.db.admission.all().filter((lease) => this.pending.has(lease.id));
-    for (const saved of ordered) {
-      const pending = this.pending.get(saved.id);
-      if (!pending || this.closed) continue;
+    const ordered = [...this.pending.values()].sort((a, b) => a.sequence - b.sequence);
+    for (const pending of ordered) {
+      const saved = pending.request;
+      if (this.pending.get(saved.id) !== pending || this.closed) continue;
       try {
         pending.options.signal.throwIfAborted();
         await pending.options.requireCurrent();

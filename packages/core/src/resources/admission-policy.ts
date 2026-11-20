@@ -90,11 +90,20 @@ export function resourceAdmissionReason(
   for (const lock of request.locks) {
     for (const holder of holders) {
       const owned = holder.locks.find((other) => other.resourceId === lock.resourceId);
+      if (!owned) continue;
+      if (owned.generation !== lock.generation || lock.mode === 'exclusive')
+        return 'resource_locked';
+      // Before shared chat access, a retained chat turn pinned this same checkout exclusively.
+      // It still protects the generation against cleanup, including after an unclean shutdown.
       if (
-        owned &&
-        (owned.generation !== lock.generation ||
-          owned.mode === 'exclusive' ||
-          lock.mode === 'exclusive')
+        owned.mode === 'exclusive' &&
+        !(
+          holder.state === 'retained' &&
+          holder.checkpoint === 'project-chat-controller' &&
+          holder.ownerId.startsWith('chat:') &&
+          holder.projectId === request.projectId &&
+          holder.locks.length === 1
+        )
       )
         return 'resource_locked';
     }

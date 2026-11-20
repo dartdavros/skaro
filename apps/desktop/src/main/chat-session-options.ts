@@ -38,7 +38,7 @@ export async function chatSessionOptions(
     if (continuation && continuation.sessionId === chat.nativeSessionId)
       instructions += '\n\n' + continuation.context;
   }
-  instructions += '\n\n' + ((await projectMemory(ctx.deps.db)?.note(projectId)) ?? '');
+  instructions += '\n\n' + (projectMemory(ctx.deps.db)?.instructions(projectId) ?? '');
   return {
     resourceAdmission: resourceSessionAdmission(
       ctx.deps.db,

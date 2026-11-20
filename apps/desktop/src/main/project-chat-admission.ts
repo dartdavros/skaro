@@ -2,7 +2,7 @@ import { realpath } from 'node:fs/promises';
 import { resourceId, type AppDb } from '@skaro/core';
 import type { ApplicationResources } from './application-resources';
 
-/** Chat topics share one exclusive project executor, including any commands surviving a turn. */
+/** Keep the checkout in use through background commands while allowing concurrent project work. */
 export async function projectChatTurn(
   db: AppDb,
   resources: ApplicationResources,
@@ -39,7 +39,7 @@ export async function projectChatTurn(
       review: 0,
       diskBytes: {},
     },
-    locks: [{ resourceId: resource.id, generation: resource.generation, mode: 'exclusive' }],
+    locks: [{ resourceId: resource.id, generation: resource.generation, mode: 'shared' }],
   });
   try {
     const held = await resources.modelWork(account, true);
