@@ -30,7 +30,7 @@ export const codexDefinition = {
   adapterVersion: CODEX_ADAPTER_VERSION,
   delivery: {
     kind: 'managed-npm',
-    pin: { version: '0.159.2', shownVersion: '0.159.2' },
+    pin: { version: '0.171.0', shownVersion: '0.171.0' },
     downloadSize: 90e6,
     distribution(platform, pin) {
       const key = `${platform.os}-${platform.arch}`;
