@@ -5,7 +5,7 @@ import {
   type ResourceLease,
 } from '../resources/admission-model.ts';
 import { validateResourceRequest } from '../resources/admission-policy.ts';
-import { resourceLeaseRecords } from './admission-records.ts';
+import { resourceLeaseById } from './admission-records.ts';
 
 /** Called inside the admission transaction. Splitting conserves every reserved capacity exactly. */
 export function splitResourceReservation(
@@ -68,7 +68,5 @@ export function splitResourceReservation(
       child.projectId,
       JSON.stringify(child),
     );
-  return resourceLeaseRecords(db).filter((value) =>
-    children.some((child) => child.id === value.id),
-  );
+  return children.map((child) => resourceLeaseById(db, child.id)!);
 }

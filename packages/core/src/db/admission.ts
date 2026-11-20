@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { DbTable } from './table.ts';
 import { DbResources } from './resources.ts';
 import { resourceLeaseConsumers } from './admission-consumers.ts';
-import { resourceLeaseRecords } from './admission-records.ts';
+import { resourceLeaseById, resourceLeaseRecords } from './admission-records.ts';
 import { splitResourceReservation } from './admission-split.ts';
 import {
   ownsResourceCapacity,
@@ -47,7 +47,8 @@ export class DbResourceAdmission extends DbTable {
     return resourceLeaseRecords(this.db);
   }
   get(projectId: string, id: string): ResourceLease | undefined {
-    return this.all().find((lease) => lease.id === id && lease.projectId === projectId);
+    const lease = resourceLeaseById(this.db, id);
+    return lease?.projectId === projectId ? lease : undefined;
   }
   isLive(lease: ResourceLease): boolean {
     return (
@@ -58,7 +59,7 @@ export class DbResourceAdmission extends DbTable {
   request(input: ResourceLeaseRequest): ResourceLease {
     validateResourceRequest(input);
     return this.atomic(() => {
-      const found = this.all().find((lease) => lease.id === input.id);
+      const found = resourceLeaseById(this.db, input.id);
       if (found) {
         const {
           revision: _r,
@@ -143,7 +144,8 @@ export class DbResourceAdmission extends DbTable {
         )
           return this.write(lease, 'waiting_resource', 'resource_generation_changed');
       }
-      const reason = resourceAdmissionReason(lease, this.all(), budget, this.now());
+      const holders = lease.locks.length ? this.all() : [];
+      const reason = resourceAdmissionReason(lease, holders, budget, this.now());
       const result = this.write(
         lease,
         reason ? 'waiting_resource' : 'granted',

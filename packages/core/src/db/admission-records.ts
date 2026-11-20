@@ -35,10 +35,23 @@ export function resourceLeaseRecord(row: Record<string, unknown>): ResourceLease
   return { ...value, sequence: Number(row.sequence) };
 }
 
+function hasLeaseTable(db: DatabaseSync): boolean {
+  return !!db.prepare("SELECT 1 FROM sqlite_master WHERE name='resource_leases'").get();
+}
+
 export function resourceLeaseRecords(db: DatabaseSync): ResourceLease[] {
-  if (!db.prepare("SELECT 1 FROM sqlite_master WHERE name='resource_leases'").get()) return [];
+  if (!hasLeaseTable(db)) return [];
   return db
     .prepare('SELECT id,project_id,sequence,value FROM resource_leases ORDER BY sequence')
     .all()
     .map(resourceLeaseRecord);
+}
+
+/** The lease ID is globally unique. Validate the selected row just as for a ledger scan. */
+export function resourceLeaseById(db: DatabaseSync, id: string): ResourceLease | undefined {
+  if (!hasLeaseTable(db)) return undefined;
+  const row = db
+    .prepare('SELECT id,project_id,sequence,value FROM resource_leases WHERE id=?')
+    .get(id);
+  return row && resourceLeaseRecord(row);
 }

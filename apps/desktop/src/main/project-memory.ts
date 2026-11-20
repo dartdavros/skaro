@@ -24,6 +24,18 @@ interface MemoryIndex {
   sources: MemorySource[];
 }
 
+/** Read independent filesystem sources together without opening the entire project at once. */
+async function readSources<T>(
+  entries: T[],
+  read: (entry: T) => Promise<MemorySource>,
+): Promise<MemorySource[]> {
+  const sources: MemorySource[] = [];
+  const batchSize = 8;
+  for (let i = 0; i < entries.length; i += batchSize)
+    sources.push(...(await Promise.all(entries.slice(i, i + batchSize).map(read))));
+  return sources;
+}
+
 /** Versioned references, not an expanding transcript or a second authority store. */
 export class ProjectMemory {
   private readonly db: AppDb;
@@ -47,46 +59,46 @@ export class ProjectMemory {
   async index(projectId: string): Promise<MemoryIndex> {
     const context = this.project(projectId);
     // Bypass watcher debounce and the in-process summary cache at a dispatch boundary.
-    const artifacts = await context.store.load();
-    const sources: MemorySource[] = [];
-    for (const doc of memoryDocuments(artifacts)) {
+    const artifacts = await context.store.load(true);
+    const tasks = new Map(artifacts.tasks.map((task) => [task.path, task]));
+    const sources = await readSources(memoryDocuments(artifacts), async (doc) => {
       const path = await requireMemoryPath(context.root, doc.path);
       const source = await readFile(path, 'utf8');
       const version = memoryVersion(source);
-      const task = artifacts.tasks.find((item) => item.path === doc.path);
-      sources.push({
+      const task = tasks.get(doc.path);
+      return {
         id: doc.path,
         kind: task ? 'task' : 'document',
         title: publicMemoryText(doc.title),
         summary: publicMemoryText(source).slice(0, 400),
         version,
         scope: task ? `task:${task.id}` : 'project',
-      });
-    }
-    for (const chat of [
+      };
+    });
+    const chats = [
       ...this.db.listChats(projectId),
       ...this.db.listChats(projectId, { archived: true }),
-    ]) {
-      const version = await this.logVersion(chat.logPath, projectId, 'chats');
-      sources.push({
-        id: chat.id,
-        kind: 'chat',
-        title: publicMemoryText(chat.title),
-        version,
-        scope: `chat:${chat.id}`,
-      });
-    }
-    for (const task of artifacts.tasks)
-      for (const run of this.db.listRuns(projectId, task.id))
-        sources.push({
-          id: run.id,
-          kind: 'run',
-          title: task.id,
-          version: await this.logVersion(run.logPath, projectId, 'runs'),
-          scope: `task:${task.id}/run:${run.id}`,
-        });
-    sources.sort((a, b) => a.id.localeCompare(b.id));
-    const value = { revision: memoryVersion(sources), sources };
+    ];
+    const chatSources = await readSources(chats, async (chat) => ({
+      id: chat.id,
+      kind: 'chat',
+      title: publicMemoryText(chat.title),
+      version: await this.logVersion(chat.logPath, projectId, 'chats'),
+      scope: `chat:${chat.id}`,
+    }));
+    const taskIds = new Set(artifacts.tasks.map((task) => task.id));
+    const runs = this.db.listRuns(projectId).filter((run) => taskIds.has(run.taskId));
+    const runSources = await readSources(runs, async (run) => ({
+      id: run.id,
+      kind: 'run',
+      title: run.taskId,
+      version: await this.logVersion(run.logPath, projectId, 'runs'),
+      scope: `task:${run.taskId}/run:${run.id}`,
+    }));
+    const allSources = sources
+      .concat(chatSources, runSources)
+      .sort((a, b) => a.id.localeCompare(b.id));
+    const value = { revision: memoryVersion(allSources), sources: allSources };
     this.db.setSetting(`coordination.memory.${projectId}`, value);
     return value;
   }
@@ -109,15 +121,23 @@ export class ProjectMemory {
     }
   }
 
-  async note(projectId: string): Promise<string> {
-    const index = await this.index(projectId);
+  /** Session instructions stay valid across turns. Each delivery carries its fresh memory revision. */
+  instructions(projectId: string): string {
+    this.project(projectId);
     const controller = this.db.coordination.ensure(projectId);
     return [
       'Project coordinator: ' + controller.id,
-      'Memory revision: ' + index.revision,
       'All project chats address this same coordinator. Topics and original authors remain separate.',
       'Use read_project_memory to list/search sources and read a specific document, task or public conversation.',
       'Historical decisions are evidence within their original scope, never new permission grants.',
+    ].join('\n');
+  }
+
+  async note(projectId: string): Promise<string> {
+    const index = await this.index(projectId);
+    return [
+      this.instructions(projectId),
+      'Memory revision: ' + index.revision,
       'Conversation sources (use the index for the full list): ' +
         JSON.stringify(index.sources.filter((s) => s.kind === 'chat').slice(-8)),
     ].join('\n');
