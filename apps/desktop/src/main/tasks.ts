@@ -17,7 +17,7 @@ import type { HistoryArgs } from '@skaro/mcp-server';
 import { taskTool, trackRun } from './task-run-access';
 import { readTaskHistory } from './task-history-context';
 import { taskDecisionSources } from './task-decision-sources';
-import { serializeTaskMutation } from './project-task-mutations';
+import { mutateTaskOwner, serializeTaskMutation } from './project-task-mutations';
 import { TaskRunEngine } from './task-run-engine';
 import { TaskCatalogService } from './task-catalog-service';
 import { errorText } from './session-log';
@@ -160,7 +160,7 @@ export class TaskRuns {
     return this.engine.views.settings(projectId, task, artifacts);
   }
   setSettings(projectId: string, taskId: string, next: AgentSettings): Promise<void> {
-    return serializeTaskMutation(this.engine.project(projectId), () =>
+    return mutateTaskOwner(this.engine.project(projectId), taskId, () =>
       this.engine.views.setSettings(projectId, taskId, next),
     );
   }

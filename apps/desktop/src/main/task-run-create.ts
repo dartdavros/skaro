@@ -14,7 +14,7 @@ import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { updateSubject } from './task-subject';
 import { prepareTaskWorktree } from './task-worktree';
-import { serializeTaskMutation } from './project-task-mutations';
+import { mutateTaskOwner } from './project-task-mutations';
 import { parseBuiltinTaskStart, type BuiltinTaskStart } from './builtin-task-start';
 import { saveBuiltinRunSettings } from './builtin-run-settings';
 import { CommandCancelled } from './owner-commands';
@@ -30,7 +30,7 @@ export async function createTaskRun(
   builtin?: BuiltinTaskStart,
   requireCurrent?: () => void,
 ): Promise<ActiveRun> {
-  return serializeTaskMutation(ctx.project(projectId), () =>
+  return mutateTaskOwner(ctx.project(projectId), taskId, () =>
     createLockedTaskRun(ctx, projectId, taskId, builtin, requireCurrent),
   );
 }

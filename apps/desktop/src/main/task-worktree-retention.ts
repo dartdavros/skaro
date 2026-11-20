@@ -8,13 +8,18 @@ import {
 import { isDeepStrictEqual } from 'node:util';
 import type { TaskRunEngine } from './task-run-engine';
 import { environmentArtifacts } from './task-environment-finished';
-import { serializeTaskMutation } from './project-task-mutations';
+import { cleanTaskCheckout } from './project-task-mutations';
 import { ResourceLifecycle } from './resource-lifecycle';
 import { publishedCheckout } from './worktree-publication';
 import { worktreeAbsent } from './worktree-absence';
 import { confirmRemovedWorktree } from './worktree-removal-recovery';
 
-import { completedCheckout, recordKey, type RetainedCheckout } from './worktree-retention-model';
+import {
+  checkoutTaskIds,
+  completedCheckout,
+  recordKey,
+  type RetainedCheckout,
+} from './worktree-retention-model';
 import { worktreeResourceInventory } from './worktree-resource-inventory';
 import { worktreeConsumers } from './worktree-resource-consumers';
 import {
@@ -43,7 +48,8 @@ export async function cleanCompletedWorktrees(ctx: TaskRunEngine): Promise<void>
         continue;
       }
       const path = initial.registration.identity.path!;
-      await serializeTaskMutation(context, async () => {
+      const checkoutOwners = () => checkoutTaskIds(path, db.listRuns(project.id));
+      await cleanTaskCheckout(context, checkoutOwners, async () => {
         const [observation] = await worktreeResourceInventory(db, ctx.deps.dataDir, context, path);
         if (!observation?.present || ctx.closing) return;
         const { record, conflict } = recordWorktreeObservation(db, observation);

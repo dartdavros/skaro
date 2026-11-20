@@ -11,7 +11,7 @@ import { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
 import { prepareQueuedTask } from './prepare-task-run';
-import { serializeTaskMutation } from './project-task-mutations';
+import { mutateTaskOwner } from './project-task-mutations';
 import { queueBuiltinTask } from './builtin-task-launch';
 import type { BuiltinTaskLaunchRequest } from './builtin-task-start';
 import { capturePendingBuiltinStart } from './builtin-task-pending';
@@ -42,7 +42,7 @@ export class TaskRunScheduling {
     for (const id of taskIds) await this.ctx.history.restore(projectId, id);
     for (const id of taskIds) {
       const context = this.ctx.project(projectId);
-      const send = await serializeTaskMutation(context, async () => {
+      const send = await mutateTaskOwner(context, id, async () => {
         const artifacts = await context.store.load();
         const task = findTask(artifacts, id);
         const blocker = startBlocker(task, indexTasks(artifacts.tasks));
@@ -154,7 +154,7 @@ export class TaskRunScheduling {
     input: MessageInput,
     requireCurrent?: () => void,
   ): Promise<void> {
-    return serializeTaskMutation(this.ctx.project(projectId), () =>
+    return mutateTaskOwner(this.ctx.project(projectId), taskId, () =>
       this.enqueueLocked(projectId, taskId, input, requireCurrent),
     );
   }
@@ -224,7 +224,7 @@ export class TaskRunScheduling {
     if (existing && builtin && existing.run.agent !== 'skaro')
       throw new Error('Pending builtin launch conflicts with the existing task run');
     if (existing) {
-      await serializeTaskMutation(this.ctx.project(projectId), () =>
+      await mutateTaskOwner(this.ctx.project(projectId), taskId, () =>
         restoreCleanedWorktree(this.ctx, existing.run),
       );
       if (!(await prepareQueuedTask(this.ctx, existing))) return;

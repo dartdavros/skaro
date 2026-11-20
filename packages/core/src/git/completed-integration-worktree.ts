@@ -4,7 +4,7 @@ import {
 } from '../resources/cleanup-context.ts';
 import { realpath } from 'node:fs/promises';
 import { git } from './command.ts';
-import { serializedWorktree } from './merge-queue.ts';
+import { serializedWorktree, withWorktreePath } from './merge-queue.ts';
 import { assertRemovableWorktree, WorktreeRemovalBlocked } from './worktree-safety.ts';
 import { clearWorktreeFiles } from './worktree-files.ts';
 import { WorktreePathGuard } from './worktree-path-guard.ts';
@@ -24,7 +24,7 @@ export function removeCompletedIntegrationWorktree(
   guard: () => void,
   checkpoint: () => void,
 ): Promise<void> {
-  return serializedWorktree(repo, async () => {
+  return withWorktreePath(path, async () => {
     const blocked = (reason: string): never => {
       throw new WorktreeRemovalBlocked(path, reason);
     };
@@ -72,14 +72,16 @@ export function removeCompletedIntegrationWorktree(
     await check();
     checkpoint();
     await clearWorktreeFiles(path, guard);
-    await check();
-    // Keep the operation, journal and recovery ref; remove only this Git registration.
-    guard();
-    markResourceCleanupEffect(path, true);
-    try {
-      await git(repo, ['worktree', 'remove', '--force', path]);
-    } finally {
-      markResourceCleanupSettled(path);
-    }
+    await serializedWorktree(repo, async () => {
+      await check();
+      // Keep the operation, journal and recovery ref; remove only this Git registration.
+      guard();
+      markResourceCleanupEffect(path, true);
+      try {
+        await git(repo, ['worktree', 'remove', '--force', path]);
+      } finally {
+        markResourceCleanupSettled(path);
+      }
+    });
   });
 }
