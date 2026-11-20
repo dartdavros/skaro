@@ -2,7 +2,7 @@ import { indexTasks, startBlocker } from '@skaro/core';
 import type { MessageInput } from '../shared/ipc';
 import type { TaskRunEngine } from './task-run-engine';
 import type { BuiltinTaskLaunchRequest } from './builtin-task-start';
-import { serializeTaskMutation } from './project-task-mutations';
+import { mutateTaskOwner } from './project-task-mutations';
 import { findTask, key } from './task-run-helpers';
 import { CommandCancelled } from './owner-commands';
 import { capturePendingBuiltinStart } from './builtin-task-pending';
@@ -36,7 +36,7 @@ export async function queueBuiltinTask(
       throw new CommandCancelled();
   };
   const settings = await ctx.deps.builtinSessions.resolveStart(request.settings, signal);
-  await serializeTaskMutation(ctx.project(projectId), async () => {
+  await mutateTaskOwner(ctx.project(projectId), taskId, async () => {
     requireAdmission();
     const artifacts = await ctx.project(projectId).store.load();
     requireAdmission();

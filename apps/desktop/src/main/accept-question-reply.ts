@@ -13,9 +13,11 @@ export function acceptQuestionReply(
   method: 'chat.send' | 'task.send',
   project: string,
   conversation: string,
+  replaceNativeTurn = false,
 ) {
   const mailbox = new QuestionAnswers(db, owner);
-  mailbox.accept(question, answer, emit, state.turns.at(-1)?.id, undefined, () =>
-    mailbox.queue(method, project, conversation, mailbox.project(state)),
-  );
+  mailbox.accept(question, answer, emit, state.turns.at(-1)?.id, undefined, {
+    afterCommit: () => mailbox.queue(method, project, conversation, mailbox.project(state)),
+    replaceNativeTurn,
+  });
 }

@@ -5,7 +5,7 @@ import {
 } from '../resources/cleanup-context.ts';
 import { lstat } from 'node:fs/promises';
 import { git } from './command.ts';
-import { serializedWorktree } from './merge-queue.ts';
+import { serializedWorktree, withWorktreePath } from './merge-queue.ts';
 import { assertRemovableWorktree, WorktreeRemovalBlocked } from './worktree-safety.ts';
 import { clearWorktreeFiles } from './worktree-files.ts';
 import { WorktreePathGuard } from './worktree-path-guard.ts';
@@ -25,7 +25,7 @@ export async function removeCompletedWorktree(
   guard: () => void = () => undefined,
   checkpoint: () => void = () => undefined,
 ): Promise<void> {
-  return serializedWorktree(repo, async () => {
+  return withWorktreePath(path, async () => {
     const stat = await lstat(path).catch((error: NodeJS.ErrnoException) => {
       if (error.code === 'ENOENT') return undefined;
       throw error;
@@ -54,14 +54,16 @@ export async function removeCompletedWorktree(
     guard();
     checkpoint();
     await clearWorktreeFiles(path, guard);
-    await check();
-    // Keep branch/commits/history. Fresh guards above precede Git's final exact unregister.
-    guard();
-    markResourceCleanupEffect(path, true);
-    try {
-      await git(repo, ['worktree', 'remove', '--force', path]);
-    } finally {
-      markResourceCleanupSettled(path);
-    }
+    await serializedWorktree(repo, async () => {
+      await check();
+      // Keep branch/commits/history. Fresh guards above precede Git's final exact unregister.
+      guard();
+      markResourceCleanupEffect(path, true);
+      try {
+        await git(repo, ['worktree', 'remove', '--force', path]);
+      } finally {
+        markResourceCleanupSettled(path);
+      }
+    });
   });
 }

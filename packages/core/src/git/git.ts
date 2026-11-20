@@ -16,7 +16,7 @@ import { merge } from './merge.ts';
 import { revert, type RevertOptions } from './revert.ts';
 import { localMergeObstacles } from './merge-safety.ts';
 import { recoverPublications } from './merge-recovery.ts';
-import { serializedMerge, serializedWorktree } from './merge-queue.ts';
+import { serializedMerge, mutateWorktree } from './merge-queue.ts';
 export { git, GitError, type GitResult } from './command.ts';
 export { WorktreeRemovalBlocked } from './worktree-safety.ts';
 
@@ -142,14 +142,14 @@ export class GitService {
 
   /** Service-owned checkouts only; never used for agent or owner worktrees. */
   createDetachedWorktree(path: string, base: string): Promise<void> {
-    return serializedWorktree(this.repo, async () => {
+    return mutateWorktree(this.repo, path, async () => {
       this.requireWorktreeActive?.();
       await git(this.repo, ['worktree', 'add', '--detach', path, base]);
     });
   }
 
   removeDetachedWorktree(path: string): Promise<void> {
-    return serializedWorktree(this.repo, async () => {
+    return mutateWorktree(this.repo, path, async () => {
       await git(this.repo, ['worktree', 'remove', '--force', path]);
     });
   }
@@ -170,7 +170,7 @@ export class GitService {
       guard?: () => void;
     } = {},
   ): Promise<void> {
-    return serializedWorktree(this.repo, async () => {
+    return mutateWorktree(this.repo, path, async () => {
       await this.assertRemovableWorktree(path);
       if (options.preserve && (await worktreePresent(path))) {
         const { branch, head } = options.preserve;
