@@ -25,6 +25,7 @@ interface SavedAnswer {
   encrypted?: string;
   deliveryId?: string;
   requestEpoch?: string;
+  replaceNativeTurn?: true;
   acceptedAt?: number;
   executionGuard?: { runId: string; intent: number };
 }
@@ -46,7 +47,7 @@ export class QuestionAnswers {
     emit: (event: TimelineEvent) => void,
     requestEpoch?: string,
     executionGuard?: SavedAnswer['executionGuard'],
-    afterCommit?: () => void,
+    delivery: { afterCommit?: () => void; replaceNativeTurn?: boolean } = {},
   ): void {
     try {
       validateQuestionAnswer(question, answer);
@@ -97,6 +98,9 @@ export class QuestionAnswers {
       answer: sanitized,
       deliveryId: existing?.deliveryId ?? randomUUID(),
       requestEpoch,
+      ...(existing?.replaceNativeTurn || delivery.replaceNativeTurn
+        ? { replaceNativeTurn: true }
+        : {}),
       acceptedAt: existing?.acceptedAt ?? Date.now(),
       ...(executionGuard ? { executionGuard } : {}),
       ...(encrypted ? { encrypted } : {}),
@@ -113,7 +117,7 @@ export class QuestionAnswers {
         entry.deliveryId!,
       );
     });
-    afterCommit?.();
+    delivery.afterCommit?.();
     this.replay(entry, emit);
   }
   private replay(entry: SavedAnswer, emit: (event: TimelineEvent) => void, close = true): void {
@@ -162,23 +166,43 @@ export class QuestionAnswers {
     this.recover(projected.state, (event) => projected.apply(event));
     return projected.state;
   }
+  private pendingEntries() {
+    return (this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? []).filter((entry) => {
+      if (!entry.executionGuard) return true;
+      const { runId, intent } = entry.executionGuard;
+      const run = this.db.getRun(runId);
+      const execution = new TaskExecution(this.db, runId);
+      return (
+        !!run &&
+        !run.retiredAt &&
+        this.db.latestRun(run.projectId, run.taskId)?.id === runId &&
+        execution.read().enabled &&
+        execution.intentVersion() === intent
+      );
+    });
+  }
+  private commandId(entries: SavedAnswer[]): string {
+    return entries.every((entry) => entry.deliveryId)
+      ? `answers-${coordinationHash([this.key, entries.map((entry) => entry.deliveryId)])}`
+      : `answers-${entries.map((entry) => entry.interaction.id).join('-')}`;
+  }
+  /** A native request answered through the inbox still needs its blocked turn to retire. */
+  replacesNativeTurn(commandId: string | undefined, turnId: string): boolean {
+    if (!commandId?.startsWith('answers-')) return false;
+    const entries = this.pendingEntries();
+    return (
+      entries.some((entry) => entry.replaceNativeTurn && entry.requestEpoch === turnId) &&
+      this.commandId(entries) === commandId
+    );
+  }
+  awaitingNativeReplacement(turnId: string): boolean {
+    return this.pendingEntries().some(
+      (entry) => entry.replaceNativeTurn && entry.requestEpoch === turnId,
+    );
+  }
   pending(state: TimelineState): (MessageInput & { commandId: string }) | undefined {
     if (state.interactions.some((i) => i.kind === 'question')) return undefined;
-    const entries = (this.db.getSetting<SavedAnswer[] | null>(this.key, []) ?? []).filter(
-      (entry) => {
-        if (!entry.executionGuard) return true;
-        const { runId, intent } = entry.executionGuard;
-        const run = this.db.getRun(runId);
-        const execution = new TaskExecution(this.db, runId);
-        return (
-          !!run &&
-          !run.retiredAt &&
-          this.db.latestRun(run.projectId, run.taskId)?.id === runId &&
-          execution.read().enabled &&
-          execution.intentVersion() === intent
-        );
-      },
-    );
+    const entries = this.pendingEntries();
     if (!entries.length) return undefined;
     const textOf = (values: SavedAnswer[]) =>
       values
@@ -204,9 +228,7 @@ export class QuestionAnswers {
     return {
       text,
       ...(secrets.length ? { privateText: sealPrivate({ text: textOf(decoded), secrets }) } : {}),
-      commandId: entries.every((entry) => entry.deliveryId)
-        ? `answers-${coordinationHash([this.key, entries.map((entry) => entry.deliveryId)])}`
-        : `answers-${entries.map((entry) => entry.interaction.id).join('-')}`,
+      commandId: this.commandId(entries),
     };
   }
   delivered(): void {

@@ -87,10 +87,7 @@ function changedTaskInputs(previous: TaskInputSnapshot, current: TaskInputSnapsh
 }
 
 /** Native admission can wait; compare again immediately before the expensive resumed operation. */
-export async function requireTaskInputsCurrent(
-  ctx: TaskRunEngine,
-  active: ActiveRun,
-): Promise<void> {
+export async function taskInputsCurrent(ctx: TaskRunEngine, active: ActiveRun): Promise<boolean> {
   const saved = ctx.deps.db.getSetting<TaskInputSnapshot | null>(
     `coordination.inputs.${active.run.id}`,
     null,
@@ -103,6 +100,13 @@ export async function requireTaskInputsCurrent(
     await context.store.load(),
     active.taskId,
   );
-  if (current.version !== saved.version)
+  return current.version === saved.version;
+}
+
+export async function requireTaskInputsCurrent(
+  ctx: TaskRunEngine,
+  active: ActiveRun,
+): Promise<void> {
+  if (!(await taskInputsCurrent(ctx, active)))
     throw new Error('Task input snapshot became stale during resource admission');
 }
