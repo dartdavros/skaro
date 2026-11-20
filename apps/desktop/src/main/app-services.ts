@@ -245,7 +245,14 @@ export async function createServices(
   });
   const commands = new OwnerCommands(
     db,
-    (command) => emit('command.changed', command),
+    (command) => {
+      emit('command.changed', command);
+      if (command.method === 'task.send' && !['accepted', 'delivering'].includes(command.state)) {
+        const [projectId, taskId] = command.args;
+        if (typeof projectId === 'string' && typeof taskId === 'string')
+          emit('task.changed', { projectId, taskId });
+      }
+    },
     coordinators,
     dataDir,
   );

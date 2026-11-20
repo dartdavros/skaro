@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { AppDb } from '@skaro/core';
-import { ownerDispatchPending } from './session-dispatch-pending';
+import { ownerDispatchPending, taskDispatchPending } from './session-dispatch-pending';
+import { TaskStartup } from './task-startup';
 
 it('projects only accepted or delivering input for the exact owner, without treating failures as work', () => {
   const db = AppDb.open(':memory:');
@@ -21,6 +22,29 @@ it('projects only accepted or delivering input for the exact owner, without trea
       db.commands.update('input', state);
       expect(ownerDispatchPending(db, 'project', 'T-001')).toBe(false);
     }
+  } finally {
+    db.close();
+  }
+});
+
+it('ends dispatch feedback when a startup is delivered, cancelled or failed', () => {
+  const db = AppDb.open(':memory:');
+  try {
+    const startup = new TaskStartup(db);
+    const pending = () =>
+      taskDispatchPending(db, startup.read('project', 'T-004'), 'project', 'T-004');
+    const begin = () =>
+      startup.begin('project', 'T-004', [{ text: 'Continue', commandId: 'resume' }]);
+    begin();
+    expect(pending()).toBe(true);
+    startup.delivered('project', 'T-004');
+    expect(pending()).toBe(false);
+    begin();
+    startup.fail('project', 'T-004', 'Preparation failed');
+    expect(pending()).toBe(false);
+    begin();
+    startup.cancel('project', 'T-004');
+    expect(pending()).toBe(false);
   } finally {
     db.close();
   }

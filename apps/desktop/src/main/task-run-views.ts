@@ -129,7 +129,12 @@ export class TaskRunViews {
       : undefined;
     return {
       projectId,
-      dispatchPending: taskDispatchPending(this.ctx, projectId, taskId),
+      dispatchPending: taskDispatchPending(
+        this.ctx.deps.db,
+        this.ctx.startup.read(projectId, taskId),
+        projectId,
+        taskId,
+      ),
       c4Diagnostic:
         active && !['done', 'cancelled'].includes(task.status)
           ? this.ctx.deps.db.getSetting(c4DiagnosticKey(active.run.id), undefined)

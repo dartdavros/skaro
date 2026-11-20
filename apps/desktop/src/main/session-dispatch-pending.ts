@@ -1,21 +1,23 @@
 import type { AppDb } from '@skaro/core';
-import type { TaskRunEngine } from './task-run-engine';
-import { key } from './task-run-helpers';
+import type { TaskStartup } from './task-startup';
 
 /** Native acknowledgement and model activity are later than acceptance into the durable inbox. */
-export function ownerDispatchPending(db: AppDb, projectId: string, ownerId: string): boolean {
+export function ownerDispatchPending(
+  db: Pick<AppDb, 'commands'>,
+  projectId: string,
+  ownerId: string,
+): boolean {
   return db.commands.hasPendingInput(`${projectId}:${ownerId}`);
 }
 
 export function taskDispatchPending(
-  ctx: TaskRunEngine,
+  db: Pick<AppDb, 'commands'>,
+  startup: ReturnType<TaskStartup['read']>,
   projectId: string,
   taskId: string,
 ): boolean {
-  const startup = ctx.startup.read(projectId, taskId);
+  // The scheduler also owns teardown after the last native turn. Only undelivered input counts.
   return (
-    ownerDispatchPending(ctx.deps.db, projectId, taskId) ||
-    (!!startup?.inputs.length && !startup.error) ||
-    ctx.queue.state().running.includes(key(projectId, taskId))
+    ownerDispatchPending(db, projectId, taskId) || (!!startup?.inputs.length && !startup.error)
   );
 }

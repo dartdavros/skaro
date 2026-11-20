@@ -252,6 +252,7 @@ export class TaskRunScheduling {
     if (!inputs.length) {
       this.ctx.startup.delivered(active.projectId, active.taskId);
       this.ctx.events.settleRuntime(active);
+      this.ctx.changed(active.projectId, active.taskId);
       return;
     }
     this.ctx.environments.touch(checkoutKey(active));
@@ -262,6 +263,7 @@ export class TaskRunScheduling {
         await this.ctx.messages.deliver(active, input);
       }
       this.ctx.startup.delivered(active.projectId, active.taskId);
+      this.ctx.changed(active.projectId, active.taskId);
     } catch (error) {
       if (error instanceof CommandCancelled) {
         this.ctx.startup.delivered(active.projectId, active.taskId);
