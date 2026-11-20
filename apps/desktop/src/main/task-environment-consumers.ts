@@ -1,6 +1,14 @@
 import type { TaskKey } from '@skaro/core';
 import { checkoutKey } from './task-stage';
 import type { TaskRunEngine } from './task-run-engine';
+import type { IntegrationOperation } from './integration-model';
+
+/** Verification may mark the candidate ready before the resolver has actually exited. */
+export function integrationUsesEnvironment(
+  operation: Pick<IntegrationOperation, 'state' | 'executor' | 'worker'>,
+) {
+  return operation.state !== 'ready' || !!operation.executor || !!operation.worker;
+}
 
 /** Exclude only the already-stopped review; an agent/integration using the same environment stays visible. */
 export function busyTaskEnvironments(ctx: TaskRunEngine, stoppedReview?: TaskKey): TaskKey[] {
@@ -14,6 +22,9 @@ export function busyTaskEnvironments(ctx: TaskRunEngine, stoppedReview?: TaskKey
       if (review) return omitted(review) ? [] : [review];
       const active = ctx.active.get(key);
       const operation = ctx.integrations.operation(key);
+      // The publication still owns its queue slot after the resolver and checks relinquish
+      // the candidate. Only that integration's synthetic runtime consumer is finished.
+      if (operation && !integrationUsesEnvironment(operation)) return [];
       const [projectId, taskId] = key.split('\n') as [string, string];
       return [
         operation

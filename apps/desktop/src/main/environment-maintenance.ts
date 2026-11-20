@@ -12,6 +12,7 @@ export async function maintainEnvironments(
   schedule: EnvironmentSchedule,
   destroy: (key: TaskKey) => Promise<string[]>,
   stop: (key: TaskKey) => Promise<void>,
+  cleanupStillBlocked: (key: TaskKey) => Promise<boolean>,
 ) {
   const busy = (key: TaskKey) =>
     [...deps.busy(), ...(starting ? [starting] : [])].some(
@@ -24,6 +25,9 @@ export async function maintainEnvironments(
         if (busy(record)) return;
         try {
           if (await deps.finished(record)) {
+            // If the precheck cannot inspect Docker, let the normal job report the failure.
+            if (await cleanupStillBlocked(record).catch(() => false)) return;
+            if (busy(record)) return;
             const job = backgroundWork.start(...environmentJob(deps.db, record));
             try {
               const failures = await destroy(record);

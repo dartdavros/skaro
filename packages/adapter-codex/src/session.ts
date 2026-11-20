@@ -63,7 +63,11 @@ export class CodexSession implements AgentSession {
               t: 'turn.completed',
               turnId: this.turns.active,
               outcome: 'failed',
-              error: { category: 'other', message: `Codex stopped (${code ?? signal})` },
+              error: {
+                category: 'other',
+                source: 'process_exit',
+                message: `Codex stopped (${code ?? signal})`,
+              },
             }),
           );
         }

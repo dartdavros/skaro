@@ -1,6 +1,13 @@
 import type { ResourceRecord, ResourceRegistration, TaskKey } from '@skaro/core';
 import type { EnvironmentObservation } from './environment-resource-inventory';
 
+/** Maintenance rechecks retained environments when their remaining users release them. */
+export class EnvironmentInUse extends Error {
+  constructor() {
+    super('Environment retained: resource_in_use.');
+  }
+}
+
 export function environmentCleanupOperation(
   resource: ResourceRecord,
   action: 'stop' | 'remove',

@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs';
 import {
   ensureSourceServices,
   expand,
-  runShell,
   waitReady,
   environmentTimeoutMs,
   type DockerContainer,
@@ -14,7 +13,8 @@ import type { EnvironmentDescription } from './task-environment-description';
 import type { EnvironmentRegistry } from './task-environment-registry';
 import type { EnvironmentDocker } from './task-environment-docker';
 import { environmentReadinessProblems } from './task-environment-readiness';
-import { EnvironmentCommandFailed, EnvironmentNotDispatched } from './environment-dispatch-error';
+import { EnvironmentNotDispatched } from './environment-dispatch-error';
+import { runEnvironmentCommand } from './environment-launch-command';
 
 export interface EnvironmentStartOptions {
   /** Whether to wait for a concrete ownership/cleanup conflict; never physical capacity. */
@@ -93,22 +93,23 @@ export async function startEnvironmentServices(
       return description;
     });
     const { identity, config, variables, compose } = description;
-    let completeProvenance: (() => Promise<void>) | undefined;
     const portBindings = compose
       ? await timed('prepareMs', () => admitCompose(identity, compose))
       : undefined;
     const run = async (label: 'create' | 'start', command: string) => {
-      try {
-        await runShell(expand(command, identity), {
+      const recordObjects = await deps.provenance(description);
+      await options.assertActive?.();
+      await runEnvironmentCommand(
+        expand(command, identity),
+        {
           cwd: identity.worktree,
           env: variables,
           label,
           timeoutMs: environmentTimeoutMs(config!, label),
           ...options,
-        });
-      } catch (error) {
-        throw new EnvironmentCommandFailed(error);
-      }
+        },
+        recordObjects,
+      );
     };
     if (config!.create) {
       timing.reusedData =
@@ -132,7 +133,6 @@ export async function startEnvironmentServices(
               throw new Error(`Cannot prepare a clean environment: ${failures.join('; ')}`);
             await options.assertActive?.();
             options.signal?.throwIfAborted();
-            completeProvenance = await deps.provenance(description);
             await run('create', config!.create!);
             deps.registry.update(key, { created: true });
           } finally {
@@ -140,7 +140,6 @@ export async function startEnvironmentServices(
           }
         });
     }
-    completeProvenance ??= await deps.provenance(description);
     await timed('startMs', () => run('start', config!.start));
     if (config!.ready)
       await timed('readyMs', () =>
@@ -157,7 +156,6 @@ export async function startEnvironmentServices(
       if (problems.length)
         throw new Error(`Environment services are not ready: ${problems.join('; ')}`);
     }
-    await completeProvenance();
     return {
       name: identity.name,
       urls: Object.fromEntries(

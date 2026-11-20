@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   dockerObjectIds,
   inspectEnvironmentObjects,
+  sameDockerObject,
   resourceId,
   type AppDb,
   type DockerRemovalAuthorization,
@@ -14,6 +15,7 @@ import { readCompose } from './task-compose';
 import {
   declaredNewDockerObject,
   dockerObjectOwnershipBlocker,
+  unresolvedDockerProvenance,
   dockerProofKey,
   dockerObservationKey,
   type DockerObjectDeclaration,
@@ -23,6 +25,8 @@ import type { ComposeModel } from './task-compose-ports';
 
 type Store = Pick<AppDb, 'getSetting' | 'setSetting' | 'resources'>;
 type Definitions = Record<string, { name?: string; external?: boolean }>;
+const blockedObjectKey = (resource: ResourceRecord) =>
+  `resource.docker.blocked.${resource.id}.${resource.generation}`;
 
 /** Store only declared object identities; resolved env, secrets and full Compose config never persist. */
 function declarations(model: ComposeModel, project: string): DockerObjectDeclaration {
@@ -103,9 +107,7 @@ export class EnvironmentDockerProvenance {
             )
         )
           continue;
-        if (
-          !saved.some((proof) => proof.object.kind === object.kind && proof.object.id === object.id)
-        )
+        if (!saved.some((proof) => sameDockerObject(proof.object, object)))
           saved.push({
             resourceId: resource.id,
             generation: resource.generation,
@@ -122,6 +124,20 @@ export class EnvironmentDockerProvenance {
     const current = this.db.resources.get(resource.id);
     if (!current || current.generation !== resource.generation || current.state === 'released')
       throw new Error('Docker creation generation changed');
+  }
+
+  /** Maintenance resumes as soon as the physical blocker disappears, changes or gains proof. */
+  async cleanupStillBlocked(resource: ResourceRecord | undefined): Promise<boolean> {
+    if (!resource || resource.state === 'released' || !resource.identity.composeProject)
+      return false;
+    const key = blockedObjectKey(resource);
+    const blocked = this.db.getSetting<DockerObjectIdentity | null>(key, null);
+    if (!blocked) return false;
+    const live = await inspectEnvironmentObjects([resource.identity.composeProject]);
+    this.requireGeneration(resource);
+    if (unresolvedDockerProvenance(this.db, resource, blocked, live)) return true;
+    this.db.setSetting(key, null);
+    return false;
   }
 
   removal(
@@ -143,6 +159,8 @@ export class EnvironmentDockerProvenance {
         await guard();
         const reason = dockerObjectOwnershipBlocker(this.db, resource, object);
         if (reason) {
+          if (reason === 'docker_object_provenance_unverified')
+            this.db.setSetting(blockedObjectKey(resource), object);
           retained(reason);
           throw new Error(`Docker object retained: ${reason}`);
         }

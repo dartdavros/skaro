@@ -11,6 +11,7 @@ import {
   declaredNewDockerObject,
   dockerObjectOwnershipBlocker,
   dockerProofKey,
+  unresolvedDockerProvenance,
   type DockerObjectProof,
 } from './environment-docker-ownership';
 import { completeEnvironmentAction } from './environment-resource-outcomes';
@@ -75,6 +76,13 @@ it('retains unknown objects, rejects same-name replacement and protects exact re
     expect(dockerObjectOwnershipBlocker(db, resource, object)).toBe(
       'docker_object_provenance_unverified',
     );
+    expect(unresolvedDockerProvenance(db, resource, object, [object])).toBe(true);
+    expect(unresolvedDockerProvenance(db, resource, object, [])).toBe(false);
+    expect(
+      unresolvedDockerProvenance(db, resource, object, [
+        { ...object, createdAt: '2026-11-13T00:00:00Z' },
+      ]),
+    ).toBe(false);
     db.setSetting(dockerProofKey(resource), [
       {
         resourceId: resource.id,
@@ -85,6 +93,7 @@ it('retains unknown objects, rejects same-name replacement and protects exact re
       } satisfies DockerObjectProof,
     ]);
     expect(dockerObjectOwnershipBlocker(db, resource, object)).toBeUndefined();
+    expect(unresolvedDockerProvenance(db, resource, object, [object])).toBe(false);
     expect(
       dockerObjectOwnershipBlocker(db, resource, { ...object, createdAt: '2026-11-13T00:00:00Z' }),
     ).toBe('docker_object_provenance_unverified');
