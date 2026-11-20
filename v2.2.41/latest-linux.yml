@@ -1,0 +1,5 @@
+version: 2.2.41
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.41/Skaro-2.2.41-linux-x86_64.AppImage
+    sha512: 75xZbo9VumEeSGrge7cTLW0CIOw8y7ma8QZuPAZxQt9NhggmlXIdDKqpiXoCrldYVe3ansBpfH1mv81D1e9q/g==
+    size: 140828546
