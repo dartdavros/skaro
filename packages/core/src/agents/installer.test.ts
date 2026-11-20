@@ -71,7 +71,7 @@ describe('agent packages', () => {
     );
     expect(agentPackage('codex', { os: 'darwin', arch: 'arm64' })).toMatchObject({
       name: '@openai/codex',
-      npmVersion: '0.159.2-darwin-arm64',
+      npmVersion: '0.171.0-darwin-arm64',
       binary: 'vendor/aarch64-apple-darwin/bin/codex',
       pathDirs: ['vendor/aarch64-apple-darwin/codex-path'],
     });
