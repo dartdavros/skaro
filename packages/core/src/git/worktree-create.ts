@@ -1,5 +1,5 @@
 import { git } from './command.ts';
-import { serializedWorktree } from './merge-queue.ts';
+import { mutateWorktree } from './merge-queue.ts';
 
 export interface WorktreeCreateOptions {
   path: string;
@@ -35,7 +35,7 @@ export function createWorktree(
   options: WorktreeCreateOptions,
   requireActive?: () => void,
 ): Promise<void> {
-  return serializedWorktree(repo, async () => {
+  return mutateWorktree(repo, options.path, async () => {
     await assertExpectedCheckout(repo, options);
     const exists =
       (

@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { git, type RunRecord } from '@skaro/core';
+import { git, ResourceCleanupBlocked, type RunRecord } from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
-import { serializeTaskMutation } from './project-task-mutations';
+import { mutateTaskOwner } from './project-task-mutations';
 import { stageIdOf } from './task-stage';
 import { prepareTaskWorktree } from './task-worktree';
 import { taskRunDirectory } from './task-run-directory';
@@ -15,7 +15,7 @@ const restoring = new Map<string, Promise<void>>();
 /** Explicit access restores the checkout and pins the unknown external consumer durably. */
 export function accessTaskWorktree(ctx: TaskRunEngine, run: RunRecord): Promise<string> {
   const context = ctx.project(run.projectId);
-  return serializeTaskMutation(context, async () => {
+  return mutateTaskOwner(context, run.taskId, async () => {
     await restoreCleanedWorktree(ctx, run);
     const directory = taskRunDirectory(context.root, run);
     if (run.worktree) {
@@ -38,7 +38,13 @@ export function restoreCleanedWorktree(ctx: TaskRunEngine, run: RunRecord): Prom
 }
 
 async function restoreCheckout(ctx: TaskRunEngine, run: RunRecord): Promise<void> {
-  if (!run.worktree || existsSync(run.worktree)) return;
+  if (!run.worktree) return;
+  if (ctx.deps.db.resources.cleanup.blocking({ identity: { path: run.worktree } }))
+    throw new ResourceCleanupBlocked(
+      'cleanup_in_progress',
+      'The checkout has an unfinished cleanup operation',
+    );
+  if (existsSync(run.worktree)) return;
   const current = ctx.deps.db.getRun(run.id);
   if (!current || current.retiredAt !== undefined)
     throw new Error('The run belongs to a deleted task.');
