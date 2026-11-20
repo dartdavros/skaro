@@ -59,18 +59,31 @@ export async function incidentResourceVersion(
         ? ctx.deps.db.listRuns(projectId, resource.owner.id)[0]
         : undefined;
     const { GitService } = await import('@skaro/core');
-    const head = ownerRun?.worktree ? await new GitService(ownerRun.worktree).head() : undefined;
-    const taskConfig =
-      resource.kind === 'environment' && resource.owner.kind === 'task'
-        ? (await ctx.environments.describe({ projectId, taskId: resource.owner.id })).config
-        : undefined;
+    const managed =
+      resource.kind === 'environment' &&
+      (resource.owner.kind === 'task' || resource.owner.kind === 'integration');
+    const environment = managed
+      ? await ctx.environments.recorded({ projectId, taskId: resource.owner.id })
+      : undefined;
+    if (managed && (!environment || environment.identity.name !== resource.identity.composeProject))
+      throw new Error('Incident environment registration changed');
+    const worktree = environment?.identity.worktree ?? ownerRun?.worktree;
+    const head = worktree ? await new GitService(worktree).head() : undefined;
+    const identity = environment?.identity ?? {
+      root: context.root,
+      worktree: worktree ?? context.root,
+      name: resource.identity.composeProject ?? '',
+      ports: {},
+    };
+    const config = environment
+      ? environment.config
+      : (await context.store.load()).config.environment;
     return incidentHash([
       resource.id,
       resource.generation,
       resource.identity,
       head,
-      taskConfig,
-      await taskEnvironmentVersion(context.root, (await context.store.load()).config.environment),
+      await taskEnvironmentVersion(identity, config),
     ]);
   }
   const run = ctx.deps.db.listRuns(projectId).find((r) => r.id === target);
@@ -132,11 +145,11 @@ export async function checkIncident(
       resource.ownership !== 'registered'
     )
       return false;
-    const description = await ctx.environments.describe({
+    const description = await ctx.environments.recorded({
       projectId: row.projectId,
       taskId: resource.owner.id,
     });
-    if (!description.config?.ready) return false;
+    if (!description?.config?.ready) return false;
     try {
       const response = await fetch(expand(description.config.ready, description.identity), {
         signal: AbortSignal.timeout(5000),

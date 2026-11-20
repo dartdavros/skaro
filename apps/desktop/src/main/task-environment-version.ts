@@ -1,37 +1,30 @@
 import { readFile } from 'node:fs/promises';
-import { delimiter, isAbsolute, resolve } from 'node:path';
-import type { EnvironmentConfig } from '@skaro/core';
-import { memoryVersion, requireMemoryPath } from './project-memory-sources';
+import {
+  environmentVariables,
+  type EnvironmentConfig,
+  type EnvironmentIdentity,
+} from '@skaro/core';
+import { composeSourceFiles } from './compose-source-files';
+import { isMemorySourcePath, memoryVersion, requireMemoryPath } from './project-memory-sources';
 
 export async function taskEnvironmentVersion(
-  root: string,
+  identity: EnvironmentIdentity,
   config?: EnvironmentConfig,
 ): Promise<string> {
   if (!config) return memoryVersion(null);
-  const declared = config.env.COMPOSE_FILE;
-  const paths = declared
-    ? declared
-        .split(config.env.COMPOSE_PATH_SEPARATOR ?? delimiter)
-        .map((path) => path.replaceAll('{root}', root).replaceAll('{worktree}', root))
-    : [
-        'compose.yaml',
-        'compose.yml',
-        'docker-compose.yaml',
-        'docker-compose.yml',
-        'compose.override.yaml',
-        'compose.override.yml',
-      ];
-  const files: [string, string][] = [];
-  for (const path of paths) {
+  const { worktree, root } = identity;
+  const variables = environmentVariables(identity, config);
+  const files: [string, string | null][] = [];
+  for (const path of composeSourceFiles(worktree, variables)) {
+    const scope = [worktree, root].find((dir) => isMemorySourcePath(dir, path));
+    if (!scope) throw new Error('Compose source is outside its registered scope');
     try {
-      const canonical = await requireMemoryPath(
-        root,
-        isAbsolute(path) ? path : resolve(root, path),
-      );
+      const canonical = await requireMemoryPath(scope, path);
       files.push([canonical, memoryVersion(await readFile(canonical, 'utf8'))]);
     } catch (error) {
-      if (!declared && (error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-      throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      // A missing declared input is evidence too. Its creation changes the version.
+      files.push([path, null]);
     }
   }
   return memoryVersion([config, files]);

@@ -1,6 +1,6 @@
 import { readEnvironment, type EnvironmentConfig, type TaskKey } from '@skaro/core';
 import type { ConfigureEnvironmentArgs } from '@skaro/mcp-server';
-import type { EnvironmentRegistry } from './task-environment-registry';
+import type { EnvironmentRecord, EnvironmentRegistry } from './task-environment-registry';
 
 /** Apply the persisted command without changing project defaults or the rest of the setup. */
 export function environmentConfig(
@@ -8,9 +8,16 @@ export function environmentConfig(
   key: TaskKey,
   config: EnvironmentConfig,
 ): EnvironmentConfig {
-  const start = registry.find(key)?.start ?? config.start;
-  const ports = [...new Set([...config.ports, ...(registry.find(key)?.extraPorts ?? [])])];
-  const source = registry.find(key)?.source ?? config.source;
+  return recordedEnvironmentConfig(registry.find(key), config);
+}
+
+export function recordedEnvironmentConfig(
+  record: EnvironmentRecord | undefined,
+  config: EnvironmentConfig,
+): EnvironmentConfig {
+  const start = record?.start ?? config.start;
+  const ports = [...new Set([...config.ports, ...(record?.extraPorts ?? [])])];
+  const source = record?.source ?? config.source;
   return { ...config, start, ports, ...(source ? { source } : {}) };
 }
 

@@ -10,6 +10,8 @@ import {
 } from '@skaro/core';
 import type { EnvironmentDocker } from './task-environment-docker';
 
+import { environmentCleanupOperation } from './environment-resource-guard';
+
 /** Keep exclusion through physical verification, release/renewal and caller completion metadata. */
 export async function disposeEnvironment(
   options: {
@@ -29,7 +31,7 @@ export async function disposeEnvironment(
   try {
     return await db.resources.cleanup.run(
       resource,
-      `environment.remove:${resource.id}:${resource.generation}`,
+      environmentCleanupOperation(resource, 'remove'),
       async () => {
         let failures: string[];
         try {

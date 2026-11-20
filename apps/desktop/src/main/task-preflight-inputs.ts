@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import {
   git,
+  environmentName,
   assertWorkflowGraph,
   indexTasks,
   isBlocked,
@@ -12,6 +13,9 @@ import {
 import type { ProjectContext } from './projects';
 import { CompletionStore, criteriaRevision } from './completion-store';
 import { memoryVersion, requireMemoryPath } from './project-memory-sources';
+import { stageIdOf } from './task-stage';
+import { EnvironmentRegistry } from './task-environment-registry';
+import { recordedEnvironmentConfig } from './task-environment-config';
 import { taskEnvironmentVersion } from './task-environment-version';
 
 export interface TaskInputSnapshot {
@@ -74,13 +78,27 @@ export async function taskInputSnapshot(
       document.path,
       memoryVersion(await readFile(await requireMemoryPath(context.root, document.path), 'utf8')),
     ]);
+  const run = db.latestRun(context.id, taskId);
+  const owner = (run && stageIdOf(run)) ?? taskId;
+  const base = artifacts.config.environment;
+  const record =
+    base && run?.worktree
+      ? new EnvironmentRegistry(db).find({ projectId: context.id, taskId: owner })
+      : undefined;
+  const config = base && recordedEnvironmentConfig(record, base);
+  const identity = {
+    root: context.root,
+    worktree: run?.worktree ?? context.root,
+    name: record?.name ?? environmentName(db.getProject(context.id)?.name ?? '', owner),
+    ports: record?.ports ?? {},
+  };
   const snapshot = {
     schema: 1,
     projectId: context.id,
     taskId,
     requirements: memoryVersion([task.title, task.body, task.spec, versions]),
     dependencies,
-    environment: await taskEnvironmentVersion(context.root, artifacts.config.environment),
+    environment: await taskEnvironmentVersion(identity, config),
     checks: memoryVersion(artifacts.config.checks),
     workflow: memoryVersion(artifacts.config.workflow?.[taskId] ?? []),
     authority: memoryVersion([

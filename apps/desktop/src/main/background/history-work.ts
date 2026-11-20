@@ -9,6 +9,7 @@ import {
   type TimelineEvent,
   type TimelineState,
 } from '@skaro/timeline';
+import { HISTORY_VERSION } from '../../shared/history';
 import { replayHistory } from './history-replay';
 import type { PayloadStore } from './payload-store';
 import type { ProposalItem } from './protocol';
@@ -36,7 +37,7 @@ export function historyWork(store: PayloadStore) {
       throw error;
     });
     if (!info) return { timeline: new Timeline().state, seq: 0, segments: 0 };
-    const fingerprint = `v3:${agent}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
+    const fingerprint = `v${HISTORY_VERSION}:${agent}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
     const cached = store.db
       .prepare('SELECT snapshot FROM histories WHERE path=? AND fingerprint=?')
       .get(path, fingerprint);
@@ -84,7 +85,9 @@ export function historyWork(store: PayloadStore) {
     }
     const snapshot = { timeline: timeline.state, seq, segments };
     const after = await stat(path);
-    if (`v3:${agent}:${after.size}:${after.mtimeMs}:${after.ctimeMs}` === fingerprint)
+    if (
+      `v${HISTORY_VERSION}:${agent}:${after.size}:${after.mtimeMs}:${after.ctimeMs}` === fingerprint
+    )
       store.db
         .prepare(
           `INSERT INTO histories VALUES (?, ?, ?)

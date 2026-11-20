@@ -9,6 +9,8 @@ import {
 } from '@skaro/core';
 import type { ResourceLifecycle } from './resource-lifecycle';
 
+import { environmentCleanupOperation } from './environment-resource-guard';
+
 /** Stop-only maintenance: own review lease stays held until every exact service is confirmed stopped. */
 export async function stopOwnedEnvironment(options: {
   db: Pick<AppDb, 'resources'>;
@@ -30,7 +32,7 @@ export async function stopOwnedEnvironment(options: {
   try {
     await db.resources.cleanup.runStop(
       resource,
-      `environment.stop:${resource.id}:${resource.generation}`,
+      environmentCleanupOperation(resource, 'stop'),
       async () => {
         await options.journal.run(resource, 'stop', {
           guard: options.guard,

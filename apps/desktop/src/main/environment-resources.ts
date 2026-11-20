@@ -3,6 +3,7 @@ import {
   COMPOSE_PROJECT,
   labelsOf,
   resourceId,
+  ResourceCleanupBlocked,
   type DockerContainer,
   type AppDb,
   type ResourceRecord,
@@ -17,6 +18,7 @@ import {
 } from './environment-resource-inventory';
 import {
   environmentResourceBlocker,
+  environmentCleanupOperation,
   deferEnvironmentRegistration,
   stickyEnvironmentReason,
 } from './environment-resource-guard';
@@ -46,7 +48,16 @@ export class EnvironmentResources {
     stoppedReview?: TaskKey,
   ): Promise<EnvironmentObservation[]> {
     const observations = await environmentResourceInventory(this.deps, containers);
-    for (const observation of observations) this.save(observation, stoppedReview);
+    for (const observation of observations) {
+      try {
+        this.save(observation, stoppedReview);
+      } catch (error) {
+        if (!(error instanceof ResourceCleanupBlocked) || error.reason !== 'cleanup_in_progress')
+          throw error;
+        // This observation cannot change the fenced resource. Keep checking independent resources.
+        observation.reason = error.reason;
+      }
+    }
     return observations;
   }
 
@@ -126,24 +137,50 @@ export class EnvironmentResources {
       teardownLease.cost.review > 0
         ? key
         : undefined;
-    const observations = await this.observe(containers, stoppedReview);
+    const observations = await environmentResourceInventory(this.deps, containers);
     const observation = observations.find(
       (item) =>
         item.resource.projectId === key.projectId && item.resource.identity.composeProject === name,
     );
-    let saved = this.deps.db.resources.get(this.id(key.projectId, name));
-    const foreign = this.deps.db.resources
-      .list()
-      .find(
-        (resource) =>
-          resource.projectId !== key.projectId && resource.identity.composeProject === name,
+    const savedBefore = this.deps.db.resources.get(this.id(key.projectId, name));
+    const registry = this.deps.db.resources;
+    const fence =
+      (observation && registry.cleanup.blocking(observation.resource)) ??
+      (savedBefore && registry.cleanup.blocking(savedBefore));
+    if (
+      fence &&
+      (action === 'start' ||
+        !savedBefore ||
+        fence.resourceId !== savedBefore.id ||
+        fence.operationId !== environmentCleanupOperation(savedBefore, action))
+    )
+      throw new ResourceCleanupBlocked(
+        'cleanup_in_progress',
+        'Environment cleanup is in progress.',
       );
-    const protectedObject = this.deps.db.resources
-      .list()
-      .some(
-        (other) =>
-          other.id !== saved?.id && other.objectIds?.some((id) => saved?.objectIds?.includes(id)),
-      );
+    // Before reclaiming a retry, validate current observations without mutating its fenced generation.
+    if (
+      fence?.state === 'retry' &&
+      !ownPreparation &&
+      this.busy(stoppedReview).some(
+        (owner) => owner.projectId === key.projectId && owner.taskId === key.taskId,
+      )
+    )
+      throw new Error('Environment retained: resource_in_use.');
+    let saved =
+      observation && fence?.state !== 'retry' ? this.save(observation, stoppedReview) : savedBefore;
+    // Check current Docker/registry evidence across projects without writing unrelated records.
+    const identities = [...registry.list(), ...observations.map((item) => item.resource)];
+    const foreign = identities.some(
+      (other) => other.projectId !== key.projectId && other.identity.composeProject === name,
+    );
+    const protectedObject = identities.some(
+      (other) =>
+        (other.projectId !== key.projectId || other.identity.composeProject !== name) &&
+        other.objectIds?.some(
+          (id) => saved?.objectIds?.includes(id) || observation?.resource.objectIds?.includes(id),
+        ),
+    );
     const reason =
       stickyEnvironmentReason(saved?.lastOutcome?.reason) ??
       environmentResourceBlocker(
@@ -167,7 +204,8 @@ export class EnvironmentResources {
       ) ??
       (foreign ? 'ownership_conflict' : protectedObject ? 'protected_docker_object' : undefined);
     if (reason) {
-      if (saved) this.outcome(saved, action === 'start' ? 'inspect' : action, 'retained', reason);
+      if (saved && !fence)
+        this.outcome(saved, action === 'start' ? 'inspect' : action, 'retained', reason);
       throw new Error(`Environment retained: ${reason}.`);
     }
     if (action === 'start' && saved!.state === 'released') {

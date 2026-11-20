@@ -48,6 +48,6 @@
     flex: none;
     min-height: 0;
     overflow-y: auto;
-    background: var(--sk-fill-5);
+    background: var(--sk-bg);
   }
 </style>

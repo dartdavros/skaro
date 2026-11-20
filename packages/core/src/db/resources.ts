@@ -156,7 +156,7 @@ export class DbResources extends DbTable {
   recordOutcome(input: ResourceOutcomeInput): ResourceOutcome {
     const value = resourceOutcome(input);
     let result: ResourceOutcome | undefined;
-    this.transaction(() => {
+    this.cleanup.atomic(() => {
       const old = this.db
         .prepare('SELECT value FROM resource_outcomes WHERE operation_id=?')
         .get(value.operationId);
@@ -171,6 +171,10 @@ export class DbResources extends DbTable {
       const resource = this.get(value.resourceId);
       if (!resource || resource.generation !== value.generation)
         throw new Error('Resource outcome belongs to an obsolete generation');
+      // Inspect outcomes also replace lastOutcome. A background scan must respect
+      // the same exclusion as an environment state/consumer update.
+      if (resource.kind === 'environment' && value.action === 'inspect')
+        this.cleanup.assertMutation(resource, resource);
       result = { ...value, at: this.now() };
       this.db
         .prepare(

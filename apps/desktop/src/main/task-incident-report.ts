@@ -23,15 +23,13 @@ export async function reportTaskIncident(
   const execution = ctx.continuation.execution(active);
   const intent = execution.intentVersion();
   const context = ctx.project(active.projectId);
-  const inputs = await taskInputSnapshot(
-    ctx.deps.db,
-    context,
-    await context.store.load(),
-    active.taskId,
-  ).then(
-    (v) => v.version,
-    () => incidentHash(['unavailable', active.run.id]),
-  );
+  const inputs = await context.store
+    .load()
+    .then((artifacts) => taskInputSnapshot(ctx.deps.db, context, artifacts, active.taskId))
+    .then(
+      (v) => v.version,
+      () => incidentHash(['unavailable', active.run.id]),
+    );
   const failure = details ?? incidentFailure(reason);
   if (details?.condition) assertIncidentCondition({ ...failure, condition: details.condition });
   const resource = details?.resourceId
@@ -41,16 +39,27 @@ export async function reportTaskIncident(
       : undefined;
   if (details?.resourceId && (!resource || resource.projectId !== active.projectId))
     throw new Error('Blocker resource is outside this project');
-  const subject = resource
-    ? { kind: 'resource' as const, id: resource.id, version: resource.generation }
-    : { kind: 'run' as const, id: active.run.id };
+  const runSubject = { kind: 'run' as const, id: active.run.id };
+  const resourceVersion = resource
+    ? await incidentResourceVersion(ctx, active.projectId, resource.id).catch((error: unknown) => {
+        // An unreadable checkout can itself be the failure. Keep the report on this run;
+        // without a verified resource version it cannot authorize a resource remedy.
+        if (failure.cause !== 'environment') throw error;
+        return undefined;
+      })
+    : undefined;
+  const subject =
+    resource && resourceVersion
+      ? { kind: 'resource' as const, id: resource.id, version: resource.generation }
+      : runSubject;
   const protocol: IncidentProtocol = {
     ownerPolicyRevision: incidents.policy.read(active.projectId).revision,
     cause: failure.cause,
     code: failure.code,
-    resourceVersion: await incidentResourceVersion(ctx, active.projectId, subject.id),
+    resourceVersion:
+      resourceVersion ?? (await incidentResourceVersion(ctx, active.projectId, subject.id)),
     condition:
-      failure.cause === 'environment' && !resource
+      failure.cause === 'environment' && subject.kind === 'run'
         ? 'owner-evidence'
         : (details?.condition ??
           (resource && resource.kind === 'environment'

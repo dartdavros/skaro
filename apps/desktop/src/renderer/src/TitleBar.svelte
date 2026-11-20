@@ -1,6 +1,7 @@
 <script lang="ts">
   import { IconButton, Icon, ProjectTabs, t, WindowControls } from '@skaro/ui';
   import type { TitleBarProps } from './titlebar-props';
+  import BetaLabel from './BetaLabel.svelte';
   import UpdateButton from './updates/UpdateButton.svelte';
   import DecisionButton from './decisions/DecisionButton.svelte';
   import BackgroundButton from './background/BackgroundButton.svelte';
@@ -30,7 +31,7 @@
       if (!p.closing) p.onhome();
     }}
   >
-    <span>skaro</span>
+    <span>skaro<BetaLabel /></span>
   </button>
   <div class="tabs" class:locked={!p.closing && p.locked} inert={!p.closing && p.locked}>
     {#if !p.closing}<ProjectTabs
