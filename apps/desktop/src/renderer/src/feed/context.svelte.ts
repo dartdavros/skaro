@@ -30,6 +30,7 @@ export interface FeedActions {
   readonly cwd: string | undefined;
   /** The agent session can take commands now (not after the task is done). */
   readonly interactive: boolean;
+  readonly canApplyPendingArchitecture?: boolean;
   openPath(path: string): void;
   /** Current changes of a file in the working folder ("Обновить" in the diff window). */
   fileDiff(path: string): Promise<FileDiff>;
@@ -42,7 +43,7 @@ export interface FeedActions {
   revertMerge?(commit: string): Promise<void>;
   /** Starts the run again from where it stopped. */
   restart(): void;
-  /** Decides on a chat proposal card (project chat only). */
+  /** Decides on a proposal card in this feed. */
   proposal?(itemId: string, action: ProposalAction): Promise<void>;
   /** Opens a section of the project: the created milestone, the ADR. */
   openSection?(section: 'plan' | 'docs' | 'tasks'): void;

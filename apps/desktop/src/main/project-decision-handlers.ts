@@ -10,6 +10,7 @@ import { decisionIsSafety } from './decision-authority';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 import { DecisionNotDispatched } from './decision-not-dispatched';
 import { dispatchQuestionReply } from './question-reply-dispatch';
+import { taskC4Rejection } from './c4-decision-sources';
 
 /** Wrap the existing executors. The window and original feed enter this same gate. */
 export function projectDecisionHandlers<T extends Partial<Handlers>>(
@@ -19,7 +20,11 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
   const reader = new DecisionSources(services),
     replies = new DecisionReplies(services.db);
   decisionReaders.set(services.db, reader);
-  const execute = async (entry: ProjectDecision, action: DecisionAnswer) => {
+  const execute = async (
+    entry: ProjectDecision,
+    action: DecisionAnswer,
+    readCurrent = async () => (await reader.fresh(entry.origin)).find((row) => row.id === entry.id),
+  ) => {
     try {
       if (!decisionIsSafety(action))
         requireCoordinationDispatch(services.db, entry.origin.projectId);
@@ -51,7 +56,7 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
       entry,
       action,
       async () => {
-        const current = (await reader.fresh(entry.origin)).find((row) => row.id === entry.id);
+        const current = await readCurrent();
         if (!current || current.revision !== entry.revision) throw new Error('decision_stale');
       },
       async () => {
@@ -195,6 +200,12 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
       action: 'apply' | 'reject',
       fingerprint?: string,
     ) => {
+      reader.requireProject(p);
+      if (action === 'reject') {
+        const readPending = async () => taskC4Rejection(await services.c4.records(p), p, raw);
+        const pending = await readPending();
+        if (pending) return execute(pending, { kind: 'proposal', action: { action } }, readPending);
+      }
       if (
         action === 'apply' &&
         (await services.c4.records(p)).some(
