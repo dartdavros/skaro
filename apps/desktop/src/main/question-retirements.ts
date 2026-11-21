@@ -3,6 +3,7 @@ import type { AppDb } from '@skaro/core';
 import {
   questionRequestEpoch,
   type Interaction,
+  type QuestionMessageReference,
   type TimelineEvent,
   type TimelineState,
 } from '@skaro/timeline';
@@ -13,8 +14,7 @@ interface Retirement {
   at: number;
   epoch?: string;
 }
-const fingerprint = (question: Question) =>
-  createHash('sha256').update(JSON.stringify(question)).digest('hex');
+const fingerprint = (request: string) => createHash('sha256').update(request).digest('hex');
 
 /** Exact owner cancellations, distinct from answers, permissions and automatic expiry. */
 export class QuestionRetirements {
@@ -30,19 +30,28 @@ export class QuestionRetirements {
         'Cancellation requires an exact saved async question or native request epoch and explicit owner reason.',
       );
     const records = this.db.getSetting<Record<string, Retirement>>(this.key, {});
-    const hash = fingerprint(question);
+    const hash = fingerprint(JSON.stringify(question));
     if (records[question.id]?.hash === hash && records[question.id]?.epoch === epoch) return;
     this.db.setSetting(this.key, {
       ...records,
       [question.id]: { hash, reason, epoch, at: Date.now() },
     });
   }
+
+  cancelledBy(reference: QuestionMessageReference, reason: string): boolean {
+    const record = this.db.getSetting<Record<string, Retirement>>(this.key, {})[reference.id];
+    return (
+      record?.reason === reason &&
+      record.hash === fingerprint(reference.request) &&
+      record.epoch === reference.epoch
+    );
+  }
   recover(state: TimelineState, emit: (event: TimelineEvent) => void): void {
     const records = this.db.getSetting<Record<string, Retirement>>(this.key, {});
     for (const question of [...state.interactions])
       if (
         question.kind === 'question' &&
-        records[question.id]?.hash === fingerprint(question) &&
+        records[question.id]?.hash === fingerprint(JSON.stringify(question)) &&
         (!records[question.id]?.epoch ||
           records[question.id]?.epoch === questionRequestEpoch(state, question))
       )

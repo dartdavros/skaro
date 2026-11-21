@@ -44,7 +44,7 @@ it('answers an owner question without re-enabling execution or erasing the block
   });
   expect(new TaskExecution(db, 'follow-up-blocked').read()).toEqual(execution.read());
   const delivered = taskAgentInput(input, emptyTimeline(), true);
-  expect(delivered.text).toContain('answer it and end this turn');
+  expect(delivered.text).toContain('answer without resuming implementation');
   expect(delivered.text).toContain('resume_task');
   // A retry of the durable input cannot reset the stop or the stall count.
   prepareTaskFollowUp(execution, input, emptyTimeline());

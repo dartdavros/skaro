@@ -19,8 +19,9 @@ export function taskAgentInput(
     followUp &&
       !input.internal &&
       'This is an owner follow-up, not automatic authorization to resume the task. ' +
-        'If it asks a question, requests status or explanation, answer it and end this turn; ' +
-        'do not resume implementation, environment setup, verification or result submission. ' +
+        'If it asks a question, requests status or explanation, answer without resuming ' +
+        'implementation, environment setup, verification or result submission. Follow any Skaro ' +
+        'instructions for a cancelled protected form before ending the turn. ' +
         'Only if this message explicitly instructs you to perform or continue task work, ' +
         'call resume_task with this command_id and an exact quote of that instruction before working. ' +
         'If your next action requires an owner decision, invoke the structured question tool ' +

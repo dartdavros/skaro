@@ -4,12 +4,14 @@ import type { SecretQuestion, SkaroScope } from '@skaro/mcp-server';
 import type { TaskRunEngine } from './task-run-engine';
 import { taskTool } from './task-run-access';
 
+export const TASK_SECRET_QUESTION_PREFIX = 'skaro-secret-';
+
 export function secretInteraction(
   questions: SecretQuestion[],
 ): Extract<Interaction, { kind: 'question' }> {
   return {
     kind: 'question',
-    id: `skaro-secret-${randomUUID()}`,
+    id: `${TASK_SECRET_QUESTION_PREFIX}${randomUUID()}`,
     delivery: 'async',
     questions: questions.map(({ id, header, question }) => ({
       id,
