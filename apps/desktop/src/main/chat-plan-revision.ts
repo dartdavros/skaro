@@ -86,8 +86,6 @@ export async function reviseChatPlan(
     revision: (prior.revision ?? 0) + 1,
     // The full graph is presented below; acceptance/creation remain separate decisions.
     state: 'complete' as const,
-    attempts: 0,
-    lastProgress: 0,
   };
   journal.saveAll([
     ...cards.map((item) => ({ item: { ...item, state: 'superseded' as const } })),

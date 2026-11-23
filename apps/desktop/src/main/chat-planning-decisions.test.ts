@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { savedPlanStatus } from './chat-planning-status';
-import { planningNextStep } from './chat-planning-next';
 import { dialoguePlan, planningWorkspace } from './chat-planning-test-workspace';
 
 describe('planning decisions and continuation with real storage', () => {
-  it('handles a real turn-completed event by persisting a blocker without starting an agent', async () => {
+  it('publishes a completed draft at turn end without another agent turn or creating tasks', async () => {
     const w = await planningWorkspace();
     try {
       await w.engine.planning.prepare(w.live, dialoguePlan());
       const store = w.engine.planning.store(w.live);
-      store.put({ ...store.get('dialogue')!, attempts: 2 });
       const event = {
         t: 'turn.completed' as const,
         turnId: 'stopped-too-early',
@@ -17,15 +15,14 @@ describe('planning decisions and continuation with real storage', () => {
       };
       w.engine.history.onEvent(w.live, event);
       w.engine.planningContinuation.onEvent(w.live, event);
-      for (let i = 0; i < 100 && store.get('dialogue')!.state !== 'blocked'; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 5));
-      }
-      expect(store.get('dialogue')!.state).toBe('blocked');
-      expect(
-        w.live.timeline.state.items.some(
-          (item) => item.kind === 'notice' && item.text.includes('осталось 75'),
-        ),
-      ).toBe(true);
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await w.engine.planningContinuation.settled(w.live);
+      expect(store.get('dialogue')!.state).toBe('complete');
+      const [card] = w.engine.proposals.proposals(w.live);
+      expect(card?.proposal.type === 'plan' && card.proposal.tasks.length).toBe(75);
+      expect(card?.state).toBe('pending');
+      await w.engine.planning.propose(w.live, { key: 'dialogue' });
+      expect(w.engine.proposals.proposals(w.live)).toHaveLength(1);
       expect(w.live.session).toBeUndefined();
       expect((await w.store.load()).tasks).toHaveLength(0);
     } finally {
@@ -51,9 +48,6 @@ describe('planning decisions and continuation with real storage', () => {
       expect(plan.state).toBe('waiting');
       await w.store.setSpecStatus(pending.id, 'superseded');
       w.engine.project(w.live.projectId).invalidate();
-      expect(
-        planningNextStep(plan, w.live.timeline.state.items, await w.store.load(), 0).action,
-      ).toBe('blocked');
       expect((await w.engine.planning.propose(w.live, { key: 'dialogue' })).isError).toBe(true);
       plan = w.engine.planning.store(w.live).get('dialogue')!;
       expect(plan.state).toBe('blocked');
@@ -71,10 +65,8 @@ describe('planning decisions and continuation with real storage', () => {
       let plan = w.engine.planning.store(w.live).get('dialogue')!;
       expect(plan.state).toBe('waiting');
       expect(w.engine.proposals.proposals(w.live)).toHaveLength(0);
-      expect(planningNextStep(plan, [], await w.store.load(), 0).action).toBe('waiting');
       await w.store.setSpecStatus('0001', 'accepted');
       w.engine.project(w.live.projectId).invalidate();
-      expect(planningNextStep(plan, [], await w.store.load(), 0).action).toBe('continue');
       await w.engine.planning.propose(w.live, { key: 'dialogue' });
       plan = w.engine.planning.store(w.live).get('dialogue')!;
       expect(
@@ -85,23 +77,10 @@ describe('planning decisions and continuation with real storage', () => {
     }
   });
 
-  it('limits continuations without progress and prevents cancelled or interrupted work from restarting', async () => {
+  it('prevents cancelled or interrupted work from restarting', async () => {
     const w = await planningWorkspace();
     try {
       await w.engine.planning.prepare(w.live, dialoguePlan());
-      const plan = w.engine.planning.store(w.live).get('dialogue')!;
-      expect(planningNextStep({ ...plan, attempts: 2 }, [], await w.store.load(), 2).action).toBe(
-        'blocked',
-      );
-      await w.engine.planning.propose(w.live, { key: 'dialogue', milestone: 'M08' });
-      expect(
-        planningNextStep(
-          { ...plan, attempts: 2 },
-          w.live.timeline.state.items,
-          await w.store.load(),
-          2,
-        ).action,
-      ).toBe('continue');
       w.engine.planningContinuation.schedule(w.live);
       w.engine.planningContinuation.stop(w.live, 'Владелец остановил выполнение');
       expect(w.live.planningTimer).toBeUndefined();

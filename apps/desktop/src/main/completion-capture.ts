@@ -65,8 +65,7 @@ export async function captureResult(hooks: CompletionHooks, work: CapturedWork):
   });
   store.saveResult({ ...result, pendingReview: false });
   store.issue(taskId);
-  // A result submitted again closes the conflict its merge had met.
-  store.conflict(taskId, false);
+  // The first conflict remains recorded until publication so a second one goes to coordination.
   context.invalidate();
   hooks.deps.emit('project.changed', { projectId });
 }

@@ -27,6 +27,7 @@ export async function finishCompletion(
     )
       continue;
     projected.push(result);
+    store.conflict(task.id, false);
     store.issue(task.id);
     if (task.milestone) store.issue(task.milestone);
     if (task.status === 'review') await context.store.updateTask(task.id, { status: 'done' });

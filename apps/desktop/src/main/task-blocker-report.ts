@@ -10,6 +10,7 @@ export function reportTaskBlocker(
   details?: TaskBlockerDetails,
   operationId?: string,
 ): Promise<ToolResult> {
+  if (scope.kind === 'integration') return ctx.integrations.reportBlocker(reason, scope);
   return taskTool(ctx, scope, async () => {
     const active = ctx.requireActive(scope.projectId, scope.taskId!);
     if (ctx.deps.coordinators) {

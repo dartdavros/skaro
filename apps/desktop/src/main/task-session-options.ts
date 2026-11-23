@@ -15,6 +15,7 @@ import { resourceSessionAdmission } from './resource-session';
 import { requireTaskInputsCurrent } from './task-preflight';
 import { taskC4Protocol } from './c4-protocol';
 import { C4_IMPACT_INSTRUCTIONS } from './c4-impact-instructions';
+import { taskAcceptanceNote } from './task-acceptance-report';
 
 export type TaskSessionSettings = Pick<
   AgentSettings,
@@ -91,7 +92,8 @@ export async function taskSessionOptions(
         : '') +
       (taskC4Protocol(ctx.deps.db, projectId, run.id) === 'impact-v1'
         ? C4_IMPACT_INSTRUCTIONS
-        : ''),
+        : '') +
+      taskAcceptanceNote(ctx.deps.db, run.id, task),
     ...(environment ? { env: environment.variables } : {}),
     mcpServers: {
       playwright: await taskBrowserServer(ctx.deps.dataDir, run.id),

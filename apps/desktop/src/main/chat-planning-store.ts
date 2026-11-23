@@ -6,8 +6,9 @@ export interface SavedChatPlan extends PreparePlanArgs {
   revision?: number;
   state: 'active' | 'waiting' | 'paused' | 'blocked' | 'complete' | 'cancelled';
   reason?: string;
-  attempts: number;
-  lastProgress: number;
+  /** Retained for decoding drafts written by earlier versions. */
+  attempts?: number;
+  lastProgress?: number;
 }
 
 const storageKey = (chatId: string) => `chat.planning.${chatId}`;

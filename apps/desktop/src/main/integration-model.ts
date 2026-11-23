@@ -4,6 +4,7 @@ import type { AgentId, MergeProgress } from '../shared/ipc';
 
 export interface IntegrationRequest {
   inputVersion?: string;
+  conflictRecovery?: true;
   localChanges?: import('@skaro/core').LocalChangesSnapshot;
   projectId: string;
   taskId: string;
@@ -42,6 +43,8 @@ export interface IntegrationOperation extends IntegrationRequest {
   conflicts: string[];
   needsVerification: boolean;
   attempts: number;
+  coordinatorRecovery?: boolean;
+  blocker?: { worker: string; reason: string };
   /** Failed publications of this verified candidate; they repeat without a new verification. */
   publishFailures?: number;
   worker?: string;

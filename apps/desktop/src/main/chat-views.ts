@@ -13,6 +13,8 @@ import type { TimelineState } from '@skaro/timeline';
 import { projectTaskProposalLifecycles } from './task-decision-lifecycle';
 import { ownerResourceWait } from './resource-wait-view';
 import { projectChatArchitecture } from './chat-architecture';
+import { planningIntent } from './chat-planning-intent';
+import { ChatPlanningStore } from './chat-planning-store';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -61,6 +63,9 @@ export class ChatViews {
       if (
         cached &&
         !this.ctx.live.has(chatId) &&
+        (saved.archived ||
+          (!new ChatPlanningStore(this.ctx.deps.db, chatId).current() &&
+            !planningIntent(this.ctx.deps.db, { chat: saved }))) &&
         !this.ctx.deps.db.commands.hasOutstanding(`${projectId}:${chatId}`)
       )
         return {

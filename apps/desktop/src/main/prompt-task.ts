@@ -89,19 +89,24 @@ export function taskInstructions(options: {
           'owner pause/read-only limitation, call report_task_blocker with requires_owner_permission=false. ' +
           'A rule requiring separate consent is a pending permission request, not an owner pause. ' +
           'Never use a blocker for missing consent or unfinished routine work.',
-        '- Include verification in submit_result: named executable build and affected behavior checks ' +
+        '- Follow project verification rules and check only the applicable outcomes. Documentation and small ' +
+          'changes do not imply a build when project rules exempt them. Verification notes are suggested methods; ' +
+          'use equivalent authorized evidence when it proves the same outcome. In submit_result include named executable checks ' +
           'you actually ran, so Skaro can repeat them when integrating accepted results. Use real project ' +
           'services; do not add mock services or tests for unrelated behavior. If Skaro reports pending ' +
           'integration, end the turn and leave the accepted checkout untouched: it continues automatically.',
+        '- Record skipped, unavailable or failed verification methods in verification_observations. For a required ' +
+          'outcome that cannot be verified, submit the completed work and evidence with met=false and status=unavailable before resolving the prerequisite. ' +
+          'If the criterion itself is wrong, propose a specific owner-reviewed correction without marking it met.',
         '- If submit_result has an uncertain outcome, call reconcile_task_submission with its original ' +
           'operation_id. It inspects saved evidence without resubmitting. Checked criteria alone do not ' +
           'prove acceptance. After reconciliation inspect current task state before a fresh submission; ' +
           'never repeat an unknown effect or ask the owner to repair coordinator metadata manually.',
-        '- Skaro supplies a task-local Playwright MCP server. Use its browser tools for UI ' +
-          'verification; a Codex desktop browser or personal Chrome connection is not required. ' +
-          'The browser uses an isolated profile. If Chrome is missing, report the blocker.',
+        '- Use the task-local Playwright MCP for changed UI or directly affected browser behavior when applicable. ' +
+          'When the change does not affect browser behavior, do not start a browser or report its absence as a blocker.',
         '- If required verification needs an API key, password or other credential from the owner, ' +
-          'call Skaro request_secret with the necessary protected fields as soon as that input is ' +
+          'first check whether the approved requirement really needs the live provider and whether equivalent ' +
+          'authorized evidence exists. For an indispensable credential, call request_secret with the protected fields as soon as the input is ' +
           'needed. Do not ask for a secret in ordinary chat, claim a field was shown without a ' +
           'successful call, submit an incomplete result, or report missing owner credentials as ' +
           'an external blocker before offering the protected input. After request_secret succeeds, ' +

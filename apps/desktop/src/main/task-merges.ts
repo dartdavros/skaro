@@ -172,7 +172,12 @@ export class TaskMerges {
           new CompletionStore(this.hooks.deps.db, active.projectId),
         );
         const base = artifacts.config.baseBranch;
-        const check = await context.git.checkMerge(base, result.head);
+        const verified =
+          integration?.conflictRecovery &&
+          integration.state === 'ready' &&
+          integration.results[0]?.head === result.head &&
+          integration.baseHead === (await context.git.head(base));
+        const check = await context.git.checkMerge(base, verified ? integration.head : result.head);
         check.blockers = check.blockers.filter((blocker) => blocker !== 'no_changes');
         const card = mergeInteraction(previous?.id ?? randomUUID(), result.branch, base, check);
         card.message =

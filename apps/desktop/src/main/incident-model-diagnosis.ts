@@ -37,6 +37,9 @@ export async function diagnoseIncident(ctx: TaskRunEngine, row: CoordinationBloc
           'cause using the project instructions and real environment. Recorded failure: ' +
           execution.blocked +
           '. ' +
+          (row.protocol!.code === 'merge_conflict_stalled'
+            ? 'Preserve and inspect the existing task index and worktree. Complete the authorized Git resolution without discarding either side. Once the current base is included in task HEAD and no merge remains active, call verify_project_incident; Skaro resumes the task for verification and submission. '
+            : '') +
           'Do not repeat a command with an uncertain outcome, override Stop, a denial, credentials or permissions. ' +
           'If repair is already authorized, perform it with the normal scoped tools, then call verify_project_incident. ' +
           'For an owner decision call plan_project_incident with your concrete diagnosis, smallest actionable question ' +

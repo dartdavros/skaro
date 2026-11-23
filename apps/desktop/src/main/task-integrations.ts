@@ -25,6 +25,7 @@ import { IntegrationControls } from './integration-controls';
 import { recoverIntegrations } from './integration-resume';
 import { randomUUID } from 'node:crypto';
 import { integrationRetirementEligible } from './integration-retirement-policy';
+import { integrationHoldsTask } from './integration-routing';
 
 /** Connects the integration protocol to task scheduling, permissions, environments and recovery. */
 export class TaskIntegrations {
@@ -122,14 +123,7 @@ export class TaskIntegrations {
   }
 
   ownsTask(projectId: string, taskId: string): boolean {
-    return this.store
-      .all(projectId)
-      .some(
-        (op) =>
-          (op.executor ||
-            ['preparing', 'resolving', 'verifying', 'paused', 'waiting'].includes(op.state)) &&
-          (op.taskId === taskId || op.results.some((result) => result.taskId === taskId)),
-      );
+    return this.store.all(projectId).some((operation) => integrationHoldsTask(operation, taskId));
   }
 
   get closing(): boolean {
@@ -239,6 +233,21 @@ export class TaskIntegrations {
     } catch (error) {
       return { text: errorText(error), isError: true };
     }
+  }
+
+  async reportBlocker(reason: string, scope: SkaroScope): Promise<ToolResult> {
+    const { operation: op, worker } = this.admitted(scope);
+    assertQuestionsAnswered((await this.history.state(op)).state);
+    await this.service.serial(op.id, async () => {
+      this.assertExecuting(op);
+      if (op.worker !== worker) throw new Error('This integration worker has been replaced');
+      if (op.state === 'ready') throw new Error('The integration already passed its checks');
+      op.blocker = { worker, reason: this.history.secrets(op).redact(reason) };
+      this.service.save(op);
+    });
+    return {
+      text: 'The blocker was recorded on this candidate. End the turn to release the executor to project coordination.',
+    };
   }
 
   private environmentVariables(op: IntegrationOperation): Record<string, string> {

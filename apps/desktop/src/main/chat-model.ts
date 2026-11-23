@@ -62,7 +62,6 @@ export class LiveChat {
   proposalQueue: Promise<void> = Promise.resolve();
   deliveryQueue: Promise<void> = Promise.resolve();
   planningRevision = 0;
-  planningContinuations = 0;
   planningTimer: ReturnType<typeof setTimeout> | undefined;
   planningSending = false;
   planningPending: Promise<void> | undefined;

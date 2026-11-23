@@ -34,6 +34,7 @@ export interface ControlPlanArgs extends PlanKeyArgs {
 }
 
 export interface ProjectPlanningHandlers {
+  beginTaskPlan?(decisionId: string | undefined, scope: SkaroScope): Promise<ToolResult>;
   revisePlan?(args: RevisePlanArgs, scope: SkaroScope): Promise<ToolResult>;
   preparePlan(args: PreparePlanArgs, scope: SkaroScope): Promise<ToolResult>;
   proposeSavedPlan(args: ProposeSavedPlanArgs, scope: SkaroScope): Promise<ToolResult>;
