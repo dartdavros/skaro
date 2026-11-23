@@ -40,11 +40,14 @@ export function integrationInstructions(
     `Last recorded failure: ${op.error ?? 'none'}. Retained check evidence: ${JSON.stringify(op.checkRuns ?? [])}.`,
     'Stage your resolution. Skaro owns commit, merge continuation and publication: do not commit, rebase, ' +
       'reset, switch branches, merge other inputs, push, edit .skaro or change the accepted source worktrees.',
-    'Call verify_integration with a structured list of real build and affected behavior checks covering ' +
+    'Call verify_integration with the applicable real build and affected behavior checks covering ' +
       'both sides. Skaro executes them on this exact candidate. If it returns another conflict or a ' +
       'failed check, fix it here and call again. A final text answer cannot accept the integration. ' +
-      'Ending the turn without a verified candidate stops the integration until the owner replies: ' +
-      'do it only for a real blocker and state that blocker exactly.',
+      'For an evidenced obstacle use report_integration_blocker. Continue routine recovery within the existing authority. ' +
+      'If you need an actual owner decision, open the existing structured question and wait.',
+    op.coordinatorRecovery
+      ? 'The coordinator assigned recovery of the preceding incomplete resolver turn. Inspect the retained index, exact Git inputs and last failure before taking action. Resolve it in this candidate and verify it, or raise the precise owner decision required.'
+      : '',
     'Skaro closes this session when the turn ends and stops every command it left running in the ' +
       'background. Wait for a long command inside the turn; never end the turn to wait for it.',
     'Checks default to cmd.exe on Windows and the system shell elsewhere. For PowerShell scripts, ' +

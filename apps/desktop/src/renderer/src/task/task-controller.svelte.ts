@@ -180,6 +180,10 @@ export function createTaskController(
     get interactive() {
       return true;
     },
+    get canApplyPendingArchitecture() {
+      const task = view?.task;
+      return !!task && !task.archived && task.stage !== 'done' && task.stage !== 'cancelled';
+    },
     openPath: (path) =>
       void guard(() => window.skaro.invoke('files.open', projectId, taskId, path)).catch(
         () => undefined,

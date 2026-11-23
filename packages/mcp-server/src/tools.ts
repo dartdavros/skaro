@@ -6,6 +6,11 @@ import {
   verificationCheckSchema,
   type IntegrationCheck,
 } from './verification-plan.ts';
+import {
+  readVerificationObservations,
+  verificationObservationsSchema,
+  type VerificationObservation,
+} from './verification-observations.ts';
 
 import type { SkaroScope } from '@skaro/timeline';
 export type { SkaroScope } from '@skaro/timeline';
@@ -23,12 +28,15 @@ export interface CriterionVerdict {
   /** 1-based number of the criterion in the task. */
   number: number;
   met: boolean;
+  /** Distinguishes a failed observation from an unavailable prerequisite. */
+  status?: 'failed' | 'unavailable';
   /** How the agent checked it: a command, a test, a measurement. */
   evidence: string;
 }
 
 export interface SubmitResultArgs {
   verification?: IntegrationCheck[];
+  verificationObservations?: VerificationObservation[];
   summary: string;
   criteria: CriterionVerdict[];
   commitMessage: string;
@@ -55,7 +63,17 @@ function verdicts(value: unknown): CriterionVerdict[] | string {
     if (typeof v['met'] !== 'boolean') return `criteria[${i}].met must be true or false.`;
     if (typeof v['evidence'] !== 'string' || !v['evidence'].trim())
       return `criteria[${i}].evidence must say how you checked the criterion.`;
-    out.push({ number: v['number'], met: v['met'], evidence: v['evidence'].trim() });
+    const status = v['status'];
+    if (status !== undefined && (v['met'] || (status !== 'failed' && status !== 'unavailable')))
+      return `criteria[${i}].status must be failed or unavailable and requires met: false.`;
+    if (out.some((verdict) => verdict.number === v['number']))
+      return `Criterion ${v['number']} received more than one verdict.`;
+    out.push({
+      number: v['number'],
+      met: v['met'],
+      evidence: v['evidence'].trim(),
+      ...(status && { status }),
+    });
   }
   return out;
 }
@@ -94,6 +112,12 @@ export function submitResultTool(
             properties: {
               number: { type: 'integer', minimum: 1, description: 'Criterion number, from 1.' },
               met: { type: 'boolean' },
+              status: {
+                type: 'string',
+                enum: ['failed', 'unavailable'],
+                description:
+                  'For met: false, distinguish observed failure from missing authorized access or environment. Describe the exact reason in evidence.',
+              },
               evidence: {
                 type: 'string',
                 description: 'How it was checked and what the check showed.',
@@ -113,6 +137,7 @@ export function submitResultTool(
             'the owner requires it.',
           items: verificationCheckSchema(),
         },
+        verification_observations: verificationObservationsSchema,
       },
       required: ['summary', 'criteria', 'commit_message'],
       additionalProperties: false,
@@ -124,12 +149,23 @@ export function submitResultTool(
       const verification =
         args['verification'] === undefined ? undefined : readVerificationPlan(args['verification']);
       if (typeof verification === 'string') return { text: verification, isError: true };
+      const observations =
+        args['verification_observations'] === undefined
+          ? undefined
+          : readVerificationObservations(args['verification_observations']);
+      if (typeof observations === 'string') return { text: observations, isError: true };
       const summary = typeof args['summary'] === 'string' ? args['summary'].trim() : '';
       if (!summary) return { text: '"summary" must not be empty.', isError: true };
       const { commitMessage: message } = commitMessage(args);
       if (!message) return { text: '"commit_message" must not be empty.', isError: true };
       return handler(
-        { summary, criteria, commitMessage: message, ...(verification ? { verification } : {}) },
+        {
+          summary,
+          criteria,
+          commitMessage: message,
+          ...(verification && { verification }),
+          ...(observations?.length && { verificationObservations: observations }),
+        },
         scope,
       );
     },

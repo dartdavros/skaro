@@ -23,10 +23,12 @@ export function createC4Services(
     db,
     projects,
     locale,
-    publish: (scope, item) =>
-      scope.kind === 'task'
-        ? runs.architectureEvent(scope, item)
-        : chats.architectureEvent(scope, item),
+    publish: async (scope, item) => {
+      if (scope.kind !== 'task') return chats.architectureEvent(scope, item);
+      await runs.architectureEvent(scope, item);
+      if (item.state === 'applied' || item.state === 'rejected')
+        chats.planningChanged(scope.projectId);
+    },
     changed: (projectId) => emit('project.changed', { projectId }),
     stageImport: (args, scope) => chats.stageC4(args, scope),
   });

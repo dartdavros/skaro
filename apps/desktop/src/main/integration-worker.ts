@@ -38,6 +38,7 @@ export async function runIntegrationWorker(
   ctx.integrations.assertExecuting(op);
   const worker = `integration-${op.id}-${randomUUID()}`;
   op.worker = worker;
+  op.blocker = undefined;
   op.attempts++;
   ctx.integrations.service.save(op);
   let grant: ReturnType<typeof ctx.deps.mcp.grant> | undefined;
@@ -185,12 +186,6 @@ export async function runIntegrationWorker(
     });
     ctx.integrations.store.delivered(op.id, pending.length);
     await ended;
-    if (op.state !== 'ready' && op.state !== 'paused') {
-      // The agent ended its turn on a question or a report: repeating the turn changes nothing,
-      // so the candidate waits for the owner's message.
-      op.state = 'waiting';
-      ctx.integrations.service.save(op);
-    }
     await session.close();
     await pump;
   } finally {

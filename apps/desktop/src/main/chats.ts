@@ -53,8 +53,12 @@ export class ChatSessions implements ProjectToolHandlers {
     if (!publishChatArchitecture(this.engine, live, item)) return;
     if (item.state === 'applied' || item.state === 'rejected') {
       await this.engine.planDecisions.drain(live);
-      this.engine.planningContinuation.schedule(live);
+      this.planningChanged(scope.projectId);
     }
+  }
+  planningChanged(projectId: string): void {
+    for (const chat of this.engine.live.values())
+      if (chat.projectId === projectId) this.engine.planningContinuation.schedule(chat);
   }
   async stageC4(
     args: import('@skaro/mcp-server').ProposeC4Args,
@@ -131,7 +135,10 @@ export class ChatSessions implements ProjectToolHandlers {
     };
   }
   async open(projectId: string, chatId: string, options?: { paged: boolean }): Promise<ChatView> {
-    return this.engine.views.open(projectId, chatId, options);
+    const view = await this.engine.views.open(projectId, chatId, options);
+    const live = this.engine.live.get(chatId);
+    if (live) this.engine.planningContinuation.schedule(live);
+    return view;
   }
   async create(
     projectId: string,

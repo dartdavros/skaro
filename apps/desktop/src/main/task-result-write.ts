@@ -8,6 +8,7 @@ import { completedTaskReply } from './task-merge-result';
 import { C4ValidationError } from '@skaro/core';
 import { c4ToolFailure, recordC4Diagnostic } from './c4-tool-diagnostic';
 import { operationFailure } from '@skaro/mcp-server';
+import { saveTaskAcceptanceReport } from './task-acceptance-report';
 
 /** Only validation and criterion mutation belong under the project gate; scheduling runs afterward. */
 export async function writeTaskResult(
@@ -76,6 +77,19 @@ export async function writeTaskResult(
       { kind: 'task', projectId: active.projectId, taskId: active.taskId, runId: active.run.id },
       null,
     );
-  await updateSubject(context, task.id, { body: setCriteria(task.body, met) });
+  const body = setCriteria(task.body, met);
+  await updateSubject(context, task.id, { body });
+  saveTaskAcceptanceReport(
+    ctx.deps.db,
+    active.run.id,
+    { ...task, body },
+    active.secrets.redact({
+      criteria: criteria.map((criterion) => criterion.text),
+      verdicts: args.criteria,
+      summary: args.summary,
+      verification: args.verification,
+      observations: args.verificationObservations,
+    }),
+  );
   return { kind: 'written' as const, task, met };
 }

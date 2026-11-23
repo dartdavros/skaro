@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { git } from '@skaro/core';
+import { git, MergeBlockedError } from '@skaro/core';
 import { beforeEach, afterEach, expect, it } from 'vitest';
 import { CompletionFixture } from './completion-test-support';
 import { conflictingResults, stageResolution, behaviorCheck } from './integration-test-support';
@@ -15,6 +15,40 @@ beforeEach(async () => {
 afterEach(async () => {
   await f.close();
 });
+
+it('leaves the first conflict with the task and publishes a verified candidate for a repeated conflict', async () => {
+  const { first, second, b, results } = await conflictingResults(f);
+  await f.coordinator.merge(f.projectId, first.id);
+  const baseHead = await f.context.git.head('main');
+  await expect(f.coordinator.merge(f.projectId, second.id)).rejects.toBeInstanceOf(
+    MergeBlockedError,
+  );
+  expect(f.integrations.deps.store.all(f.projectId)).toEqual([]);
+
+  f.journal.conflict(second.id, true);
+  const handoff = await f.coordinator.merge(f.projectId, second.id).catch((error: unknown) => {
+    if (!(error instanceof IntegrationPending)) throw error;
+    return error.operation;
+  });
+  await f.restart();
+  const [candidate] = f.integrations.deps.store.all(f.projectId);
+  expect(candidate).toMatchObject({
+    id: 'id' in handoff ? handoff.id : undefined,
+    conflictRecovery: true,
+    purpose: 'publication',
+    state: 'resolving',
+    baseHead,
+  });
+  expect(await f.context.git.head('main')).toBe(baseHead);
+  await stageResolution(candidate!);
+  await f.integrations.verify(candidate!, [behaviorCheck], {});
+  await f.coordinator.publishCandidate(candidate!);
+
+  expect(await f.context.git.head('HEAD', b)).toBe(results[1]!.head);
+  expect(await readFile(join(f.repo, 'shared.txt'), 'utf8')).toBe('both accepted behaviors\n');
+  expect((await f.context.store.readTask(second.id)).status).toBe('done');
+  expect(f.journal.conflicts()).not.toContain(second.id);
+}, 60_000);
 
 it.each(['squash', 'merge', 'rebase'] as const)(
   'publishes a candidate resolved before merges went per task with %s, accepted inputs unchanged',

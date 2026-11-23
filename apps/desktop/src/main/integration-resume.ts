@@ -68,6 +68,7 @@ export async function recoverIntegrations(ctx: TaskRunEngine): Promise<void> {
         // is already verified is published; the tasks of the others are merged one by one.
         if (
           op.purpose === 'publication' &&
+          !op.conflictRecovery &&
           !op.localChanges &&
           !['ready', 'applied', 'stale'].includes(op.state)
         ) {

@@ -18,6 +18,7 @@ import { taskQuestionContext } from './question-cancel-handlers';
 import { hasOwnerCommand } from './owner-command-history';
 import { renewIntegrationDispatch, requireIntegrationDispatch } from './integration-dispatch-fence';
 import { decisionIsSafety } from './decision-authority';
+import { isTaskContinuationInput } from './integration-routing';
 import type { TimelineEvent } from '@skaro/timeline';
 import { cancelQuestionRequests, supersedeQuestionInput } from './question-cancellation';
 import {
@@ -55,6 +56,7 @@ export class IntegrationControls {
   }
 
   async send(projectId: string, taskId: string, input: MessageInput): Promise<boolean> {
+    if (isTaskContinuationInput(input)) return false;
     const op = this.current(projectId, taskId);
     if (!op) return false;
     if (
@@ -136,6 +138,7 @@ export class IntegrationControls {
       if (op.executor) return;
       op.state = 'resolving';
       op.attempts = 0;
+      if (freshOwner) op.coordinatorRecovery = undefined;
       this.ctx.integrations.service.save(op);
       this.ctx.integrations.enqueue(op);
     }
@@ -216,7 +219,10 @@ export class IntegrationControls {
   }
 
   async interrupt(projectId: string, taskId: string): Promise<void> {
-    const saved = this.current(projectId, taskId);
+    const saved = currentIntegration(this.ctx.integrations.store.all(projectId), taskId, [
+      ...CONTROLLED,
+      'ready',
+    ]);
     if (!saved) return;
     resourcesFor(this.ctx.deps.db)?.stopOwner(projectId, `integration:${saved.id}`);
     const live = this.sessions.get(saved.id);

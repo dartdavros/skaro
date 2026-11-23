@@ -73,6 +73,35 @@ describe('submit_result', () => {
     expect(tool.available?.({ kind: 'project_chat', projectId: 'p', chatId: 'c' })).toBe(false);
   });
 
+  it('keeps an inapplicable method separate from an unavailable required outcome', async () => {
+    let report: SubmitResultArgs | undefined;
+    const tool = submitResultTool(async (input) => {
+      report = input;
+      return { text: 'recorded' };
+    });
+    const criterion = {
+      number: 1,
+      met: false,
+      status: 'unavailable',
+      evidence: 'Authorized provider account required',
+    };
+    const observations = [
+      { name: 'Browser review', outcome: 'not_applicable', reason: 'No browser behavior changed' },
+    ];
+    const input = {
+      summary: 'Backend updated',
+      commit_message: 'fix: update backend',
+      criteria: [criterion],
+      verification_observations: observations,
+    };
+    expect((await tool.call(input, scope)).isError).toBeUndefined();
+    expect(report?.criteria).toEqual([criterion]);
+    expect(report?.verificationObservations).toEqual(observations);
+    expect(
+      (await tool.call({ ...input, criteria: [{ ...criterion, met: true }] }, scope)).isError,
+    ).toBe(true);
+  });
+
   it('preserves executable acceptance checks and rejects malformed plans', async () => {
     let got: SubmitResultArgs | undefined;
     const tool = submitResultTool(async (args) => {

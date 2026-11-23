@@ -1,5 +1,7 @@
 import type { DecisionSource } from '../shared/project-decisions';
+import { emptyTimeline } from '@skaro/timeline';
 import type { C4ProposalRecord } from './c4-service';
+import { projectDecisionProjection } from './decision-projection';
 
 /** Storage wins when a crash separated the confirmed package from its timeline publication. */
 export function canonicalC4Decisions(
@@ -19,4 +21,31 @@ export function canonicalC4Decisions(
   const present = new Set(items.map((item) => item.id));
   for (const record of owned) if (!present.has(record.item.id)) items.push(record.item);
   return { ...source, timeline: { ...source.timeline, items } };
+}
+
+/** A saved package can still be declined from its task feed after the task leaves the queue. */
+export function taskC4Rejection(
+  records: readonly Pick<C4ProposalRecord, 'scope' | 'item'>[],
+  projectId: string,
+  itemId: string,
+) {
+  const record = records.find(
+    ({ scope, item }) =>
+      scope.projectId === projectId &&
+      scope.kind === 'task' &&
+      item.id === itemId &&
+      item.proposal.type === 'architecture' &&
+      item.state === 'pending',
+  );
+  if (!record?.scope.taskId || !record.scope.runId) return;
+  return projectDecisionProjection([
+    {
+      projectId,
+      kind: 'task',
+      id: record.scope.taskId,
+      title: record.scope.taskId,
+      epoch: record.scope.runId,
+      timeline: { ...emptyTimeline(), items: [record.item] },
+    },
+  ])[0];
 }

@@ -17,9 +17,15 @@ export const TASK_SCHEMA = {
     criteria: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Acceptance criteria: checkable statements.',
+      description:
+        'Observable outcomes of the requested change. Put check methods and prerequisites in verification_notes.',
     },
     notes: { type: 'string', description: 'Optional hints: files, decisions, constraints.' },
+    verification_notes: {
+      type: 'string',
+      description:
+        'Optional verification methods for the affected outcomes, including their environment and prerequisites. These notes do not add acceptance criteria.',
+    },
     depends_on: {
       type: 'array',
       items: { type: 'string' },
@@ -104,15 +110,22 @@ export function tasks(
 ): ProposedTaskArgs[] {
   return list(args, 'tasks', allowEmpty).map((t, i): ProposedTaskArgs => {
     const task = record(t, `tasks[${i}]`);
+    if (
+      !Array.isArray(task['criteria']) ||
+      task['criteria'].some((item) => typeof item !== 'string' || /[\r\n]/.test(item))
+    )
+      throw new ToolArgsError(`tasks[${i}]: each criterion must be a single outcome statement.`);
     const criteria = strings(task, 'criteria');
     if (!criteria.length) throw new ToolArgsError(`tasks[${i}]: "criteria" must not be empty.`);
     const ref = task['ref'];
+    const { verification_notes: verificationNotes } = optional(task, 'verification_notes');
     return {
       ref: typeof ref === 'string' && ref.trim() ? ref.trim() : `${prefix}task-${i + 1}`,
       title: text(task, 'title'),
       goal: text(task, 'goal'),
       criteria,
       ...optional(task, 'notes'),
+      ...(verificationNotes && { verificationNotes }),
       dependsOn: task['depends_on'] === undefined ? [] : strings(task, 'depends_on'),
       ...optional(task, 'spec'),
     };

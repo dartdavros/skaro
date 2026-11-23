@@ -11,6 +11,7 @@ import { TaskExecution } from './task-execution';
 import { checkIncidentProvider } from './incident-provider-check';
 import { terminalTaskHistory } from './terminal-task-requests';
 import { findTask } from './task-run-helpers';
+import { checkTaskMergeConflict } from './task-merge-conflict-recovery';
 
 export async function currentIncidentSubscriber(
   ctx: TaskRunEngine,
@@ -134,6 +135,8 @@ export async function checkIncident(
     row.protocol!.resourceVersion
   )
     return false;
+  if (row.protocol!.code === 'merge_conflict_stalled' && row.protocol!.cause === 'no-progress')
+    return checkTaskMergeConflict(ctx, row);
   if (row.protocol!.condition === 'owner-evidence') return false;
   if (row.protocol!.condition === 'provider-evidence') return checkIncidentProvider(ctx, row);
   if (row.protocol!.condition === 'environment-ready') {

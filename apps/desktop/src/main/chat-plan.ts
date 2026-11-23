@@ -123,6 +123,15 @@ export class ChatPlan {
 
   proposedTask(task: ProposedTaskArgs, titles: Map<string, string>): ProposedTask {
     const dependsOn = task.dependsOn.map((d) => (titles.has(d) ? d : d.toUpperCase()));
+    const locale = this.ctx.deps.locale();
+    const verificationLabel = locale === 'ru' ? 'Способ проверки' : 'Verification approach';
+    const verification = task.verificationNotes
+      ?.split(/\r?\n/)
+      .map((line) => `> ${line}`)
+      .join('\n');
+    const notes = [task.notes, verification && `**${verificationLabel}**\n\n${verification}`]
+      .filter(Boolean)
+      .join('\n\n');
     return {
       ref: task.ref,
       title: task.title,
@@ -130,9 +139,9 @@ export class ChatPlan {
         {
           goal: task.goal,
           criteria: task.criteria,
-          ...(task.notes ? { notes: task.notes } : {}),
+          ...(notes ? { notes } : {}),
         },
-        this.ctx.deps.locale(),
+        locale,
       ),
       dependsOn,
       dependsOnTitles: dependsOn.map((d) => titles.get(d) ?? d),

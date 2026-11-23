@@ -10,6 +10,7 @@ import type { MessageInput } from '../shared/ipc';
 import { QuestionRetirements } from './question-retirements';
 import { QuestionAnswers } from './question-answers';
 import { DecisionNotDispatched } from './decision-not-dispatched';
+import { TASK_SECRET_QUESTION_PREFIX } from './task-secret-input';
 
 type Question = Extract<Interaction, { kind: 'question' }>;
 export interface QuestionCancellationContext {
@@ -81,21 +82,42 @@ export async function supersedeQuestionInput(
           ref.epoch === questionRequestEpoch(context.state, q),
       ),
   );
-  if (!questions.length) return input;
-  await cancelQuestionRequests(
-    context,
-    questions,
-    `Superseded by owner message ${input.commandId ?? ''}`,
+  const reason = `Superseded by owner message ${input.commandId ?? ''}`;
+  if (questions.length) await cancelQuestionRequests(context, questions, reason);
+
+  const retirements = new QuestionRetirements(context.db, context.owner);
+  const recoveredProtected = input.supersededQuestions.filter(
+    (ref) =>
+      input.commandId &&
+      ref.id.startsWith(TASK_SECRET_QUESTION_PREFIX) &&
+      !questions.some((question) => question.id === ref.id) &&
+      retirements.cancelledBy(ref, reason),
   );
+  const superseded = [
+    ...questions,
+    ...recoveredProtected.map((ref) => JSON.parse(ref.request) as Question),
+  ];
+  if (!superseded.length) return input;
+  const requests = superseded.map((q) => ({
+    id: q.id,
+    questions: q.questions.map((field) => field.text),
+  }));
+  const protectedForm = superseded.some((q) => q.id.startsWith(TASK_SECRET_QUESTION_PREFIX));
   return {
     ...input,
     text: withSkaroNote(
       'The owner replied in the composer and superseded these earlier requests: ' +
-        JSON.stringify(
-          questions.map((q) => ({ id: q.id, questions: q.questions.map((field) => field.text) })),
-        ) +
+        JSON.stringify(requests) +
         '. Their fields were cancelled, not filled. Interpret the actual owner message as the new instruction. ' +
-        'Do not repeat obsolete requests. Ask a new concrete question only if the new instruction leaves an indispensable decision unresolved.',
+        'Do not repeat obsolete requests. Ask a new concrete question only if the new instruction leaves an indispensable decision unresolved.' +
+        (protectedForm
+          ? '\nA protected form was cancelled. Tell the owner in commentary before any tool call that ' +
+            'chat did not submit the form. Never use or repeat credentials from this message. If the ' +
+            'owner has not withdrawn the task or this request and protected values are still needed, ' +
+            'call Skaro request_secret now with the fields still required and wait for the form answer. ' +
+            'Opening replacement fields is part of answering this message and does not require resume_task ' +
+            'or another message asking to continue. Do not end with a status-only acknowledgement.'
+          : ''),
       input.text,
     ),
   };

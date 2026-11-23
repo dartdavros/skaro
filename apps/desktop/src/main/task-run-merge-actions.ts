@@ -10,6 +10,7 @@ import { CompletionStore } from './completion-store';
 import { stageIdOf } from './task-stage';
 import { IntegrationPending } from './integration-model';
 import { accessTaskWorktree } from './task-worktree-retention';
+import { resolveRepeatedTaskConflict } from './task-merge-conflict-recovery';
 
 /** A task is merged on its own by Git; a conflict goes back to its agent, checkout and environment. */
 export class TaskRunMergeActions {
@@ -45,8 +46,10 @@ export class TaskRunMergeActions {
       return;
     }
     if (action.action === 'update_branch') return this.updateBranch(active, context);
-    if (action.action === 'resolve_with_agent' && !card.blockers.includes('dirty_base'))
+    if (action.action === 'resolve_with_agent' && !card.blockers.includes('dirty_base')) {
+      if (await resolveRepeatedTaskConflict(this.ctx, active)) return;
       return this.conflicted(active, card.conflicts);
+    }
     try {
       await this.confirmMerge(
         active,

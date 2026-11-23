@@ -57,6 +57,25 @@ const keyArgs = (args: Record<string, unknown>) => ({ key: text(args, 'key') });
 
 export function planningTools(handlers: ProjectPlanningHandlers): Tool<SkaroScope>[] {
   const result: Tool<SkaroScope>[] = [
+    ...(handlers.beginTaskPlan
+      ? [
+          {
+            name: 'begin_task_plan',
+            description:
+              'Register an owner request for an implementation plan or task proposals before doing the planning. Honor explicit text-only requests. If a required C4 or milestone proposal is pending, call again with its exact decision_id to resume after application.',
+            inputSchema: {
+              type: 'object',
+              properties: { decision_id: { type: 'string' } },
+              additionalProperties: false,
+            },
+            available: inChat,
+            call: guarded(
+              (args) => optional(args, 'decision_id'),
+              (args, scope) => handlers.beginTaskPlan!(args.decision_id, scope),
+            ),
+          } satisfies Tool<SkaroScope>,
+        ]
+      : []),
     {
       name: 'prepare_plan',
       description:
@@ -64,7 +83,7 @@ export function planningTools(handlers: ProjectPlanningHandlers): Tool<SkaroScop
         'existing milestones, full task records, requirement coverage and dependencies by unique ' +
         'ref, including dependencies across milestones. expected_total must match the records. ' +
         'This saves a draft, not task files. Repeating the same key and contents is idempotent. ' +
-        'Then call propose_saved_plan and finish_plan. Never claim tasks are prepared before this succeeds.\n\nTask boundaries:\n' +
+        'Skaro offers the saved plan automatically when ready. Never claim tasks are prepared before this succeeds.\n\nTask boundaries:\n' +
         TASK_DECOMPOSITION_RULES,
       inputSchema: {
         type: 'object',
@@ -171,8 +190,9 @@ export function planningTools(handlers: ProjectPlanningHandlers): Tool<SkaroScop
     },
   ];
   if (handlers.revisePlan) {
-    const prepare = result[0]!;
-    result.splice(1, 0, {
+    const index = result.findIndex((tool) => tool.name === 'prepare_plan');
+    const prepare = result[index]!;
+    result.splice(index + 1, 0, {
       ...prepare,
       name: 'revise_plan',
       description:

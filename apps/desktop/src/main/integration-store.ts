@@ -17,6 +17,7 @@ export function integrationFingerprint(request: IntegrationRequest, baseHead: st
         task: request.taskId,
         purpose: request.purpose,
         inputVersion: request.inputVersion,
+        conflictRecovery: request.conflictRecovery,
         baseHead,
         results: request.results.map((r) => [r.taskId, r.head, r.criteria, r.verification]),
         checks: request.checks,

@@ -8,6 +8,7 @@ export interface ProposedTaskArgs {
   goal: string;
   criteria: string[];
   notes?: string;
+  verificationNotes?: string;
   /** Refs of tasks in the same call or ids of existing tasks (T-004). */
   dependsOn: string[];
   /** Specification the task implements (0003). */

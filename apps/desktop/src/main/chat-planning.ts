@@ -16,6 +16,7 @@ import type { LiveChat } from './chat-model';
 import { serializeChatMutation } from './chat-mutations';
 import { pendingC4PlanProblem } from './chat-plan-c4';
 import { reviseChatPlan } from './chat-plan-revision';
+import { beginPlanningIntent } from './chat-planning-intent';
 
 export class ChatPlanning implements ProjectPlanningHandlers {
   private readonly ctx: ChatEngine;
@@ -25,6 +26,13 @@ export class ChatPlanning implements ProjectPlanningHandlers {
 
   store(live: LiveChat): ChatPlanningStore {
     return new ChatPlanningStore(this.ctx.deps.db, live.chat.id);
+  }
+
+  beginTaskPlan(decisionId: string | undefined, scope: SkaroScope): Promise<ToolResult> {
+    const live = this.ctx.context.caller(scope);
+    return serializeChatMutation(live, async () =>
+      beginPlanningIntent(this.ctx.deps.db, live, decisionId),
+    );
   }
 
   async preparePlan(args: PreparePlanArgs, scope: SkaroScope): Promise<ToolResult> {
@@ -45,8 +53,8 @@ export class ChatPlanning implements ProjectPlanningHandlers {
       const {
         state: _state,
         reason: _reason,
-        attempts: _attempts,
-        lastProgress: _progress,
+        attempts: _legacyAttempts,
+        lastProgress: _legacyProgress,
         revision: _revision,
         ...contents
       } = prior;
@@ -65,10 +73,10 @@ export class ChatPlanning implements ProjectPlanningHandlers {
       };
     const problem = preparedPlanProblem(normalized, artifacts);
     if (problem) return { text: problem, isError: true };
-    const plan = { ...normalized, state: 'active' as const, attempts: 0, lastProgress: 0 };
+    const plan = { ...normalized, state: 'active' as const };
     store.put(plan);
     return {
-      text: `Saved ${args.expectedTotal} complete task records. Call propose_saved_plan for ALL milestones, then finish_plan.\n${planStatusText(plan, live.timeline.state.items, artifacts)}`,
+      text: `Saved ${args.expectedTotal} complete task records. Skaro publishes the proposal when prerequisites are ready.\n${planStatusText(plan, live.timeline.state.items, artifacts)}`,
     };
   }
 
@@ -77,10 +85,31 @@ export class ChatPlanning implements ProjectPlanningHandlers {
     return serializeChatMutation(live, () => this.propose(live, args));
   }
 
-  async propose(live: LiveChat, args: ProposeSavedPlanArgs): Promise<ToolResult> {
+  async publishReady(live: LiveChat, key: string, current: () => boolean): Promise<void> {
+    await serializeChatMutation(live, async () => {
+      if (!current()) return;
+      const result = await this.propose(live, { key }, current);
+      if (result.isError && current()) this.ctx.history.notice(live, 'other', 'error', result.text);
+    });
+  }
+
+  async propose(
+    live: LiveChat,
+    args: ProposeSavedPlanArgs,
+    current = () => true,
+  ): Promise<ToolResult> {
     const store = this.store(live);
     const plan = store.get(args.key);
     if (!plan) return { text: 'No saved plan with this key.', isError: true };
+    if (plan.state === 'complete') {
+      return {
+        text: planStatusText(
+          plan,
+          live.timeline.state.items,
+          await this.ctx.project(live.projectId).load(),
+        ),
+      };
+    }
     if (['paused', 'cancelled', 'blocked'].includes(plan.state)) {
       return {
         text: `Plan is ${plan.state}: ${plan.reason}. Resume only within the owner-authorized request.`,
@@ -98,6 +127,7 @@ export class ChatPlanning implements ProjectPlanningHandlers {
     if (problem) return { text: problem, isError: true };
     const all = plan.milestones.flatMap((m) => m.tasks);
     const architecture = await pendingC4PlanProblem(this.ctx.deps.db, live.projectId, all);
+    if (!current()) return { text: 'Planning operation was superseded.', isError: true };
     if (architecture) {
       store.put({ ...plan, state: 'waiting', reason: architecture });
       return {
@@ -114,10 +144,11 @@ export class ChatPlanning implements ProjectPlanningHandlers {
       };
     }
     await this.ctx.planReview.consolidate(live);
+    if (!current()) return { text: 'Planning operation was superseded.', isError: true };
     this.ctx.planReview.offer(live, plan, artifacts);
-    store.put({ ...plan, state: 'active', reason: undefined });
+    store.put({ ...plan, state: 'complete', reason: undefined });
     return {
-      text: `One complete plan is ready for one owner confirmation. Call finish_plan.\n${planStatusText(store.get(plan.key)!, live.timeline.state.items, artifacts)}`,
+      text: `One complete plan is ready for owner confirmation.\n${planStatusText(store.get(plan.key)!, live.timeline.state.items, artifacts)}`,
     };
   }
 
@@ -144,7 +175,7 @@ export class ChatPlanning implements ProjectPlanningHandlers {
     }
     store.put({ ...plan, state: 'complete', reason: undefined });
     return {
-      text: `All saved tasks were proposed. Acceptance and creation are separate owner decisions.\n${planStatusText(store.get(plan.key)!, live.timeline.state.items, artifacts)}`,
+      text: `All saved tasks were proposed in one card. Skaro creates the selected tasks after owner confirmation.\n${planStatusText(store.get(plan.key)!, live.timeline.state.items, artifacts)}`,
     };
   }
 
@@ -171,7 +202,6 @@ export class ChatPlanning implements ProjectPlanningHandlers {
       state:
         args.action === 'resume' ? 'active' : args.action === 'cancel' ? 'cancelled' : 'paused',
       reason: args.reason,
-      attempts: 0,
     });
     return { text: `Plan ${args.key}: ${store.get(args.key)!.state}. ${args.reason}` };
   }

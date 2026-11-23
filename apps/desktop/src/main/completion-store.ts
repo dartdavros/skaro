@@ -88,7 +88,7 @@ export class CompletionStore {
     this.db.setSetting(`completion.${this.projectId}.issues`, issues);
   }
 
-  /** Tasks sent back to their agents over a merge conflict, until they submit a result again. */
+  /** Tasks sent back to their agents over a merge conflict, until publication. */
   conflicts(): string[] {
     return this.db.getSetting(`completion.${this.projectId}.conflicts`, []);
   }

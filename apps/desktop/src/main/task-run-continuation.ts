@@ -10,6 +10,9 @@ import type { EnvironmentRecord } from './task-environment-registry';
 import type { MessageInput } from '../shared/ipc';
 import { OWNER_PERMISSION_INSTRUCTIONS } from './agent-interaction-instructions';
 import { incidentDiagnosisCurrent } from './incident-model-diagnosis';
+import { handoffStalledMerge } from './task-merge-conflict-recovery';
+import { CompletionStore } from './completion-store';
+import { taskAcceptanceNote } from './task-acceptance-report';
 
 const CONTINUE =
   'Continue the authorized task to its verified result. The preceding model turn ended, ' +
@@ -136,13 +139,27 @@ export class TaskRunContinuation {
     const next = execution.next(turn.id, fingerprint);
     if (next === 'duplicate') return true;
     if (next === 'stalled') {
-      if (this.ctx.deps.coordinators)
-        await this.ctx.incidents.report(
+      if (await handoffStalledMerge(this.ctx, active, task)) return true;
+      if (!execution.read().enabled) return true;
+      if (this.ctx.deps.coordinators) {
+        const conflict = new CompletionStore(this.ctx.deps.db, active.projectId)
+          .conflicts()
+          .includes(active.taskId);
+        const incident = await this.ctx.incidents.report(
           active,
-          'Repeated completion without progress',
-          { cause: 'no-progress', code: 'no_progress', condition: 'owner-evidence' },
+          conflict
+            ? 'The first Git conflict resolution stalled in the task checkout'
+            : 'Repeated completion without progress',
+          {
+            cause: 'no-progress',
+            code: conflict ? 'merge_conflict_stalled' : 'no_progress',
+            condition: 'owner-evidence',
+          },
           'controller',
         );
+        await this.ctx.incidents.reconcile(active.projectId, incident.id);
+        return true;
+      }
       this.block(
         active,
         'Агент повторно завершил работу без результата и без изменений. Автопродолжение остановлено, чтобы не расходовать лимит впустую.',
@@ -151,7 +168,7 @@ export class TaskRunContinuation {
       return true;
     }
     await this.ctx.scheduling.enqueue(active.projectId, active.taskId, {
-      text: CONTINUE,
+      text: CONTINUE + taskAcceptanceNote(this.ctx.deps.db, active.run.id, task),
       internal: true,
       commandId: `continue-${active.run.id}-${turn.id}`,
     });

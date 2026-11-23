@@ -7,6 +7,7 @@ import {
   projectDecisionProjection,
 } from './decision-projection';
 import type { DecisionSource } from '../shared/project-decisions';
+import { taskC4Rejection } from './c4-decision-sources';
 
 const approval: Interaction = {
   kind: 'approval',
@@ -68,36 +69,50 @@ it('excludes every request of a completed task, including controller questions, 
   ).toEqual([]);
   expect(state.interactions).toEqual([merge, question, nativeQuestion]);
 });
-it('keeps accepted architecture in the source while removing it from unanswered decisions', () => {
+it('allows explicit rejection of a saved task package outside the active decisions queue', () => {
   const entry = source('architecture-owner');
   entry.timeline.interactions = [];
-  entry.timeline.items = [
-    {
-      id: 'skaro-c4-observed',
-      kind: 'proposal',
-      turnId: '',
-      status: 'done',
-      state: 'accepted',
-      startedAt: 0,
-      native: { agent: 'skaro', type: 'proposal', ref: 'architecture' },
-      proposal: {
-        type: 'architecture',
-        packageId: 'observed',
-        title: 'Architecture',
-        summary: 'Protocol metadata',
-        baseRevision: 1,
-      },
-    },
-  ];
-  expect(projectDecisionProjection([entry])).toEqual([]);
-  expect(entry.timeline.items[0]!.kind === 'proposal' && entry.timeline.items[0]!.state).toBe(
-    'accepted',
-  );
-  entry.timeline.items[0] = {
-    ...entry.timeline.items[0]!,
+  const item = {
+    id: 'skaro-c4-observed',
+    kind: 'proposal',
+    turnId: '',
+    status: 'done',
     state: 'pending',
-  } as (typeof entry.timeline.items)[number];
-  expect(projectDecisionProjection([entry])).toHaveLength(1);
+    startedAt: 0,
+    native: { agent: 'skaro', type: 'proposal', ref: 'architecture' },
+    proposal: {
+      type: 'architecture',
+      packageId: 'observed',
+      title: 'Architecture',
+      summary: 'Protocol metadata',
+      baseRevision: 1,
+    },
+  } as const;
+  const scope = {
+    kind: 'task' as const,
+    projectId: entry.projectId,
+    taskId: entry.id,
+    runId: entry.epoch,
+  };
+  const record = { item, scope };
+  entry.timeline.items = [item];
+  const [active] = projectDecisionProjection([entry]);
+  expect(active).toBeDefined();
+  expect(projectDecisionProjection([{ ...entry, terminalTask: true }])).toEqual([]);
+  expect(taskC4Rejection([record], entry.projectId, item.id)).toMatchObject({
+    id: active!.id,
+    revision: active!.revision,
+    origin: { id: entry.id, epoch: entry.epoch },
+  });
+  expect(taskC4Rejection([record], 'foreign-project', item.id)).toBeUndefined();
+  expect(taskC4Rejection([record], entry.projectId, 'another-package')).toBeUndefined();
+  for (const state of ['accepted', 'applied', 'rejected'] as const) {
+    const decided = { ...item, state };
+    expect(
+      projectDecisionProjection([{ ...entry, timeline: { ...entry.timeline, items: [decided] } }]),
+    ).toEqual([]);
+    expect(taskC4Rejection([{ scope, item: decided }], entry.projectId, item.id)).toBeUndefined();
+  }
   expect(taskDecisionTimeline(entry.timeline, false, true).items).toEqual([]);
   expect(taskDecisionTimeline(entry.timeline, false, false).items).toHaveLength(1);
   expect(entry.timeline.items).toHaveLength(1); // Historical proposal remains intact.

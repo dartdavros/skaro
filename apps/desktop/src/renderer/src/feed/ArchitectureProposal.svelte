@@ -11,6 +11,11 @@
   let review = $state.raw<C4PackageReview>();
   let error = $state('');
   const proposal = $derived(model.proposal.type === 'architecture' ? model.proposal : undefined);
+  const canApply = $derived(
+    model.actionable &&
+      ((model.item.state === 'pending' && model.feed.canApplyPendingArchitecture !== false) ||
+        (model.item.state === 'accepted' && !!model.item.result?.error)),
+  );
   $effect(() => {
     const id = model.item.id;
     let current = true;
@@ -69,7 +74,7 @@
           ><X size={16} />{t('proposal.reject')}</button
         >
       {/if}
-      {#if model.actionable && (model.item.state === 'pending' || (model.item.state === 'accepted' && model.item.result?.error))}
+      {#if canApply}
         <button
           type="button"
           class="btn primary"

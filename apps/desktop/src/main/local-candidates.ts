@@ -98,10 +98,14 @@ export class LocalCandidates {
     const context = this.ctx.project(op.projectId);
     const artifacts = await context.store.load();
     const inputs = await taskInputSnapshot(this.ctx.deps.db, context, artifacts, op.taskId);
+    const worktree = this.ctx.deps.db.latestRun(op.projectId, op.taskId)?.worktree;
     if (
       !op.inputVersion ||
       op.inputVersion !== inputs.version ||
-      memoryVersion(op.checks) !== inputs.checks
+      memoryVersion(op.checks) !== inputs.checks ||
+      !worktree ||
+      (await context.git.head('HEAD', worktree)) !== op.baseHead ||
+      (await git(worktree, ['status', '--porcelain'])).stdout.trim()
     )
       throw new Error('Local candidate inputs changed; prepare a new candidate');
     return inputs;

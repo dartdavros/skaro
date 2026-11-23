@@ -3,8 +3,8 @@ import { CompletionMonitor } from './completion-monitor';
 import { CompletionStore, type TaskResult } from './completion-store';
 import { captureResult } from './completion-capture';
 import { acceptedResult, assertResultUnchanged, wasReverted } from './completion-results';
-import { publishCandidate, retireCandidates } from './completion-publication';
-import { mergeMilestoneTasks } from './completion-milestone';
+import { publishCandidate } from './completion-publication';
+import { mergeCompletionTarget } from './completion-milestone';
 import { finishCompletion } from './completion-projection';
 import { reconcileCompletions } from './completion-recovery';
 import type { ProjectContext } from './projects';
@@ -162,17 +162,8 @@ export class CompletionCoordinator {
     );
   }
 
-  private async performMerge(
-    projectId: string,
-    target: string,
-    message?: string,
-  ): Promise<{ commit: string; base: string }> {
-    const context = this.hooks.deps.projects.get(projectId);
-    context.invalidate();
-    const artifacts = await context.load();
-    if (artifacts.tasks.some((item) => item.id === target))
-      return this.mergeResults(projectId, [target], message);
-    return mergeMilestoneTasks(
+  private performMerge(projectId: string, target: string, message?: string) {
+    return mergeCompletionTarget(
       this.hooks,
       projectId,
       target,
@@ -258,8 +249,6 @@ export class CompletionCoordinator {
           candidate,
         );
       } else {
-        // The older candidates of the task are over: its merge is a Git operation of its own.
-        retireCandidates(this.hooks.integrations, projectId, ids);
         this.mergingNow.set(projectId, target);
         this.hooks.deps.emit('project.changed', { projectId });
         try {
@@ -270,6 +259,7 @@ export class CompletionCoordinator {
             operation,
             text,
             this.hooks.integrations,
+            this.hooks.deps.db,
           );
         } finally {
           this.mergingNow.delete(projectId);

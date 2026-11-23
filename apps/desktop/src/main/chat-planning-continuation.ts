@@ -1,9 +1,7 @@
 import type { TimelineEvent } from '@skaro/timeline';
 import type { ChatEngine } from './chat-engine';
 import type { LiveChat } from './chat-model';
-import { planStatusText } from './chat-planning-status';
-import { planningNextStep } from './chat-planning-next';
-import { pendingC4PlanProblem } from './chat-plan-c4';
+import { nextPlanningIntent, planningIntent, stopPlanningIntent } from './chat-planning-intent';
 
 /** Continuations are bounded, serialized with user messages, and scoped to a saved plan. */
 export class ChatPlanningContinuation {
@@ -20,11 +18,11 @@ export class ChatPlanningContinuation {
     const store = this.ctx.planning.store(live);
     const plan = store.current();
     if (plan) store.put({ ...plan, state: 'paused', reason });
+    stopPlanningIntent(this.ctx.deps.db, live);
   }
 
   userMessage(live: LiveChat): void {
     live.planningRevision++;
-    live.planningContinuations = 0;
     if (live.planningTimer) clearTimeout(live.planningTimer);
     live.planningTimer = undefined;
     live.planningWake = false;
@@ -50,7 +48,14 @@ export class ChatPlanningContinuation {
       return;
     }
     if (live.planningSent) return;
-    if (live.planningTimer || live.chat.archived || !this.ctx.planning.store(live).current())
+    if (
+      this.ctx.closing ||
+      live.stopping ||
+      live.stopError ||
+      live.planningTimer ||
+      live.chat.archived ||
+      (!this.ctx.planning.store(live).current() && !planningIntent(this.ctx.deps.db, live))
+    )
       return;
     const revision = live.planningRevision;
     live.planningTimer = setTimeout(() => {
@@ -76,82 +81,44 @@ export class ChatPlanningContinuation {
   }
 
   private async continue(live: LiveChat, revision: number): Promise<void> {
-    if (
-      revision !== live.planningRevision ||
-      live.chat.archived ||
-      live.timeline.state.status !== 'idle' ||
-      live.timeline.state.interactions.length
-    )
-      return;
-    const store = this.ctx.planning.store(live);
-    let plan = store.current();
-    if (!plan || !['active', 'waiting'].includes(plan.state)) return;
-    const artifacts = await this.ctx.project(live.projectId).load();
-    const architecture = await pendingC4PlanProblem(
-      this.ctx.deps.db,
-      live.projectId,
-      plan.milestones.flatMap((m) => m.tasks),
-    );
-    if (
-      revision !== live.planningRevision ||
-      live.chat.archived ||
-      live.timeline.state.status !== 'idle'
-    )
-      return;
-    // A tool may have finished or paused the operation while artifacts were loading.
-    plan = store.get(plan.key);
-    if (!plan || !['active', 'waiting'].includes(plan.state)) return;
-    if (architecture) {
-      store.put({ ...plan, state: 'waiting', reason: architecture });
+    const current = () =>
+      !this.ctx.closing &&
+      !live.stopping &&
+      !live.stopError &&
+      revision === live.planningRevision &&
+      !live.chat.archived &&
+      live.timeline.state.status === 'idle' &&
+      !live.timeline.state.interactions.length;
+    if (!current()) return;
+    const plan = this.ctx.planning.store(live).current();
+    if (plan) {
+      if (plan.state === 'active' || plan.state === 'waiting')
+        await this.ctx.planning.publishReady(live, plan.key, current);
       return;
     }
-    const next = planningNextStep(
-      plan,
-      live.timeline.state.items,
-      artifacts,
-      live.planningContinuations,
-    );
-    const { status, attempts } = next;
-    if (next.action === 'waiting') {
-      store.put({ ...plan, state: 'waiting', reason: next.reason });
-      return;
-    }
-    if (next.action === 'blocked') {
-      plan = {
-        ...plan,
-        state: 'blocked',
-        reason: next.reason,
-      };
-      store.put(plan);
+    const next = nextPlanningIntent(this.ctx.deps.db, live);
+    if (next === 'exhausted') {
       const ru = this.ctx.deps.locale() === 'ru';
       this.ctx.history.notice(
         live,
         'other',
         'error',
         ru
-          ? `Планирование не завершено: предложено ${status.counts.proposed} из ${status.counts.prepared}, осталось ${status.counts.unproposed}. Автопродолжение остановлено; сохранённый план доступен агенту.`
-          : `Planning is incomplete: proposed ${status.counts.proposed}/${status.counts.prepared}, remaining ${status.counts.unproposed}. Automatic continuation stopped; the saved plan is retained.`,
+          ? 'Агент не подготовил структурированный план или предложение задач. Автопродолжение остановлено.'
+          : 'The agent produced neither structured task records nor a task proposal. Automatic continuation stopped.',
       );
       return;
     }
-    store.put({
-      ...plan,
-      state: 'active',
-      reason: undefined,
-      attempts: attempts + 1,
-      lastProgress: status.counts.proposed,
-    });
-    live.planningContinuations++;
+    if (next !== 'continue') return;
     await this.ctx.conversation.continuePlanning(
       live,
       {
+        internal: true,
         text:
-          'Continue the existing owner-authorized planning operation only. It is not complete. ' +
-          'Call propose_saved_plan for all remaining ready milestones, then finish_plan. Do not ' +
-          'repeat existing cards, invent task counts, or stop to wait for T-xxx numbers. ' +
-          'If an indispensable owner decision is missing, use the structured question tool and ' +
-          'control_plan pause with its concrete reason.\n' +
-          planStatusText(plan, live.timeline.state.items, artifacts),
+          'Continue the registered owner request for implementation tasks. Read get_project_context ' +
+          'and current C4 when relevant. Call propose_tasks for a single task or prepare_plan for the full graph. ' +
+          'If a prerequisite needs a new decision, open the actual proposal and bind it with begin_task_plan, ' +
+          'or ask a structured question for indispensable missing information.',
       },
       revision,
     );

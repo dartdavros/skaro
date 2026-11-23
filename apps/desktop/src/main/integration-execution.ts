@@ -11,6 +11,7 @@ import { showEnvironmentStart } from './integration-check-feed';
 import { IntegrationAgentUnavailable, integrationFailure } from './integration-failure';
 import { C4PublicationError } from './c4-candidate';
 import { EnvironmentInUse } from './environment-resource-guard';
+import { IntegrationRecoveryExhausted, recoverUnfinishedIntegration } from './integration-blocker';
 
 /** Execute one queue lease; continuation is emitted only after the candidate is verified. */
 export async function executeIntegration(
@@ -94,6 +95,10 @@ export async function executeIntegration(
       integration.setRuntime(op, op.state === 'waiting' ? 'waiting' : 'idle');
       return;
     }
+    if (op.state !== 'ready') {
+      await recoverUnfinishedIntegration(ctx, op);
+      return;
+    }
     integration.assertExecuting(op);
     await integration.service.assertReady(op);
     integration.assertExecuting(op);
@@ -107,7 +112,7 @@ export async function executeIntegration(
       if (!(error instanceof EnvironmentInUse))
         return integration.history.notice(op, errorText(error), true);
     });
-    if (integration.closing) return;
+    if (integration.closing || integration.wasInterrupted(op.id)) return;
     if (op.purpose === 'dependencies') ctx.queue.enqueue([`${op.projectId}\n${op.taskId}`]);
     else if (op.publish) {
       publishing = true;
@@ -158,9 +163,10 @@ export async function executeIntegration(
       await integration.history.notice(op, op.error, true);
     integration.setRuntime(op, 'failed');
     ctx.startup.fail(op.projectId, op.taskId, op.error);
-    // Only a crashed agent is retried unattended; a finished turn waits for the owner instead.
+    // Transport crashes retain their bounded retry. An exhausted recovery pass requires new input.
     if (
       !(error instanceof IntegrationAgentUnavailable) &&
+      !(error instanceof IntegrationRecoveryExhausted) &&
       !c4Failure &&
       op.attempts > 0 &&
       op.attempts < 3

@@ -18,6 +18,7 @@ import {
   type ToolResult,
   type SkaroScope,
 } from '@skaro/mcp-server';
+import { integrationBlockerTool } from './integration-blocker';
 import type { EventName, Events } from '../shared/ipc';
 import { ProductAgents } from './builtin-product-agents';
 import { ChatSessions } from './chats';
@@ -55,6 +56,7 @@ import { LocalVersions } from './local-versions';
 import { managedCacheServices } from './managed-cache-services';
 import { startProjectWriters } from './project-recovery-startup';
 import { submissionRecoveryTool } from './task-submission-recovery';
+import { publishDispatchChange } from './session-dispatch-pending';
 
 export async function createServices(
   appState: AppState,
@@ -155,11 +157,13 @@ export async function createServices(
         return action();
       }),
       verifyIntegrationTool((checks, scope) => runs.verifyIntegration(checks, scope)),
+      integrationBlockerTool((reason, scope) => runs.reportBlocker(reason, scope)),
       taskHistoryTool((args, scope) => runs.readHistory(args, scope)),
       chatHistoryTool((args, scope) => chats.readHistory(args, scope)),
       ciRunTool((args, scope) => ci.call(args, scope)),
       ...projectTools({
         planning: {
+          beginTaskPlan: (decision, scope) => chats.planning.beginTaskPlan!(decision, scope),
           preparePlan: (args, scope) => chats.planning.preparePlan(args, scope),
           revisePlan: (args, scope) => chats.planning.revisePlan!(args, scope),
           proposeSavedPlan: (args, scope) => chats.planning.proposeSavedPlan(args, scope),
@@ -242,7 +246,7 @@ export async function createServices(
   });
   const commands = new OwnerCommands(
     db,
-    (command) => emit('command.changed', command),
+    (command) => publishDispatchChange(emit, command),
     coordinators,
     dataDir,
   );

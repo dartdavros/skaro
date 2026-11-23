@@ -11,6 +11,20 @@ interface Merged {
   base: string;
 }
 
+export async function mergeCompletionTarget(
+  hooks: CompletionHooks,
+  projectId: string,
+  target: string,
+  mergeTask: (id: string, message?: string) => Promise<Merged>,
+  message?: string,
+): Promise<Merged> {
+  const context = hooks.deps.projects.get(projectId);
+  context.invalidate();
+  if ((await context.load()).tasks.some((item) => item.id === target))
+    return mergeTask(target, message);
+  return mergeMilestoneTasks(hooks, projectId, target, mergeTask, message);
+}
+
 export async function mergeMilestoneTasks(
   hooks: CompletionHooks,
   projectId: string,

@@ -208,7 +208,16 @@ export class TaskRunResults {
     if (args.commitMessage) active.commitMessage = args.commitMessage;
     const state = await this.criteriaChanged(active.projectId, active.taskId);
     const open = met.flatMap((ok, i) => (ok ? [] : [i + 1]));
-    if (open.length) return { text: unmetReply(task, open, 'result') };
+    if (open.length) {
+      const unavailable = args.criteria.filter((criterion) => criterion.status === 'unavailable');
+      return {
+        text: [
+          unmetReply(task, open, 'result'),
+          ...unavailable.map(({ number, evidence }) => `#${number}: ${evidence}`),
+        ].join('\n'),
+        ...(unavailable.length && { structuredContent: { state: 'incomplete', unavailable } }),
+      };
+    }
     const done = `All ${met.length} acceptance criteria are ticked in the task. `;
     if (state === 'integrating')
       return {

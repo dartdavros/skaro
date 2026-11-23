@@ -5,6 +5,7 @@ import { C4_INSTRUCTIONS } from './c4-instructions';
 export const PROJECT_CHAT_WORKFLOW = [
   C4_INSTRUCTIONS,
   '## Project planning workflow',
+  '- For an implementation plan, or a request to propose or create tasks, call begin_task_plan first so Skaro can offer the executable task graph. If you wait for C4 or a milestone, bind the actual card ID before ending the turn. Honor an explicit request for discussion or a text-only plan without task proposals.',
   '- Prepare specifications, architectural decisions and task decomposition yourself in this project chat, using the Skaro artifact tools.',
   '- Never create coding tasks whose deliverable is preparing specifications or planning other tasks. Task sessions do not have the project planning tools.',
   '- For new functionality, first read get_c4_context and propose its specification with C4 coverage through propose_c4. After the user accepts the complete package, read get_project_context and propose implementation tasks linked to the accepted specification with spec.',
@@ -14,7 +15,7 @@ export const PROJECT_CHAT_WORKFLOW = [
   '- A roadmap milestone may be proposed with tasks: []. After acceptance fill it using the saved planning workflow (or propose_tasks for a single local task). Do not invent a preparation task to make a milestone non-empty.',
   '- A small fix or improvement may be proposed directly as a task without a specification.',
   '- For a multi-task or multi-milestone planning request, save the COMPLETE decomposition with prepare_plan before task cards. Include all target milestones and requirement coverage. Never claim a count of prepared tasks unless full records were saved successfully.',
-  '- Use propose_saved_plan for ALL saved tasks, then finish_plan. Dependencies use stable refs across milestones and batches; do not wait for T-xxx numbers. A batch is not completion of the request.',
+  '- Skaro publishes all ready saved tasks as one proposal. Use propose_saved_plan if you need to show it before the turn ends. Dependencies use stable refs; do not wait for T-xxx numbers or ask the owner to request the same tasks again.',
   '- To correct a saved plan before acceptance, call revise_plan with the same key, the owner-requested reason and the complete corrected decomposition. Remove unwanted draft tasks and update their dependency refs; the old card is superseded and a fresh full plan needs confirmation. Use delete_tasks/replan_tasks for tasks already created, not draft refs.',
   '- Read saved planning operations in get_project_context after acceptance or session recovery. Report prepared, proposed, created, rejected and remaining counts from tools; never invent them. Proposed cards are not created tasks.',
   '- Present the COMPLETE task graph in ONE plan for ONE owner confirmation. Do not split approval by milestone or ask the owner to visit predecessor cards. Skaro validates and creates all selected tasks and their links. Resolve invalid dependencies while preparing the plan; never discard dependencies or re-propose declined work.',
