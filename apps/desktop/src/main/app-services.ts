@@ -56,6 +56,7 @@ import { LocalVersions } from './local-versions';
 import { managedCacheServices } from './managed-cache-services';
 import { startProjectWriters } from './project-recovery-startup';
 import { submissionRecoveryTool } from './task-submission-recovery';
+import { publishDispatchChange } from './session-dispatch-pending';
 
 export async function createServices(
   appState: AppState,
@@ -245,14 +246,7 @@ export async function createServices(
   });
   const commands = new OwnerCommands(
     db,
-    (command) => {
-      emit('command.changed', command);
-      if (command.method === 'task.send' && !['accepted', 'delivering'].includes(command.state)) {
-        const [projectId, taskId] = command.args;
-        if (typeof projectId === 'string' && typeof taskId === 'string')
-          emit('task.changed', { projectId, taskId });
-      }
-    },
+    (command) => publishDispatchChange(emit, command),
     coordinators,
     dataDir,
   );
