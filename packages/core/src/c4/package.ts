@@ -5,7 +5,7 @@ import { readC4Model } from './shape.ts';
 import { inspectC4Model } from './validate.ts';
 import { C4Problems, C4ValidationError, c4Issue } from './diagnostics.ts';
 import { C4_DOCUMENT_PATH, c4BodyHash, validateC4Documents } from './documents.ts';
-import { authoredBody } from './render.ts';
+import { resolveC4DocumentChange, type C4DocumentChange } from './document-edits.ts';
 import { readC4Documents, inspectC4Code } from './project.ts';
 import { readC4File, withC4Lock } from './io.ts';
 import { recoverC4Transaction } from './transaction.ts';
@@ -16,7 +16,9 @@ export interface PrepareC4Package {
   summary: string;
   baseRevision: number;
   model: unknown;
-  documents: { path: string; content: string }[];
+  documents: C4DocumentChange[];
+  /** Agent proposals must reconstruct existing documents from their exact stored contents. */
+  preserveExistingDocuments?: boolean;
   locale: string;
   task?: C4Package['task'];
   /** Task proposals validate code paths against their real worktree. */
@@ -46,7 +48,10 @@ export async function prepareC4Package(root: string, args: PrepareC4Package): Pr
       if (changed.has(doc.path))
         throw new C4ValidationError([c4Issue(`C4: duplicate document ${doc.path}`)]);
       changed.add(doc.path);
-      after.set(doc.path, authoredBody(doc.content) + '\n');
+      after.set(
+        doc.path,
+        resolveC4DocumentChange(doc, before.get(doc.path), args.preserveExistingDocuments === true),
+      );
     }
     if (!after.has('architecture.md'))
       throw new C4ValidationError([

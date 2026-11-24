@@ -1,5 +1,6 @@
 import type { ToolResult } from './server.ts';
 import type { SkaroScope } from './tools.ts';
+import type { C4DocumentChange } from '@skaro/core';
 
 /** A task the agent proposes; `ref` lets tasks of one call depend on each other. */
 export interface ProposedTaskArgs {
@@ -32,12 +33,12 @@ export interface ProposeAdrArgs {
 }
 
 export interface ProposeSpecArgs {
-  c4?: { baseRevision: number; model: unknown; documents: { path: string; content: string }[] };
+  c4?: { baseRevision: number; model: unknown; documents: C4DocumentChange[] };
   /** An existing specification to change (0003); without it the specification is new. */
   id?: string;
   title?: string;
-  /** The whole Markdown text: Problem, Scenarios, Requirements (R-1…), Out of scope, Open questions. */
-  content: string;
+  /** New specification Markdown: Problem, Scenarios, Requirements, Out of scope, Open questions. */
+  content?: string;
   replaces?: string;
   summary?: string;
 }

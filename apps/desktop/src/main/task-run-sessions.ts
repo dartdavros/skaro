@@ -12,6 +12,8 @@ import { retireNativeSession } from './native/session-retirement';
 import { CommandCancelled } from './owner-commands';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { forgetTaskRun } from './task-run-forget';
+import { untilCancelled, readSessionEvents } from './task-session-cancellation';
+import { detachTaskSession, drainRetiredEvents } from './task-session-detach';
 
 /** sessions: a focused part of the task-run controller. */
 export class TaskRunSessions {
@@ -21,7 +23,10 @@ export class TaskRunSessions {
   }
 
   attach(active: ActiveRun): Promise<AgentSession> {
+    if (this.ctx.messages.stopping(active.projectId, active.taskId))
+      return Promise.reject(new CommandCancelled());
     if (active.suspending) return active.suspending.then(() => this.attach(active));
+    if (active.detaching) return active.detaching.then(() => this.attach(active));
     try {
       requireTaskNotStopping(active);
     } catch (error) {
@@ -35,35 +40,53 @@ export class TaskRunSessions {
       );
     taskRunDirectory(this.ctx.project(active.projectId).root, active.run);
     if (active.session) return Promise.resolve(active.session);
-    active.attaching ??= this.startSession(active).finally(() => (active.attaching = undefined));
+    if (!active.attaching) {
+      const startup = new AbortController();
+      active.sessionStartup = startup;
+      active.attaching = this.startSession(active, startup).finally(() => {
+        active.sessionStartup = undefined;
+        active.attaching = undefined;
+      });
+    }
     return active.attaching;
   }
 
-  async startSession(active: ActiveRun): Promise<AgentSession> {
+  private async startSession(active: ActiveRun, startup: AbortController): Promise<AgentSession> {
+    const { signal } = startup;
     const epoch = active.deliveryEpoch;
     const { projectId, taskId, run } = active;
     const context = this.ctx.project(projectId);
-    const artifacts = await context.load();
+    const artifacts = await untilCancelled(context.load(), signal);
+    signal.throwIfAborted();
     if (!artifacts.tasks.some((task) => task.id === taskId))
       throw new Error('Milestones have no agent sessions. Use a task or the project chat.');
     if (run.agent === 'skaro') {
       if (active.deliveryEpoch !== epoch) throw new CommandCancelled();
-      const started = await startBuiltinTaskSession(this.ctx, active, artifacts);
+      const started = await startBuiltinTaskSession(this.ctx, active, artifacts, startup);
       return this.publish(active, started.session, started.segment, !!started.resume, epoch);
     }
     const task = findTask(artifacts, taskId);
     const agent = run.agent as AgentId;
-    await this.ctx.views.ensureAgent(agent);
+    await untilCancelled(this.ctx.views.ensureAgent(agent), signal);
+    signal.throwIfAborted();
     await this.ctx.processes.stop(run.id);
-    const settings = await this.ctx.views.withDefaults(
-      agent,
-      context.root,
-      this.ctx.views.settings(projectId, task, artifacts),
+    signal.throwIfAborted();
+    const settings = await untilCancelled(
+      this.ctx.views.withDefaults(
+        agent,
+        context.root,
+        this.ctx.views.settings(projectId, task, artifacts),
+      ),
+      signal,
     );
+    signal.throwIfAborted();
     // A started session keeps the exact resolved model/effort when project defaults change.
     this.ctx.deps.db.setSetting(settingsKey(projectId, taskId), settings);
     const sandbox =
-      settings.permissionMode === 'auto' ? await this.ctx.deps.agents.sandbox(agent) : undefined;
+      settings.permissionMode === 'auto'
+        ? await untilCancelled(this.ctx.deps.agents.sandbox(agent), signal)
+        : undefined;
+    signal.throwIfAborted();
     const resume = run.nativeSessionId;
 
     const segment = active.segments++;
@@ -75,9 +98,14 @@ export class TaskRunSessions {
     active.grant = this.ctx.deps.mcp.grant({ kind: 'task', projectId, taskId, runId: run.id });
     let session: AgentSession;
     try {
-      const options = await taskSessionOptions(this.ctx, active, artifacts, settings, segment);
+      const options = await untilCancelled(
+        taskSessionOptions(this.ctx, active, artifacts, settings, segment),
+        signal,
+      );
+      signal.throwIfAborted();
       session = await this.ctx.deps.agents.adapter(agent).start({
         ...options,
+        signal,
         ...(sandbox ? { sandboxVerified: sandbox.holds } : {}),
         ...(sandbox?.mode ? { sandboxMode: sandbox.mode } : {}),
       });
@@ -89,7 +117,8 @@ export class TaskRunSessions {
           this.ctx.processes.stop(run.id),
         );
       }
-      if (resume) this.ctx.history.notice(active, 'session_lost', 'error', errorText(error));
+      if (resume && !(signal.aborted && error === signal.reason))
+        this.ctx.history.notice(active, 'session_lost', 'error', errorText(error));
       throw error;
     }
     return this.publish(active, session, segment, !!resume, epoch);
@@ -127,19 +156,26 @@ export class TaskRunSessions {
     }
     active.session = session;
     if (resume) this.ctx.history.notice(active, 'session_restored', 'info', '');
-    active.pumping = this.pump(active, session, segment);
+    const reader = new AbortController();
+    active.eventReader = reader;
+    active.pumping = this.pump(active, session, segment, reader.signal);
     this.ctx.changed(projectId, taskId);
     return session;
   }
 
-  async pump(active: ActiveRun, session: AgentSession, segment: number): Promise<void> {
+  private async pump(
+    active: ActiveRun,
+    session: AgentSession,
+    segment: number,
+    signal: AbortSignal,
+  ): Promise<void> {
     try {
-      for await (const event of session.events) {
+      await readSessionEvents(session.events, signal, (event) => {
         const scoped = segmentTurns(active.run.agent === 'skaro' ? 0 : segment, event);
         const entry = active.run.previousRunId ? runEvent(scoped, active.run.id) : scoped;
-        if (active.session !== session && active.inputTransition?.expectedExit(entry)) continue; // Confirmed teardown will close this turn in the durable timeline.
+        if (active.session !== session && active.inputTransition?.expectedExit(entry)) return;
         this.ctx.events.onEvent(active, entry);
-      }
+      });
     } catch (error) {
       this.ctx.events.failTurn(active, error);
     }
@@ -166,41 +202,14 @@ export class TaskRunSessions {
     }
   }
 
-  async detach(active: ActiveRun, keepSlot = false): Promise<void> {
-    // An attachment already in flight must not publish a new process after cleanup has run.
-    active.builtinStartup?.abort(new Error('Builtin task detached during startup'));
-    await active.attaching?.catch(() => undefined);
-    const builtin = !!active.builtinAdmission;
-    const session = active.session;
-    active.session = undefined;
-    active.grant?.revoke();
-    active.grant = undefined;
-    try {
-      await retireNativeSession(active, 'Task session detached', async () => {
-        try {
-          await this.ctx.processes.stop(active.run.id);
-        } finally {
-          if (builtin) await session?.close();
-          else await session?.close().catch(() => undefined);
-        }
-      });
-    } catch (error) {
-      active.stopError = errorText(error);
-      throw error;
-    } finally {
-      this.ctx.history.flush(active);
-      // A closed session ends no turn by itself: its slot must not stay taken.
-      if (!keepSlot) {
-        active.release?.();
-        active.release = undefined;
-      }
-    }
+  detach(active: ActiveRun, keepSlot = false): Promise<void> {
+    return detachTaskSession(this.ctx, active, keepSlot);
   }
 
   /** A handoff must prove shutdown; a timeout/error leaves the old run frozen for retry. */
   async stopForHandoff(active: ActiveRun): Promise<void> {
-    if (active.builtinStartup) {
-      active.builtinStartup.abort(new Error('Builtin task changed agent during startup'));
+    if (active.sessionStartup) {
+      active.sessionStartup.abort(new Error('Task changed agent during startup'));
       await active.attaching?.catch(() => undefined);
     }
     if (active.builtinAdmission) {
@@ -214,7 +223,7 @@ export class TaskRunSessions {
         } finally {
           await session?.close();
         }
-        await active.pumping;
+        await drainRetiredEvents(active);
       });
     }
     active.grant?.revoke();
@@ -226,7 +235,7 @@ export class TaskRunSessions {
           await session.stopBackground(item.background.taskId);
       await this.ctx.processes.stop(active.run.id);
       await session.close();
-      await active.pumping;
+      await drainRetiredEvents(active);
       active.session = undefined;
     } else await this.ctx.processes.stop(active.run.id);
   }

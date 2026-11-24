@@ -18,7 +18,7 @@ import { trackRun } from './task-run-access';
 import { withAgentDefaults } from './agent-model-defaults';
 import type { TaskAgentPreferences } from './task-agent-preferences';
 import { taskViewSettings } from './task-view-settings';
-import { c4DiagnosticKey } from './c4-tool-diagnostic';
+import { readC4Diagnostic } from './c4-tool-diagnostic';
 import { accessTaskWorktree } from './task-worktree-retention';
 import { validateBuiltinTaskSettings } from './builtin-task-settings-validation';
 import { terminalTaskHistory, terminalTaskTimeline } from './terminal-task-requests';
@@ -44,7 +44,7 @@ export class TaskRunViews {
   }
 
   async open(projectId: string, taskId: string, options?: { paged: boolean }): Promise<TaskView> {
-    let active = await this.ctx.history.restore(projectId, taskId);
+    const active = await this.ctx.history.restore(projectId, taskId);
     void retireTaskHistories(this.ctx, key(projectId, taskId)).catch((error: unknown) =>
       console.error('Task history retirement:', error),
     );
@@ -55,7 +55,6 @@ export class TaskRunViews {
     const artifacts = listed;
     const requirements = spec ? await context.documentRequirements(spec.path) : {};
     const task = findTask(artifacts, taskId);
-    if (active) active = await this.ctx.handoff.recover(active, false);
     if (active) {
       if (task.status === 'done') this.ctx.results.closeMergeCard(active, 'answered');
       else {
@@ -127,6 +126,18 @@ export class TaskRunViews {
           integration.timeline,
         )
       : undefined;
+    const diagnostic =
+      active && !['done', 'cancelled'].includes(task.status)
+        ? readC4Diagnostic(this.ctx.deps.db, active.run.id)
+        : undefined;
+    const c4Diagnostic =
+      diagnostic?.stage === 'proposal' && active
+        ? readC4Diagnostic(
+            this.ctx.deps.db,
+            active.run.id,
+            (await context.load()).c4?.revision ?? 0,
+          )
+        : diagnostic;
     return {
       projectId,
       dispatchPending: taskDispatchPending(
@@ -135,10 +146,7 @@ export class TaskRunViews {
         projectId,
         taskId,
       ),
-      c4Diagnostic:
-        active && !['done', 'cancelled'].includes(task.status)
-          ? this.ctx.deps.db.getSetting(c4DiagnosticKey(active.run.id), undefined)
-          : undefined,
+      c4Diagnostic,
       environmentReview: this.ctx.reviews.state(projectId, taskId),
       task: shown,
       ...(stage

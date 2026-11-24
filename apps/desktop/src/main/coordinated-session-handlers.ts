@@ -4,6 +4,7 @@ import type { Handlers } from './ipc';
 import type { MethodName, MessageInput } from '../shared/ipc';
 import type { ProjectCoordinators } from './project-coordinators';
 import { coordinationHash } from './project-coordinator-request';
+import { parkCommandId, parkDelivery } from './task-park-delivery';
 import { sessionCommand, sessionCommandScope } from './session-command-catalogue';
 import { resourcesFor } from './resource-execution';
 import { safetyDecisionMethod } from './decision-authority';
@@ -24,7 +25,9 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
         const command =
           method === 'chat.create' ? (args[2] as MessageInput | undefined)?.commandId : undefined;
         // IPC has no general retry envelope. Each invocation is a distinct command.
-        const id = command ? `chat-create:${command}` : `ipc:${randomUUID()}`;
+        const parkId =
+          method === 'task.park' && args[3] !== undefined ? parkCommandId(args[3]) : undefined;
+        const id = parkId ?? (command ? `chat-create:${command}` : `ipc:${randomUUID()}`);
         const descriptor = sessionCommand(method, args, id);
         if (!descriptor) return handler(...args);
         const { projectId, subject, mode } = descriptor;
@@ -70,6 +73,7 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
               whileSuspended: safetyDecisionMethod(method, args),
               evidence: () => ({ code: 'handler_returned', refs: [subject] }),
               ...(!descriptor.returnsValue ? { replay: () => undefined } : {}),
+              ...(parkId ? parkDelivery(db, projectId, id, subject) : {}),
               ...(method === 'chat.create' && command
                 ? {
                     replay: async () => {

@@ -1,4 +1,4 @@
-import { indexTasks, isBlocked, startBlocker } from '@skaro/core';
+import { indexTasks, isBlocked, isTaskParked, startBlocker } from '@skaro/core';
 import { projectC4Protocol } from './c4-protocol';
 import { randomUUID } from 'node:crypto';
 import { CommandCancelled } from './owner-commands';
@@ -170,6 +170,10 @@ export class TaskRunScheduling {
     const task = findTask(await this.ctx.project(projectId).store.load(), taskId);
     requireCurrent?.();
     const k = key(projectId, taskId);
+    if (this.ctx.parking.has(k) || (isTaskParked(task.status) && input.internal))
+      throw new CommandCancelled();
+    if (isTaskParked(task.status) && !input.resumeTask)
+      throw new Error('Resume the task from the task panel first.');
     await this.ctx.stages.sync(projectId, taskId);
     requireCurrent?.();
     const active = this.ctx.active.get(k);
@@ -202,6 +206,8 @@ export class TaskRunScheduling {
   }
 
   private async beginCurrent(projectId: string, taskId: string, k: string): Promise<void> {
+    if (this.ctx.parking.has(k) || transitionPending(this.ctx.deps.db, projectId, taskId))
+      throw new CommandCancelled();
     const pending = this.ctx.startup.read(projectId, taskId);
     if (!pending?.inputs.length && !this.ctx.queuedInputs.get(k)?.length) {
       this.ctx.setRuntime(projectId, taskId, 'idle');
@@ -280,3 +286,4 @@ export class TaskRunScheduling {
   }
 }
 import { requireStartupGeneration } from './task-startup-generation';
+import { transitionPending } from './task-lifecycle-journal';

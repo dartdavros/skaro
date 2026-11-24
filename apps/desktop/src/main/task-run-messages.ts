@@ -1,7 +1,7 @@
 import { QuestionAnswers } from './question-answers';
+import { isTaskParked } from '@skaro/core';
 import { decisionItemId } from './decision-item-id';
-import { resourcesFor } from './resource-execution';
-import { stopOwnerMessages, CommandCancelled, queueOwnerMessage } from './owner-commands';
+import { CommandCancelled, queueOwnerMessage } from './owner-commands';
 import { assertQuestionMessageAllowed, validateQuestionAnswer } from '@skaro/timeline';
 import { isAsyncQuestion, type Interaction, type InteractionAnswer } from '@skaro/timeline';
 import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
@@ -12,27 +12,41 @@ import { key, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
 import { trackRun } from './task-run-access';
 import type { TaskRunEngine } from './task-run-engine';
-import { stopBuiltinTask, requireTaskNotStopping } from './builtin-task-stop';
+import { requireTaskNotStopping } from './builtin-task-stop';
 import { deliverTaskInput } from './task-input-transition';
 import { prepareTaskFollowUp } from './task-follow-up';
 import { terminalTaskHistory, retireTerminalTaskRequests } from './terminal-task-requests';
-import { stopManagedTask } from './managed-task-stop';
 import { supersedeQuestionInput } from './question-cancellation';
 import { taskQuestionContext } from './question-cancel-handlers';
 import { dispatchTaskReply } from './task-interaction-delivery';
 import { DecisionNotDispatched } from './decision-not-dispatched';
+import { currentTransition } from './task-lifecycle-journal';
+import { TaskInterrupts } from './task-interrupts';
 
 /** messages: a focused part of the task-run controller. */
 export class TaskRunMessages {
+  private readonly stops: TaskInterrupts;
   private readonly ctx: TaskRunEngine;
   constructor(ctx: TaskRunEngine) {
     this.ctx = ctx;
+    this.stops = new TaskInterrupts(ctx);
   }
 
   async send(projectId: string, taskId: string, input: MessageInput): Promise<void> {
+    if (this.stopping(projectId, taskId)) throw new CommandCancelled();
+    const transition = currentTransition(this.ctx.deps.db, projectId, taskId);
+    if (transition && transition.phase !== 'settled')
+      throw new DecisionNotDispatched(
+        'The previous lifecycle request has not settled. Stop the task to retire its writer first.',
+      );
     const epoch = this.ctx.startup.cancellationEpoch(projectId, taskId);
     const requireCurrent = () => {
-      if (this.ctx.closing || epoch !== this.ctx.startup.cancellationEpoch(projectId, taskId))
+      if (
+        this.ctx.closing ||
+        this.stopping(projectId, taskId) ||
+        this.ctx.parking.has(key(projectId, taskId)) ||
+        epoch !== this.ctx.startup.cancellationEpoch(projectId, taskId)
+      )
         throw new CommandCancelled();
     };
     if (await this.ctx.integrations.controls.send(projectId, taskId, input)) return;
@@ -44,6 +58,10 @@ export class TaskRunMessages {
     requireCurrent();
     const task = findTask(await this.ctx.project(projectId).summary(), taskId);
     requireCurrent();
+    if (isTaskParked(task.status)) {
+      if (input.internal) throw new CommandCancelled();
+      if (!input.resumeTask) throw new Error('Resume the task from the task panel first.');
+    }
     retireTerminalTaskRequests(
       active.timeline.state,
       terminalTaskHistory(this.ctx.deps.db, task.status, active.run.id, task.archived),
@@ -211,45 +229,11 @@ export class TaskRunMessages {
     await this.ctx.results.criteriaChanged(projectId, taskId);
   }
 
-  async interrupt(projectId: string, taskId: string): Promise<void> {
-    resourcesFor(this.ctx.deps.db)?.stopOwner(projectId, `task:${taskId}`);
-    if (this.ctx.handoff.changing(this.ctx.active.get(key(projectId, taskId))))
-      throw new Error('Wait for the agent handoff to finish before stopping the task.');
-    this.ctx.continuation.stop(projectId, taskId);
-    const commands = stopOwnerMessages(projectId, taskId);
-    // A task feed can address an integration resolver. Its interrupt acknowledgement does not
-    // prove transport retirement, so a task-runtime stop must not certify that delivery.
-    const integrationOwnsDelivery = this.ctx.integrations.store
-      .all(projectId)
-      .some(
-        (op) =>
-          !['applied', 'stale'].includes(op.state) &&
-          (op.taskId === taskId || op.results.some((result) => result.taskId === taskId)),
-      );
-    this.ctx.startup.cancel(projectId, taskId);
-    const k = key(projectId, taskId);
-    this.ctx.queuedInputs.delete(k);
-    const current = this.ctx.active.get(k) ?? (await this.ctx.history.restore(projectId, taskId));
-    if (current) {
-      current.deliveryEpoch++;
-      current.builtinStartup?.abort(new CommandCancelled());
-    }
-    if (current?.run.agent === 'skaro')
-      return stopBuiltinTask(this.ctx, current, integrationOwnsDelivery ? [] : commands);
-    if (current) return stopManagedTask(this.ctx, current, commands, integrationOwnsDelivery);
-    await this.ctx.architecture.stop(projectId, taskId);
-    await this.ctx.integrations.controls.interrupt(projectId, taskId);
-    if (this.ctx.queue.cancel(k)) {
-      this.ctx.queuedInputs.delete(k);
-      // A started task goes back to what its feed says; a new one was never running.
-      const active = this.ctx.active.get(k);
-      if (active) this.ctx.events.settleRuntime(active);
-      else this.ctx.setRuntime(projectId, taskId, 'idle');
-      return;
-    }
-    await this.ctx.active.get(k)?.session?.interrupt();
-    const active = this.ctx.active.get(k);
-    if (active) await this.ctx.sessions.detach(active);
+  stopping(project: string, task: string) {
+    return this.stops.stopping(project, task);
+  }
+  interrupt(project: string, task: string, ownerStop = false) {
+    return this.stops.interrupt(project, task, ownerStop);
   }
 
   async stopBackground(projectId: string, taskId: string, backgroundId: string): Promise<void> {

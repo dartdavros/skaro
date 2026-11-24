@@ -12,7 +12,7 @@ import type { C4ProposalRecord } from './c4-service';
 import { c4ChangeHash, c4ReviewKey } from './c4-fingerprint';
 import { readTaskC4Scope } from './c4-task-scope';
 import { c4CoverageProblems } from './c4-coverage';
-import { c4DiagnosticKey } from './c4-tool-diagnostic';
+import { readC4Diagnostic } from './c4-tool-diagnostic';
 import { taskC4Base } from './c4-task-base';
 
 /** Send the model once, authored document text and durable proposal facts, without repeated preview payloads. */
@@ -26,6 +26,7 @@ export async function c4Context(
 ): Promise<ToolResult> {
   context.invalidate();
   const artifacts = await context.load();
+  const documents = [...(await readC4Documents(context.root))];
   const baseHead =
     scope.kind === 'task'
       ? await taskC4Base(db, artifacts, {
@@ -54,12 +55,8 @@ export async function c4Context(
                 'Only task-scoped problems block this result. Project-wide gaps are informational here. Artifact-only work cannot publish planned implementation.',
             }
           : {}),
-        documents: Object.fromEntries(
-          [...(await readC4Documents(context.root))].map(([path, body]) => [
-            path,
-            authoredBody(body),
-          ]),
-        ),
+        documents: Object.fromEntries(documents.map(([path, body]) => [path, authoredBody(body)])),
+        documentHashes: Object.fromEntries(documents.map(([path, body]) => [path, c4Hash(body)])),
         nextSpec: String(Math.max(0, ...artifacts.specs.map((s) => Number(s.id))) + 1).padStart(
           4,
           '0',
@@ -112,7 +109,9 @@ export async function c4Context(
         ...(baseHead
           ? {
               task: {
-                diagnostic: scope.runId ? db.getSetting(c4DiagnosticKey(scope.runId), null) : null,
+                diagnostic: scope.runId
+                  ? (readC4Diagnostic(db, scope.runId, artifacts.c4?.revision ?? 0) ?? null)
+                  : null,
                 id: scope.taskId,
                 checkout,
                 baseHead,

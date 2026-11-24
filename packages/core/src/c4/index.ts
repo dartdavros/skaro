@@ -16,6 +16,7 @@ export * from './review-model.ts';
 export * from './package-review.ts';
 export * from './document-snapshot.ts';
 export * from './document-migration.ts';
+export type { C4DocumentChange } from './document-edits.ts';
 export type * from './review-types.ts';
 export type * from './document-model.ts';
 export { withC4Lock } from './io.ts';

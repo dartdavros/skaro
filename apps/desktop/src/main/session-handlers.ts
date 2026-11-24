@@ -1,4 +1,5 @@
 import type { Handlers } from './ipc';
+import { taskControlView } from './task-control-view';
 import { c4ProtocolHandlers } from './c4-protocol-handlers';
 import { c4AuditHandlers } from './c4-audit-handlers';
 import { archiagentActivationHandlers } from './archiagent-activation-handlers';
@@ -61,9 +62,11 @@ export function sessionHandlers(
   | 'plan.reorder'
   | 'plan.placeTask'
   | 'task.open'
+  | 'task.controls'
   | 'task.send'
   | 'task.respond'
   | 'task.interrupt'
+  | 'task.park'
   | 'task.clear'
   | 'task.stopBackground'
   | 'task.setSettings'
@@ -160,6 +163,7 @@ export function sessionHandlers(
       'plan.reorder': (projectId, ids) => plan.reorder(projectId, ids),
       'plan.placeTask': (projectId, taskId, milestoneId, index) =>
         plan.placeTask(projectId, taskId, milestoneId, index),
+      'task.controls': (project, task) => taskControlView(db, services.projects.get(project), task),
       'task.open': async (projectId, taskId, options) => {
         await c4.restore({ kind: 'task', projectId, taskId });
         return runs.open(projectId, taskId, options);
@@ -168,6 +172,8 @@ export function sessionHandlers(
       'task.respond': (projectId, taskId, id, answer) =>
         runs.respond(projectId, taskId, id, answer),
       'task.interrupt': (projectId, taskId) => runs.interrupt(projectId, taskId),
+      'task.park': (projectId, taskId, status, requestId) =>
+        runs.park(projectId, taskId, status, requestId),
       'task.clear': (projectId, taskId) => runs.clearChat(projectId, taskId),
       'task.stopBackground': (projectId, taskId, id) => runs.stopBackground(projectId, taskId, id),
       'task.setSettings': (projectId, taskId, settings) =>

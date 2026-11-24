@@ -1,14 +1,16 @@
 // State of an open task screen: the view from the main process, then live timeline batches.
 
-import type { TimelineState } from '@skaro/timeline';
+import { questionMessageReferences, type TimelineState } from '@skaro/timeline';
 import type { TaskView } from '../../../shared/ipc';
 import { TaskFeedState } from './feed-state';
+import { TaskControls } from './task-controls.svelte';
 import { readSession, saveSession } from '../session-snapshot';
 import { currentHistory } from '../history-view';
 
 export class TaskSession {
   readonly projectId: string;
   readonly taskId: string;
+  readonly controls: TaskControls;
   view = $state.raw<TaskView | undefined>();
   timeline = $state.raw<TimelineState | undefined>();
   error = $state<string | undefined>();
@@ -18,6 +20,17 @@ export class TaskSession {
   private reloadAgain = false;
   private snapshotTimer?: ReturnType<typeof setTimeout>;
   private generation = 0;
+  questionReferences(timeline: TimelineState | undefined) {
+    const sources = this.view?.timelineSources;
+    return questionMessageReferences(
+      timeline,
+      sources && [
+        ...(sources.base ? [sources.base] : []),
+        ...sources.integrations.map((s) => s.timeline),
+      ],
+    );
+  }
+
   rememberPage(page: import('../../../shared/history').HistoryPage): void {
     if (!this.view) return;
     this.view = { ...this.view, historyPage: page };
@@ -27,6 +40,7 @@ export class TaskSession {
   constructor(projectId: string, taskId: string) {
     this.projectId = projectId;
     this.taskId = taskId;
+    this.controls = new TaskControls(projectId, taskId);
     this.view = readSession<TaskView>(`task.${projectId}.${taskId}`);
     this.timeline = this.view?.timeline;
     const mine = (p: { projectId: string; taskId: string }) =>
@@ -73,6 +87,7 @@ export class TaskSession {
 
   /** Loads (or reloads) the view; overlapping calls collapse into one more round. */
   reload(): Promise<void> {
+    this.controls.refresh();
     if (this.reloading) {
       this.reloadAgain = true;
       return this.reloading;
@@ -100,6 +115,18 @@ export class TaskSession {
       } while (this.reloadAgain);
     })().finally(() => (this.reloading = undefined));
     return this.reloading;
+  }
+
+  async park(status: 'paused' | 'stopped'): Promise<void> {
+    const reached = await window.skaro.invoke(
+      'task.park',
+      this.projectId,
+      this.taskId,
+      status,
+      crypto.randomUUID(),
+    );
+    this.controls.confirmed(reached, this.view?.task);
+    void this.reload();
   }
 
   dispose(): void {

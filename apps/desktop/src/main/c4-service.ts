@@ -16,7 +16,11 @@ import { legacyC4ServiceReview } from './c4-service-review';
 import { c4RecordProtocol } from './c4-record-protocol';
 import { classifiedC4Package } from './c4-package-review';
 import { decideC4Package } from './c4-package-decision';
-import { c4ToolFailure, recordC4Diagnostic } from './c4-tool-diagnostic';
+import {
+  beginC4ProposalDiagnostic,
+  c4ToolFailure,
+  settleSavedC4ProposalDiagnostic,
+} from './c4-tool-diagnostic';
 
 type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 export interface C4ProposalRecord {
@@ -108,15 +112,16 @@ export class C4Service implements C4Handlers {
   }
   async propose(args: ProposeC4Args, scope: SkaroScope): Promise<ToolResult> {
     const checkout = this.caller(scope);
+    const finish = beginC4ProposalDiagnostic(this.deps.db, scope, args.baseRevision);
+    const notify = (diagnostic?: C4ValidationError['diagnostic'] | null) => {
+      if (finish(diagnostic)) this.deps.changed(scope.projectId);
+    };
     try {
-      return await this.proposeOnce(args, scope, checkout);
+      const result = await this.proposeOnce(args, scope, checkout);
+      notify(result.isError ? undefined : null);
+      return result;
     } catch (error) {
-      recordC4Diagnostic(
-        this.deps.db,
-        scope,
-        error instanceof C4ValidationError ? error.diagnostic : null,
-      );
-      this.deps.changed(scope.projectId);
+      notify(error instanceof C4ValidationError ? error.diagnostic : undefined);
       return c4ToolFailure(error);
     }
   }
@@ -253,6 +258,17 @@ export class C4Service implements C4Handlers {
 
   async restore(scope: SkaroScope): Promise<void> {
     for (const record of await this.records(scope.projectId, scope.taskId ?? scope.chatId)) {
+      if (
+        scope.runId &&
+        record.scope.runId === scope.runId &&
+        settleSavedC4ProposalDiagnostic(
+          this.deps.db,
+          scope.runId,
+          record.package.baseRevision,
+          record.item.startedAt,
+        )
+      )
+        this.deps.changed(scope.projectId);
       const protocol = c4RecordProtocol(record);
       if (
         protocol === 'impact-v1' &&
@@ -260,13 +276,8 @@ export class C4Service implements C4Handlers {
         !classifiedC4Package(this.deps.db, record)
       )
         continue;
-      if (record.item.state === 'accepted') {
-        try {
-          await this.decide(scope.projectId, record.item.id, 'apply');
-        } catch {
-          /* Durable error is displayed on the existing card. */
-        }
-      } else await this.deps.publish(record.scope, record.item);
+      // Accepted writes are reconciled by recoverC4Operations before project writers start.
+      await this.deps.publish(record.scope, record.item);
     }
   }
 }

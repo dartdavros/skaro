@@ -4,12 +4,19 @@ import { dispatchState } from './coordination-dispatch';
 import { continueResolvedIncident } from './incident-continuation';
 import { retireCapacityWait } from './resource-wait-retirement';
 import { retireTerminalIncident } from './incident-retirement';
+import { recoverQueuedTaskStarts } from './task-queued-start-recovery';
+import { recoverTaskTransitions } from './task-lifecycle-recovery';
 /** Recovery observes actual conditions first; legacy prose never becomes a repair or resume intent. */
 export async function recoverCoordinatorIncidents(ctx: TaskRunEngine) {
   for await (const project of projectRecords(ctx.deps.db)) {
     if (ctx.closing) return;
+    await recoverTaskTransitions(ctx, project.id);
+    await recoverQueuedTaskStarts(ctx, project.id).catch((error: unknown) =>
+      console.error('Queued task start recovery:', project.id, error),
+    );
     for (const row of ctx.incidents.store.list(project.id)) {
       if (ctx.closing) return;
+      if (row.protocol?.code === 'task_lifecycle_unconfirmed') continue;
       try {
         if (await retireTerminalIncident(ctx, row)) continue;
         if (!dispatchState(ctx.deps.db, project.id).enabled) continue;

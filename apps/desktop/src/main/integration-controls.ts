@@ -1,4 +1,5 @@
 import {
+  operationTimeout,
   isAsyncQuestion,
   validateQuestionAnswer,
   assertQuestionMessageAllowed,
@@ -56,7 +57,7 @@ export class IntegrationControls {
   }
 
   async send(projectId: string, taskId: string, input: MessageInput): Promise<boolean> {
-    if (isTaskContinuationInput(input)) return false;
+    if (input.resumeTask || isTaskContinuationInput(input)) return false;
     const op = this.current(projectId, taskId);
     if (!op) return false;
     if (
@@ -231,8 +232,22 @@ export class IntegrationControls {
     this.ctx.queue.cancel(integrationQueueKey(op));
     await this.ctx.processes.stop(`verification-${op.id}`);
     this.ctx.integrations.service.interrupt(op.id);
-    await live?.session.interrupt();
-    await live?.session.close();
+    if (live) {
+      try {
+        await operationTimeout(
+          live.session.interrupt(),
+          5000,
+          'Integration interrupt deadline exceeded',
+        );
+      } catch {
+        this.ctx.deps.db.addEvent(projectId, 'task_interrupt_escalated', {
+          task: taskId,
+          integration: op.id,
+        });
+      }
+      await this.ctx.processes.stop(live.worker);
+      await live.session.close();
+    }
     this.ctx.integrations.setRuntime(op, 'idle');
   }
 }

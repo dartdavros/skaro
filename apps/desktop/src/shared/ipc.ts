@@ -3,6 +3,7 @@ import type { ArchiagentActivationMethods } from './archiagent-activation';
 import type { C4CoordinationMethods } from './c4-coordination';
 import type { C4AuditMethods } from './c4-audit';
 import type { AgentMethods } from './agent-methods';
+import type { TaskControlMethods } from './task-park';
 import type { LocalVersionMethods } from './local-versions';
 import type { IncidentMethods } from './incidents';
 import type { ProjectActivityMethods } from './project-activity';
@@ -72,6 +73,7 @@ export interface Methods
     LocalVersionMethods,
     IncidentMethods,
     AgentMethods,
+    TaskControlMethods,
     ModelSettingsMethods,
     ModelCatalogMethods,
     ModelUsageMethods,

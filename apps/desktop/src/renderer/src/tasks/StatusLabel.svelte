@@ -63,6 +63,8 @@
       <Icon name="eye" size={12} stroke={2.1} />
     {:else if kind === 'blocked'}
       <Icon name="lock" size={11} stroke={2.1} />
+    {:else if kind === 'paused' || kind === 'stopped'}
+      <Icon name={kind === 'paused' ? 'pause' : 'stopSquare'} size={12} stroke={2.1} />
     {:else if kind === 'error'}
       <Icon name="errorCircle" size={12} stroke={2.1} />
     {:else if kind === 'done'}

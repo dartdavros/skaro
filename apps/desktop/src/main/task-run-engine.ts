@@ -52,6 +52,7 @@ export class TaskRunEngine {
   readonly cleanup = new TaskResourceCleanup(this);
   readonly deps: TaskRunDeps;
   readonly active = new Map<string, ActiveRun>();
+  readonly parking = new Map<string, Promise<import('../shared/task-park').TaskParkReceipt>>();
   /** Messages that wait for a queue slot, in the order they were sent. */
   readonly queuedInputs = new Map<string, MessageInput[]>();
   readonly queue: RunQueue;

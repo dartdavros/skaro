@@ -33,6 +33,19 @@
   const layout = new TaskDescriptionLayout();
   onDestroy(() => layout.dispose());
   const view = $derived(controller.view);
+  const controls = $derived(controller.session.controls.task);
+  const task = $derived(
+    view && controls
+      ? {
+          ...view.task,
+          status: controls.status,
+          stage: controls.stage,
+          archived: controls.archived,
+          resourceWait: controls.resourceWait,
+          lifecyclePending: controls.lifecyclePending,
+        }
+      : (controls ?? view?.task),
+  );
   const settings = $derived(controller.settings);
 </script>
 
@@ -46,13 +59,14 @@
     {ontasks}
     {onplan}
   />
-  {#if view && layout.open}
+  {#if task && layout.open}
     <TaskDescriptionPanel
-      task={view.task}
-      stage={view.stage}
+      {task}
+      stage={view?.stage}
       {layout}
       {onspec}
       {onopen}
+      onaction={controller.lifecycle}
       ontoggle={(i) => void window.skaro.invoke('task.toggleCriterion', projectId, taskId, i)}
     />
   {/if}

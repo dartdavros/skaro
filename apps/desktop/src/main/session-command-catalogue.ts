@@ -51,6 +51,7 @@ export const SESSION_COMMANDS = {
   'task.open': { mode: 'observation', subject: 'task', returnsValue: true },
   'task.respond': { mode: 'control', subject: 'task' },
   'task.interrupt': { mode: 'control', subject: 'task', priorityStop: true },
+  'task.park': { mode: 'control', subject: 'task', priorityStop: true, returnsValue: true },
   'task.clear': { mode: 'mutation', subject: 'task' },
   'task.stopBackground': { mode: 'control', subject: 'task', priorityStop: true },
   'task.setSettings': { mode: 'mutation', subject: 'task' },

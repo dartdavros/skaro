@@ -1,4 +1,5 @@
 import { projectRecords } from './project-records';
+import { transitionPending } from './task-lifecycle-journal';
 import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
 import { settingsKey } from './task-run-helpers';
@@ -11,6 +12,7 @@ export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void
       const artifacts = await ctx.project(project.id).summary();
       const runtime = ctx.deps.db.getTaskRuntime(project.id);
       for (const task of artifacts.tasks) {
+        if (transitionPending(ctx.deps.db, project.id, task.id)) continue;
         // Prior versions marked an accepted result as failed: a turn broken after it, its merge.
         if (task.status === 'review' && runtime.get(task.id)?.state === 'failed')
           ctx.setRuntime(project.id, task.id, 'idle', runtime.get(task.id)?.runId);

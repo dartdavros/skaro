@@ -2,7 +2,6 @@ import { OwnerMessages } from '../feed/owner-messages.svelte';
 import { SessionDispatch } from '../feed/session-dispatch.svelte';
 import { cleanError } from '../feed/action-error';
 import type { AgentModel, PermissionMode } from '@skaro/timeline';
-import { questionMessageReferences } from '@skaro/timeline';
 import { t } from '@skaro/ui';
 import { onDestroy } from 'svelte';
 import type { AgentInfo, AgentSettings, MergeAction, MessageInput } from '../../../shared/ipc';
@@ -12,6 +11,7 @@ import { modelEffort, modelName } from '../feed/format';
 import { TaskSession } from './session.svelte';
 import { TaskStartState } from './task-start-state';
 import { watchOwnerCommands } from '../feed/command-events';
+import type { TaskLifecycleAction } from './task-lifecycle-actions';
 
 export function createTaskController(
   projectId: string,
@@ -42,9 +42,11 @@ export function createTaskController(
   const view = $derived(session.view);
   const dispatch = new SessionDispatch(session, guard);
   const timeline = $derived(
-    dispatch.timeline(
-      ownerMessages.timeline(session.timeline, session.view?.history),
-      view?.dispatchPending || startState.pending,
+    session.controls.timeline(
+      dispatch.timeline(
+        ownerMessages.timeline(session.timeline, session.view?.history),
+        view?.dispatchPending || startState.pending,
+      ),
     ),
   );
   const hasFeed = $derived(
@@ -119,33 +121,24 @@ export function createTaskController(
     }
   }
 
+  const deliver = (input: MessageInput) =>
+    guard(() =>
+      ownerMessages.send(input, (value) =>
+        window.skaro.invoke('task.send', projectId, taskId, value),
+      ),
+    );
+
   async function send(input: MessageInput): Promise<void> {
     if (!openQuestion && openApproval?.kind === 'approval') {
       return respond(openApproval.id, { kind: 'approval', choice: 'deny', message: input.text });
     }
-    await guard(() =>
-      ownerMessages.send(
-        {
-          ...input,
-          supersededQuestions: questionMessageReferences(
-            timeline,
-            view?.timelineSources
-              ? [
-                  ...(view.timelineSources.base ? [view.timelineSources.base] : []),
-                  ...view.timelineSources.integrations.map((source) => source.timeline),
-                ]
-              : undefined,
-          ),
-        },
-        (value) => window.skaro.invoke('task.send', projectId, taskId, value),
-      ),
-    );
+    await deliver({ ...input, supersededQuestions: session.questionReferences(timeline) });
   }
 
   async function start(): Promise<void> {
     if (!startRequest.begin()) return;
     try {
-      await send({ text: t('task.start.message') });
+      await deliver({ text: t('task.start.message') });
     } catch (error) {
       startRequest.cancel();
       throw error;
@@ -153,6 +146,12 @@ export function createTaskController(
   }
 
   const respond = dispatch.respond;
+  async function lifecycle(action: TaskLifecycleAction): Promise<void> {
+    if (action === 'start') return start();
+    if (action === 'resume') return deliver({ text: t('task.resume.message'), resumeTask: true });
+    const status = action === 'pause' ? 'paused' : 'stopped';
+    await guard(() => session.park(status));
+  }
 
   async function saveSettings(next: AgentSettings): Promise<void> {
     await guard(() => window.skaro.invoke('task.setSettings', projectId, taskId, next));
@@ -225,6 +224,7 @@ export function createTaskController(
     session,
     send,
     start,
+    lifecycle,
     saveSettings,
     setPermission,
     stopEnvironmentReview: () =>

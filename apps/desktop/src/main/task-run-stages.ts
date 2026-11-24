@@ -6,6 +6,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { readLedger, stageIdOf, writeLedger } from './task-stage';
 import { background } from './background/client';
 import { AUTO_MERGE_KEY } from '../shared/ipc';
+import { mainCheckoutClean, stoppedCheckoutOwner } from './task-main-checkout';
 
 /** Milestones schedule tasks; they never create agent sessions or their own chats. */
 export class TaskRunStages {
@@ -25,6 +26,13 @@ export class TaskRunStages {
       (!!holder && holder !== k) ||
       this.ctx.queue.state().running.some((other) => other !== k && this.units.get(other) === unit)
     );
+  }
+
+  rememberStoppedCheckout(projectId: string, taskId: string): void {
+    const run =
+      this.ctx.active.get(key(projectId, taskId))?.run ??
+      this.ctx.deps.db.latestRun(projectId, taskId);
+    if (run && !run.worktree) this.ctx.deps.db.setSetting(stoppedCheckoutOwner(projectId), taskId);
   }
 
   async sync(projectId: string, taskId: string): Promise<void> {
@@ -50,13 +58,28 @@ export class TaskRunStages {
         return (
           existing &&
           (inPlace ? !existing.worktree : stageIdOf(existing) === stageId) &&
-          (task.status === 'in_progress' || task.status === 'failed')
+          (task.status === 'in_progress' ||
+            task.status === 'failed' ||
+            task.status === 'paused' ||
+            (!inPlace && task.status === 'stopped'))
         );
       });
-      if (holder) this.holders.set(unit, key(projectId, holder.id));
+      const retained = inPlace ? await this.stoppedHolder(projectId, artifacts.tasks) : undefined;
+      if (retained || holder) this.holders.set(unit, key(projectId, retained ?? holder!.id));
       else this.holders.delete(unit);
     }
     this.ctx.queue.poke();
+  }
+
+  private async stoppedHolder(projectId: string, tasks: readonly import('@skaro/core').Task[]) {
+    const setting = stoppedCheckoutOwner(projectId);
+    const owner = this.ctx.deps.db.getSetting<string | null>(setting, null);
+    if (!owner) return undefined;
+    const task = tasks.find((item) => item.id === owner);
+    if (task?.status === 'stopped' && !(await mainCheckoutClean(this.ctx.project(projectId).root)))
+      return owner;
+    this.ctx.deps.db.setSetting(setting, null);
+    return undefined;
   }
 
   /** Retain provenance for an unfinished task in a legacy shared checkout. */

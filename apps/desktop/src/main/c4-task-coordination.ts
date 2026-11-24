@@ -130,7 +130,6 @@ export class C4TaskCoordination {
     const run = this.ctx.deps.db.latestRun(project, task);
     const entries = [...this.running.entries()].filter(([, entry]) => entry.run === run?.id);
     for (const [, entry] of entries) entry.abort.abort(new Error('C4 review stopped by owner'));
-    await Promise.all(entries.map(([, entry]) => entry.promise));
     for (const [id] of entries) {
       const job = this.store.get(id);
       if (job?.worker) {
@@ -138,6 +137,7 @@ export class C4TaskCoordination {
         resourcesFor(this.ctx.deps.db)?.reconcileProcess(project, job.worker);
       }
     }
+    await Promise.all(entries.map(([, entry]) => entry.promise));
   }
   async recover(project: string, task: string) {
     const run = this.ctx.deps.db.latestRun(project, task);

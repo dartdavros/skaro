@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from '@skaro/ui';
+  import { Icon, t } from '@skaro/ui';
   import type { TaskStatus } from '../../../shared/ipc';
   import StatusOutlineIcon from './StatusOutlineIcon.svelte';
   import type { ResourceWait } from '../../../shared/resource-wait';
@@ -18,6 +18,8 @@
     <span class="dot blue"></span>
   {:else if status === 'failed'}
     <span class="dot red"></span>
+  {:else if status === 'paused' || status === 'stopped'}
+    <Icon name={status === 'paused' ? 'pause' : 'stopSquare'} size={12} stroke={2} />
   {:else if status === 'done'}
     <svg
       width="11"

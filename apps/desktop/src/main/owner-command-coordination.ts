@@ -4,6 +4,7 @@ import { coordinationHash } from './project-coordinator-request';
 import { savedOwnerCommand } from './owner-command-evidence';
 import { requireOwnerOrigin } from './owner-command-provenance';
 import { requireNativeTaskStopProof } from './native-task-stop-proof';
+import { savedTaskStop } from './task-stop-deliveries';
 
 /** Links the existing inbox to project admission, without another delivery queue. */
 export class OwnerCommandCoordination {
@@ -73,11 +74,17 @@ export class OwnerCommandCoordination {
       },
     );
   }
-  async reconcile(command: OwnerCommand): Promise<boolean> {
+  async reconcile(command: OwnerCommand): Promise<'delivered' | 'cancelled' | undefined> {
     const [projectId] = command.args as [string];
     this.validate(projectId);
-    if (!(await savedOwnerCommand(this.db, this.dataDir, command))) return false;
     const id = this.operationId(command);
+    if (!(await savedOwnerCommand(this.db, this.dataDir, command))) {
+      const operation = this.db.coordination.getOperation(projectId, id);
+      const proof = operation && savedTaskStop(this.db, command, operation);
+      if (!proof) return;
+      this.stopped(command, proof);
+      return 'cancelled';
+    }
     if (this.db.coordination.getOperation(projectId, id)?.state === 'uncertain')
       await this.coordinators.reconcile(
         projectId,
@@ -85,7 +92,7 @@ export class OwnerCommandCoordination {
         this.evidence(command, 'owner_native_echo'),
         'succeeded',
       );
-    return true;
+    return 'delivered';
   }
   stopped(command: OwnerCommand, proof: CoordinationRef): void {
     const [projectId, ownerId] = command.args as [string, string];

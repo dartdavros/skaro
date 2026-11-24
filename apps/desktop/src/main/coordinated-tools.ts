@@ -112,7 +112,13 @@ export function coordinatedTools(
         const subject = coordinationToolSubject(scope);
         const version = coordinators.version(scope.projectId);
         const previous = db.coordination.getOperation(scope.projectId, identity.id);
-        const policy = environmentToolPolicy(db, tool.name, args, scope);
+        const ownerPark =
+          tool.name === 'set_task_status' &&
+          scope.kind === 'project_chat' &&
+          (args.status === 'paused' || args.status === 'stopped');
+        const policy = ownerPark
+          ? { mode: 'control' as const, scopeKey: `stop:${identity.id}` }
+          : environmentToolPolicy(db, tool.name, args, scope);
         const mode = policy?.mode ?? (controls.has(tool.name) ? 'control' : 'mutation');
         return coordinationToolReceipt(
           tool.name,

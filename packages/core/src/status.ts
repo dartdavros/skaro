@@ -54,12 +54,18 @@ export function isBlocked(task: Task, index: TaskIndex): boolean {
   return task.status === 'todo' && !task.unblocked && unmergedDependencies(task, index).length > 0;
 }
 
+export function isTaskParked(status: TaskStatus): status is 'paused' | 'stopped' {
+  return status === 'paused' || status === 'stopped';
+}
+
 export function displayStatus(
   task: Task,
   index: TaskIndex,
   runtime: TaskRuntime = 'idle',
 ): DisplayStatus {
   if (task.status === 'done') return 'done';
+  if (isTaskParked(task.status) && runtime !== 'queued' && runtime !== 'running')
+    return task.status;
   if (hasFailed(task, runtime)) return 'failed';
   if (runtime === 'waiting') return 'needs_answer';
   if (runtime === 'queued') return 'queued';

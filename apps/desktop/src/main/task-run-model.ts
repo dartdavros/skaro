@@ -44,12 +44,15 @@ export class ActiveRun {
   run: RunRecord;
   readonly timeline: Timeline;
   session: AgentSession | undefined;
+  retiringSession: AgentSession | undefined;
+  detaching?: Promise<void>;
   /** Present only for the builtin runtime; managed agents keep their existing lifecycle. */
   builtinAdmission?: NativeAdmissions;
   /** Closes configured credential/route leases with the task's process admission. */
   builtinClose?: () => void | Promise<void>;
-  /** Cancels a prepared host before detach/shutdown waits for attachment. */
-  builtinStartup?: AbortController;
+  /** Cancels preparation and native startup until this attachment publishes its session. */
+  sessionStartup?: AbortController;
+  eventReader?: AbortController;
   /** Invalidates a delivery/attachment already awaiting I/O when the owner stops the task. */
   deliveryEpoch = 0;
   delivery?: Promise<void>;

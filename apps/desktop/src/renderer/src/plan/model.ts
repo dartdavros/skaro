@@ -3,7 +3,16 @@
 import type { TaskSummary } from '../../../shared/ipc';
 
 export type RowStatus =
-  'todo' | 'blocked' | 'working' | 'need' | 'review' | 'error' | 'done' | 'cancel';
+  | 'todo'
+  | 'blocked'
+  | 'working'
+  | 'need'
+  | 'paused'
+  | 'stopped'
+  | 'review'
+  | 'error'
+  | 'done'
+  | 'cancel';
 
 export function rowStatus(status: TaskSummary['status']): RowStatus {
   switch (status) {

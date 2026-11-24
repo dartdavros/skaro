@@ -20,6 +20,7 @@ import { builtinJournalReplay } from './builtin-journal-replay';
 import { builtinSessionDirectory } from './builtin-session-directory';
 import { builtinRunSettings } from './builtin-run-settings';
 import { retireNativeSession } from './native/session-retirement';
+import { untilCancelled } from './task-session-cancellation';
 
 /** Main-only composition port. A saved route alone cannot prepare a task's model/payload/budget grants. */
 export interface BuiltinTaskSessionPreparer {
@@ -44,6 +45,7 @@ export async function startBuiltinTaskSession(
   ctx: TaskRunEngine,
   active: ActiveRun,
   artifacts: ProjectArtifacts,
+  startup: AbortController,
 ) {
   const prepare = ctx.deps.builtinSessions;
   if (!prepare) throw new Error('Builtin task model/payload/budget admission is not configured');
@@ -52,8 +54,6 @@ export async function startBuiltinTaskSession(
   const sessionId = resume ?? randomUUID();
   const directory = builtinSessionDirectory(ctx.deps.dataDir, 'tasks', run.id, sessionId);
   const scope: SkaroScope = { kind: 'task', projectId, taskId, runId: run.id };
-  const startup = new AbortController();
-  active.builtinStartup = startup;
   let lease: NativeAdmissions | undefined;
   let prepared: Awaited<ReturnType<BuiltinTaskSessionPreparer['prepare']>> | undefined;
   let session: Awaited<ReturnType<typeof startBuiltinNativeSession>> | undefined;
@@ -63,7 +63,10 @@ export async function startBuiltinTaskSession(
     await ctx.processes.stop(run.id);
     const settings = builtinRunSettings(ctx, active);
     const segment = active.segments++;
-    const options = await taskSessionOptions(ctx, active, artifacts, settings, segment);
+    const options = await untilCancelled(
+      taskSessionOptions(ctx, active, artifacts, settings, segment),
+      signal,
+    );
     requireCurrentBuiltinTask(ctx, scope, sessionId, active, signal);
     const expected = {
       scope,
@@ -72,7 +75,7 @@ export async function startBuiltinTaskSession(
       artifactDir: join(directory, 'artifacts'),
       options,
     };
-    prepared = await prepare.prepare({
+    const preparing = prepare.prepare({
       ...expected,
       scope: structuredClone(scope),
       options: { ...options, ...(options.readDirs ? { readDirs: [...options.readDirs] } : {}) },
@@ -85,11 +88,20 @@ export async function startBuiltinTaskSession(
         acceptance: builtinAcceptancePort(ctx, scope, lease),
       },
     });
+    try {
+      prepared = await untilCancelled(preparing, signal);
+    } catch (error) {
+      // No runtime has started. Revoke only this preparation if it finishes after cancellation.
+      if (signal.aborted)
+        void preparing
+          .then((late) => late.close())
+          .catch((reason: unknown) => console.error('Cancelled task preparation:', reason));
+      throw error;
+    }
     requireBuiltinTaskSessionPolicy(expected, prepared.config);
-    const replay = await builtinJournalReplay(
-      join(ctx.deps.dataDir, run.logPath),
-      sessionId,
-      active.log,
+    const replay = await untilCancelled(
+      builtinJournalReplay(join(ctx.deps.dataDir, run.logPath), sessionId, active.log),
+      signal,
     );
     requireCurrentBuiltinTask(ctx, scope, sessionId, active, signal);
     if (replay.needsSeparator) ctx.history.writeLine(active, new Uint8Array([10]));
@@ -135,7 +147,5 @@ export async function startBuiltinTaskSession(
       });
     }
     throw error;
-  } finally {
-    if (active.builtinStartup === startup) active.builtinStartup = undefined;
   }
 }

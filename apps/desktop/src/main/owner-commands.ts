@@ -127,9 +127,10 @@ export class OwnerCommands {
   }
   private async reconcile(command: OwnerCommand): Promise<boolean> {
     try {
-      if (await this.requireCoordination().reconcile(command)) {
+      const outcome = await this.requireCoordination().reconcile(command);
+      if (outcome) {
         if (this.db.commands.get(command.id)?.state !== 'cancelled')
-          this.publish(this.db.commands.update(command.id, 'delivered'));
+          this.publish(this.db.commands.update(command.id, outcome));
         return true;
       }
     } catch (error) {

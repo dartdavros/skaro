@@ -228,6 +228,7 @@ export function c4Work(store: PayloadStore) {
       migrate(scope.projectId);
       const prepared = await prepareC4Package(root, {
         ...args,
+        preserveExistingDocuments: true,
         ...(scope.kind === 'task' ? { task: { id: scope.taskId!, runId: scope.runId! } } : {}),
       });
       return recordPackage(prepared, scope, args.protocol);

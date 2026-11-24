@@ -7,6 +7,7 @@ import type { ChatSessions } from './chats';
 import { incidentModelTools } from './incident-model-tools';
 import { TaskExecution } from './task-execution';
 import { incidentModelPlan } from './incident-model-plan';
+import { pendingTransitions } from './task-lifecycle-journal';
 export function coordinatorTools(
   memory: ProjectMemory,
   runs: () => TaskRuns,
@@ -40,6 +41,17 @@ export function coordinatorTools(
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       call: async (_args, scope) => ({
         text: JSON.stringify({
+          lifecycleRequests: pendingTransitions(runs().incidents.store.db, scope.projectId).map(
+            (entry) => ({
+              task: entry.id,
+              target: entry.target,
+              run: entry.run,
+              phase: entry.phase,
+              incident: entry.incidentId,
+              recovery:
+                'The owner can request Stop to retire this writer and then resume from the task panel.',
+            }),
+          ),
           incidents: runs()
             .incidents.store.list(scope.projectId)
             .map((row) => ({
