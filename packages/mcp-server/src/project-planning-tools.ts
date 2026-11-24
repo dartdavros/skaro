@@ -62,7 +62,7 @@ export function planningTools(handlers: ProjectPlanningHandlers): Tool<SkaroScop
           {
             name: 'begin_task_plan',
             description:
-              'Register an owner request for an implementation plan or task proposals before doing the planning. Honor explicit text-only requests. If a required C4 or milestone proposal is pending, call again with its exact decision_id to resume after application.',
+              'Register planning only when the owner requests Skaro tasks or agrees to delegate work into tasks. A text plan or work completed directly in project chat requires no task plan. If a required C4 or milestone proposal is pending, call again with its exact decision_id to resume after application.',
             inputSchema: {
               type: 'object',
               properties: { decision_id: { type: 'string' } },

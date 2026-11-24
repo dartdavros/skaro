@@ -3,13 +3,14 @@ import { taskC4Protocol } from './c4-protocol';
 import { inspectSemanticC4Review } from './c4-semantic-gate';
 import { c4PackageBlocks } from './c4-package-policy';
 import { background } from './background/client';
-import { C4ValidationError, c4Issue, git, type AppDb } from '@skaro/core';
+import { C4ValidationError, c4Issue, type AppDb } from '@skaro/core';
 import { inspectC4ReviewCandidate } from './c4-review-candidate';
 import type { ReviewC4Args } from '@skaro/mcp-server';
 import type { ProjectContext } from './projects';
 import { c4CoverageProblems } from './c4-coverage';
 export { c4CoverageProblems } from './c4-coverage';
 import { readTaskC4Scope, reviewedTaskScope, type C4TaskScope } from './c4-task-scope';
+import { taskC4Base } from './c4-task-base';
 
 export interface C4TaskReview extends ReviewC4Args {
   runId: string;
@@ -57,9 +58,15 @@ async function inspectC4TaskReviewData(
 ): Promise<{ review: C4TaskReview; artifactOnly: boolean }> {
   context.invalidate();
   const artifacts = await context.load();
-  const baseHead = (await git(checkout, ['rev-parse', artifacts.config.baseBranch])).stdout.trim();
-  const actualScope = await readTaskC4Scope(checkout, baseHead, artifacts, taskId);
   const run = runId ?? db.latestRun(context.id, taskId)?.id;
+  const baseHead = await taskC4Base(db, artifacts, {
+    projectId: context.id,
+    taskId,
+    runId: run,
+    checkout,
+    inPlace: checkout === context.root,
+  });
+  const actualScope = await readTaskC4Scope(checkout, baseHead, artifacts, taskId);
   const impact = !!run && taskC4Protocol(db, context.id, run) === 'impact-v1';
   const packages = await background(dirname(db.filePath), 'c4.list', context.id, taskId);
   if (

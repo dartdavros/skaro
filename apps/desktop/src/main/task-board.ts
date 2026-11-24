@@ -2,6 +2,7 @@
 // Runs, the queue and the agent choice stay in TaskRuns.
 
 import type { Events, EventName } from '../shared/ipc';
+import type { TaskStatus } from '@skaro/core';
 import type { Projects } from './projects';
 import type { TaskRuns } from './tasks';
 import { serializeTaskMutation } from './project-task-mutations';
@@ -28,6 +29,10 @@ export class TaskBoard {
       for (const id of taskIds) await store.updateTask(id, { archived });
       this.done(projectId, taskIds);
     });
+  }
+
+  setStatus(projectId: string, taskId: string, status: TaskStatus): Promise<void> {
+    return this.deps.runs.setBoardStatus(projectId, taskId, status);
   }
 
   /** "Удалить безвозвратно": the task file, its branches and worktrees. Merged code stays. */

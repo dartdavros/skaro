@@ -1,8 +1,8 @@
 import { recoverCoordinatorIncidents } from './coordinator-recovery';
 import { taskUpdateBusy } from './task-update-activity';
-import { type ProjectArtifacts, type Task } from '@skaro/core';
+import { type ProjectArtifacts, type Task, type TaskStatus } from '@skaro/core';
 import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
-import { type InteractionAnswer, type Item } from '@skaro/timeline';
+import type { InteractionAnswer, Item, ProcessAdmissionPort } from '@skaro/timeline';
 import type {
   AgentSettings,
   MergeAction,
@@ -25,7 +25,6 @@ import { startTaskEnvironment } from './task-environment-tool';
 import { clearTaskChat } from './task-clear';
 import { configureTaskEnvironment } from './task-environment-config-tool';
 import type { ConfigureEnvironmentArgs } from '@skaro/mcp-server';
-import type { ProcessAdmissionPort } from '@skaro/timeline';
 import { builtinAcceptancePort } from './builtin-acceptance';
 import { builtinTaskAdmission } from './builtin-task-admission';
 import { submitTaskResult } from './task-submit';
@@ -36,6 +35,7 @@ import { reportTaskBlocker } from './task-blocker-report';
 import { cancelTaskQuestion } from './question-cancel-handlers';
 import { prepareModelIncident, verifyModelIncident } from './incident-model-access';
 import { prepareBuiltinTaskReview } from './builtin-task-review';
+import { setTaskBoardStatus } from './task-board-status';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
@@ -127,6 +127,9 @@ export class TaskRuns {
   forget(projectId: string, taskId: string): Promise<void> {
     return this.engine.sessions.forget(projectId, taskId);
   }
+  setBoardStatus(projectId: string, taskId: string, status: TaskStatus): Promise<void> {
+    return setTaskBoardStatus(this.engine, projectId, taskId, status);
+  }
   retireHistory(projectId: string, taskId: string): void {
     this.engine.deps.db.retireTaskRuns(projectId, taskId);
     this.engine.scheduling.forgetAwaiting(projectId, [taskId]);
@@ -217,14 +220,8 @@ export class TaskRuns {
     if (scope.kind === 'project_chat') return this.engine.results.mergeTask(args, scope);
     return taskTool(this.engine, scope, () => this.engine.results.mergeTask(args, scope));
   }
-  async operationNotice(
-    projectId: string,
-    taskId: string,
-    text: string,
-    error: boolean,
-  ): Promise<void> {
-    const active = await this.engine.history.restore(projectId, taskId);
-    if (active) this.engine.history.notice(active, 'other', error ? 'error' : 'info', text);
+  operationNotice(project: string, task: string, text: string, error: boolean): Promise<void> {
+    return this.engine.history.operationNotice(project, task, text, error);
   }
   submitResult(args: SubmitResultArgs, scope: SkaroScope): Promise<ToolResult> {
     return submitTaskResult(this.engine, args, scope);

@@ -150,6 +150,15 @@ describe('chat instructions', () => {
     expect(chat('en')).not.toContain('«этап»');
   });
 
+  it('keeps direct requests in project chat and exposes explicit task lifecycle actions', () => {
+    for (const prompt of [chat('en'), PROJECT_CHAT_WORKFLOW]) {
+      expect(prompt).toContain('do not require a new task');
+      expect(prompt).toContain('Register begin_task_plan only when the owner asks for Skaro tasks');
+      expect(prompt).toContain('call delete_task with its exact ID');
+      expect(prompt).toContain('call set_task_status with the exact task ID and requested status');
+    }
+  });
+
   it('keeps coherent work together in new chats, continued chats and imports', () => {
     const prompts = [
       chat('en'),
