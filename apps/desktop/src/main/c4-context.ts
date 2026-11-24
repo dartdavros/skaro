@@ -3,7 +3,6 @@ import {
   authoredBody,
   readC4Documents,
   c4Hash,
-  git,
   type AppDb,
   type C4Package,
 } from '@skaro/core';
@@ -14,6 +13,7 @@ import { c4ChangeHash, c4ReviewKey } from './c4-fingerprint';
 import { readTaskC4Scope } from './c4-task-scope';
 import { c4CoverageProblems } from './c4-coverage';
 import { c4DiagnosticKey } from './c4-tool-diagnostic';
+import { taskC4Base } from './c4-task-base';
 
 /** Send the model once, authored document text and durable proposal facts, without repeated preview payloads. */
 export async function c4Context(
@@ -28,7 +28,13 @@ export async function c4Context(
   const artifacts = await context.load();
   const baseHead =
     scope.kind === 'task'
-      ? (await git(checkout, ['rev-parse', artifacts.config.baseBranch])).stdout.trim()
+      ? await taskC4Base(db, artifacts, {
+          projectId: scope.projectId,
+          taskId: scope.taskId!,
+          runId: scope.runId,
+          checkout,
+          inPlace: checkout === context.root,
+        })
       : undefined;
   const taskScope = baseHead
     ? await readTaskC4Scope(checkout, baseHead, artifacts, scope.taskId ?? '')

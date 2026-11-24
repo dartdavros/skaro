@@ -22,6 +22,11 @@ export class TaskRunHistory {
     this.ctx = ctx;
   }
 
+  async operationNotice(projectId: string, taskId: string, text: string, error: boolean) {
+    const active = await this.restore(projectId, taskId);
+    if (active) this.notice(active, 'other', error ? 'error' : 'info', text);
+  }
+
   restore(projectId: string, taskId: string): Promise<ActiveRun | undefined> {
     const k = key(projectId, taskId);
     const pending = this.restoring.get(k);

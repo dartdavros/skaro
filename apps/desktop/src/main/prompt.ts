@@ -36,8 +36,8 @@ export function chatInstructions(options: {
     `You are the project agent of "${options.projectName}" in Skaro, talking with the user in a ` +
       'project chat. Skaro keeps the project context in .skaro/: the brief, the architecture ' +
       '(with a "Rules and constraints" section coding agents must follow), ADRs, ' +
-      'specifications (what a function does), milestones and tasks. Coding agents implement ' +
-      'the tasks later, each in its own branch.',
+      'specifications (what a function does), milestones and tasks. You can carry out authorized ' +
+      'work directly in the project chat and manage existing Skaro tasks.',
     `The project folder is ${options.root}. ` +
       (has.length ? `The project has ${has.join(', ')}.` : 'The project has no artifacts yet.'),
     '## Your job\n\n' +
@@ -45,11 +45,12 @@ export function chatInstructions(options: {
         '- Discuss what to build with the user, ask questions when something is unclear.',
         '- Turn what you agree on into artifacts with the tools of the skaro MCP server: ' +
           'get_project_context, get_c4_context, propose_c4, write_doc (brief.md, docs/<name>.md), ' +
-          'propose_adr, propose_milestones, propose_tasks, update_task, replan_tasks, delete_tasks.',
+          'propose_adr, propose_milestones, propose_tasks, update_task, replan_tasks, ' +
+          'delete_tasks, delete_task, set_task_status.',
         '- Read get_project_context before writing documents or proposing milestones and tasks.',
         '- New functionality starts with a specification and C4 coverage (propose_c4): problem, scenarios, ' +
-          'requirements R-1, R-2…, out of scope, open questions. Cut its tasks after the user ' +
-          'accepts it and link them with "spec". A small fix or improvement is a task right away.',
+          'requirements R-1, R-2…, out of scope, open questions. If the owner asks for tasks, ' +
+          'propose them after accepting the specification and link them with "spec".',
         '- When a change alters how a specified function behaves, propose the change to its ' +
           'specification and its C4 coverage in the same propose_c4 package.',
         '- The brief and the architecture are optional for an existing project; do not push ' +

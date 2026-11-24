@@ -13,6 +13,7 @@ import {
 import type { ProjectContext } from './projects';
 import { c4ArchitectureHash, c4ChangeHash } from './c4-fingerprint';
 import { readTaskC4Scope, type C4TaskScope } from './c4-task-scope';
+import { taskC4Base } from './c4-task-base';
 import { memoryVersion, requireMemoryPath } from './project-memory-sources';
 import { taskInputSnapshot, type TaskInputSnapshot } from './task-preflight-inputs';
 import { localC4Scope } from './c4-preservation';
@@ -142,9 +143,13 @@ export async function observeC4Impact(
   );
   if (options.requireDispatchInputs !== false && (!saved || saved.version !== inputs.version))
     throw new Error('C4 observation requires the current dispatched preflight inputs');
-  const baseHead = (
-    await git(checkout, ['rev-parse', '--verify', `${artifacts.config.baseBranch}^{commit}`])
-  ).stdout.trim();
+  const base = (input: typeof artifacts) =>
+    taskC4Base(db, input, {
+      ...owner,
+      checkout,
+      inPlace: !run.worktree,
+    });
+  const baseHead = await base(artifacts);
   const head = (await git(checkout, ['rev-parse', '--verify', 'HEAD^{commit}'])).stdout.trim();
   const scope = localC4Scope(
     await readTaskC4Scope(checkout, baseHead, artifacts, taskId),
@@ -206,10 +211,7 @@ export async function observeC4Impact(
     observation.intent !== db.getSetting(`execution.${runId}.intent`, 0, { strict: true }) ||
     changeHash !== (await c4ChangeHash(checkout, baseHead)) ||
     head !== (await git(checkout, ['rev-parse', '--verify', 'HEAD^{commit}'])).stdout.trim() ||
-    baseHead !==
-      (
-        await git(checkout, ['rev-parse', '--verify', `${artifacts.config.baseBranch}^{commit}`])
-      ).stdout.trim() ||
+    baseHead !== (await base(artifacts)) ||
     memoryVersion(files) !==
       memoryVersion(
         await readC4ImpactSources(
@@ -222,6 +224,7 @@ export async function observeC4Impact(
   const after = await context.store.load();
   if (
     inputs.version !== (await taskInputSnapshot(db, context, after, taskId)).version ||
+    baseHead !== (await base(after)) ||
     architectureHash !== c4ArchitectureHash(after, scope)
   )
     throw new Error('C4 observation accepted inputs changed during collection');

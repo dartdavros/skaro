@@ -1,4 +1,4 @@
-import { git, C4ValidationError, c4Issue, type AppDb } from '@skaro/core';
+import { C4ValidationError, c4Issue, type AppDb } from '@skaro/core';
 import type { ReviewC4Args, SkaroScope, ToolResult } from '@skaro/mcp-server';
 import type { ProjectContext } from './projects';
 import { c4ArchitectureHash, c4ChangeHash, c4ReviewKey } from './c4-fingerprint';
@@ -6,6 +6,7 @@ import { c4CoverageProblems } from './c4-coverage';
 import { inspectC4ReviewCandidate } from './c4-review-candidate';
 import { readTaskC4Scope, reviewedTaskScope } from './c4-task-scope';
 import type { C4TaskReview } from './c4-review';
+import { taskC4Base } from './c4-task-base';
 
 /** A saved review certifies preflight as well as coverage, without publishing architecture. */
 export async function writeC4TaskReview(
@@ -19,7 +20,15 @@ export async function writeC4TaskReview(
   db.setSetting(c4ReviewKey(context.id, scope.taskId!), null);
   context.invalidate();
   const artifacts = await context.load();
-  const baseHead = (await git(checkout, ['rev-parse', artifacts.config.baseBranch])).stdout.trim();
+  const base = (input: typeof artifacts) =>
+    taskC4Base(db, input, {
+      projectId: scope.projectId,
+      taskId: scope.taskId!,
+      runId: scope.runId,
+      checkout,
+      inPlace: checkout === context.root,
+    });
+  const baseHead = await base(artifacts);
   const taskScope = await readTaskC4Scope(checkout, baseHead, artifacts, scope.taskId!);
   const reviewedScope = reviewedTaskScope(taskScope, args, artifacts.c4);
   const issues = c4CoverageProblems(artifacts, scope.taskId!, args, taskScope).map((message) =>
@@ -47,6 +56,7 @@ export async function writeC4TaskReview(
   context.invalidate();
   const after = await context.load();
   if (
+    baseHead !== (await base(after)) ||
     args.changeHash !== (await c4ChangeHash(checkout, baseHead)) ||
     JSON.stringify(artifacts.c4) !== JSON.stringify(after.c4) ||
     c4ArchitectureHash(artifacts, reviewedScope) !== c4ArchitectureHash(after, reviewedScope) ||

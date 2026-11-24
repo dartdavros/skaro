@@ -57,6 +57,7 @@ import { managedCacheServices } from './managed-cache-services';
 import { startProjectWriters } from './project-recovery-startup';
 import { submissionRecoveryTool } from './task-submission-recovery';
 import { publishDispatchChange } from './session-dispatch-pending';
+import { projectTaskLifecycleTools } from './project-task-lifecycle-tools';
 
 export async function createServices(
   appState: AppState,
@@ -161,6 +162,7 @@ export async function createServices(
       taskHistoryTool((args, scope) => runs.readHistory(args, scope)),
       chatHistoryTool((args, scope) => chats.readHistory(args, scope)),
       ciRunTool((args, scope) => ci.call(args, scope)),
+      ...projectTaskLifecycleTools(db, currentChats, () => board),
       ...projectTools({
         planning: {
           beginTaskPlan: (decision, scope) => chats.planning.beginTaskPlan!(decision, scope),

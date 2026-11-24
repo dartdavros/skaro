@@ -59,6 +59,8 @@ const mutations = new Set([
   'update_task',
   'replan_tasks',
   'delete_tasks',
+  'delete_task',
+  'set_task_status',
 ]);
 
 export function coordinationToolSubject(scope: SkaroScope): CoordinationRef {
