@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { c4Hash } from '@skaro/core';
 import { expect, it } from 'vitest';
 import { C4Service, type C4ProposalRecord } from './c4-service';
 import { unresolvedPlanPackages } from './chat-plan-c4';
@@ -20,6 +21,8 @@ async function architecture(w: Awaited<ReturnType<typeof planningWorkspace>>) {
   const model = structuredClone(artifacts.c4!);
   model.revision++;
   const spec = artifacts.specs[0]!;
+  const source = await readFile(join(w.store.root, spec.path), 'utf8');
+  const heading = '## Требования';
   const response = await service.propose(
     {
       title: 'Pending specification amendment',
@@ -29,15 +32,16 @@ async function architecture(w: Awaited<ReturnType<typeof planningWorkspace>>) {
       documents: [
         {
           path: spec.path.replace(/^\.skaro\//, ''),
-          content:
-            (await readFile(join(w.store.root, spec.path), 'utf8')) +
-            '\nAdditional owner-reviewed detail.\n',
+          baseHash: c4Hash(source),
+          edits: [{ oldText: heading, newText: `${heading}\n\nAdditional owner-reviewed detail.` }],
         },
       ],
     },
     { kind: 'project_chat', projectId: w.live.projectId, chatId: w.live.chat.id },
   );
+  expect(response.isError, response.text).not.toBe(true);
   const id = (JSON.parse(response.text) as { packageId: string }).packageId;
+  expect(id).toBeTruthy();
   return {
     id,
     records: () => service.records(w.live.projectId),
