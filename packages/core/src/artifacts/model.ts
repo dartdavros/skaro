@@ -2,11 +2,14 @@ import { DEFAULT_AGENT } from '@skaro/agents';
 // Project artifacts stored in .skaro/ (docs/architecture.md, section 3).
 
 /** Stored task status. "Blocked" and "needs answer" are computed, not stored. */
-export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'failed' | 'cancelled';
+export type TaskStatus =
+  'todo' | 'in_progress' | 'paused' | 'stopped' | 'review' | 'done' | 'failed' | 'cancelled';
 
 export const TASK_STATUSES: readonly TaskStatus[] = [
   'todo',
   'in_progress',
+  'paused',
+  'stopped',
   'review',
   'done',
   'failed',

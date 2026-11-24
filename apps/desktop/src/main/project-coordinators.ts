@@ -1,6 +1,8 @@
 import type { AppDb, CoordinationEvidence, CoordinationOperation } from '@skaro/core';
 import { coordinationRequest, type ProjectOperationRequest } from './project-coordinator-request';
 import { CoordinationPending } from './project-coordinator-errors';
+import { recoverSessionView } from './session-view-recovery';
+import { reconcileParkDelivery } from './task-park-delivery';
 import { dispatchProjectOperation, type CoordinationExecution } from './coordinator-delivery';
 import { migrateCoordinatorProject } from './coordinator-migration';
 import { requireCoordinationDispatch, dispatchSafetyAction } from './coordination-dispatch';
@@ -46,6 +48,8 @@ export class ProjectCoordinators {
       recoverSubmissionReceipts(this.db, project.id);
       reconcileUnstartedEnvironments(this.db, project.id);
       for (const operation of this.db.coordination.pending(project.id)) {
+        if (recoverSessionView(this.db, operation) || reconcileParkDelivery(this.db, operation))
+          continue;
         if (operation.state !== 'queued' || operation.action.startsWith('owner.')) continue;
         if (operation.action === 'ipc.chat.create' && operation.subject.kind === 'command') {
           if (operation.mode === 'mutation' && operation.scopeKey === 'project') {

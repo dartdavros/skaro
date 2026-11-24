@@ -278,6 +278,7 @@ export async function startNativeSession(
     return session;
   } catch (error) {
     await session.close();
+    signal?.throwIfAborted();
     throw error;
   } finally {
     signal?.removeEventListener('abort', abort);

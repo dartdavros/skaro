@@ -11,6 +11,10 @@ import { assertQuestionMessageAllowed } from '@skaro/timeline';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { hasOwnerCommand } from './owner-command-history';
 import { QuestionAnswers } from './question-answers';
+import { isTaskParked } from '@skaro/core';
+import { resumeParkedTask } from './task-park';
+import { beginTransition, currentTransition, transitionPhase } from './task-lifecycle-journal';
+import { reportLifecycleConflict } from './task-lifecycle-conflict';
 
 /** One serialized delivery owns the old turn, its queue slot and its replacement. */
 export async function deliverTaskInput(
@@ -24,6 +28,8 @@ export async function deliverTaskInput(
     requireTaskNotStopping(active);
     if (
       ctx.closing ||
+      ctx.messages.stopping(projectId, taskId) ||
+      ctx.parking.has(`${projectId}\n${taskId}`) ||
       active.switching ||
       active.run.id !== run.id ||
       ctx.active.get(`${projectId}\n${taskId}`) !== active ||
@@ -35,6 +41,8 @@ export async function deliverTaskInput(
   };
   current();
   if (hasOwnerCommand(active.timeline.state, original.commandId)) return;
+  const previousTransition = currentTransition(ctx.deps.db, projectId, taskId);
+  if (previousTransition && previousTransition.phase !== 'settled') throw new CommandCancelled();
   assertQuestionMessageAllowed(active.timeline.state, original.internal);
   const previous = ctx.deps.db.getSetting<TaskInputSnapshot | null>(
     `coordination.inputs.${run.id}`,
@@ -42,6 +50,10 @@ export async function deliverTaskInput(
   );
   let inputs = await readTaskInputs(ctx, active);
   current();
+  const task = inputs.artifacts.tasks.find((item) => item.id === taskId);
+  if (task && original.resumeTask && !isTaskParked(task.status)) throw new CommandCancelled();
+  if (task && isTaskParked(task.status) && (original.internal || !original.resumeTask))
+    throw new CommandCancelled();
   const turn = active.timeline.state.turns.at(-1);
   let replacing = false;
   let checkpointed = false;
@@ -115,9 +127,28 @@ export async function deliverTaskInput(
     // Once a native write is possible the durable owner-command receipt governs uncertain delivery.
     ctx.startup.consumeTransition(projectId, taskId, run.id, original.commandId);
     active.inputTransition = undefined;
+    const resume =
+      task && isTaskParked(task.status)
+        ? beginTransition(ctx.deps.db, projectId, {
+            id: taskId,
+            run: run.id,
+            target: 'in_progress',
+            from: task.status,
+            commandId: original.commandId,
+          })
+        : undefined;
     if (!latest || latest.outcome) await session.send(message, input.commandId);
     else await session.steer(message, input.commandId);
+    if (resume && transitionPhase(ctx.deps.db, projectId, resume, 'confirmed')) {
+      current();
+      await resumeParkedTask(ctx, projectId, taskId, current);
+      transitionPhase(ctx.deps.db, projectId, resume, 'settled');
+      ctx.changed(projectId, taskId);
+    }
   } catch (error) {
+    const pending = currentTransition(ctx.deps.db, projectId, taskId);
+    if (pending?.target === 'in_progress' && pending.commandId === original.commandId)
+      await reportLifecycleConflict(ctx, projectId, pending);
     if (replacing) {
       if (
         checkpointed &&

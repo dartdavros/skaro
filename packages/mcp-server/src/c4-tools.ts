@@ -1,13 +1,15 @@
 import type { Tool, ToolResult } from './server.ts';
 import type { SkaroScope } from './tools.ts';
 import { operationFailure } from './tool-failure.ts';
+import type { C4DocumentChange } from '@skaro/core';
+import { C4_DOCUMENTS_SCHEMA, readC4DocumentChanges } from './c4-document-args.ts';
 
 export interface ProposeC4Args {
   title: string;
   summary: string;
   baseRevision: number;
   model: unknown;
-  documents: { path: string; content: string }[];
+  documents: C4DocumentChange[];
 }
 export interface ReviewC4Args {
   realized: string[];
@@ -93,7 +95,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
       name: 'propose_c4',
       available,
       description:
-        'Propose ONE consistent package of the complete shared C4 model and related architecture, specifications and ADRs. Read get_c4_context for the schema and current revision. Documents are full Markdown files relative to .skaro/; ADR/spec files need frontmatter with string id, title and status. For a new specification choose the next unused four-digit number returned in context. The service computes body hashes and generates uniform interactive diagram previews. Do not author Mermaid, styles, coordinates or generated C4 sections. Model revision must equal base_revision + 1. Include evidence for all elements and relationships and map every specification requirement R-n. Planned work stays planned until published. The package is saved immediately but changes apply only after one owner decision. In an import this stages its C4 model; stage documents with stage_artifact and finish_import. Never discard source architecture or invent missing decisions.',
+        'Propose ONE consistent package of the complete shared C4 model and related documents. Read get_c4_context for the schema, revision and documentHashes. Paths are relative to .skaro/. For an existing file, pass base_hash from documentHashes and edits with exact unique old_text and new_text. Full content is for new files only. ADR/spec files need frontmatter with string id, title and status. For a new specification use the next number from context. Do not include generated C4 sections. Model revision must equal base_revision + 1. Include evidence for elements and relationships and map each specification requirement. Planned work stays planned until published. The package applies after one owner decision. In an import, stage documents with stage_artifact and finish_import.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -104,15 +106,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
             type: 'object',
             description: 'Complete model matching the schema from get_c4_context.',
           },
-          documents: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: { path: { type: 'string' }, content: { type: 'string' } },
-              required: ['path', 'content'],
-              additionalProperties: false,
-            },
-          },
+          documents: C4_DOCUMENTS_SCHEMA,
         },
         required: ['title', 'summary', 'base_revision', 'model', 'documents'],
         additionalProperties: false,
@@ -120,17 +114,12 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
       call: call(
         'propose_c4',
         (args): ProposeC4Args => {
-          if (!Array.isArray(args.documents)) throw new Error('documents must be an array');
-          const documents = args.documents.map((raw: Record<string, unknown>) => ({
-            path: text(raw, 'path'),
-            content: text(raw, 'content'),
-          }));
           return {
             title: text(args, 'title'),
             summary: text(args, 'summary'),
             baseRevision: integer(args, 'base_revision'),
             model: args.model,
-            documents,
+            documents: readC4DocumentChanges(args.documents),
           };
         },
         (args, scope) => handlers.propose(args, scope),

@@ -4,6 +4,8 @@ import type { IntegrationTimeline } from './task-timeline';
 export type { BootstrapState, WorkspaceState } from './bootstrap';
 
 export interface TaskDetail extends TaskSummary {
+  lifecyclePending?: boolean;
+  lifecycleRevision?: number;
   dependsOn: TaskRef[];
   /** Tasks that wait for this one. */
   blocks: TaskRef[];
@@ -70,6 +72,8 @@ export interface TaskView {
 }
 
 export interface MessageInput {
+  /** Set by the task lifecycle Resume action. Ordinary messages do not restart a parked task. */
+  resumeTask?: true;
   /** Exact questions visible on submission; a queued message cannot cancel a newer request. */
   supersededQuestions?: import('@skaro/timeline').QuestionMessageReference[];
   /** Main-process orchestration; retained for delivery recovery, hidden from the conversation. */

@@ -54,6 +54,8 @@ export interface AgentSettings {
 export type TaskStatus =
   | 'todo'
   | 'in_progress'
+  | 'paused'
+  | 'stopped'
   | 'review'
   | 'done'
   | 'failed'
@@ -72,7 +74,8 @@ export interface TaskRef {
 export type MergeProgress = 'running' | 'queued' | 'needs_answer' | 'failed' | 'conflict';
 
 /** Where the task is in its lifecycle (the task file); `status` adds what happens right now. */
-export type TaskStage = 'todo' | 'in_progress' | 'review' | 'done' | 'failed' | 'cancelled';
+export type TaskStage =
+  'todo' | 'in_progress' | 'paused' | 'stopped' | 'review' | 'done' | 'failed' | 'cancelled';
 
 export interface TaskSummary extends TaskRef {
   resourceWait?: import('./resource-wait').ResourceWait;

@@ -86,6 +86,7 @@ const safetyActions = new Set([
   'mcp.cancel_question',
   'ipc.decisions.cancel',
   'ipc.task.interrupt',
+  'ipc.task.park',
   'ipc.chat.interrupt',
   'ipc.task.stop_background',
   'ipc.tasks.cancel',

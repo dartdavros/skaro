@@ -43,10 +43,15 @@ export class TaskRunProcesses {
   private async stopRecorded(runId: string): Promise<void> {
     // Output can arrive before the asynchronous OS identity query finishes.
     // Drain admission before reading the durable list, so stop cannot miss that process.
-    while (this.admissions.get(runId)?.size) await Promise.all([...this.admissions.get(runId)!]);
     const setting = this.key(runId);
-    const records = this.db.getSetting<OwnedProcess[] | null>(setting, []) ?? [];
-    if (!records.length) return;
+    for (;;) {
+      while (this.admissions.get(runId)?.size) await Promise.all([...this.admissions.get(runId)!]);
+      const records = this.db.getSetting<OwnedProcess[] | null>(setting, []) ?? [];
+      if (!records.length) return;
+      await this.stopBatch(runId, setting, records);
+    }
+  }
+  private async stopBatch(runId: string, setting: string, records: OwnedProcess[]): Promise<void> {
     const checkpoint = `${setting}.stop`;
     const save = (state: 'running' | 'verified' | 'failed') => {
       this.db.setSetting(checkpoint, { state, identities: records, at: Date.now() });
@@ -56,7 +61,17 @@ export class TaskRunProcesses {
     save('running');
     try {
       for (const record of records) await stopOwnedProcess(record);
-      this.db.setSetting(setting, []);
+      // Admission can append another identity while the OS is retiring the captured tree.
+      const latest = this.db.getSetting<OwnedProcess[]>(setting, []);
+      this.db.setSetting(
+        setting,
+        latest.filter(
+          (p) =>
+            !records.some(
+              (r) => r.pid === p.pid && r.birth === p.birth && r.platform === p.platform,
+            ),
+        ),
+      );
       save('verified');
     } catch (error) {
       save('failed');

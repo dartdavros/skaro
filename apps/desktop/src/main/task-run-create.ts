@@ -3,6 +3,7 @@ import { bindC4Protocol } from './c4-protocol';
 import { join } from 'node:path';
 import {
   taskBranch,
+  isTaskParked,
   indexTasks,
   pendingDependencies,
   startBlocker,
@@ -96,7 +97,7 @@ async function createLockedTaskRun(
   }
   if (builtin) currentBuiltin();
   await updateSubject(context, taskId, {
-    status: 'in_progress',
+    status: isTaskParked(task.status) ? task.status : 'in_progress',
     ...(branch ? { branch } : {}),
   });
   context.invalidate();

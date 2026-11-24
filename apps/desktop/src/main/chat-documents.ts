@@ -111,7 +111,7 @@ export class ChatDocuments {
       const id = adrId(args.id);
       const spec = (await this.ctx.project(live.projectId).load()).specs.find((s) => s.id === id);
       if (!spec) return { text: `There is no specification ${args.id}.`, isError: true };
-      if (sameText(spec.body, args.content))
+      if (args.content !== undefined && sameText(spec.body, args.content))
         return { text: `SPEC-${id} already has this text; nothing changed.` };
     }
     return {

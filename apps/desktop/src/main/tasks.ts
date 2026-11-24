@@ -36,10 +36,10 @@ import { cancelTaskQuestion } from './question-cancel-handlers';
 import { prepareModelIncident, verifyModelIncident } from './incident-model-access';
 import { prepareBuiltinTaskReview } from './builtin-task-review';
 import { setTaskBoardStatus } from './task-board-status';
+import { parkTask, type ParkedTaskStatus } from './task-park';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
-
 /** Public API: composes focused task-run services without owning their workflows. */
 export class TaskRuns {
   cancelIntegrationQuestion(id: string, reason: string, scope: SkaroScope) {
@@ -184,7 +184,10 @@ export class TaskRuns {
     return this.engine.messages.respond(projectId, taskId, interactionId, answer);
   }
   interrupt(projectId: string, taskId: string): Promise<void> {
-    return this.engine.messages.interrupt(projectId, taskId);
+    return this.engine.messages.interrupt(projectId, taskId, true);
+  }
+  park(projectId: string, taskId: string, status: ParkedTaskStatus, requestId?: string) {
+    return parkTask(this.engine, projectId, taskId, status, undefined, requestId);
   }
   clearChat(projectId: string, taskId: string): Promise<void> {
     return clearTaskChat(this.engine, projectId, taskId);

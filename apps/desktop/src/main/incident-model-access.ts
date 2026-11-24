@@ -36,6 +36,17 @@ async function readModelIncident(ctx: TaskRunEngine, scope: SkaroScope, id: stri
   return row;
 }
 export async function verifyModelIncident(ctx: TaskRunEngine, scope: SkaroScope, id: string) {
+  if (scope.kind === 'project_chat' && scope.chatId && !scope.importId) {
+    const incident = ctx.incidents.store.get(scope.projectId, id);
+    if (incident.protocol?.code === 'task_lifecycle_unconfirmed') {
+      await ctx.incidents.reconcile(scope.projectId, id);
+      if (ctx.incidents.store.get(scope.projectId, id).state !== 'resolved')
+        throw new DecisionNotDispatched(
+          'Lifecycle outcome still unconfirmed. Ask the owner before stopping this task.',
+        );
+      return;
+    }
+  }
   const row = await prepareModelIncident(ctx, scope, id);
   const plan = incidentModelPlan(ctx.deps.db, row);
   const verified = plan?.verificationSession

@@ -24,14 +24,30 @@ export async function proposeC4Specification(
   const title = args.title ?? previous?.title;
   if (!title) return { isError: true, text: 'A specification title is required' };
   const path = previous?.path.replace(/^\.skaro\//, '') ?? `specs/${id}-${slugify(title)}.md`;
-  const file = parseMarkdown(args.content);
-  setFields(file, {
-    id,
-    title,
-    status: 'accepted',
-    date: new Date().toISOString().slice(0, 10),
-    ...(args.replaces ? { replaces: args.replaces } : {}),
-  });
+  const documents = [...args.c4.documents];
+  if (previous) {
+    if (
+      args.content !== undefined ||
+      args.title ||
+      args.replaces ||
+      !documents.some((doc) => doc.path === path && doc.edits !== undefined)
+    )
+      return {
+        isError: true,
+        text: `Edit ${path} in c4.documents with base_hash and exact edits, including any frontmatter changes.`,
+      };
+  } else {
+    if (!args.content?.trim()) return { isError: true, text: 'A new specification needs content.' };
+    const file = parseMarkdown(args.content);
+    setFields(file, {
+      id,
+      title,
+      status: 'accepted',
+      date: new Date().toISOString().slice(0, 10),
+      ...(args.replaces ? { replaces: args.replaces } : {}),
+    });
+    documents.push({ path, content: serializeMarkdown(file) });
+  }
   const model = structuredClone(readC4Model(args.c4.model));
   const binding = model.specifications.find((s) => s.id === id);
   if (!binding)
@@ -43,10 +59,7 @@ export async function proposeC4Specification(
       summary: args.summary ?? title,
       baseRevision: args.c4.baseRevision,
       model,
-      documents: [
-        ...args.c4.documents.filter((d) => d.path !== path),
-        { path, content: serializeMarkdown(file) },
-      ],
+      documents,
     },
     scope,
   );

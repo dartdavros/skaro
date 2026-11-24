@@ -7,7 +7,8 @@ import {
   confirmOwnerMessagesStopped,
   stopOwnerMessages,
 } from './owner-commands';
-import { key } from './task-run-helpers';
+import { shutdownTaskRuntime } from './task-runtime-shutdown';
+import { taskStopDeliveries } from './task-stop-deliveries';
 
 /** The native Stop keeps durable shared decisions, but retires its writer before a fresh intent. */
 export function stopManagedTask(
@@ -21,9 +22,13 @@ export function stopManagedTask(
   const unblock = blockOwnerMessages(projectId, taskId, 'Task is stopping. Wait for confirmation.');
   const receipt = `native.task-stop.${active.run.id}`,
     requestId = randomUUID();
-  const captured = integrationOwnsDelivery
-    ? []
-    : [...new Set([...commands, ...stopOwnerMessages(projectId, taskId)])];
+  const captured = taskStopDeliveries(
+    ctx.deps.db,
+    projectId,
+    taskId,
+    [...new Set([...commands, ...stopOwnerMessages(projectId, taskId)])],
+    integrationOwnsDelivery,
+  );
   const record = (state: string, runs?: string[]) =>
     ctx.deps.db.setSetting(receipt, {
       version: 1,
@@ -36,20 +41,7 @@ export function stopManagedTask(
   const work = (async () => {
     try {
       record('requested');
-      await ctx.architecture.stop(projectId, taskId);
-      await ctx.integrations.controls.interrupt(projectId, taskId);
-      ctx.queue.cancel(key(projectId, taskId));
-      const session = active.session;
-      if (session) {
-        try {
-          await operationTimeout(session.interrupt(), 5000, 'Native interrupt deadline exceeded');
-        } catch {
-          ctx.deps.db.addEvent(projectId, 'task_interrupt_escalated', { task: taskId });
-        }
-      }
-      // detach drains attachment, revokes grants and verifies PID/birth before returning.
-      await ctx.sessions.detach(active);
-      await active.pumping;
+      await shutdownTaskRuntime(ctx, active);
       const runs = ctx.deps.db.listRuns(projectId, taskId, { includeRetired: true });
       for (const run of runs) await ctx.processes.stop(run.id);
       record(

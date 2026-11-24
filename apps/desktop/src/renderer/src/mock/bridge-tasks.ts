@@ -62,6 +62,12 @@ export const tasksHandlers = {
   'task.send': () => undefined,
   'task.respond': () => undefined,
   'task.interrupt': () => undefined,
+  'task.controls': (_project, id) => detail(id),
+  'task.park': (_project, _id, status, requestId = crypto.randomUUID()) => ({
+    status,
+    requestId,
+    revision: 0,
+  }),
   'task.stopBackground': () => undefined,
   'task.setSettings': (_p, _t, next) => void Object.assign(taskSettings, next),
   'task.merge': () => undefined,
@@ -88,9 +94,11 @@ export const tasksHandlers = {
   | 'plan.reorder'
   | 'plan.placeTask'
   | 'task.open'
+  | 'task.controls'
   | 'task.send'
   | 'task.respond'
   | 'task.interrupt'
+  | 'task.park'
   | 'task.stopBackground'
   | 'task.setSettings'
   | 'task.merge'

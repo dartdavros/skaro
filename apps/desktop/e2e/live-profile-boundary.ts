@@ -8,6 +8,7 @@ export function assertLiveProfileBoundary(userData: string): void {
     process.env['SKARO_RESPONSIVENESS_PROFILE'],
     process.env['SKARO_STARTUP_USER_DATA'],
     process.env['SKARO_FOLLOW_UP_PROFILE'],
+    process.env['SKARO_LIFECYCLE_PROFILE'],
   ];
   if (!profiles.some((profile) => profile && resolve(profile) === resolve(userData))) return;
   const writable = process.env['SKARO_E2E_WRITE_PROJECT_ROOT'];

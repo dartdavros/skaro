@@ -1,6 +1,15 @@
 import type { TaskStatus, TaskSummary } from './ipc-entities';
 export type BoardStatus =
-  'todo' | 'blocked' | 'working' | 'need' | 'review' | 'done' | 'error' | 'cancelled';
+  | 'todo'
+  | 'blocked'
+  | 'working'
+  | 'need'
+  | 'paused'
+  | 'stopped'
+  | 'review'
+  | 'done'
+  | 'error'
+  | 'cancelled';
 export type TaskColumn = 'todo' | 'working' | 'review' | 'done';
 export function boardStatus(status: TaskStatus): BoardStatus {
   if (status === 'in_progress' || status === 'queued') return 'working';

@@ -26,6 +26,7 @@ import { retireCapacityWait } from './resource-wait-retirement';
 import { bindIncidentEnvironment } from './incident-environment-verification';
 import { bindIncidentSession } from './incident-session-verification';
 import { retireTerminalIncident } from './incident-retirement';
+import { recoverTaskTransitions } from './task-lifecycle-recovery';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -120,6 +121,10 @@ export class TaskIncidents {
   private async advance(projectId: string, id: string): Promise<void> {
     let row = this.store.get(projectId, id);
     if (row.state !== 'open' || this.ctx.closing) return;
+    if (row.protocol?.code === 'task_lifecycle_unconfirmed') {
+      await recoverTaskTransitions(this.ctx, projectId, row.protocol.resourceVersion);
+      return;
+    }
     if (await retireTerminalIncident(this.ctx, row)) return;
     if (await retireCapacityWait(this.ctx, row)) return;
     const subscribers = [];

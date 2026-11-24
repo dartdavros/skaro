@@ -1,10 +1,12 @@
 import type { AppDb, OwnerCommand } from '@skaro/core';
 import { coordinationHash } from './project-coordinator-request';
 import { requireCoordinationDispatch } from './coordination-dispatch';
+import type { MessageInput } from '../shared/ipc';
 interface CommandOrigin {
   projectId: string;
   inputHash: string;
   dispatchRevision: number;
+  destination?: 'task';
 }
 const key = (id: string) => `coordination.owner-origin.${id}`;
 const hash = (command: OwnerCommand) =>
@@ -46,9 +48,17 @@ export function registerOwnerOrigin(db: AppDb, command: OwnerCommand) {
       projectId,
       inputHash: hash(command),
       dispatchRevision: dispatch.revision,
+      ...(command.method === 'task.send' &&
+      (command.args[2] as MessageInput)?.resumeTask === true &&
+      !db.commands.get(command.id)
+        ? { destination: 'task' }
+        : {}),
     })
   )
     throw new Error('Owner command origin changed');
+}
+export function hasTaskDestination(db: AppDb, command: OwnerCommand) {
+  return origin(db, command)?.destination === 'task';
 }
 export function requireOwnerOrigin(db: AppDb, command: OwnerCommand) {
   const saved = origin(db, command);

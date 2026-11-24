@@ -8,6 +8,8 @@ import { taskInputsCurrent } from './task-preflight';
 import type { TaskRunEngine } from './task-run-engine';
 import { key } from './task-run-helpers';
 import type { ActiveRun } from './task-run-model';
+import { recoverWaitingTaskSuspension } from './task-suspension';
+import { errorText } from './session-log';
 
 /** Only informational replies may cross an input revision. Permissions belong to the old turn. */
 export function replacementQuestion(
@@ -53,32 +55,44 @@ export async function dispatchTaskReply(
     );
     return 'queued' as const;
   };
-  const requireOpen = () => {
+  const requireOpen = (native = false) => {
     const latest = state.turns.at(-1);
     if (
       ctx.closing ||
       active.stopping ||
-      active.stopError ||
       active.switching ||
       active.inputTransition ||
       active.deliveryEpoch !== deliveryEpoch ||
-      active.session !== session ||
       active.run.id !== run.id ||
       ctx.active.get(key(projectId, taskId)) !== active ||
       latest?.id !== turnId ||
-      latest?.outcome !== outcome ||
+      (native && (active.session !== session || latest?.outcome !== outcome)) ||
       !state.interactions.includes(interaction)
     )
       throw new DecisionNotDispatched(
         'The task or its open request changed before the reply was sent',
       );
   };
+  const shutdownFailure = (error: unknown) =>
+    new DecisionNotDispatched(
+      `Reply not sent. Agent shutdown could not be confirmed. ${errorText(error)}`,
+    );
   requireOpen();
   if (
     interaction.kind === 'question' &&
     (isAsyncQuestion(interaction) || !session || !turn || outcome)
-  )
+  ) {
+    try {
+      await recoverWaitingTaskSuspension(ctx, active);
+    } catch (error) {
+      throw shutdownFailure(error);
+    }
+    requireOpen();
+    if (active.stopError) throw shutdownFailure(active.stopError);
     return queueAnswer(interaction);
+  }
+  requireOpen(true);
+  if (active.stopError) throw shutdownFailure(active.stopError);
   if (!session) throw new DecisionNotDispatched('The agent session has ended');
   let current: boolean;
   try {
@@ -86,7 +100,8 @@ export async function dispatchTaskReply(
   } catch (error) {
     throw new DecisionNotDispatched(error);
   }
-  requireOpen();
+  requireOpen(true);
+  if (active.stopError) throw shutdownFailure(active.stopError);
   const replacementPending =
     interaction.kind === 'question' &&
     !!turnId &&

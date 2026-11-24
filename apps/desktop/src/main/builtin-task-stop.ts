@@ -6,7 +6,7 @@ import {
 } from './owner-commands';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
-import { key } from './task-run-helpers';
+import { shutdownTaskRuntime } from './task-runtime-shutdown';
 
 /** Stop retires the transport and its grants; a later input must obtain a fresh admission. */
 export function stopBuiltinTask(
@@ -19,20 +19,7 @@ export function stopBuiltinTask(
   const unblock = blockOwnerMessages(projectId, taskId, 'Task is stopping. Wait for confirmation.');
   const work = (async () => {
     try {
-      await ctx.architecture.stop(projectId, taskId);
-      await ctx.integrations.controls.interrupt(projectId, taskId);
-      ctx.queue.cancel(key(projectId, taskId));
-      const session = active.session;
-      if (session) {
-        try {
-          await operationTimeout(session.interrupt(), 5000, 'Native interrupt deadline exceeded');
-        } catch {
-          // Teardown below still requires verified process exit; a timeout is not success.
-          ctx.deps.db.addEvent(projectId, 'task_interrupt_escalated', { task: taskId });
-        }
-      }
-      await ctx.sessions.detach(active);
-      await active.pumping;
+      await shutdownTaskRuntime(ctx, active);
       await operationTimeout(
         confirmOwnerMessagesStopped(projectId, taskId, commands, {
           kind: 'run',
