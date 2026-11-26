@@ -7,6 +7,7 @@ export interface AgentLimitWindow {
 
 export interface AgentLimits {
   checkedAt: string;
+  reached?: boolean;
   windows: AgentLimitWindow[];
 }
 

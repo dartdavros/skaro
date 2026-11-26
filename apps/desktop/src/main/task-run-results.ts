@@ -1,3 +1,4 @@
+import { inspectWorkflowPublication, publicationReply } from './workflow-publication';
 import { MergeBlockedError, newlyUnblocked } from '@skaro/core';
 import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
 import { AUTO_MERGE_KEY } from '../shared/ipc';
@@ -24,6 +25,35 @@ export class TaskRunResults {
 
   async mergeTask(args: MergeTaskArgs, scope: SkaroScope): Promise<ToolResult> {
     if (scope.importId) return { text: 'Import sessions cannot merge tasks.', isError: true };
+    if (args.publication || (args.partial && !args.milestoneId)) {
+      try {
+        const taskId = scope.kind === 'task' ? scope.taskId : args.taskId;
+        if (!taskId || args.milestoneId || (args.taskId && args.taskId !== taskId))
+          throw new Error('Partial workflow publication needs a single scoped task.');
+        const context = this.ctx.project(scope.projectId);
+        const task = await context.store.readTask(taskId);
+        if (
+          args.publication ||
+          (task.status !== 'review' &&
+            task.status !== 'done' &&
+            taskSections(task.body).criteria.some((criterion) => !criterion.done))
+        ) {
+          if (!args.partial || !args.publication)
+            throw new Error(
+              'For a workflow prerequisite pass partial=true and publication={pullRequest, head, workflow}. Supply the exact owner-authorized PR and full commit SHA.',
+            );
+          if (task.archived || ['paused', 'stopped', 'cancelled', 'done'].includes(task.status))
+            throw new Error('Publication requires an active task.');
+          const run = this.ctx.deps.db.latestRun(scope.projectId, taskId);
+          if (!run || (scope.kind === 'task' && scope.runId !== run.id))
+            throw new Error('The publication run is no longer current.');
+          const result = await inspectWorkflowPublication(context, task, run, args.publication);
+          return publicationReply(result);
+        }
+      } catch (error) {
+        return { text: errorText(error), isError: true };
+      }
+    }
     if (scope.kind === 'project_chat') {
       if (!!args.taskId === !!args.milestoneId)
         return { text: 'Specify exactly one task_id or milestone_id.', isError: true };

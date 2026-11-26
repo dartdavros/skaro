@@ -1,3 +1,5 @@
+import { accountLimits } from './account-limits.svelte';
+import type { AgentInfo } from '../../../shared/ipc';
 import { defaultAgent } from '@skaro/agents/catalog';
 import type { AgentLimits } from '@skaro/timeline';
 import type { AgentId, AgentSettings } from '../../../shared/ipc';
@@ -35,7 +37,7 @@ export class LimitsController {
     }
   }
 
-  async load(agent: AgentId): Promise<void> {
+  async load(agent: AgentId, info?: AgentInfo): Promise<void> {
     const generation = ++this.generation;
     this.loading = true;
     this.failed = false;
@@ -47,7 +49,9 @@ export class LimitsController {
         if (generation === this.generation) this.usage = usage;
         return;
       }
-      const snapshot = await window.skaro.invoke('agents.limits', agent);
+      const account = accountLimits(info);
+      if (!account) throw new Error('Agent account is unavailable');
+      const snapshot = await account.refresh();
       if (generation === this.generation) this.snapshot = snapshot;
     } catch {
       if (generation === this.generation) this.failed = true;

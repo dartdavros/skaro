@@ -28,5 +28,9 @@ export function codexLimits(value: unknown): AgentLimits {
     const kind = duration === 300 ? 'five_hour' : duration === 10080 ? 'seven_day' : undefined;
     if (window && kind) windows.push(limitWindow(kind, window['usedPercent'], window['resetsAt']));
   }
-  return { checkedAt: new Date().toISOString(), windows };
+  return {
+    checkedAt: new Date().toISOString(),
+    windows,
+    ...(limits?.['rateLimitReachedType'] ? { reached: true } : {}),
+  };
 }

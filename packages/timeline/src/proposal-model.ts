@@ -10,6 +10,7 @@ export interface ProposedMilestone {
 
 /** A task in a proposed plan; `ref` links tasks of the same proposal to each other. */
 export interface ProposedTask {
+  requiresPullRequest?: boolean;
   ref: string;
   title: string;
   /** Task file body: "Цель", "Критерии приёмки", "Заметки". */

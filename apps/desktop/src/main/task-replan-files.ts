@@ -24,6 +24,7 @@ export function restoredTaskText(task: Task, existing = ''): string {
     agent: task.agent,
     model: task.model,
     branch: task.branch,
+    requires_pull_request: task.requiresPullRequest || undefined,
     spec: task.spec,
     created: task.created,
     unblocked: task.unblocked || undefined,

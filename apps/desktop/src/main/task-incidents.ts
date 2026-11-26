@@ -7,6 +7,7 @@ import {
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
 import { IncidentStore } from './incident-store';
+import { inspectIncidentWorkflow } from './incident-workflow-publication';
 import { IncidentPolicy } from './incident-policy';
 import { checkIncident, currentIncidentSubscriber, incidentAction } from './incident-condition';
 import { IncidentDecisions } from './incident-decisions';
@@ -63,6 +64,12 @@ export class TaskIncidents {
   }
   bindEnvironment(row: CoordinationBlocker, id: string) {
     return bindIncidentEnvironment(this.ctx, row, id);
+  }
+  inspectWorkflow(
+    row: CoordinationBlocker,
+    request: import('@skaro/mcp-server').WorkflowPublication,
+  ) {
+    return inspectIncidentWorkflow(this.ctx, row, request);
   }
   bindSession(row: CoordinationBlocker) {
     return bindIncidentSession(this.ctx, row);

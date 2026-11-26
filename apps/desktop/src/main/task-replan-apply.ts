@@ -14,6 +14,7 @@ import { taskFiles } from './task-replan-files';
 
 export function taskInput(task: Task): NewTask {
   return {
+    ...(task.requiresPullRequest && { requiresPullRequest: true }),
     title: task.title,
     body: task.body,
     dependsOn: task.dependsOn,
@@ -29,6 +30,7 @@ export function taskInput(task: Task): NewTask {
 export function afterTask(before: Task, input: NewTask): Task {
   return {
     ...before,
+    requiresPullRequest: input.requiresPullRequest,
     title: input.title,
     body: input.body!,
     dependsOn: input.dependsOn!,
@@ -74,6 +76,7 @@ export async function allocateReplan(ctx: ChatEngine, decision: TaskReplanDecisi
       ...(before ? { before } : {}),
       input: {
         ...taskInput(source),
+        ...(task.requiresPullRequest && { requiresPullRequest: true }),
         title: task.title,
         body: task.body,
         milestone: task.milestone,
@@ -170,6 +173,7 @@ export async function applyReplanWrites(
           milestone: write.input.milestone,
           order: write.input.order,
           spec: write.input.spec,
+          requiresPullRequest: write.input.requiresPullRequest,
         });
       }
     } else if (!current) await context.store.createReservedTask(write.id, write.input);

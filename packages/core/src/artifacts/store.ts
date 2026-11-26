@@ -13,6 +13,7 @@ import type {
   Doc,
   Milestone,
   ProjectArtifacts,
+  ArtifactProblem,
   Spec,
   SpecStatus,
   ProjectConfig,
@@ -41,6 +42,13 @@ export class ArtifactStore {
     this.files = new ArtifactFiles(projectRoot, reservedTaskIds, cache);
     this.defaults = defaults;
   }
+  async readConfig(): Promise<ProjectConfig> {
+    const problems: ArtifactProblem[] = [];
+    const config = await configOps.readConfig(this.files, this.defaults, problems);
+    if (problems.length) throw new Error(problems.map((problem) => problem.message).join('\n'));
+    return config;
+  }
+
   readTask(id: string): Promise<Task> {
     return tasks.readTask(this.files, id);
   }

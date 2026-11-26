@@ -46,7 +46,7 @@ export function taskViewSettings(
     ...(agent === 'skaro' && saved?.budgetUsd !== undefined ? { budgetUsd: saved.budgetUsd } : {}),
     isolation: taskRunIsolation(
       running?.run ?? ctx.deps.db.listRuns(projectId, task.id)[0],
-      saved?.isolation ?? artifacts.config.isolation,
+      task.requiresPullRequest ? 'worktree' : (saved?.isolation ?? artifacts.config.isolation),
     ),
   };
 }

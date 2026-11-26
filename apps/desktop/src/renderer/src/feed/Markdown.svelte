@@ -1,13 +1,13 @@
 <script lang="ts">
   import { useFeed } from './context.svelte';
-  import { drawMermaid } from './markdown';
+  import { drawMermaid } from './mermaid';
   import { agentMarkdown } from './markdown-work';
   import { MarkdownDom } from './markdown-dom';
   import { markdownInteractions } from './markdown-interactions';
   import { useFeedLoading } from './feed-loading.svelte';
   import { onMount } from 'svelte';
 
-  let { text }: { text: string } = $props();
+  let { text, streaming = false }: { text: string; streaming?: boolean } = $props();
   const feed = useFeed();
   const interactions = markdownInteractions(feed);
   let root = $state<HTMLDivElement>();
@@ -63,7 +63,6 @@
     const dom = new MarkdownDom(
       root,
       (fragment) => {
-        void drawMermaid(fragment);
         void interactions.decorate(fragment);
         return () => {};
       },
@@ -76,13 +75,26 @@
   });
   $effect(() => {
     const dom = renderer;
-    if (!dom || !prepared) return;
+    const element = root;
+    const pending = streaming;
+    if (!dom || !element || !prepared) return;
     if (!parts.length) painted = true;
-    void dom.update(parts).catch((error) => {
-      failed = true;
-      feed.historyError?.(String(error));
-    });
-    return () => dom.cancel();
+    let current = true;
+    void dom
+      .update(parts)
+      .then(() => {
+        if (current) return drawMermaid(element, pending);
+      })
+      .catch((error) => {
+        if (current) {
+          failed = true;
+          feed.historyError?.(String(error));
+        }
+      });
+    return () => {
+      current = false;
+      dom.cancel();
+    };
   });
 </script>
 

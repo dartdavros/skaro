@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon, t } from '@skaro/ui';
-  import { drawMermaid } from '../feed/markdown';
+  import { drawMermaid } from '../feed/mermaid';
   import { sanitizeBlock, type Block } from './render';
   let { value }: { value: Block } = $props();
   const block = $derived(sanitizeBlock(value));

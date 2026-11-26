@@ -21,3 +21,5 @@ export * from './task-delete-tool.ts';
 export * from './task-lifecycle-tools.ts';
 export * from './c4-tools.ts';
 export { operationFailure } from './tool-failure.ts';
+
+export * from './workflow-publication.ts';

@@ -28,6 +28,7 @@ export function toTask(
     order: num(f['order']),
     agent: str(f['agent']),
     model: str(f['model']),
+    ...(f['requires_pull_request'] === true && { requiresPullRequest: true }),
     branch: str(f['branch']),
     spec: specId(f['spec']),
     created: str(f['created']) ?? dateString(f['created']),

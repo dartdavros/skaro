@@ -66,6 +66,10 @@ async function createLockedTaskRun(
   const settings = builtin
     ? parseBuiltinTaskStart(builtin)
     : ctx.views.settings(projectId, task, artifacts);
+  if (task.requiresPullRequest && builtin && builtin.isolation !== 'worktree')
+    throw new Error(
+      'This task requires a pull request. Select worktree isolation for its builtin launch.',
+    );
   const adapterVersion =
     settings.agent === 'skaro'
       ? ctx.deps.builtinSessions!.adapterVersion

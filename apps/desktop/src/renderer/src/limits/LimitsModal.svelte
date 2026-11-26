@@ -26,10 +26,9 @@
   $effect(() => {
     if (!controller.initialized) return;
     const agent = controller.draft.agent;
-    const authenticated = agents.find((a) => a.id === agent)?.authenticated;
-    void authenticated;
-    void controller.load(agent);
-    const timer = setInterval(() => void controller.load(agent), 60_000);
+    const info = agents.find((a) => a.id === agent);
+    void controller.load(agent, info);
+    const timer = setInterval(() => void controller.load(agent, info), 60_000);
     return () => {
       clearInterval(timer);
       controller.cancel();
@@ -86,7 +85,11 @@
     <Button
       disabled={controller.loading}
       onclick={() => {
-        if (controller.initialized) void controller.load(controller.draft.agent);
+        if (controller.initialized)
+          void controller.load(
+            controller.draft.agent,
+            agents.find((a) => a.id === controller.draft.agent),
+          );
         else void controller.initialize(projectId);
       }}>{t('limits.refresh')}</Button
     >
