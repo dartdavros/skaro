@@ -1,0 +1,5 @@
+version: 2.2.49
+files:
+  - url: https://github.com/dartdavros/skaro/releases/download/v2.2.49/Skaro-2.2.49-mac-arm64.dmg
+    sha512: 8Qo0zReA0hbIgE9uZe3t0044z1ZkYwBFQjSh7z+JbVL4pZjGGr/BsMTyPUT70QdNgGlD79TuOk0LikOQ+pWyIg==
+    size: 146528049
