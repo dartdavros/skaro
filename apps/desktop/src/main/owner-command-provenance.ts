@@ -60,6 +60,13 @@ export function registerOwnerOrigin(db: AppDb, command: OwnerCommand) {
 export function hasTaskDestination(db: AppDb, command: OwnerCommand) {
   return origin(db, command)?.destination === 'task';
 }
+export function bindTaskDestination(db: AppDb, project: string, task: string, id: string) {
+  const command = db.commands.get(id);
+  if (command?.method !== 'task.send' || command.owner !== `${project}:${task}`) return;
+  const previous = origin(db, command);
+  if (previous && !previous.destination)
+    db.settings.compareAndSet(key(id), previous, { ...previous, destination: 'task' });
+}
 export function requireOwnerOrigin(db: AppDb, command: OwnerCommand) {
   const saved = origin(db, command);
   if (!saved && !legacyOrigin(db, command))

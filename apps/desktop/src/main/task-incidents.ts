@@ -197,8 +197,14 @@ export class TaskIncidents {
     requireCoordinationDispatch(this.ctx.deps.db, projectId);
     // An interrupted dispatch is not permission to repeat an unknown external effect.
     if (row.protocol!.phase === 'executing' || row.protocol!.phase === 'verifying') {
-      await escalateIncident(this.ctx, row);
-      return;
+      const id = row.protocol!.operationId;
+      const op = id && this.store.db.coordination.getOperation(projectId, id);
+      if (op && op.state === 'failed' && op.evidence?.code === 'environment_preflight_failed') {
+        row = this.store.update(row, { phase: 'waiting' });
+      } else {
+        await escalateIncident(this.ctx, row);
+        return;
+      }
     }
     if (row.protocol!.attempts >= 2) {
       this.store.update(row, { phase: 'exhausted' });

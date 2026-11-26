@@ -99,6 +99,19 @@ it('resumes only the current owner instruction and rejects stale quotes and call
   ).toBe(true);
 });
 
+it('carries an environment incident into a renewed intent only when its controller retains it', () => {
+  const execution = new TaskExecution(db, 'follow-up-environment');
+  execution.start();
+  execution.block('Compose preflight failed', 'environment-incident');
+  const instruction = 'Исправь окружение и продолжай';
+  execution.followUp('environment-repair', instruction);
+  expect(execution.resume('environment-repair', instruction, true)).toBe(true);
+  expect(execution.read().blockedIncident).toBe('environment-incident');
+  execution.followUp('new-intent', instruction);
+  expect(execution.resume('new-intent', instruction)).toBe(true);
+  expect(execution.read().blockedIncident).toBeUndefined();
+});
+
 it('keeps option cards open through clarification, completion and replay; only a complete answer resumes prior work', () => {
   const execution = new TaskExecution(db, 'follow-up-question');
   execution.start();

@@ -51,19 +51,26 @@ export class TaskExecution {
     if (state.followUp?.resumeAfterAnswer)
       this.db.setSetting(this.key, { ...state, enabled: true, followUp: undefined });
   }
-  resume(commandId: string, instruction: string): boolean {
+  resume(commandId: string, instruction: string, retainBlocker = false): boolean {
     const state = this.read();
-    const request = state.followUp;
-    if (
-      !instruction.trim() ||
-      request?.commandId !== commandId ||
-      !request.text.includes(instruction)
-    )
-      return false;
-    if (state.enabled) return !state.blocked;
+    if (!this.matchesFollowUp(commandId, instruction)) return false;
+    if (state.enabled) return true;
     this.bumpIntent();
-    this.db.setSetting(this.key, { enabled: true, stalls: 0, followUp: request });
+    this.db.setSetting(this.key, {
+      ...(retainBlocker && state.blockedIncident
+        ? { blocked: state.blocked, blockedIncident: state.blockedIncident }
+        : {}),
+      enabled: true,
+      stalls: 0,
+      followUp: state.followUp,
+    });
     return true;
+  }
+  matchesFollowUp(commandId: string, instruction: string): boolean {
+    const request = this.read().followUp;
+    return (
+      !!instruction.trim() && request?.commandId === commandId && request.text.includes(instruction)
+    );
   }
   stop(): void {
     this.bumpIntent();

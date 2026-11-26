@@ -56,7 +56,11 @@ export class OwnerCommandCoordination {
         subject: { kind, id: ownerId },
         inputHash: coordinationHash(command.args),
         mode: 'delivery',
-        scopeKey: `delivery:${kind}:${ownerId}`,
+        // OwnerCommands serializes actual task sends, and the task/resolver owns the native writer.
+        // A lost receipt for an older message must not fence a distinct new instruction.
+        scopeKey:
+          this.db.coordination.getOperation(projectId, this.operationId(command))?.scopeKey ??
+          (kind === 'task' ? `delivery:task-command:${command.id}` : `delivery:chat:${ownerId}`),
       },
       effect,
       {

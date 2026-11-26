@@ -172,8 +172,6 @@ export class TaskRunScheduling {
     const k = key(projectId, taskId);
     if (this.ctx.parking.has(k) || (isTaskParked(task.status) && input.internal))
       throw new CommandCancelled();
-    if (isTaskParked(task.status) && !input.resumeTask)
-      throw new Error('Resume the task from the task panel first.');
     await this.ctx.stages.sync(projectId, taskId);
     requireCurrent?.();
     const active = this.ctx.active.get(k);

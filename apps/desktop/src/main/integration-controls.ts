@@ -8,6 +8,8 @@ import {
   type InteractionAnswer,
 } from '@skaro/timeline';
 import type { MessageInput } from '../shared/ipc';
+import { isTaskParked } from '@skaro/core';
+import { bindTaskDestination } from './owner-command-provenance';
 import { resourcesFor } from './resource-execution';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ResolverSession } from './integration-worker';
@@ -60,6 +62,16 @@ export class IntegrationControls {
     if (input.resumeTask || isTaskContinuationInput(input)) return false;
     const op = this.current(projectId, taskId);
     if (!op) return false;
+    // An immutable local verification candidate is not the stopped task's writer.
+    if (!input.internal && op.purpose === 'local') {
+      const db = this.ctx.deps.db;
+      const { tasks } = await this.ctx.project(projectId).summary();
+      const task = tasks.find((item) => item.id === taskId);
+      if (task && isTaskParked(task.status)) {
+        if (input.commandId) bindTaskDestination(db, projectId, taskId, input.commandId);
+        return false;
+      }
+    }
     if (
       !input.internal &&
       input.supersededQuestions?.some((ref) => !ref.id.startsWith(`integration-${op.id}:`))

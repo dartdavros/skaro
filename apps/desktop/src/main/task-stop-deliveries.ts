@@ -5,7 +5,7 @@ import { currentTransition } from './task-lifecycle-journal';
 import { coordinationHash } from './project-coordinator-request';
 import { hasTaskDestination } from './owner-command-provenance';
 
-/** Old internal continuations bypassed the resolver. New resumes record their destination at acceptance. */
+/** Old internal continuations bypassed the resolver. New task-directed inputs record this explicitly. */
 function isTaskOnly(db: AppDb, command: OwnerCommand | undefined, project: string, task: string) {
   const input = command?.args[2] as MessageInput | undefined;
   return (
@@ -15,8 +15,7 @@ function isTaskOnly(db: AppDb, command: OwnerCommand | undefined, project: strin
     command.args[1] === task &&
     command.owner === `${project}:${task}` &&
     input?.commandId === command.id &&
-    (isTaskContinuationInput(input) ||
-      (input.resumeTask === true && hasTaskDestination(db, command)))
+    (isTaskContinuationInput(input) || hasTaskDestination(db, command))
   );
 }
 
@@ -39,7 +38,7 @@ export function savedTaskStop(db: AppDb, command: OwnerCommand, operation: Coord
     operation.inputHash !== coordinationHash(command.args) ||
     operation.subject.kind !== 'task' ||
     operation.subject.id !== task ||
-    operation.scopeKey !== `delivery:task:${task}`
+    ![`delivery:task:${task}`, `delivery:task-command:${command.id}`].includes(operation.scopeKey)
   )
     return;
   const entry = currentTransition(db, project, task);

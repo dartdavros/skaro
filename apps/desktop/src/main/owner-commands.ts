@@ -136,7 +136,11 @@ export class OwnerCommands {
     } catch (error) {
       console.error('Command recovery:', error);
     }
-    if (['cancelled', 'delivered'].includes(this.db.commands.get(command.id)?.state ?? ''))
+    if (
+      ['cancelled', 'delivered', 'uncertain'].includes(
+        this.db.commands.get(command.id)?.state ?? '',
+      )
+    )
       return false;
     this.publish(
       this.db.commands.update(

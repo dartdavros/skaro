@@ -18,12 +18,12 @@ export function taskAgentInput(
     state && questionMessageNote(state, input.internal),
     followUp &&
       !input.internal &&
-      'This is an owner follow-up, not automatic authorization to resume the task. ' +
+      'An explicit owner instruction to work or continue applies even if the task was paused or stopped. ' +
         'If it asks a question, requests status or explanation, answer without resuming ' +
         'implementation, environment setup, verification or result submission. Follow any Skaro ' +
         'instructions for a cancelled protected form before ending the turn. ' +
-        'Only if this message explicitly instructs you to perform or continue task work, ' +
-        'call resume_task with this command_id and an exact quote of that instruction before working. ' +
+        'For a command to perform or continue task work, immediately call resume_task with this ' +
+        'command_id and an exact quote of that instruction, then carry it out in this turn. ' +
         'If your next action requires an owner decision, invoke the structured question tool ' +
         'with concrete options and wait for the complete answer. Do not ask in plain chat.',
   ]

@@ -22,6 +22,8 @@ import { dispatchTaskReply } from './task-interaction-delivery';
 import { DecisionNotDispatched } from './decision-not-dispatched';
 import { currentTransition } from './task-lifecycle-journal';
 import { TaskInterrupts } from './task-interrupts';
+import { recoverTaskTransitions } from './task-lifecycle-recovery';
+import { hasOwnerCommand } from './owner-command-history';
 
 /** messages: a focused part of the task-run controller. */
 export class TaskRunMessages {
@@ -33,12 +35,6 @@ export class TaskRunMessages {
   }
 
   async send(projectId: string, taskId: string, input: MessageInput): Promise<void> {
-    if (this.stopping(projectId, taskId)) throw new CommandCancelled();
-    const transition = currentTransition(this.ctx.deps.db, projectId, taskId);
-    if (transition && transition.phase !== 'settled')
-      throw new DecisionNotDispatched(
-        'The previous lifecycle request has not settled. Stop the task to retire its writer first.',
-      );
     const epoch = this.ctx.startup.cancellationEpoch(projectId, taskId);
     const requireCurrent = () => {
       if (
@@ -49,6 +45,17 @@ export class TaskRunMessages {
       )
         throw new CommandCancelled();
     };
+    requireCurrent();
+    let transition = currentTransition(this.ctx.deps.db, projectId, taskId);
+    if (!input.internal && transition?.target === 'in_progress' && transition.phase !== 'settled') {
+      await recoverTaskTransitions(this.ctx, projectId, transition.token);
+      requireCurrent();
+      transition = currentTransition(this.ctx.deps.db, projectId, taskId);
+    }
+    if (transition && transition.phase !== 'settled')
+      throw new DecisionNotDispatched(
+        'The previous lifecycle request has not settled. Stop the task to retire its writer first.',
+      );
     if (await this.ctx.integrations.controls.send(projectId, taskId, input)) return;
     requireCurrent();
     let active = await this.ctx.history.restore(projectId, taskId);
@@ -58,10 +65,8 @@ export class TaskRunMessages {
     requireCurrent();
     const task = findTask(await this.ctx.project(projectId).summary(), taskId);
     requireCurrent();
-    if (isTaskParked(task.status)) {
-      if (input.internal) throw new CommandCancelled();
-      if (!input.resumeTask) throw new Error('Resume the task from the task panel first.');
-    }
+    if (isTaskParked(task.status) && input.internal) throw new CommandCancelled();
+    if (hasOwnerCommand(active.timeline.state, input.commandId)) return;
     retireTerminalTaskRequests(
       active.timeline.state,
       terminalTaskHistory(this.ctx.deps.db, task.status, active.run.id, task.archived),

@@ -4,7 +4,11 @@ import type { TaskIncidents } from './task-incidents';
 import { checkIncident, currentIncidentSubscriber, incidentAction } from './incident-condition';
 import { resourceExecution, resourcesFor } from './resource-execution';
 import { hasEnvironmentWait } from './incident-environment-wait';
-import { EnvironmentNotDispatched, EnvironmentCommandFailed } from './environment-dispatch-error';
+import {
+  EnvironmentNotDispatched,
+  EnvironmentPreflightFailed,
+  EnvironmentCommandFailed,
+} from './environment-dispatch-error';
 import { incidentOperationId } from './incident-operation';
 import { IncidentDispatchAuthority } from './incident-dispatch-authority';
 export async function executeIncident(
@@ -117,7 +121,13 @@ export async function executeIncident(
       ctx.deps.coordinators!.reconcile(
         row.projectId,
         id,
-        { code: 'environment_not_dispatched_before_admission', refs: [row.subject] },
+        {
+          code:
+            error instanceof EnvironmentPreflightFailed
+              ? 'environment_preflight_failed'
+              : 'environment_not_dispatched_before_admission',
+          refs: [row.subject],
+        },
         'failed',
       );
     else if (error instanceof EnvironmentCommandFailed && operation?.state === 'uncertain')

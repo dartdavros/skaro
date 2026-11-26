@@ -15,6 +15,7 @@ import { isTaskParked } from '@skaro/core';
 import { resumeParkedTask } from './task-park';
 import { beginTransition, currentTransition, transitionPhase } from './task-lifecycle-journal';
 import { reportLifecycleConflict } from './task-lifecycle-conflict';
+import { prepareTaskFollowUp } from './task-follow-up';
 
 /** One serialized delivery owns the old turn, its queue slot and its replacement. */
 export async function deliverTaskInput(
@@ -51,9 +52,19 @@ export async function deliverTaskInput(
   let inputs = await readTaskInputs(ctx, active);
   current();
   const task = inputs.artifacts.tasks.find((item) => item.id === taskId);
-  if (task && original.resumeTask && !isTaskParked(task.status)) throw new CommandCancelled();
-  if (task && isTaskParked(task.status) && (original.internal || !original.resumeTask))
-    throw new CommandCancelled();
+  const parked = !!task && isTaskParked(task.status);
+  if (parked && original.internal) throw new CommandCancelled();
+  if (parked) {
+    const answer = new QuestionAnswers(ctx.deps.db, `active.${run.id}`).pending(
+      active.timeline.state,
+    );
+    original = prepareTaskFollowUp(
+      ctx.continuation.execution(active),
+      original,
+      active.timeline.state,
+      answer,
+    );
+  }
   const turn = active.timeline.state.turns.at(-1);
   let replacing = false;
   let checkpointed = false;
@@ -128,7 +139,7 @@ export async function deliverTaskInput(
     ctx.startup.consumeTransition(projectId, taskId, run.id, original.commandId);
     active.inputTransition = undefined;
     const resume =
-      task && isTaskParked(task.status)
+      parked && original.resumeTask
         ? beginTransition(ctx.deps.db, projectId, {
             id: taskId,
             run: run.id,
