@@ -18,11 +18,14 @@ function escape(text: string): string {
 
 marked.use({
   renderer: {
-    code({ text, lang }: Tokens.Code): string {
+    code({ text, lang, raw }: Tokens.Code): string {
       const language = (lang ?? '').trim().split(/\s+/)[0] ?? '';
       if (isC4Diagram(language, text)) return '';
       if (language === 'mermaid') {
-        return `<div class="md-mermaid" data-source="${escape(text)}"></div>`;
+        const opening = /^ {0,3}(`{3,}|~{3,})/.exec(raw)?.[1];
+        const closing = /\n {0,3}(`{3,}|~{3,})[ \t]*\n*$/.exec(raw)?.[1];
+        const open = opening && !closing?.startsWith(opening);
+        return `<div class="md-mermaid${open ? ' md-mermaid-open' : ''}" data-source="${escape(text)}"></div>`;
       }
       const known = language && hljs.getLanguage(language);
       const html = known
@@ -68,8 +71,10 @@ export function parseAgentMarkdown(text: string): string {
 /** Complete Markdown blocks keep their semantics; definitions are resolved by the full lexer. */
 export function parseAgentMarkdownParts(text: string): string[] {
   const tokens = marked.lexer(text);
-  // Raw HTML can open a container across Markdown blocks. Preserve its single parse context.
-  if (tokens.some((token) => token.type === 'html')) return [parseAgentMarkdown(text)];
+  // Raw HTML can span blocks. Keep everything from its first possible opening together.
+  const htmlStart = tokens.some((token) => token.type === 'html')
+    ? tokens.findIndex((token) => token.type === 'html' || token.raw.includes('<'))
+    : -1;
   const parts: string[] = [];
   let pending: typeof tokens = Object.assign([], { links: tokens.links });
   let size = 0;
@@ -79,7 +84,18 @@ export function parseAgentMarkdownParts(text: string): string[] {
     pending = Object.assign([], { links: tokens.links });
     size = 0;
   };
-  for (const token of tokens) {
+  for (const [index, token] of tokens.entries()) {
+    if (htmlStart >= 0 && index >= htmlStart) {
+      pending.push(token);
+      continue;
+    }
+    // Later streamed text must not remount an already finished top-level diagram.
+    if (token.type === 'code' && token.lang?.trim().split(/\s+/)[0] === 'mermaid') {
+      flush();
+      pending.push(token);
+      flush();
+      continue;
+    }
     if (size && size + token.raw.length > 8192) flush();
     pending.push(token);
     size += token.raw.length;

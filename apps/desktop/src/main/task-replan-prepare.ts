@@ -70,6 +70,9 @@ export function prepareTaskReplan(
     if (milestone && !artifacts.milestones.some((m) => m.id === milestone))
       throw new Error(`There is no milestone ${milestone}.`);
     return {
+      ...(input.requiresPullRequest || sources.some((source) => source.requiresPullRequest)
+        ? { requiresPullRequest: true }
+        : {}),
       ref: input.ref,
       ...(id ? { id } : {}),
       sources: input.sources,

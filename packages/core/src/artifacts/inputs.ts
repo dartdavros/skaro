@@ -1,6 +1,7 @@
 import type { Task, AdrStatus } from './model.ts';
 
 export interface NewTask {
+  requiresPullRequest?: boolean;
   title: string;
   milestone?: string;
   dependsOn?: string[];
@@ -25,6 +26,7 @@ export type TaskPatch = Partial<
     | 'agent'
     | 'model'
     | 'branch'
+    | 'requiresPullRequest'
     | 'spec'
     | 'body'
   >

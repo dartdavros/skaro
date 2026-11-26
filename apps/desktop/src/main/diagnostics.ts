@@ -14,12 +14,14 @@ export async function collectDiagnostics(
   db: AppDb,
   dataDir: string,
   versions: { app: string; electron: string; node: string },
+  memory?: Diagnostics['memory'],
 ): Promise<Diagnostics> {
   const report: Diagnostics = {
     format: 1,
     createdAt: new Date().toISOString(),
     versions: { ...versions, ...diagnosticVersions() },
     platform: { os: process.platform, arch: process.arch },
+    ...(memory && { memory }),
     logs: { scanned: 0, unavailable: 0, invalidLines: 0, projectionErrors: 0 },
     unknownEvents: 0,
     unknown: [],

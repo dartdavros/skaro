@@ -1,5 +1,10 @@
 // Skaro tools for agent sessions (architecture.md 6). The descriptions are what the agent reads.
 
+import {
+  publicationRequest,
+  workflowPublicationSchema,
+  type WorkflowPublication,
+} from './workflow-publication.ts';
 import type { Tool, ToolResult } from './server.ts';
 import {
   readVerificationPlan,
@@ -19,6 +24,7 @@ export interface MergeTaskArgs {
   taskId?: string;
   milestoneId?: string;
   partial?: boolean;
+  publication?: WorkflowPublication;
   /** Short summary of the work, for the task file. */
   summary?: string;
   commitMessage?: string;
@@ -227,9 +233,11 @@ export function mergeTaskTool(
           description: 'Task to merge; required in project chat unless milestone_id is specified.',
         },
         milestone_id: { type: 'string', description: 'Milestone to merge.' },
+        publication: workflowPublicationSchema,
         partial: {
           type: 'boolean',
-          description: 'Not needed: a milestone request always merges only its accepted tasks.',
+          description:
+            'With a single unfinished task and publication, prepare or verify the explicitly authorized PR prerequisite while keeping acceptance open. Milestones still merge only accepted tasks.',
         },
         summary: {
           type: 'string',
@@ -251,6 +259,9 @@ export function mergeTaskTool(
           ...(typeof args['milestone_id'] === 'string'
             ? { milestoneId: args['milestone_id'] }
             : {}),
+          ...(args['publication'] !== undefined && {
+            publication: publicationRequest(args['publication']),
+          }),
           ...(typeof args['partial'] === 'boolean' ? { partial: args['partial'] } : {}),
           ...(typeof args['summary'] === 'string' ? { summary: args['summary'] } : {}),
           ...commitMessage(args),

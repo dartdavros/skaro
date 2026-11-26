@@ -180,6 +180,7 @@ export class ChatPlanDecisions {
               ...artifacts.tasks.filter((t) => t.milestone === milestone).map((t) => t.order ?? 0),
             ) + 1,
           ...(milestone ? { milestone } : {}),
+          ...(task.requiresPullRequest && { requiresPullRequest: true }),
           ...(task.spec ? { spec: adrId(task.spec) } : {}),
         },
       };

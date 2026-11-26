@@ -8,6 +8,8 @@ import {
 import type { TaskRunEngine } from './task-run-engine';
 import { taskInputSnapshot, verifyPrerequisites } from './task-preflight-inputs';
 import { TaskExecution } from './task-execution';
+import { incidentModelPlan } from './incident-model-plan';
+import { inspectIncidentWorkflow, isWorkflowIncident } from './incident-workflow-publication';
 import { checkIncidentProvider } from './incident-provider-check';
 import { terminalTaskHistory } from './terminal-task-requests';
 import { findTask } from './task-run-helpers';
@@ -137,6 +139,20 @@ export async function checkIncident(
     return false;
   if (row.protocol!.code === 'merge_conflict_stalled' && row.protocol!.cause === 'no-progress')
     return checkTaskMergeConflict(ctx, row);
+  if (isWorkflowIncident(row)) {
+    const target = incidentModelPlan(ctx.deps.db, row)?.workflow;
+    if (target) {
+      const result = await inspectIncidentWorkflow(ctx, row, target);
+      const current = incidentModelPlan(ctx.deps.db, row)?.workflow;
+      return (
+        result.state === 'published' &&
+        !!current &&
+        incidentHash(result.target) === incidentHash(target) &&
+        incidentHash(current) === incidentHash(target)
+      );
+    }
+    return false;
+  }
   if (row.protocol!.condition === 'owner-evidence') return false;
   if (row.protocol!.condition === 'provider-evidence') return checkIncidentProvider(ctx, row);
   if (row.protocol!.condition === 'environment-ready') {

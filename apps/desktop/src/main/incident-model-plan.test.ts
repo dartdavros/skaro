@@ -33,16 +33,30 @@ it('requires actionable distinct options with consequences and invalidates plans
     // Pure incident DTO/SQLite metadata contract, no substituted project/backend/agent.
     const row = {
       id: 'incident',
+      projectId: 'project',
+      eventId: 'event',
+      subject: { kind: 'run', id: 'run' },
+      category: 'dependency',
+      inputHash: incidentHash('inputs'),
+      resolution: { code: 'dependency_ready', refs: [] },
+      subscribers: [{ kind: 'task', id: 'task' }],
+      state: 'open',
+      revision: 1,
+      createdAt: 0,
+      updatedAt: 0,
       protocol: {
         cause: 'dependency',
+        code: 'dependency_missing',
         condition: 'inputs-current',
+        phase: 'diagnosing',
+        attempts: 0,
         resourceVersion: incidentHash('resource'),
         ownerPolicyRevision: 1,
         subscriptions: [
           { taskId: 'task', runId: 'run', inputs: incidentHash('inputs'), intent: 1 },
         ],
       },
-    } as CoordinationBlocker;
+    } satisfies CoordinationBlocker;
     const plan = {
       explanation: 'The declared dependency is absent',
       question: 'Which action should I take?',

@@ -1,4 +1,5 @@
 import { incidentHash, type AppDb, type CoordinationBlocker, type ProjectCheck } from '@skaro/core';
+import { isWorkflowIncident } from './incident-workflow-publication';
 import { assertIncidentVerification } from './incident-verification-policy';
 
 export interface IncidentModelPlan {
@@ -6,6 +7,7 @@ export interface IncidentModelPlan {
   question: string;
   options: { label: string; description: string }[];
   verification?: ProjectCheck;
+  workflow?: import('./workflow-publication').PublicationTarget;
   verificationEnvironment?: { id: string; version: string };
   verificationSession?: import('./incident-session-verification').IncidentSessionVerification;
   resourceVersion: string;
@@ -14,11 +16,12 @@ export interface IncidentModelPlan {
 }
 export const incidentPlanKey = (id: string) => `incident.model-plan.${id}`;
 export function incidentPlanVerifiable(plan: IncidentModelPlan, row: CoordinationBlocker) {
-  if (!row.protocol) return false;
+  if (!row.protocol || (isWorkflowIncident(row) && !plan.workflow)) return false;
   const methods = [
     plan.verification,
     plan.verificationEnvironment,
     plan.verificationSession,
+    plan.workflow,
   ].filter(Boolean);
   if (methods.length > 1) return false;
   try {
@@ -61,4 +64,4 @@ export function parseIncidentOptions(value: unknown): IncidentModelPlan['options
   return options;
 }
 export const incidentDiagnosisId = (row: CoordinationBlocker) =>
-  `diagnose-incident-${incidentHash(['checkable-resolution-v2', row.id, row.protocol?.resourceVersion, row.protocol?.ownerPolicyRevision, row.protocol?.subscriptions])}`;
+  `diagnose-incident-${incidentHash([isWorkflowIncident(row) ? 'workflow-publication-v1' : 'checkable-resolution-v2', row.id, row.protocol?.resourceVersion, row.protocol?.ownerPolicyRevision, row.protocol?.subscriptions])}`;

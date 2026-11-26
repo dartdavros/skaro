@@ -39,6 +39,7 @@ export async function createReservedTask(
   setFields(file, {
     id,
     title: input.title,
+    requires_pull_request: input.requiresPullRequest || undefined,
     milestone: input.milestone,
     status: 'todo',
     depends_on: input.dependsOn ?? [],
@@ -71,6 +72,9 @@ export async function updateTask(
     ...('order' in patch ? { order: patch.order } : {}),
     ...('agent' in patch ? { agent: patch.agent } : {}),
     ...('model' in patch ? { model: patch.model } : {}),
+    ...('requiresPullRequest' in patch
+      ? { requires_pull_request: patch.requiresPullRequest || undefined }
+      : {}),
     ...('branch' in patch ? { branch: patch.branch } : {}),
     ...('spec' in patch ? { spec: patch.spec } : {}),
   });

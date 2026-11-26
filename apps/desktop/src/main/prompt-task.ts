@@ -115,11 +115,13 @@ export function taskInstructions(options: {
         '- Keep the user informed while you work: before each step write one short sentence ' +
           'about what you are doing now. Work in small steps; do not think the whole task ' +
           'through in one long silent pass.',
-        '- Commit your work to the task branch when a piece is done. ' +
+        (branch
+          ? '- Commit completed pieces to the registered task branch. '
+          : '- Work in the current checkout. Do not create or switch branches in this shared copy. If a PR is required, use the managed task checkout before starting implementation. ') +
           'Commit messages follow ' +
           "the repository's commit convention: look at git log, a commitlint config or " +
           'CONTRIBUTING. If the repository has none, use Conventional Commits in English ' +
-          '(feat: …, fix: …, docs: …). The project instructions below may say otherwise.',
+          '(feat: вЂ¦, fix: вЂ¦, docs: вЂ¦). The project instructions below may say otherwise.',
         ...(criteria.length
           ? [
               '- Before you say the task is done, verify every acceptance criterion yourself ' +
@@ -136,6 +138,7 @@ export function taskInstructions(options: {
           : [
               '- When the work is done, call submit_result with criteria: [], a summary and a commit message.',
             ]),
+        '- If verification requires a GitHub workflow published before final acceptance, retain the open criteria. For an explicitly approved PR call merge_task with partial=true and publication={pullRequest,head,workflow}, follow its scoped command and verify the returned publication. If blocked on this prerequisite use external code github_workflow_publication_missing. Publication itself does not authorize executing the workflow.',
         '- When the user asks to merge, call merge_task. Skaro merges the accepted results and ' +
           'updates task statuses. Each task is merged independently after its own accepted result; ' +
           'do not wait for every task of its milestone. There is no separate milestone agent or chat. Never merge into ' +

@@ -1,4 +1,7 @@
 import { incidentHash } from '@skaro/core';
+import { publicationRequest, workflowPublicationSchema } from '@skaro/mcp-server';
+import { isWorkflowIncident } from './incident-workflow-publication';
+import { publicationReply } from './workflow-publication';
 import type { SkaroScope, Tool } from '@skaro/mcp-server';
 import type { TaskRuns } from './tasks';
 import type { ChatSessions } from './chats';
@@ -39,6 +42,7 @@ export function incidentModelTools(
               additionalProperties: false,
             },
           },
+          verification_workflow: workflowPublicationSchema,
           verification_check: { type: 'string' },
           verification_agent: {
             type: 'boolean',
@@ -87,9 +91,20 @@ export function incidentModelTools(
           args.verification_agent === true
             ? await controller.incidents.bindSession(row)
             : undefined;
-        if ([check, environment, session].filter(Boolean).length > 1)
+        const workflow =
+          args.verification_workflow === undefined
+            ? undefined
+            : await controller.incidents.inspectWorkflow(
+                row,
+                publicationRequest(args.verification_workflow),
+              );
+        if (isWorkflowIncident(row) && !workflow)
+          throw new Error(
+            'Bind verification_workflow to the exact PR, commit and workflow of this incident.',
+          );
+        if ([check, environment, session, workflow].filter(Boolean).length > 1)
           throw new Error('Bind exactly one verification method');
-        assertIncidentVerification(row.protocol!, !!(check || environment || session));
+        assertIncidentVerification(row.protocol!, !!(check || environment || session || workflow));
         const fresh = await controller.prepareIncident(scope, row.id);
         if (fresh.revision !== row.revision) throw new Error('Incident changed during diagnosis');
         controller.incidents.store.db.setSetting(incidentPlanKey(row.id), {
@@ -98,6 +113,7 @@ export function incidentModelTools(
           options,
           ...(check ? { verification: check } : {}),
           ...(environment ? { verificationEnvironment: environment } : {}),
+          ...(workflow ? { workflow: workflow.target } : {}),
           ...(session ? { verificationSession: session } : {}),
           resourceVersion: row.protocol!.resourceVersion,
           policyRevision: row.protocol!.ownerPolicyRevision,
@@ -109,6 +125,7 @@ export function incidentModelTools(
           verification: check ? incidentHash(check) : undefined,
         });
         if (args.requires_owner_decision) await controller.incidents.escalate(row);
+        if (workflow && !args.requires_owner_decision) return publicationReply(workflow);
         return {
           text: args.requires_owner_decision
             ? 'The diagnosed resolution question is open above the composer. Wait for its answer.'

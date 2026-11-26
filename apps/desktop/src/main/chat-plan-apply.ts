@@ -59,6 +59,7 @@ export async function applyChatPlan(options: {
       body: task.body,
       order: order++,
       ...(milestone ? { milestone } : {}),
+      ...(task.requiresPullRequest && { requiresPullRequest: true }),
       ...(task.spec ? { spec: adrId(task.spec) } : {}),
     });
     known.set(task.ref, t.id);

@@ -26,6 +26,11 @@ export const TASK_SCHEMA = {
       description:
         'Optional verification methods for the affected outcomes, including their environment and prerequisites. These notes do not add acceptance criteria.',
     },
+    requires_pull_request: {
+      type: 'boolean',
+      description:
+        'Set true when delivering or verifying this task requires a pull request. Skaro provisions its task branch before execution.',
+    },
     depends_on: {
       type: 'array',
       items: { type: 'string' },
@@ -124,6 +129,7 @@ export function tasks(
       title: text(task, 'title'),
       goal: text(task, 'goal'),
       criteria,
+      ...(task['requires_pull_request'] === true && { requiresPullRequest: true }),
       ...optional(task, 'notes'),
       ...(verificationNotes && { verificationNotes }),
       dependsOn: task['depends_on'] === undefined ? [] : strings(task, 'depends_on'),

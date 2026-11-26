@@ -49,6 +49,19 @@ describe('task instructions', () => {
     expect(text).toMatch(/Conventional Commits in English/);
   });
 
+  it('keeps an in-place run on its current checkout', () => {
+    const shared = taskInstructions({
+      task,
+      artifacts,
+      root: '/work/project',
+      cwd: '/work/project',
+      locale: 'ru',
+    });
+    expect(shared).toContain('Do not create or switch branches in this shared copy');
+    expect(shared).not.toContain('Commit completed pieces to the registered task branch');
+    expect(text).toContain('Commit completed pieces to the registered task branch');
+  });
+
   it('forbids calling the task done without a full report', () => {
     expect(text).toContain(
       'acceptance as verified only when submit_result reports every criterion met',

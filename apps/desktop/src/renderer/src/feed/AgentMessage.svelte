@@ -18,7 +18,7 @@
 </script>
 
 <div class="fd-text" class:commentary={row.item.phase === 'commentary'}>
-  <Markdown text={row.item.text} />
+  <Markdown text={row.item.text} streaming={row.item.status === 'running'} />
 </div>
 {#if actions && row.final && row.item.status !== 'running'}
   <ReplyActions text={row.item.text} />

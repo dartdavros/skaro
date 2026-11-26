@@ -4,6 +4,7 @@ import type { C4DocumentChange } from '@skaro/core';
 
 /** A task the agent proposes; `ref` lets tasks of one call depend on each other. */
 export interface ProposedTaskArgs {
+  requiresPullRequest?: boolean;
   ref: string;
   title: string;
   goal: string;

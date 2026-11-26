@@ -145,6 +145,7 @@ export class ChatPlan {
       ),
       dependsOn,
       dependsOnTitles: dependsOn.map((d) => titles.get(d) ?? d),
+      ...(task.requiresPullRequest && { requiresPullRequest: true }),
       ...(task.spec ? { spec: adrId(task.spec) } : {}),
     };
   }

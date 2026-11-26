@@ -2,6 +2,7 @@ import type { CoordinationBlocker } from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
 import { currentIncidentSubscriber } from './incident-condition';
 import { incidentDiagnosisId, incidentModelPlan } from './incident-model-plan';
+import { isWorkflowIncident } from './incident-workflow-publication';
 import { queueOwnerMessage } from './owner-commands';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 
@@ -39,6 +40,9 @@ export async function diagnoseIncident(ctx: TaskRunEngine, row: CoordinationBloc
           '. ' +
           (row.protocol!.code === 'merge_conflict_stalled'
             ? 'Preserve and inspect the existing task index and worktree. Complete the authorized Git resolution without discarding either side. Once the current base is included in task HEAD and no merge remains active, call verify_project_incident; Skaro resumes the task for verification and submission. '
+            : '') +
+          (isWorkflowIncident(row)
+            ? 'Use plan_project_incident with verification_workflow={pullRequest,head,workflow} from the recorded publication decision. Inspect the decision and respect its exact PR, commit and deployment scope. Execute the returned publication command only under that authority, then verify_project_incident. '
             : '') +
           'Do not repeat a command with an uncertain outcome, override Stop, a denial, credentials or permissions. ' +
           'If repair is already authorized, perform it with the normal scoped tools, then call verify_project_incident. ' +

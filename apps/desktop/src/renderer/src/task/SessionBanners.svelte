@@ -4,11 +4,13 @@
   import type { AgentInfo } from '../../../shared/ipc';
   import { clock } from '../feed/context.svelte';
   import { agentName } from '../feed/format';
+  import { watchAccount } from '../limits/account-limits.svelte';
+  import { sessionLimit } from '../limits/session-limit';
 
   /** Over the feed: sign-in, usage limit, agent download (mockup 8a). */
   let {
     agent,
-    limits,
+    limits: reported,
     error,
     ondismiss,
   }: {
@@ -19,6 +21,13 @@
   } = $props();
 
   const name = $derived(agent ? agentName(agent.id) : '');
+  const account = watchAccount(() => agent);
+  // Native notifications invalidate the provider read. A replayed event is never current quota.
+  const report = $derived(reported ? [reported.state, reported.resetsAt].join('/') : '');
+  $effect(() => {
+    if (report) account.refresh();
+  });
+  const limits = $derived(sessionLimit(account.snapshot, clock.now));
   // The reset time, with the date when it is not today (a weekly window).
   const until = $derived.by(() => {
     if (!limits?.resetsAt) return '';
@@ -31,11 +40,7 @@
     });
     return t('banner.until', { time });
   });
-  // A limit is news only until its reset: after that the agent has a fresh allowance even if it
-  // has not said so yet (it reports limits only while it works).
-  const limit = $derived(
-    limits && !(limits.resetsAt && Date.parse(limits.resetsAt) <= clock.now) ? limits.state : 'ok',
-  );
+  const limit = $derived(limits?.state);
   const mb = (n: number) => Math.round(n / 1e6);
 </script>
 

@@ -17,6 +17,7 @@ export const TASK_STATUSES: readonly TaskStatus[] = [
 ];
 
 export interface Task {
+  requiresPullRequest?: boolean;
   id: string;
   title: string;
   milestone?: string;

@@ -1,5 +1,6 @@
 /** Serializable task-graph proposal; snapshots detect edits between review and application. */
 export interface ReplanTask {
+  requiresPullRequest?: boolean;
   ref: string;
   id?: string;
   sources: string[];
