@@ -25,7 +25,7 @@ export async function completeInPlaceC4(
   const review = await assertC4TaskReview(db, context, taskId, context.root, runId);
   context.invalidate();
   const artifacts = await context.load();
-  const pkg = await prepareC4Publication(context, artifacts, review.realized);
+  const pkg = await prepareC4Publication(context.root, artifacts, review.realized);
   if (review.changeHash !== (await c4ChangeHash(context.root, review.baseHead)))
     throw new Error(`${taskId}: code changed during in-place completion; review C4 again`);
   const result = /^T-\d+$/.test(taskId)

@@ -2,6 +2,7 @@ import { copyFile, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { git } from './command.ts';
 import { fileImage, restoreFiles, sameImage, type FileImage } from './merge-files.ts';
+import { recoverBasePublications } from './merge-base-worktree.ts';
 
 interface PublicationJournal {
   base: string;
@@ -24,6 +25,7 @@ function alive(pid: number): boolean {
 
 /** Called under the repository's publication queue. Unknown/concurrent edits stop recovery. */
 export async function recoverPublications(repo: string): Promise<boolean> {
+  await recoverBasePublications(repo, alive);
   const gitDir = (await git(repo, ['rev-parse', '--absolute-git-dir'])).stdout.trim();
   const entries = (await readdir(gitDir)).filter((name) =>
     name.startsWith('skaro-merge-recovery-'),

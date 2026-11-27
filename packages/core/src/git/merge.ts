@@ -11,7 +11,8 @@ import {
 } from './git.ts';
 import { serializedMerge } from './merge-queue.ts';
 import { localMergeObstacles } from './merge-safety.ts';
-import { captureFiles, publishMerge } from './merge-publication.ts';
+import { assertPublicationFiles, captureFiles, publishMerge } from './merge-publication.ts';
+import { publishUnoccupiedBase } from './merge-base-worktree.ts';
 import { recoverPublications } from './merge-recovery.ts';
 import { assertLocalChanges, LocalChangesChangedError } from './local-changes.ts';
 
@@ -26,18 +27,27 @@ async function prepareMerge(service: GitService, options: MergeOptions) {
   await recoverPublications(service.repo);
   if (options.expectedBaseHead && (await service.head(options.base)) !== options.expectedBaseHead)
     throw new GitBaseChangedError();
-  const check = await service.checkMerge(options.base, options.branch);
+  const check = await service.checkMerge(
+    options.base,
+    options.branch,
+    options.publishOffCheckout && !options.localResolution,
+  );
   if (options.localResolution) {
     await assertLocalChanges(service.repo, options.localResolution.snapshot);
     if (check.localChanges?.some((path) => !options.localResolution!.snapshot.paths.includes(path)))
       throw new LocalChangesChangedError();
     check.blockers = check.blockers.filter((blocker) => blocker !== 'dirty_base');
   }
-  if (options.allowMetadataOnly && options.managedPaths?.length)
+  const resolveManagedPaths = options.managedPaths;
+  const metadataOnly = check.blockers.includes('no_changes');
+  if (
+    options.allowMetadataOnly &&
+    (typeof resolveManagedPaths === 'function' || resolveManagedPaths?.length)
+  )
     check.blockers = check.blockers.filter((blocker) => blocker !== 'no_changes');
   if (check.blockers.length) throw new MergeBlockedError(check);
-  const before = await service.head();
-  const managed = await captureFiles(service.repo, options.managedPaths ?? []);
+  const before = await service.head(check.isolatedBase ? `refs/heads/${options.base}` : 'HEAD');
+  const isolatedBase = check.isolatedBase === true;
   const guards = await captureFiles(service.repo, options.guardPaths ?? []);
   const dir = await mkdtemp(join(tmpdir(), 'skaro-merge-'));
   const checkout = join(dir, 'checkout');
@@ -45,6 +55,15 @@ async function prepareMerge(service: GitService, options: MergeOptions) {
   try {
     await service.createDetachedWorktree(checkout, before);
     registered = true;
+    const managedPaths =
+      typeof resolveManagedPaths === 'function'
+        ? await resolveManagedPaths(checkout, isolatedBase)
+        : (resolveManagedPaths ?? []);
+    if (metadataOnly && !managedPaths.length) {
+      check.blockers.push('no_changes');
+      throw new MergeBlockedError(check);
+    }
+    const managed = await captureFiles(service.repo, managedPaths);
     if (options.strategy === 'rebase') {
       if (options.expectedBaseHead) {
         // Replay the resolved tree onto the base, without replaying conflicting source commits.
@@ -77,8 +96,9 @@ async function prepareMerge(service: GitService, options: MergeOptions) {
         '--',
         ...check.skaroChanges,
       ]);
-    const extra = (await options.beforeCommit?.(checkout)) ?? [];
-    if (extra.some((path) => !(options.managedPaths ?? []).includes(path)))
+    const extra =
+      (await options.beforeCommit?.(checkout, { baseHead: before, isolatedBase })) ?? [];
+    if (extra.some((path) => !managedPaths.includes(path)))
       throw new Error('merge metadata must declare its managedPaths');
     if (extra.length) await git(checkout, ['add', '--', ...extra]);
     if (options.verify) {
@@ -92,21 +112,32 @@ async function prepareMerge(service: GitService, options: MergeOptions) {
     if (options.strategy !== 'rebase' || staged.code !== 0)
       await git(checkout, ['commit', '--no-verify', '-m', options.message]);
     const commit = await service.head('HEAD', checkout);
-    const obstacles = await localMergeObstacles(service.repo, before, commit, extra);
-    if (obstacles.some((path) => !options.localResolution?.snapshot.paths.includes(path)))
-      throw new MergeBlockedError({ ...check, blockers: ['dirty_base'], localChanges: obstacles });
+    if (!check.isolatedBase) {
+      const obstacles = await localMergeObstacles(service.repo, before, commit, extra);
+      if (obstacles.some((path) => !options.localResolution?.snapshot.paths.includes(path)))
+        throw new MergeBlockedError({
+          ...check,
+          blockers: ['dirty_base'],
+          localChanges: obstacles,
+        });
+    }
     await options.prepared?.({ before, commit });
     if ((await service.head(options.base)) !== before) throw new GitBaseChangedError();
-    await publishMerge(
-      service.repo,
-      checkout,
-      before,
-      commit,
-      options.base,
-      managed,
-      guards,
-      options.localResolution,
-    );
+    if (check.isolatedBase)
+      await publishUnoccupiedBase(service.repo, options.base, before, commit, () =>
+        assertPublicationFiles(service.repo, managed, guards),
+      );
+    else
+      await publishMerge(
+        service.repo,
+        checkout,
+        before,
+        commit,
+        options.base,
+        managed,
+        guards,
+        options.localResolution,
+      );
     return { commit, check, before };
   } finally {
     // This is Skaro's private checkout: no services or ignored user data run here.

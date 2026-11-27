@@ -112,6 +112,52 @@ it('preserves unrelated staged, unstaged, untracked and ignored owner data', asy
   expect(await readFile(join(fixture.repo, 'data', 'database'), 'utf8')).toBe('ignored owner data');
 }, 30_000);
 
+it('completes an accepted task on an unoccupied base while the owner stays on another branch', async () => {
+  const task = await fixture.task('Publish while editing another branch');
+  const context = fixture.context;
+  const modelPath = '.skaro/c4/model.json';
+  const modelFile = join(fixture.repo, modelPath);
+  const baseModel = (await context.load()).c4!;
+  baseModel.elements[0]!.code = ['README.md'];
+  await writeFile(modelFile, JSON.stringify(baseModel));
+  await fixture.commit();
+  const worktree = await fixture.checkout(task);
+  await git(worktree, ['mv', 'README.md', 'renamed.md']);
+  await git(fixture.repo, ['switch', '-qc', 'owner-work']);
+  const owner = await context.git.head();
+  const localModel = structuredClone(baseModel);
+  localModel.revision++;
+  localModel.elements[0]!.code = ['data/other-task.txt'];
+  const localArchitecture = JSON.stringify(localModel);
+  await writeFile(modelFile, localArchitecture);
+  for (const checkout of [fixture.repo, worktree]) {
+    await mkdir(join(checkout, 'data'));
+    await writeFile(join(checkout, 'data/other-task.txt'), 'other task code\n');
+  }
+  await fixture.accept(task, worktree);
+  await writeFile(join(fixture.repo, 'README.md'), 'uncommitted owner notes\n');
+  const published = await fixture.coordinator.merge(fixture.projectId, task.id);
+
+  expect(await context.git.currentBranch()).toBe('owner-work');
+  expect(await context.git.head()).toBe(owner);
+  expect(await context.git.head('main')).toBe(published.commit);
+  expect(await readFile(join(fixture.repo, 'README.md'), 'utf8')).toBe('uncommitted owner notes\n');
+  expect(await readFile(modelFile, 'utf8')).toBe(localArchitecture);
+  baseModel.revision++;
+  baseModel.elements[0]!.code = ['renamed.md'];
+  expect(JSON.parse((await git(fixture.repo, ['show', `main:${modelPath}`])).stdout)).toEqual(
+    baseModel,
+  );
+  expect(
+    (await git(fixture.repo, ['show', `main:.skaro/c4/history/${baseModel.revision}.json`])).stdout,
+  ).toContain('renamed.md');
+  expect((await context.store.readTask(task.id)).status).toBe('done');
+  expect((await git(fixture.repo, ['show', `main:${task.path}`])).stdout).toContain('status: done');
+  expect(fixture.db.listMerges(fixture.projectId, task.id)).toMatchObject([
+    { commit: published.commit },
+  ]);
+}, 45_000);
+
 it('runs only the configured project checks at the merge and keeps the task in review when one fails', async () => {
   const task = await fixture.task('Checked task');
   const context = fixture.context;

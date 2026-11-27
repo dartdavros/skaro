@@ -15,6 +15,7 @@ import { isTaskParked } from '@skaro/core';
 import { currentTransition } from './task-lifecycle-journal';
 import { ownerResumeText, prepareTaskFollowUp } from './task-follow-up';
 import { confirmTaskResume } from './task-resume';
+import { taskAcceptanceRecoveryNote } from './operation-reissue';
 
 /** One serialized delivery owns the old turn, its queue slot and its replacement. */
 export async function deliverTaskInput(
@@ -143,6 +144,7 @@ export async function deliverTaskInput(
       active.timeline.state,
       execution.read().followUp?.commandId === input.commandId && !!input.commandId,
       resumed,
+      taskAcceptanceRecoveryNote(ctx.deps.db, projectId, taskId),
     );
     // Once a native write is possible the durable owner-command receipt governs uncertain delivery.
     ctx.startup.consumeTransition(projectId, taskId, run.id, original.commandId);

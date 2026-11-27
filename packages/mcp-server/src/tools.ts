@@ -224,7 +224,8 @@ export function mergeTaskTool(
       'Do not call this tool to reconfirm a merge reported by submit_result. Do not push or switch ' +
       'branches yourself. Unrelated uncommitted changes in the main copy are preserved and do not ' +
       'require a globally clean checkout; Skaro checks actual path overlaps and resolves them through ' +
-      'its existing local-change workflow. If the result reports blockers such as conflicts, tell the user.',
+      'its existing local-change workflow. Resolve conflicts using the task branch and continue. ' +
+      'If a remedy needs an owner decision, use ask_owner with the exact action and its consequences.',
     inputSchema: {
       type: 'object',
       properties: {

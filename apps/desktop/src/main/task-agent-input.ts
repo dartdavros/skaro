@@ -18,6 +18,7 @@ export function taskAgentInput(
   state?: TimelineState,
   followUp = false,
   resumed = false,
+  recovery = '',
 ): UserInput {
   const note = [
     input.commandId && `command_id: ${input.commandId}`,
@@ -39,6 +40,7 @@ export function taskAgentInput(
         'command_id and an exact quote of that instruction, then carry it out in this turn. ' +
         'If your next action requires an owner decision, call Skaro ask_owner with concrete options. ' +
         'Await the answer for that action and continue independent work.',
+    recovery,
   ]
     .filter(Boolean)
     .join('\n');

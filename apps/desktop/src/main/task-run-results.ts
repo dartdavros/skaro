@@ -4,7 +4,7 @@ import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@s
 import { AUTO_MERGE_KEY } from '../shared/ipc';
 import { errorText } from './session-log';
 import { taskSections } from './task-body';
-import { type MergeInteraction } from './task-merge-card';
+import { mergeToolReply, type MergeInteraction } from './task-merge-card';
 import { mergedTaskReply, unmetReply } from './task-merge-result';
 import { key, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
@@ -94,10 +94,19 @@ export class TaskRunResults {
     if (!active || active.run.id !== scope.runId) {
       return { text: 'This session is no longer the current run of the task.', isError: true };
     }
+    const context = this.ctx.project(active.projectId);
     try {
-      return await this.ctx.merges.request(args, active, this.ctx.project(active.projectId));
+      return await this.ctx.merges.request(args, active, context);
     } catch (error) {
       if (error instanceof IntegrationPending) return { text: error.message };
+      if (error instanceof MergeBlockedError) {
+        if (error.check.blockers.includes('conflicts')) {
+          await this.ctx.mergeActions.conflicted(active, error.check.conflicts);
+          return { text: active.conflictOrder! };
+        }
+        const card = await this.ctx.merges.showCard(active, context);
+        if (card) return { text: mergeToolReply(card) };
+      }
       return { text: errorText(error), isError: true };
     }
   }

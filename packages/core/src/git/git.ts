@@ -7,14 +7,13 @@ import {
 
 import { worktreePresent } from './worktree-files.ts';
 import { createWorktree, type WorktreeCreateOptions } from './worktree-create.ts';
-import { SKARO_DIR } from '../artifacts/store.ts';
-import { git, GitError } from './command.ts';
+import { git } from './command.ts';
 import { assertRemovableWorktree, type ContainerMounts } from './worktree-safety.ts';
 import * as state from './worktree-state.ts';
 import { diffStats, worktreeStats } from './diff.ts';
 import { merge } from './merge.ts';
 import { revert, type RevertOptions } from './revert.ts';
-import { localMergeObstacles } from './merge-safety.ts';
+import { checkMerge } from './merge-check.ts';
 import { recoverPublications } from './merge-recovery.ts';
 import { serializedMerge, mutateWorktree } from './merge-queue.ts';
 export { git, GitError, type GitResult } from './command.ts';
@@ -25,6 +24,7 @@ export type MergeBlocker = 'dirty_base' | 'not_on_base' | 'conflicts' | 'no_chan
 
 export interface MergeCheck {
   blockers: MergeBlocker[];
+  isolatedBase?: boolean;
   /** Local paths that would be overwritten, rather than unrelated dirty files. */
   localChanges?: string[];
   /** Commits on the base branch the task branch does not have ("Обновить ветку задачи"). */
@@ -43,6 +43,8 @@ export interface DiffStats {
 }
 
 export interface MergeOptions {
+  /** Publish an unoccupied base through a private worktree, leaving the owner checkout alone. */
+  publishOffCheckout?: boolean;
   /** Verified local layers, applied without including them in the task commit. */
   localResolution?: import('./local-changes.ts').LocalChangesResolution;
   base: string;
@@ -54,11 +56,14 @@ export interface MergeOptions {
   /** The task worktree: "rebase" moves the branch onto the base there first. */
   worktree?: string;
   /** Metadata paths Skaro is allowed to update; checked before publishing. */
-  managedPaths?: string[];
+  managedPaths?: string[] | ((baseCheckout: string, isolatedBase: boolean) => Promise<string[]>);
   /** Read-only verification inputs: reject publication if they change during preparation. */
   guardPaths?: string[];
   /** Runs only in the isolated merge checkout, never in the user's working copy. */
-  beforeCommit?: (checkout: string) => Promise<string[]>;
+  beforeCommit?: (
+    checkout: string,
+    preparation: { baseHead: string; isolatedBase: boolean },
+  ) => Promise<string[]>;
   /** Checks the prepared candidate after metadata is staged and before publication. */
   verify?: (checkout: string) => Promise<void>;
   /** Persist the verified candidate before updating the base ref. Must be durable on return. */
@@ -212,49 +217,8 @@ export class GitService {
   }
 
   /** Checks shown in the merge confirmation card (docs/architecture.md, section 8). */
-  async checkMerge(base: string, branch: string): Promise<MergeCheck> {
-    const blockers: MergeBlocker[] = [];
-    if ((await this.currentBranch()) !== base) blockers.push('not_on_base');
-
-    const baseAhead = Number(
-      (await git(this.repo, ['rev-list', '--count', `${branch}..${base}`])).stdout.trim(),
-    );
-    const skaroChanges = (
-      await git(this.repo, ['diff', '--name-only', `${base}...${branch}`, '--', SKARO_DIR])
-    ).stdout
-      .split('\n')
-      .filter(Boolean);
-    const stats = await this.diffStats(base, branch);
-    const codeFiles = stats.files - skaroChanges.length;
-    if (codeFiles <= 0) blockers.push('no_changes');
-
-    const trial = await git(
-      this.repo,
-      ['merge-tree', '--write-tree', '--name-only', '--no-messages', base, branch],
-      {
-        allowFail: true,
-      },
-    );
-    let conflicts: string[] = [];
-    if (trial.code === 1) {
-      conflicts = trial.stdout.split('\n').slice(1).filter(Boolean);
-      blockers.push('conflicts');
-    } else if (trial.code !== 0) {
-      throw new GitError(['merge-tree', base, branch], trial);
-    }
-    const localChanges =
-      trial.code === 0
-        ? await localMergeObstacles(this.repo, base, trial.stdout.split('\n')[0]!, skaroChanges)
-        : [];
-    if (localChanges.length) blockers.push('dirty_base');
-    return {
-      blockers,
-      baseAhead,
-      conflicts,
-      skaroChanges,
-      stats,
-      ...(localChanges.length ? { localChanges } : {}),
-    };
+  checkMerge(base: string, branch: string, publishOffCheckout = false): Promise<MergeCheck> {
+    return checkMerge(this, base, branch, publishOffCheckout);
   }
 
   /** Merge implementation stays separate from worktree lifecycle and checks. */

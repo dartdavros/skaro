@@ -4,7 +4,19 @@ import type { C4Model } from './model.ts';
 import { authoredBody } from './render.ts';
 
 export const c4Hash = (body: string): string => createHash('sha256').update(body).digest('hex');
-export const c4BodyHash = (text: string): string => c4Hash(authoredBody(parseMarkdown(text).body));
+export const c4BodyHash = (text: string): string =>
+  c4Hash(authoredBody(parseMarkdown(text).body.replace(/\r\n/g, '\n')));
+
+export function matchesC4BodyHash(text: string, expected: string): boolean {
+  const body = parseMarkdown(text).body;
+  const lf = body.replace(/\r\n/g, '\n');
+  if (c4Hash(authoredBody(lf)) === expected) return true;
+  // Previously accepted models may store a hash of the original Windows line endings.
+  return (
+    (body !== lf && c4Hash(authoredBody(body)) === expected) ||
+    c4Hash(authoredBody(lf.replace(/\n/g, '\r\n'))) === expected
+  );
+}
 export const C4_DOCUMENT_PATH =
   /^(architecture\.md|brief\.md|docs\/[a-zA-Z0-9_-]+\.md|(adr|specs)\/\d{4}-[a-zA-Z0-9_-]+\.md)$/;
 
@@ -52,7 +64,7 @@ export function validateC4Documents(model: C4Model, documents: Map<string, strin
       errors.push(`SPEC-${spec.id}: missing or invalid document path`);
       continue;
     }
-    if (spec.bodyHash !== c4BodyHash(text))
+    if (!matchesC4BodyHash(text, spec.bodyHash))
       errors.push(`SPEC-${spec.id}: C4 binding is stale after document edits`);
     const checkRefs = (
       entry: { elements: string[]; relationships: string[]; views: string[] },

@@ -83,7 +83,7 @@ export class MergeCardRefresh {
             continue;
           }
           const base = artifacts.config.baseBranch;
-          const check = await context.git.checkMerge(base, run.run.branch);
+          const check = await context.git.checkMerge(base, run.run.branch, true);
           const next = mergeInteraction(card.id, run.run.branch, base, check);
           if (card.message) next.message = card.message;
           withStage(next, card.stage);

@@ -4,13 +4,20 @@ import { emptyTimeline, Timeline, withSkaroNote, type Interaction } from '@skaro
 import { taskResumeTool } from '@skaro/mcp-server';
 import { TaskExecution } from './task-execution';
 import { ownerResumeText, prepareTaskFollowUp } from './task-follow-up';
-import { resumeTaskExecution } from './task-resume';
+import { resumeTaskExecution, taskAcceptsContinuation } from './task-resume';
 import { taskAgentInput } from './task-agent-input';
 import { QuestionAnswers } from './question-answers';
 
 // Real SQLite settings and timeline DTOs only; no project, fake agent or API is created.
 const db = AppDb.open(':memory:');
 afterAll(() => db.close());
+
+it('accepts continuation for work awaiting publication and preserves terminal task states', () => {
+  expect(taskAcceptsContinuation({ status: 'review', archived: false })).toBe(true);
+  expect(taskAcceptsContinuation({ status: 'review', archived: true })).toBe(false);
+  expect(taskAcceptsContinuation({ status: 'done', archived: false })).toBe(false);
+  expect(taskAcceptsContinuation({ status: 'cancelled', archived: false })).toBe(false);
+});
 const question: Extract<Interaction, { kind: 'question' }> = {
   kind: 'question',
   id: 'decision',

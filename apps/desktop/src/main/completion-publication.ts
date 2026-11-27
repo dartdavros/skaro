@@ -1,6 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { ArtifactStore, git, type MergeOptions, type ProjectArtifacts } from '@skaro/core';
+import {
+  ArtifactStore,
+  git,
+  readAcceptedC4Model,
+  type MergeOptions,
+  type ProjectArtifacts,
+} from '@skaro/core';
 import type { ProjectContext } from './projects';
 import { CompletionStore, criteriaRevision, type CompletionOperation } from './completion-store';
 import { taskSections } from './task-body';
@@ -26,21 +32,27 @@ async function publication(
     if (!task) throw new Error(`Task ${result.taskId} was removed`);
     return task;
   });
-  const architecturePaths = artifacts.c4
-    ? [
-        '.skaro/c4/model.json',
-        '.skaro/architecture.md',
-        `.skaro/c4/history/${artifacts.c4.revision + 1}.json`,
-      ]
-    : [];
   return {
     base: operation.base,
+    publishOffCheckout: true,
     strategy: operation.strategy,
     message:
       operation.results.length > 1
         ? `${message.split('\n\n')[0]}\n\n${operation.results.map((result) => result.message).join('\n')}`
         : message,
-    managedPaths: [...tasks.map((task) => task.path), ...architecturePaths],
+    managedPaths: async (baseCheckout, isolatedBase) => {
+      const model = isolatedBase ? await readAcceptedC4Model(baseCheckout) : artifacts.c4;
+      return [
+        ...tasks.map((task) => task.path),
+        ...(model
+          ? [
+              '.skaro/c4/model.json',
+              '.skaro/architecture.md',
+              `.skaro/c4/history/${model.revision + 1}.json`,
+            ]
+          : []),
+      ];
+    },
     guardPaths: [
       '.skaro/c4/model.json',
       '.skaro/architecture.md',
@@ -50,21 +62,23 @@ async function publication(
         .map((spec) => spec.path),
     ],
     allowMetadataOnly: true,
-    beforeCommit: async (candidate) => {
+    beforeCommit: async (candidate, { baseHead, isolatedBase }) => {
       context.invalidate();
       assertPublicationDependencies(await context.load(), operation.results, store);
       const target = new ArtifactStore(candidate);
-      const codeCandidate = { root: candidate, base: operation.base, staged: true };
+      // The restored metadata in a detached candidate belongs to the destination branch.
+      const publicationArtifacts = isolatedBase ? await target.load() : artifacts;
+      const codeCandidate = { root: candidate, base: baseHead, staged: true };
       const architecture = await prepareC4Publication(
-        context,
-        artifacts,
+        isolatedBase ? candidate : context.root,
+        publicationArtifacts,
         operation.results.flatMap((result) => result.c4?.realized ?? []),
         codeCandidate,
       );
       const c4Files = await writeC4Publication(candidate, architecture);
       const c4Model = architecture
         ? JSON.parse(architecture.files.find((f) => f.path === 'c4/model.json')!.after)
-        : artifacts.c4;
+        : publicationArtifacts.c4;
       if (c4Model) {
         await assertCandidateC4(c4Model, codeCandidate);
       }

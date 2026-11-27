@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { AppDb } from '@skaro/core';
-import { DecisionReplies } from './decision-replies';
+import { DecisionReplies, decisionReplyUncertain } from './decision-replies';
 import { decisionHash } from './decision-projection';
 import type { ProjectDecision } from '../shared/project-decisions';
 
@@ -171,6 +171,54 @@ it('serializes conflicting views and permits merge preparation before the termin
     );
     expect(replies.status(entry)).toBe('denied');
     expect(effects).toBe(2);
+  } finally {
+    db.close();
+  }
+});
+
+it('lets the completion coordinator recover an interrupted merge confirmation after restart', async () => {
+  const db = AppDb.open(':memory:');
+  const merge: ProjectDecision = {
+    ...entry,
+    interaction: {
+      kind: 'merge',
+      id: 'merge-card',
+      from: 'task',
+      to: 'main',
+      files: 1,
+      added: 1,
+      removed: 0,
+      blockers: [],
+      baseAhead: 0,
+      skaroChanges: [],
+      conflicts: [],
+    },
+  };
+  const answer = { kind: 'merge', action: { action: 'confirm', message: 'Publish task' } } as const;
+  const key = `coordination.decision-reply.v1.${merge.origin.projectId}.${decisionHash([merge.id, merge.revision])}`;
+  const verify = async () => {};
+  try {
+    db.setSetting(key, {
+      revision: merge.revision,
+      answer: decisionHash(answer),
+      outcome: 'answered',
+      state: 'uncertain',
+    });
+    const recovered = new DecisionReplies(db);
+    await expect(
+      recovered.accept(merge, answer, verify, async () => {
+        throw new Error('C4 validation failed');
+      }),
+    ).rejects.toThrow('C4 validation failed');
+    expect(decisionReplyUncertain(db, merge)).toBe(false);
+    let publications = 0;
+    const publish = async () => {
+      publications++;
+    };
+    await new DecisionReplies(db).accept(merge, answer, verify, publish);
+    await new DecisionReplies(db).accept(merge, answer, verify, publish);
+    expect(publications).toBe(1);
+    expect(recovered.status(merge)).toBe('answered');
   } finally {
     db.close();
   }

@@ -21,6 +21,13 @@ import {
 import { localPublicationFiles, prepareLocalIndex } from './local-publication.ts';
 export { captureFiles } from './merge-files.ts';
 
+export async function assertPublicationFiles(repo: string, ...snapshots: FileImages[]) {
+  for (const snapshot of snapshots)
+    for (const [path, image] of snapshot)
+      if (!sameImage(image, await fileImage(join(repo, path))))
+        throw new Error(`Merge metadata changed during preparation: ${path}`);
+}
+
 /** Keep the real index locked, while read-tree carries unrelated staged and unstaged work forward. */
 export async function publishMerge(
   repo: string,
@@ -59,9 +66,7 @@ export async function publishMerge(
       (await git(repo, ['rev-parse', 'HEAD'])).stdout.trim() !== before
     )
       throw new GitBaseChangedError();
-    for (const [path, image] of [...managed, ...guards])
-      if (!sameImage(image, await fileImage(join(repo, path))))
-        throw new Error(`Merge metadata changed during preparation: ${path}`);
+    await assertPublicationFiles(repo, managed, guards);
     const obstacles = await localMergeObstacles(repo, before, commit, [...managed.keys()]);
     if (obstacles.some((path) => !local?.snapshot.paths.includes(path)))
       throw new Error(`Local changes would be overwritten: ${obstacles.join(', ')}`);

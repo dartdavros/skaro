@@ -5,7 +5,7 @@ import { skaroC4 } from '../../../../docs/c4/skaro-model.ts';
 import { skaroC4Specification } from '../../../../docs/c4/skaro-specification.ts';
 import { readC4Model } from './shape.ts';
 import { validateC4Model } from './validate.ts';
-import { validateC4Documents } from './documents.ts';
+import { c4BodyHash, c4Hash, validateC4Documents } from './documents.ts';
 import { projectC4Document, authoredBody } from './render.ts';
 import { c4AtState, realizeC4 } from './state.ts';
 import { validateC4Code } from './project.ts';
@@ -74,6 +74,14 @@ it('covers every real C4 requirement and detects stale specification edits', asy
   const documents = new Map([
     ['specs/0001-c4.md', `---\nid: "0001"\ntitle: C4\nstatus: accepted\n---\n${text}`],
   ]);
+  expect(validateC4Documents(model, documents)).toEqual([]);
+  const document = documents.get('specs/0001-c4.md')!;
+  const crlf = (value: string) => value.replace(/\r?\n/g, '\r\n');
+  documents.set('specs/0001-c4.md', crlf(document));
+  expect(c4BodyHash(document)).toBe(c4BodyHash(crlf(document)));
+  expect(validateC4Documents(model, documents)).toEqual([]);
+  model.specifications[0]!.bodyHash = c4Hash(authoredBody(crlf(text)));
+  documents.set('specs/0001-c4.md', document);
   expect(validateC4Documents(model, documents)).toEqual([]);
   model.specifications[0]!.requirements.pop();
   expect(validateC4Documents(model, documents).join('\n')).toContain('unmapped requirement R-9');

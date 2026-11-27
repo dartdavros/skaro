@@ -18,6 +18,7 @@ interface Receipt {
   revision: string;
   answer: string;
   outcome: 'answered' | 'denied';
+  operation?: 'merge_confirm';
   state: 'dispatching' | 'done' | 'uncertain' | 'not_dispatched';
 }
 export function decisionReplyStatus(db: AppDb, entry: ProjectDecision) {
@@ -38,6 +39,7 @@ export function decisionReplyUncertain(db: AppDb, entry: ProjectDecision): boole
   );
   return (
     !!receipt &&
+    receipt.operation !== 'merge_confirm' &&
     ['dispatching', 'uncertain'].includes(receipt.state) &&
     !replyProof(db, entry, receipt.answer)
   );
@@ -100,6 +102,12 @@ export class DecisionReplies {
     effect: () => Promise<void>,
     answer: DecisionAnswer,
   ) {
+    // Task publication reconciles its durable Git candidate before attempting a merge.
+    const mergeConfirmation =
+      entry.kind === 'interaction' &&
+      entry.interaction.kind === 'merge' &&
+      answer.kind === 'merge' &&
+      answer.action.action === 'confirm';
     const previous = this.db.getSetting<Receipt | undefined>(key, undefined, { strict: true });
     if (previous) {
       const proof = replyProof(this.db, entry, previous.answer);
@@ -112,7 +120,8 @@ export class DecisionReplies {
           throw new Error('decision_reply_uncertain');
         return;
       }
-      if (!notDispatched) throw new DecisionNotDispatched('decision_reply_uncertain');
+      if (!notDispatched && !mergeConfirmation)
+        throw new DecisionNotDispatched('decision_reply_uncertain');
     }
     try {
       await verify();
@@ -123,6 +132,7 @@ export class DecisionReplies {
       revision: entry.revision,
       answer: hash,
       outcome,
+      ...(mergeConfirmation ? { operation: 'merge_confirm' } : {}),
       state: 'dispatching',
     };
     if (!this.db.settings.compareAndSet(key, previous, receipt))

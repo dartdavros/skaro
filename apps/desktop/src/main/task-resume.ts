@@ -16,6 +16,13 @@ import { RESUMED_ENVIRONMENT } from './task-agent-input';
 import { taskC4WaitPolicy } from './c4-package-policy';
 import type { TaskC4WaitPolicy } from '../shared/feed-actions';
 
+export function taskAcceptsContinuation(task: Pick<Task, 'archived' | 'status'>): boolean {
+  return (
+    !task.archived &&
+    (task.status === 'in_progress' || task.status === 'review' || isTaskParked(task.status))
+  );
+}
+
 export function resumeTaskExecution(
   execution: TaskExecution,
   state: TimelineState,
@@ -75,11 +82,7 @@ export async function resumeTaskFromInstruction(
     );
   const { artifacts, snapshot } = await readTaskInputs(ctx, active);
   const subject = artifacts.tasks.find((item) => item.id === task);
-  if (
-    !subject ||
-    subject.archived ||
-    (!isTaskParked(subject.status) && subject.status !== 'in_progress')
-  )
+  if (!subject || !taskAcceptsContinuation(subject))
     return { text: 'The current task state does not allow execution.', isError: true };
   if (
     !(await confirmTaskResume(
@@ -112,8 +115,7 @@ export async function confirmTaskResume(
   current: () => void,
 ): Promise<boolean> {
   const { projectId: project, taskId: task } = active;
-  if (subject.archived || (!isTaskParked(subject.status) && subject.status !== 'in_progress'))
-    return false;
+  if (!taskAcceptsContinuation(subject)) return false;
   current();
   const execution = ctx.continuation.execution(active);
   const db = ctx.deps.db;

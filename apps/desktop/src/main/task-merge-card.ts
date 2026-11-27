@@ -49,14 +49,18 @@ export function mergeToolReply(card: MergeInteraction): string {
           `- merging would overwrite local files: ${card.localChanges?.join(', ') ?? 'see the card'}; preserve those edits before merging;`,
         );
       if (blocker === 'not_on_base')
-        lines.push(`- the main working copy is not on ${card.to} (the user must switch to it);`);
+        lines.push(
+          `- Skaro cannot reserve ${card.to} for isolated publication. Inspect where the base is checked out and whether it has local work. If changing that checkout is necessary, call ask_owner with the exact action and its consequences.`,
+        );
       if (blocker === 'no_changes') lines.push('- the task branch has no code changes;');
       if (blocker === 'conflicts')
         lines.push(`- merge conflicts in: ${card.conflicts.join(', ')};`);
       if (blocker === 'criteria')
         lines.push(`- readiness criteria are not ticked: ${card.stage?.unmet.join('; ') ?? ''};`);
     }
-    lines.push('The user sees this in a card. Tell the user briefly and end your turn.');
+    lines.push(
+      'Continue the available remediation yourself. Use ask_owner for a concrete decision that needs consent, then carry out the approved action and retry the current publication.',
+    );
   }
   if (card.baseAhead) {
     lines.push(`Note: ${card.to} has ${card.baseAhead} commits the task branch does not have.`);
