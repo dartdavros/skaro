@@ -55,7 +55,7 @@ import type { ProjectCatalogMethods } from './project-catalog';
 import type { DocumentCatalogMethods } from './document-catalog';
 import type { GraphMethods, GraphEvents } from './graph';
 import type { DiagramExportMethods } from './diagram-export';
-import type { C4ReviewMethods } from './c4-review';
+import type { C4PackageMethods } from './c4-review';
 export * from './ipc-entities';
 export * from './ipc-sessions';
 export type { UpdateState } from './updates';
@@ -84,18 +84,13 @@ export interface Methods
     ChatMethods,
     GraphMethods,
     DiagramExportMethods,
-    C4ReviewMethods {
+    C4PackageMethods {
+  'c4.model': (projectId: string) => import('@skaro/core/c4-view').C4Model | null;
   'c4.files': (projectId: string, itemId: string) => string[];
   'c4.file': (projectId: string, itemId: string, path: string, side: 'before' | 'after') => string;
   'session.remember': (key: string, view: ChatView | TaskView) => void;
   'commands.list': (projectId: string, ownerId: string) => import('@skaro/timeline').OwnerCommand[];
   'c4.content': (projectId: string, itemId: string, side: 'before' | 'after') => string;
-  'c4.decide': (
-    projectId: string,
-    itemId: string,
-    action: 'apply' | 'reject',
-    fingerprint?: string,
-  ) => void;
   'task.revertMerge': (projectId: string, taskId: string, commit: string) => void;
   'window.minimize': () => void;
   'window.toggleMaximize': () => void;

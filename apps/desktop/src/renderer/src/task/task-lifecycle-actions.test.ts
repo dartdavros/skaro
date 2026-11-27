@@ -1,19 +1,15 @@
 import { expect, it } from 'vitest';
-import { taskLifecycleActions } from './task-lifecycle-actions';
+import { taskCanStop } from './task-lifecycle-actions';
 
-it('offers the owner actions for parked, queued and accepted tasks in the sidebar', () => {
+it('offers Stop in the composer for tasks that can be stopped', () => {
   const task = { archived: false, stage: 'todo', status: 'todo' } as const;
-  expect(taskLifecycleActions(task)).toEqual(['start']);
-  expect(taskLifecycleActions({ ...task, status: 'queued' })).toEqual(['pause', 'stop']);
-  expect(taskLifecycleActions({ ...task, stage: 'paused', status: 'paused' })).toEqual([
-    'resume',
-    'stop',
-  ]);
-  expect(taskLifecycleActions({ ...task, stage: 'stopped', status: 'stopped' })).toEqual([
-    'resume',
-  ]);
-  expect(taskLifecycleActions({ ...task, stage: 'review', status: 'review' })).toEqual([]);
-  expect(
-    taskLifecycleActions({ ...task, stage: 'stopped', status: 'stopped', lifecyclePending: true }),
-  ).toEqual(['stop']);
+  expect(taskCanStop(task)).toBe(false);
+  expect(taskCanStop({ ...task, status: 'queued' })).toBe(true);
+  expect(taskCanStop({ ...task, stage: 'in_progress', status: 'needs_answer' })).toBe(true);
+  expect(taskCanStop({ ...task, stage: 'paused', status: 'paused' })).toBe(true);
+  expect(taskCanStop({ ...task, stage: 'stopped', status: 'stopped' })).toBe(false);
+  expect(taskCanStop({ ...task, stage: 'stopped', status: 'queued' })).toBe(true);
+  expect(taskCanStop({ ...task, stage: 'review', status: 'in_progress' })).toBe(false);
+  expect(taskCanStop({ ...task, archived: true, status: 'queued' })).toBe(false);
+  expect(taskCanStop({ ...task, stage: 'stopped', lifecyclePending: true })).toBe(true);
 });

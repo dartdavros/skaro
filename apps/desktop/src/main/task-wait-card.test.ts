@@ -1,7 +1,12 @@
+import { AppDb } from '@skaro/core';
+import { QuestionAnswers } from './question-answers';
+import { TaskExecution } from './task-execution';
+import { prepareTaskFollowUp } from './task-follow-up';
 import { expect, it } from 'vitest';
 import { assertQuestionsAnswered, Timeline, type TimelineState } from '@skaro/timeline';
 import {
   ACCEPT_AS_IS,
+  FINISH,
   acceptedBody,
   awaitsDecision,
   isLegacyWaitCard,
@@ -85,4 +90,36 @@ it('accepting as is ticks only the unmet criteria', () => {
 it('leaves the question to a pending proposal card', () => {
   expect(awaitsDecision(state([{ kind: 'proposal', state: 'pending' }]))).toBe(true);
   expect(awaitsDecision(state([{ kind: 'proposal', state: 'applied' }]))).toBe(false);
+});
+
+it('restores the accepted finish answer as the same task instruction without reopening the card', () => {
+  const db = AppDb.open(':memory:');
+  try {
+    const timeline = Timeline.restore(state([submit]));
+    const card = waitCard('run', body, timeline.state)!;
+    timeline.apply({ t: 'interaction.opened', interaction: card });
+    const mailbox = new QuestionAnswers(db, 'active.run');
+    mailbox.accept(
+      card,
+      { kind: 'question', answers: { criteria: [FINISH] } },
+      (event) => timeline.apply(event),
+      'turn',
+    );
+    const restored = Timeline.restore(structuredClone(timeline.state));
+    const answer = new QuestionAnswers(db, 'active.run').pending(restored.state)!;
+    expect(answer.resumeTask).toBe(true);
+    expect(waitCard('run', body, restored.state)).toBeUndefined();
+    const execution = new TaskExecution(db, 'run');
+    prepareTaskFollowUp(execution, answer, restored.state, answer);
+    expect(execution.resume(answer.commandId, FINISH)).toBe(true);
+    const version = execution.intentVersion();
+    const reopened = new TaskExecution(db, 'run');
+    prepareTaskFollowUp(reopened, answer, restored.state, answer);
+    expect(reopened.resume(answer.commandId, FINISH)).toBe(true);
+    expect(reopened.intentVersion()).toBe(version);
+    reopened.stop();
+    expect(reopened.resume(answer.commandId, FINISH)).toBe(false);
+  } finally {
+    db.close();
+  }
 });

@@ -91,7 +91,7 @@ test('loads the working graph with its actual saved expansion and native service
     // Return from another real section: restoration must retain the owner's expansion.
     await page.getByRole('button', { name: 'C4', exact: true }).click();
     await expect(page.locator('[data-c4-gallery]')).toBeVisible({ timeout: 30_000 });
-    const model = await page.evaluate((id) => window.skaro.invoke('graph.model', id), projectId!);
+    const model = await page.evaluate((id) => window.skaro.invoke('c4.model', id), projectId!);
     await checkC4Gallery(page, model!, evidence!);
     await page.getByRole('button', { name: 'Граф связей', exact: true }).click();
     await expect(host).toHaveAttribute('data-layout-ready', 'true', { timeout: 30_000 });

@@ -1,3 +1,5 @@
+import { IncidentStore } from './incident-store';
+import { IncidentPolicy } from './incident-policy';
 import { app, shell } from 'electron';
 import { join } from 'node:path';
 import { AttachmentStore } from '@skaro/core';
@@ -33,7 +35,6 @@ import { trace } from './trace';
 import { createC4Services } from './c4-services';
 import type { C4Audits } from './c4-audits';
 import { c4AuditTools } from './c4-audit-tools';
-import { proposeC4Specification } from './c4-specification';
 import { ProjectOverview } from './project-overview';
 import { GraphService } from './graph/service';
 import { attachProjectBackground } from './background-services';
@@ -56,6 +57,7 @@ import { LocalVersions } from './local-versions';
 import { managedCacheServices } from './managed-cache-services';
 import { startProjectWriters } from './project-recovery-startup';
 import { submissionRecoveryTool } from './task-submission-recovery';
+import { mergeRecoveryTool } from './merge-operation-recovery';
 import { publishDispatchChange } from './session-dispatch-pending';
 import { projectTaskLifecycleTools } from './project-task-lifecycle-tools';
 
@@ -126,21 +128,13 @@ export async function createServices(
     tools: coordinatedTools(db, coordinators, [
       ...coordinatorTools(memory, currentRuns, currentChats),
       submissionRecoveryTool(db, dataDir),
+      mergeRecoveryTool(db, (id) => projects.get(id)),
       ...cacheTools,
       ...c4AuditTools(() => c4Audits),
       ...c4Tools({
         migrate: (scope) => c4.migrate(scope),
-        context: (scope) =>
-          scope.kind === 'task'
-            ? runs.scopedTool(scope, () => c4.context(scope))
-            : scope.chatId
-              ? c4Audits.context(scope.projectId, scope.chatId)
-              : c4.context(scope),
-        propose: (args, scope) =>
-          scope.kind === 'task'
-            ? runs.scopedTool(scope, () => c4.propose(args, scope))
-            : c4.propose(args, scope),
-        review: (args, scope) => runs.scopedTool(scope, () => c4.review(args, scope)),
+        context: (scope) => c4Audits.context(scope.projectId, scope.chatId!),
+        propose: (args, scope) => c4.propose(args, scope),
       }),
       // Tools are called only after the app is up, when `runs` exists.
       mergeTaskTool((args, scope): Promise<ToolResult> => runs.mergeTask(args, scope)),
@@ -175,7 +169,7 @@ export async function createServices(
         context: (scope) => chats.context(scope),
         writeDoc: (args, scope) => chats.writeDoc(args, scope),
         proposeAdr: (args, scope) => chats.proposeAdr(args, scope),
-        proposeSpec: (args, scope) => proposeC4Specification(c4, projects, args, scope),
+        proposeSpec: (args, scope) => chats.proposeSpec(args, scope),
         stageArtifact: (args, scope) => chats.stageArtifact(args, scope),
         finishImport: (args, scope) => chats.finishImport(args, scope),
         proposeMilestones: (args, scope) => chats.proposeMilestones(args, scope),
@@ -206,7 +200,10 @@ export async function createServices(
     locale: () => appState.getLocale(app.getLocale()),
   });
   const runs: TaskRuns = new TaskRuns({
-    coordinators,
+    incidentHistory: {
+      store: new IncidentStore(db, coordinators),
+      policy: new IncidentPolicy(db, coordinators),
+    },
     notify: (kind, text, title) => notifier.notify(kind, text, title),
     db,
     dataDir,
@@ -265,7 +262,6 @@ export async function createServices(
   auditObserver.current = c4Audits;
   await startProjectWriters(commands, runs, chats, c4Audits);
 
-  graph.start();
   return {
     localVersions,
     memory,

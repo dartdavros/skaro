@@ -1,5 +1,10 @@
 import { taskTimelineRuntime } from './task-runtime-state';
-import { currentActivity, persistsAfterTurn, type TimelineEvent } from '@skaro/timeline';
+import {
+  currentActivity,
+  isDeferredInteraction,
+  persistsAfterTurn,
+  type TimelineEvent,
+} from '@skaro/timeline';
 import { errorText } from './session-log';
 import { FLUSH_MS, key } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
@@ -50,7 +55,7 @@ export class TaskRunEvents {
       case 'interaction.opened':
         // The merge card is "На ревью", not a question: it does not make the task wait.
         if (event.interaction.kind !== 'merge') {
-          this.ctx.setRuntime(projectId, taskId, 'waiting', active.run.id);
+          this.settleRuntime(active);
           this.ctx.deps.db.addEvent(projectId, 'waiting', {
             task: taskId,
             what: event.interaction.kind,
@@ -66,14 +71,8 @@ export class TaskRunEvents {
         return;
       case 'turn.completed': {
         if (active.inputTransition?.consumes(event)) return;
-        const recorded =
-          event.outcome === 'failed' && event.error
-            ? this.ctx.incidents
-                .failure(active, event.error)
-                .catch((error) => console.error('Incident capture:', error))
-            : Promise.resolve();
         if (!event.continuing) {
-          const pending = recorded.then(() => this.onTurnCompleted(active, event.outcome));
+          const pending = this.onTurnCompleted(active, event.outcome);
           active.operations.add(pending);
           void pending.then(
             () => active.operations.delete(pending),
@@ -106,7 +105,6 @@ export class TaskRunEvents {
       return;
     const interaction = waitCard(active.run.id, body, state);
     if (!interaction) return;
-    if (state.items.some((item) => item.id === `skaro-decision-${interaction.id}`)) return;
     this.ctx.history.skaroEvent(active, { t: 'interaction.opened', interaction });
   }
 
@@ -115,7 +113,11 @@ export class TaskRunEvents {
     outcome: 'done' | 'interrupted' | 'failed',
   ): Promise<void> {
     this.settleRuntime(active);
-    if (active.timeline.state.interactions.some((i) => i.kind === 'question')) {
+    if (
+      active.timeline.state.interactions.some(
+        (i) => i.kind === 'question' && !isDeferredInteraction(i),
+      )
+    ) {
       active.release?.();
       active.release = undefined;
       this.ctx.queue.poke();
@@ -138,8 +140,6 @@ export class TaskRunEvents {
     }
     if (after) return;
     await suspendWaitingTask(this.ctx, active);
-    if (this.ctx.deps.coordinators && (await this.ctx.incidents.afterTurn(active))) return;
-    if (await this.ctx.architecture.afterTurn(active)) return;
     const { projectId, taskId } = active;
     const context = this.ctx.project(projectId);
     try {
@@ -177,18 +177,8 @@ export class TaskRunEvents {
 
   settleRuntime(active: ActiveRun): void {
     if (active.switching) return;
-    const execution = this.ctx.continuation.execution(active).read();
-    const incident = execution.blockedIncident
-      ? this.ctx.deps.db.coordination.blockers.get(active.projectId, execution.blockedIncident)
-      : undefined;
-    const state = taskTimelineRuntime(
-      active.timeline.state,
-      execution.enabled && incident?.state === 'open'
-        ? this.ctx.incidents.work.running(active.projectId, incident.id)
-          ? 'running'
-          : 'queued'
-        : undefined,
-    );
+    const queued = this.ctx.queue.state().queued.includes(key(active.projectId, active.taskId));
+    const state = taskTimelineRuntime(active.timeline.state, queued ? 'queued' : undefined);
     // After a failed turn the agent stays idle: "failed" holds until it works again.
     const current = this.ctx.deps.db.getTaskRuntime(active.projectId).get(active.taskId)?.state;
     if (state === 'idle' && current === 'failed') return;

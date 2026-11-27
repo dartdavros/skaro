@@ -1,4 +1,4 @@
-import { c4BodyHash } from '@skaro/core';
+import { matchesC4BodyHash } from '@skaro/core';
 import type { C4Model } from '@skaro/core/c4-view';
 import type { Facts, SourceFile } from '../facts';
 import { c4NodeId } from './c4-id';
@@ -20,7 +20,7 @@ export function projectC4Bindings(
       continue;
     }
     try {
-      document.attributes.c4Stale = c4BodyHash(file.text) !== spec.bodyHash;
+      document.attributes.c4Stale = !matchesC4BodyHash(file.text, spec.bodyHash);
     } catch (error) {
       diagnostic(path, String(error));
       document.attributes.c4Stale = true;

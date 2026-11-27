@@ -3,7 +3,7 @@ import type { ProjectCoordinators } from './project-coordinators';
 import { coordinationHash } from './project-coordinator-request';
 import { savedOwnerCommand } from './owner-command-evidence';
 import { requireOwnerOrigin } from './owner-command-provenance';
-import { requireNativeTaskStopProof } from './native-task-stop-proof';
+import { requireTaskStopProof } from './native-task-stop-proof';
 import { savedTaskStop } from './task-stop-deliveries';
 
 /** Links the existing inbox to project admission, without another delivery queue. */
@@ -46,7 +46,11 @@ export class OwnerCommandCoordination {
   }
   deliver(command: OwnerCommand, effect: () => Promise<void>): Promise<void> {
     const [projectId, ownerId] = command.args as [string, string];
-    const kind = command.method === 'chat.send' ? 'chat' : 'task';
+    if (command.method === 'task.send') {
+      requireOwnerOrigin(this.db, command);
+      return effect();
+    }
+    const kind = 'chat';
     return this.coordinators.execute(
       {
         id: this.operationId(command),
@@ -56,7 +60,11 @@ export class OwnerCommandCoordination {
         subject: { kind, id: ownerId },
         inputHash: coordinationHash(command.args),
         mode: 'delivery',
-        scopeKey: `delivery:${kind}:${ownerId}`,
+        // OwnerCommands serializes actual task sends, and the task/resolver owns the native writer.
+        // A lost receipt for an older message must not fence a distinct new instruction.
+        scopeKey:
+          this.db.coordination.getOperation(projectId, this.operationId(command))?.scopeKey ??
+          `delivery:chat:${ownerId}`,
       },
       effect,
       {
@@ -105,10 +113,7 @@ export class OwnerCommandCoordination {
       )
         throw new Error('Confirmed stop belongs to another chat');
     } else {
-      const run = proof.kind === 'run' ? this.db.getRun(proof.id) : undefined;
-      if (command.method !== 'task.send' || run?.projectId !== projectId || run.taskId !== ownerId)
-        throw new Error('Confirmed stop belongs to another task runtime');
-      if (run.agent !== 'skaro') requireNativeTaskStopProof(this.db, run, proof);
+      requireTaskStopProof(this.db, projectId, ownerId, proof);
     }
     const id = this.operationId(command);
     const operation = this.db.coordination.getOperation(projectId, id);

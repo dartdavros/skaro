@@ -47,7 +47,9 @@
   {:else}
     <StatusOutlineIcon />
   {/if}
-  {resourceWait ? resourceWaitLabel(resourceWait) : t(`task.status.${status}`)}
+  <span class="label"
+    >{resourceWait ? resourceWaitLabel(resourceWait) : t(`task.status.${status}`)}</span
+  >
 </span>
 
 <style>
@@ -56,8 +58,8 @@
     align-items: center;
     gap: 7px;
     height: 22px;
+    min-width: 0;
     padding: 0 9px;
-    align-self: flex-start;
     border-radius: 6px;
     background: var(--sk-fill-18);
     color: var(--sk-text-13);
@@ -65,7 +67,14 @@
     font-weight: 600;
   }
 
+  .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .dot {
+    flex: none;
     width: 7px;
     height: 7px;
     border-radius: 50%;

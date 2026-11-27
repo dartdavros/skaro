@@ -9,7 +9,7 @@
   let error = $state('');
   onMount(() => {
     void window.skaro
-      .invoke('graph.model', projectId)
+      .invoke('c4.model', projectId)
       .then((source) => {
         if (!source) throw new Error('The project has no accepted C4 model.');
         const parsed = readC4Model(source);

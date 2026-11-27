@@ -1,10 +1,9 @@
-import { MergeBlockedError, type AppDb, type ProjectArtifacts } from '@skaro/core';
+import { MergeBlockedError, type ProjectArtifacts } from '@skaro/core';
 import type { ProjectContext } from './projects';
 import type { CompletionStore, CompletionOperation, TaskResult } from './completion-store';
 import type { IntegrationService } from './integration-service';
 import { prepareLocalIntegration } from './integration-local-changes';
 import { publishCandidate, publishCompletion, retireCandidates } from './completion-publication';
-import { requireCoordinationDispatch } from './coordination-dispatch';
 import { IntegrationPending } from './integration-model';
 
 export function prepareConflictCandidate(
@@ -37,7 +36,6 @@ export async function publishWithLocalChanges(
   operation: CompletionOperation,
   message: string,
   integrations: IntegrationService,
-  db: AppDb,
 ): Promise<void> {
   const ids = operation.results.map((result) => result.taskId);
   const repeated = ids.length === 1 && store.conflicts().includes(ids[0]!);
@@ -61,7 +59,6 @@ export async function publishWithLocalChanges(
       existing.state === 'ready' &&
       existing.baseHead === (await context.git.head(operation.base))
     ) {
-      requireCoordinationDispatch(db, context.id);
       operation.integrationId = existing.id;
       store.save(operation);
       await publishCandidate(context, artifacts, store, operation, message, integrations, existing);
@@ -80,7 +77,6 @@ export async function publishWithLocalChanges(
       error instanceof MergeBlockedError &&
       error.check.blockers.includes('conflicts')
     ) {
-      requireCoordinationDispatch(db, context.id);
       const candidate = await prepareConflictCandidate(
         integrations,
         context,

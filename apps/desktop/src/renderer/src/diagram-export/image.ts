@@ -28,10 +28,22 @@ export function exportHost(source: HTMLElement, width: number, height: number): 
   source.append(host);
   return host;
 }
-export const painted = () =>
-  new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-  );
+export function painted(signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
+    const abort = () => {
+      cancelAnimationFrame(frame);
+      reject(signal?.reason);
+    };
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        signal?.removeEventListener('abort', abort);
+        resolve();
+      });
+    });
+    signal?.addEventListener('abort', abort, { once: true });
+  });
+}
 export async function pngBytes(blob: Blob | null): Promise<Uint8Array> {
   if (!blob || !blob.size || blob.size > EXPORT_MAX_BYTES)
     throw new Error('diagram-export-file-size');

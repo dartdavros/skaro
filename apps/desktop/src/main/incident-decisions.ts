@@ -60,6 +60,10 @@ export class IncidentDecisions {
     answer: InteractionAnswer,
     taskId?: string,
   ): Promise<void> {
+    if (!this.ctx.deps.coordinators && (answer.kind !== 'approval' || answer.choice !== 'deny'))
+      throw new DecisionNotDispatched(
+        'Historical incidents cannot authorize task execution. Use the task chat.',
+      );
     let prepared: Awaited<ReturnType<typeof validateIncidentAnswer>>;
     try {
       prepared = await validateIncidentAnswer(

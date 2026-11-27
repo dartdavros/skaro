@@ -23,12 +23,12 @@ export interface ReviewC4Args {
 export interface C4Handlers {
   context(scope: SkaroScope): Promise<ToolResult>;
   propose(args: ProposeC4Args, scope: SkaroScope): Promise<ToolResult>;
-  review(args: ReviewC4Args, scope: SkaroScope): Promise<ToolResult>;
+  review?(args: ReviewC4Args, scope: SkaroScope): Promise<ToolResult>;
   migrate?(scope: SkaroScope): Promise<ToolResult>;
 }
 
 export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
-  const available = (scope: SkaroScope) => scope.kind === 'task' || scope.kind === 'project_chat';
+  const available = (scope: SkaroScope) => scope.kind === 'project_chat';
   const call =
     <T>(
       operation: string,
@@ -95,7 +95,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
       name: 'propose_c4',
       available,
       description:
-        'Propose ONE consistent package of the complete shared C4 model and related documents. Read get_c4_context for the schema, revision and documentHashes. Paths are relative to .skaro/. For an existing file, pass base_hash from documentHashes and edits with exact unique old_text and new_text. Full content is for new files only. ADR/spec files need frontmatter with string id, title and status. For a new specification use the next number from context. Do not include generated C4 sections. Model revision must equal base_revision + 1. Include evidence for elements and relationships and map each specification requirement. Planned work stays planned until published. The package applies after one owner decision. In an import, stage documents with stage_artifact and finish_import.',
+        'Propose ONE consistent package of the complete shared C4 model and related documents for a material change. Routine task implementation uses review_c4 and does not request owner approval. In package-v1 prepare material decisions in the project chat rather than the task. In impact-v1 task proposals require independent classification. Read get_c4_context for schema, revision and documentHashes. Paths are relative to .skaro/. For an existing file, pass base_hash from documentHashes and edits with exact unique old_text and new_text. Full content is for new files only. ADR/spec files need frontmatter with string id, title and status. For a new specification use the next number from context. Do not include generated C4 sections. Model revision must equal base_revision + 1. Include evidence for elements and relationships and map each specification requirement. Planned work stays planned until published. The package applies after one owner decision. In an import, stage documents with stage_artifact and finish_import.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -127,7 +127,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
     },
     {
       name: 'review_c4',
-      available: (scope) => scope.kind === 'task',
+      available: (scope) => !!handlers.review && scope.kind === 'task',
       description:
         'Before submitting implementation, inspect actual changed code against the task requirements and accepted C4. get_c4_context returns task.reviewScope derived from Git and task requirement IDs. Cover that scope, not the entire specification or unrelated parents. Report revision, changeHash, affected IDs, evidence and aligned. Only applicable open questions and stale affected documents block acceptance. Design/document-only Git changes do not require implementation review and cannot realize planned architecture. Required architecture changes still need an accepted propose_c4 package. review_c4 preflights the future publication model and task code files before saving success, using the same candidate checks as submit_result. It does not publish planned architecture. Structured c4_validation diagnostics are data rejections: follow issue.nextStep, preserve planned future work, and re-review. A narrow planned view can describe only the implemented subset; publication automatically promotes eligible views. Code paths must be concrete files. Do not claim a Skaro defect from a validation rejection alone.',
       inputSchema: {
@@ -171,7 +171,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
             aligned: args.aligned,
           };
         },
-        (args, scope) => handlers.review(args, scope),
+        (args, scope) => handlers.review!(args, scope),
       ),
     },
   ];

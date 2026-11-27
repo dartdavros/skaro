@@ -197,6 +197,8 @@ export class C4Audits {
         this.db.addEvent(project.id, 'c4_audit_process_recovery_failed', { error: String(error) });
       }
       await recoverC4Operations(this.db, this.c4, project.id);
+      const previous = this.store.read(project.id);
+      if (!previous || ['done', 'partial', 'error', 'stopped'].includes(previous.state)) continue;
       const audit = await this.refresh(project.id);
       if (
         !audit ||

@@ -36,6 +36,15 @@ export class DbSettings extends DbTable {
     }
   }
 
+  keysWithPrefix(prefix: string): string[] {
+    return this.db
+      .prepare(
+        'SELECT key FROM settings WHERE key >= ? AND key < ? AND substr(key,1,length(?)) = ?',
+      )
+      .all(prefix, prefix + '\uffff', prefix, prefix)
+      .map(({ key }) => String(key));
+  }
+
   setSetting(key: string, value: unknown): void {
     this.db
       .prepare(

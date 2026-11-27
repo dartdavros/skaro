@@ -68,22 +68,6 @@ test('graph corrections on genuine sources with native main/preload and clipboar
       });
       return project;
     }, root!);
-    await expect
-      .poll(
-        async () => {
-          const status = await page.evaluate(
-            (id) => window.skaro.invoke('graph.status', id),
-            project.id,
-          );
-          if (['error', 'unavailable'].includes(status.phase)) throw new Error(status.error);
-          return (
-            status.snapshot?.analyzerVersion === 'graph-1.0.6' &&
-            !['queued', 'indexing', 'stale'].includes(status.phase)
-          );
-        },
-        { timeout: 180_000, intervals: [1000, 3000] },
-      )
-      .toBe(true);
     await page.reload();
     const model = JSON.parse(await readFile(join(root!, '.skaro/c4/model.json'), 'utf8'));
     const gallery = page.locator('[data-c4-gallery]');

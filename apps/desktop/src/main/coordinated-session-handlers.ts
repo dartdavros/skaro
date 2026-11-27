@@ -4,7 +4,7 @@ import type { Handlers } from './ipc';
 import type { MethodName, MessageInput } from '../shared/ipc';
 import type { ProjectCoordinators } from './project-coordinators';
 import { coordinationHash } from './project-coordinator-request';
-import { parkCommandId, parkDelivery } from './task-park-delivery';
+import { parkCommandId } from './task-park-delivery';
 import { sessionCommand, sessionCommandScope } from './session-command-catalogue';
 import { resourcesFor } from './resource-execution';
 import { safetyDecisionMethod } from './decision-authority';
@@ -31,9 +31,20 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
         const descriptor = sessionCommand(method, args, id);
         if (!descriptor) return handler(...args);
         const { projectId, subject, mode } = descriptor;
-        const question = ['task.respond', 'chat.respond'].includes(method)
-          ? currentQuestionReply(projectId, subject)
-          : undefined;
+        if (/^(task|tasks|stages)\./.test(method)) {
+          if (
+            !db.getProject(projectId) ||
+            (db.shell.projectScope && db.shell.projectScope !== projectId)
+          )
+            throw new Error('Task command is outside the project scope');
+          const resources = resourcesFor(db);
+          const effect = async () => handler(...args);
+          return resources
+            ? resources.scope(projectId, `task:${subject.id}`, effect, { intentId: id })
+            : effect();
+        }
+        const question =
+          method === 'chat.respond' ? currentQuestionReply(projectId, subject) : undefined;
         const version = coordinators.version(projectId);
         let existing = db.coordination.getOperation(projectId, id);
         if (
@@ -73,7 +84,6 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
               whileSuspended: safetyDecisionMethod(method, args),
               evidence: () => ({ code: 'handler_returned', refs: [subject] }),
               ...(!descriptor.returnsValue ? { replay: () => undefined } : {}),
-              ...(parkId ? parkDelivery(db, projectId, id, subject) : {}),
               ...(method === 'chat.create' && command
                 ? {
                     replay: async () => {

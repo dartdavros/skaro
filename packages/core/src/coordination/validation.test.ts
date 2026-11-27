@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
 import { coordinationEvidence, coordinationRequest } from './validation.ts';
 
-it('rejects raw payloads/secrets, missing mutation versions and cross-project causal links', () => {
+it('rejects raw payloads/secrets and cross-project links and preserves an explicit version', () => {
   const inputHash = createHash('sha256').update(process.cwd()).digest('hex');
   const source = { kind: 'controller', id: process.cwd() };
   const subject = { kind: 'document', id: process.cwd() };
@@ -35,9 +35,9 @@ it('rejects raw payloads/secrets, missing mutation versions and cross-project ca
     scopeKey: 'project:mutation',
     mode: 'mutation',
   };
-  expect(() => coordinationRequest({ event, intent, operation })).toThrow(
-    'expected project version',
-  );
+  expect(
+    coordinationRequest({ event, intent, operation }).operation.expectedVersion,
+  ).toBeUndefined();
   const valid = { ...operation, expectedVersion: 0 };
   expect(coordinationRequest({ event, intent, operation: valid }).operation.expectedVersion).toBe(
     0,

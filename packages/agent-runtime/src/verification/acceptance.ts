@@ -69,7 +69,6 @@ async function inspect(input: InspectionInput) {
     reasons.push('Criterion revision changed');
   if (before.continuation !== 'allowed') reasons.push(`Continuation is ${before.continuation}`);
   if (before.openDecisions.length) reasons.push('Owner decisions remain open');
-  if (!['current', 'not-required'].includes(before.c4)) reasons.push(`C4 is ${before.c4}`);
   const known = new Set(before.criteria.map((item) => item.id));
   if (!known.size) reasons.push('No authoritative acceptance criteria');
   if (new Set(input.verdicts.map((item) => item.id)).size !== input.verdicts.length)

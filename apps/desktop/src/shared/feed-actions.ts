@@ -7,6 +7,10 @@ export function isPendingProposal(item: Item): item is ProposalItem {
   return item.kind === 'proposal' && (item.state === 'pending' || item.state === 'accepted');
 }
 
+export function isBlockingTaskProposal(item: Item): boolean {
+  return isPendingProposal(item) && item.proposal?.type !== 'architecture';
+}
+
 /** Keep C4 package bodies out of the renderer's always-resident action area. */
 export function pendingProposals(items: Item[]): ProposalItem[] {
   return items.filter(isPendingProposal).map((item) =>

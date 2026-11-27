@@ -11,6 +11,7 @@ import { c4CoverageProblems } from './c4-coverage';
 export { c4CoverageProblems } from './c4-coverage';
 import { readTaskC4Scope, reviewedTaskScope, type C4TaskScope } from './c4-task-scope';
 import { taskC4Base } from './c4-task-base';
+import { preservesC4Implementation } from './c4-preservation';
 
 export interface C4TaskReview extends ReviewC4Args {
   runId: string;
@@ -57,7 +58,7 @@ async function inspectC4TaskReviewData(
   runId?: string,
 ): Promise<{ review: C4TaskReview; artifactOnly: boolean }> {
   context.invalidate();
-  const artifacts = await context.load();
+  const artifacts = await context.load(true);
   const run = runId ?? db.latestRun(context.id, taskId)?.id;
   const baseHead = await taskC4Base(db, artifacts, {
     projectId: context.id,
@@ -69,13 +70,7 @@ async function inspectC4TaskReviewData(
   const actualScope = await readTaskC4Scope(checkout, baseHead, artifacts, taskId);
   const impact = !!run && taskC4Protocol(db, context.id, run) === 'impact-v1';
   const packages = await background(dirname(db.filePath), 'c4.list', context.id, taskId);
-  if (
-    packages.some(
-      (p) =>
-        p.package.task?.id === taskId &&
-        (impact ? c4PackageBlocks(db, p, run!) : ['pending', 'accepted'].includes(p.item.state)),
-    )
-  )
+  if (packages.some((p) => p.package.task?.id === taskId && c4PackageBlocks(db, p, run ?? '')))
     throw new C4ValidationError(
       [c4Issue('A task architecture package is still pending.', 'pending_package')],
       'submission',
@@ -119,11 +114,19 @@ async function inspectC4TaskReviewData(
       'submission',
     );
   const scope = reviewedTaskScope(actualScope, review, artifacts.c4);
+  const preserved = await preservesC4Implementation(
+    checkout,
+    baseHead,
+    actualScope,
+    { root: context.root, model: artifacts.c4 },
+    review.realized,
+  );
   const issues = c4CoverageProblems(
     artifacts,
     taskId,
     review.scope ? { ...review, revision: artifacts.c4?.revision ?? review.revision } : review,
     actualScope,
+    preserved,
   ).map((message) => c4Issue(message));
   if (review.modelHash !== c4ArchitectureHash(artifacts, review.scope ? scope : undefined))
     issues.push(c4Issue('Architecture or its documents changed after review.', 'stale_review'));

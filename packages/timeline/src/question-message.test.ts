@@ -52,3 +52,22 @@ it('allows every question to be superseded while retaining native validation unt
   const state = Timeline.from([{ t: 'interaction.opened', interaction: native }]).state;
   expect(() => assertQuestionMessageAllowed(state)).toThrow('Answer the open questions');
 });
+
+it('continues work with an unanswered coordinator question and preserves it after the turn', () => {
+  const coordinator = {
+    ...question,
+    id: 'coordinator:incident',
+    questions: question.questions.map((field) => ({ ...field, secret: false })),
+  };
+  const timeline = Timeline.from([
+    { t: 'turn.started', turnId: 'work' },
+    { t: 'interaction.opened', interaction: coordinator },
+  ]);
+  expect(timeline.state.status).toBe('working');
+  expect(() => assertQuestionsAnswered(timeline.state)).not.toThrow();
+  expect(() => assertQuestionMessageAllowed(timeline.state, true)).not.toThrow();
+  timeline.apply({ t: 'turn.completed', turnId: 'work', outcome: 'done' });
+  expect(timeline.state.interactions).toEqual([coordinator]);
+  expect(timeline.state.status).toBe('idle');
+  expect(Timeline.restore({ ...timeline.state, status: 'waiting' }).state.status).toBe('idle');
+});

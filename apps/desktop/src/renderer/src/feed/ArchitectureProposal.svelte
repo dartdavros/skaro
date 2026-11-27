@@ -1,21 +1,47 @@
 <script lang="ts">
-  import { Icon, t, Banner } from '@skaro/ui';
-  import { Check, FileCheck2, FolderOpen, X } from '@lucide/svelte';
+  import { Icon, IconButton, t, Banner } from '@skaro/ui';
+  import { Check, FileCheck2, FolderOpen, RotateCw, X } from '@lucide/svelte';
   import type { C4PackageReview } from '@skaro/core/c4-view';
+  import type { C4ApplicationOperation } from '../../../shared/c4-review';
   import type { ProposalState } from './proposal-state.svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import { architectureCounts } from './architecture-review';
+  import { cleanError } from './action-error';
   import './architecture-review-i18n';
   import '../c4/audit-i18n';
   let { state: model }: { state: ProposalState } = $props();
   let review = $state.raw<C4PackageReview>();
   let error = $state('');
+  let application = $state<C4ApplicationOperation>();
+  let applicationError = $state('');
+  let unconfirmed = $state(false);
   const proposal = $derived(model.proposal.type === 'architecture' ? model.proposal : undefined);
   const canApply = $derived(
     model.actionable &&
-      ((model.item.state === 'pending' && model.feed.canApplyPendingArchitecture !== false) ||
-        (model.item.state === 'accepted' && !!model.item.result?.error)),
+      model.item.state === 'pending' &&
+      model.feed.canApplyPendingArchitecture !== false,
   );
+  const canRecover = $derived(
+    model.feed.interactive &&
+      model.feed.architectureApplication !== undefined &&
+      model.item.state === 'accepted' &&
+      !!model.item.result?.error,
+  );
+  async function recover(operation: C4ApplicationOperation) {
+    if (!model.feed.architectureApplication || model.busy) return;
+    model.busy = true;
+    application = operation;
+    applicationError = '';
+    unconfirmed = false;
+    try {
+      unconfirmed = !(await model.feed.architectureApplication(model.item.id, operation));
+    } catch (reason) {
+      applicationError = cleanError(reason);
+    } finally {
+      application = undefined;
+      model.busy = false;
+    }
+  }
   $effect(() => {
     const id = model.item.id;
     let current = true;
@@ -56,8 +82,9 @@
       </div>
     </div>
     <div class="foot">
-      <span class="hint"
-        >{model.item.result?.error ??
+      <span class="hint" aria-live="polite"
+        >{(canRecover && (applicationError || (unconfirmed && t('c4.review.notApplied')))) ||
+          model.item.result?.error ||
           (model.item.state === 'accepted'
             ? t('c4.applying')
             : t(`c4.review.${model.item.state}`))}</span
@@ -80,9 +107,29 @@
           class="btn primary"
           disabled={model.busy || !review}
           onclick={() => void model.decide({ action: 'apply', fingerprint: review?.fingerprint })}
-          >{#if model.item.state === 'accepted'}<FileCheck2 size={16} />{t(
-              'c4.audit.recover',
-            )}{:else}<Check size={16} />{t('proposal.apply')}{/if}</button
+          ><Check size={16} />{t('proposal.apply')}</button
+        >
+      {/if}
+      {#if canRecover}
+        <IconButton
+          tip={t('c4.review.retryApplication')}
+          disabled={model.busy}
+          aria-busy={application === 'retry'}
+          onclick={() => void recover('retry')}
+        >
+          {#if application === 'retry'}<LoadingIndicator size={16} />{:else}<RotateCw
+              size={16}
+            />{/if}
+        </IconButton>
+        <button
+          type="button"
+          class="btn primary"
+          disabled={model.busy}
+          aria-busy={application === 'check'}
+          onclick={() => void recover('check')}
+          >{#if application === 'check'}<LoadingIndicator size={16} />{:else}<FileCheck2
+              size={16}
+            />{/if}{t('c4.audit.recover')}</button
         >
       {/if}
     </div>

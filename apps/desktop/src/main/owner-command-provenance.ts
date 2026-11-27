@@ -5,7 +5,8 @@ import type { MessageInput } from '../shared/ipc';
 interface CommandOrigin {
   projectId: string;
   inputHash: string;
-  dispatchRevision: number;
+  dispatchRevision?: number;
+  taskDelivery?: true;
   destination?: 'task';
 }
 const key = (id: string) => `coordination.owner-origin.${id}`;
@@ -19,8 +20,9 @@ function origin(db: AppDb, command: OwnerCommand): CommandOrigin | undefined {
   if (
     value?.projectId !== command.args[0] ||
     value?.inputHash !== hash(command) ||
-    !Number.isSafeInteger(value?.dispatchRevision) ||
-    value.dispatchRevision < 0
+    (value.taskDelivery
+      ? command.method !== 'task.send'
+      : !Number.isSafeInteger(value.dispatchRevision) || value.dispatchRevision! < 0)
   )
     throw new Error('Owner command origin changed');
   return value;
@@ -40,14 +42,18 @@ function legacyOrigin(db: AppDb, command: OwnerCommand) {
 }
 export function registerOwnerOrigin(db: AppDb, command: OwnerCommand) {
   const projectId = String(command.args[0]),
-    dispatch = requireCoordinationDispatch(db, projectId);
+    task = command.method === 'task.send';
   const previous = origin(db, command);
-  if (previous) requireCoordinationDispatch(db, projectId, previous.dispatchRevision);
-  else if (
+  if (previous) {
+    if (!previous.taskDelivery)
+      requireCoordinationDispatch(db, projectId, previous.dispatchRevision);
+  } else if (
     !db.settings.compareAndSet(key(command.id), undefined, {
       projectId,
       inputHash: hash(command),
-      dispatchRevision: dispatch.revision,
+      ...(task
+        ? { taskDelivery: true }
+        : { dispatchRevision: requireCoordinationDispatch(db, projectId).revision }),
       ...(command.method === 'task.send' &&
       (command.args[2] as MessageInput)?.resumeTask === true &&
       !db.commands.get(command.id)
@@ -57,14 +63,25 @@ export function registerOwnerOrigin(db: AppDb, command: OwnerCommand) {
   )
     throw new Error('Owner command origin changed');
 }
+export function isTaskInboxCommand(db: AppDb, command: OwnerCommand): boolean {
+  return command.method === 'task.send' && origin(db, command)?.taskDelivery === true;
+}
 export function hasTaskDestination(db: AppDb, command: OwnerCommand) {
   return origin(db, command)?.destination === 'task';
+}
+export function bindTaskDestination(db: AppDb, project: string, task: string, id: string) {
+  const command = db.commands.get(id);
+  if (command?.method !== 'task.send' || command.owner !== `${project}:${task}`) return;
+  const previous = origin(db, command);
+  if (previous && !previous.destination)
+    db.settings.compareAndSet(key(id), previous, { ...previous, destination: 'task' });
 }
 export function requireOwnerOrigin(db: AppDb, command: OwnerCommand) {
   const saved = origin(db, command);
   if (!saved && !legacyOrigin(db, command))
     throw new Error('Legacy owner command has no verified coordination intent');
-  requireCoordinationDispatch(db, String(command.args[0]), saved?.dispatchRevision);
+  if (!saved?.taskDelivery)
+    requireCoordinationDispatch(db, String(command.args[0]), saved?.dispatchRevision);
 }
 export function hasOwnerOrigin(db: AppDb, command: OwnerCommand) {
   try {

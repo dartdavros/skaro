@@ -15,7 +15,7 @@ export async function c4SemanticSnapshot(
   const observation = await observeC4Impact(db, context, task, run, {
     requireDispatchInputs: dispatched,
   });
-  const artifacts = await context.store.load();
+  const artifacts = await context.store.load(false, true);
   const preservation = await inspectC4Preservation(
     observation.impact.checkout,
     observation.impact.baseHead,

@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { bindC4Protocol } from './c4-protocol';
 import { join } from 'node:path';
 import {
   taskBranch,
@@ -135,13 +134,6 @@ async function createLockedTaskRun(
   if (settings.agent === 'skaro')
     saveBuiltinRunSettings(ctx.deps.db, run.id, parseBuiltinTaskStart(settings));
   const active = new ActiveRun(projectId, taskId, run, new Timeline());
-  bindC4Protocol(
-    ctx.deps.db,
-    projectId,
-    run.id,
-    undefined,
-    ctx.startup.read(projectId, taskId)?.c4Protocol ?? 'package-v1',
-  );
   ctx.active.set(key(projectId, taskId), active);
   ctx.continuation.execution(active).start();
   return active;

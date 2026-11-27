@@ -154,7 +154,7 @@ it('claims once, persists outcomes across two handles/reopen, and rejects stale 
   }
 });
 
-it('retains uncertain scopes for reconciliation while independent controls remain available', async () => {
+it('releases a delivery lane after interruption and retains the exact receipt for reconciliation', async () => {
   const input = await observation();
   input.operation.mode = 'delivery';
   delete input.operation.expectedVersion;
@@ -206,7 +206,7 @@ it('retains uncertain scopes for reconciliation while independent controls remai
         expectedRevision: queued.revision,
         claimId: randomUUID(),
       }).acquired,
-    ).toBe(false);
+    ).toBe(true);
     const evidence = { code: 'filesystem_observation_confirmed', refs: [input.operation.subject] };
     expect(() =>
       db.coordination.finish(projectId, initial.id, {
@@ -221,12 +221,7 @@ it('retains uncertain scopes for reconciliation while independent controls remai
       state: 'succeeded',
       evidence,
     });
-    expect(
-      db.coordination.claim(projectId, queued.id, {
-        expectedRevision: queued.revision,
-        claimId: randomUUID(),
-      }).acquired,
-    ).toBe(true);
+    expect(db.coordination.getOperation(projectId, queued.id)?.state).toBe('dispatching');
   } finally {
     db.close();
   }

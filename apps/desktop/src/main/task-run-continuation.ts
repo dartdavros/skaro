@@ -1,17 +1,17 @@
-import { c4Hash, git, type Task } from '@skaro/core';
+import { createHash } from 'node:crypto';
+import { git, type Task } from '@skaro/core';
+import { isDeferredInteraction } from '@skaro/timeline';
 import { TaskExecution } from './task-execution';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
 import { awaitsDecision } from './task-wait-card';
 import { key } from './task-run-helpers';
-import { c4ChangeHash } from './c4-fingerprint';
+import { checkoutChangeHash } from './checkout-change-hash';
 import { checkoutKey } from './task-stage';
 import type { EnvironmentRecord } from './task-environment-registry';
 import type { MessageInput } from '../shared/ipc';
 import { OWNER_PERMISSION_INSTRUCTIONS } from './agent-interaction-instructions';
-import { incidentDiagnosisCurrent } from './incident-model-diagnosis';
 import { handoffStalledMerge } from './task-merge-conflict-recovery';
-import { CompletionStore } from './completion-store';
 import { taskAcceptanceNote } from './task-acceptance-report';
 
 const CONTINUE =
@@ -19,10 +19,10 @@ const CONTINUE =
   'but Skaro has not accepted the task result. Do not ask the owner to say continue. ' +
   'Read the actual remaining criteria and tool results, complete implementation and affected ' +
   'verification, then call submit_result. Resolve routine setup with Skaro tools. ' +
-  'For a genuinely missing owner decision, invoke the blocking question tool and act on its answer. ' +
+  'For a genuinely missing owner decision, use ask_owner with a concrete question and continue independent work. ' +
   OWNER_PERMISSION_INSTRUCTIONS +
   ' ' +
-  'For required owner credentials, call Skaro request_secret and wait for its protected answer; ' +
+  'For required owner credentials, call Skaro request_secret and continue steps that do not need the credential; ' +
   'do not report the missing key as an external blocker before offering that input. ' +
   'If an external prerequisite really cannot be recovered within the authorized project setup, ' +
   'call report_task_blocker with the exact evidence; do not invent a question or claim completion. ' +
@@ -38,19 +38,15 @@ export class TaskRunContinuation {
     return new TaskExecution(this.ctx.deps.db, active.run.id);
   }
   canDeliver(active: ActiveRun, input: MessageInput): boolean {
-    if (input.internal && input.commandId?.startsWith('diagnose-incident-'))
-      return (
-        !this.ctx.closing && incidentDiagnosisCurrent(this.ctx, active.run.id, input.commandId)
-      );
-    if (!input.internal || !input.commandId?.startsWith('continue-')) return true;
-    const intent = this.execution(active);
     if (
-      input.commandId.startsWith('continue-c4-decision-') &&
-      !input.commandId.endsWith(`-${intent.intentVersion()}`)
+      input.internal &&
+      /^(diagnose-incident-|continue-(c4-decision|incident)-)/.test(input.commandId ?? '')
     )
       return false;
+    if (!input.internal || !input.commandId?.startsWith('continue-')) return true;
+    const intent = this.execution(active);
     const execution = intent.read();
-    return !this.ctx.closing && execution.enabled && !execution.blocked;
+    return !this.ctx.closing && execution.enabled;
   }
   stop(projectId: string, taskId: string): void {
     const run =
@@ -58,8 +54,9 @@ export class TaskRunContinuation {
       this.ctx.deps.db.listRuns(projectId, taskId)[0];
     if (run) new TaskExecution(this.ctx.deps.db, run.id).stop();
   }
-  block(active: ActiveRun, reason: string): void {
-    this.execution(active).block(reason);
+  block(active: ActiveRun, reason: string, environmentBlocked = false): void {
+    this.execution(active).stop();
+    this.execution(active).block(reason, undefined, environmentBlocked);
     this.ctx.history.notice(active, 'other', 'error', reason);
   }
   async recover(projectId: string, task: Task): Promise<boolean> {
@@ -74,7 +71,9 @@ export class TaskRunContinuation {
       active.switching ||
       active.timeline.state.turns.at(-1)?.outcome === 'failed' ||
       active.timeline.state.status !== 'idle' ||
-      active.timeline.state.interactions.some((interaction) => interaction.kind !== 'merge') ||
+      active.timeline.state.interactions.some(
+        (i) => i.kind !== 'merge' && !isDeferredInteraction(i),
+      ) ||
       awaitsDecision(active.timeline.state)
     )
       return true;
@@ -102,64 +101,42 @@ export class TaskRunContinuation {
       this.ctx.active.get(key(active.projectId, active.taskId)) === active &&
       state.turns.at(-1)?.id === turn.id &&
       state.status === 'idle' &&
-      !state.interactions.some((interaction) => interaction.kind !== 'merge') &&
+      !state.interactions.some((i) => i.kind !== 'merge' && !isDeferredInteraction(i)) &&
       !awaitsDecision(state) &&
       !this.ctx.queuedInputs.get(key(active.projectId, active.taskId))?.length &&
       !this.ctx.startup.read(active.projectId, active.taskId)?.inputs.length;
     if (!available()) return true;
-    if (execution.read().blocked) {
-      this.ctx.setRuntime(active.projectId, active.taskId, 'failed', active.run.id);
-      return true;
-    }
     const context = this.ctx.project(active.projectId);
-    const artifacts = await context.load();
     const cwd = active.run.worktree ?? context.root;
     const head = (await git(cwd, ['rev-parse', 'HEAD'])).stdout.trim();
-    const changes = await c4ChangeHash(cwd, head);
+    const changes = await checkoutChangeHash(cwd, head);
     const environment = this.ctx.deps.db
       .getSetting<EnvironmentRecord[]>('environments', [])
       .find(
         (record) =>
           record.projectId === active.projectId && record.taskId === checkoutKey(active).taskId,
       );
-    const fingerprint = c4Hash(
-      JSON.stringify({
-        head,
-        changes,
-        body: task.body,
-        architecture: artifacts.c4?.revision,
-        environment: environment && {
-          created: environment.created,
-          source: environment.source,
-          start: environment.start,
-        },
-      }),
-    );
+    const fingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          head,
+          changes,
+          body: task.body,
+          environment: environment && {
+            created: environment.created,
+            source: environment.source,
+            start: environment.start,
+          },
+        }),
+      )
+      .digest('hex');
     if (!available() || !execution.read().enabled) return true;
     const next = execution.next(turn.id, fingerprint);
     if (next === 'duplicate') return true;
     if (next === 'stalled') {
+      if (state.interactions.some(isDeferredInteraction)) return true;
       if (await handoffStalledMerge(this.ctx, active, task)) return true;
       if (!execution.read().enabled) return true;
-      if (this.ctx.deps.coordinators) {
-        const conflict = new CompletionStore(this.ctx.deps.db, active.projectId)
-          .conflicts()
-          .includes(active.taskId);
-        const incident = await this.ctx.incidents.report(
-          active,
-          conflict
-            ? 'The first Git conflict resolution stalled in the task checkout'
-            : 'Repeated completion without progress',
-          {
-            cause: 'no-progress',
-            code: conflict ? 'merge_conflict_stalled' : 'no_progress',
-            condition: 'owner-evidence',
-          },
-          'controller',
-        );
-        await this.ctx.incidents.reconcile(active.projectId, incident.id);
-        return true;
-      }
       this.block(
         active,
         'Агент повторно завершил работу без результата и без изменений. Автопродолжение остановлено, чтобы не расходовать лимит впустую.',

@@ -10,17 +10,20 @@ export async function load(
   files: ArtifactFiles,
   defaults: () => ConfigDefaults,
   summary = false,
+  includeC4 = !summary,
 ): Promise<ProjectArtifacts> {
+  if (!includeC4) return loadProject(files, defaults, summary, false);
   return withC4Lock(files.root, async () => {
     await recoverC4Transaction(files.root);
-    return loadProject(files, defaults, summary);
+    return loadProject(files, defaults, summary, true);
   });
 }
 
 async function loadProject(
   files: ArtifactFiles,
   defaults: () => ConfigDefaults,
-  summary = false,
+  summary: boolean,
+  includeC4: boolean,
 ): Promise<ProjectArtifacts> {
   const problems: ArtifactProblem[] = [];
   const config = await readConfig(files, defaults, problems);
@@ -59,7 +62,7 @@ async function loadProject(
       problems.push({ path: task.path, message: `unknown specification ${task.spec}` });
     }
   }
-  const c4 = summary ? { problems: [] } : await inspectC4Project(files.root);
+  const c4 = includeC4 ? await inspectC4Project(files.root) : { problems: [] };
   return {
     config,
     brief,

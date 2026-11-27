@@ -4,7 +4,7 @@ import type { ChatSessions } from './chats';
 import type { C4Audits } from './c4-audits';
 import { startProjectRecovery } from './project-recovery';
 
-/** C4 migration/application is a startup writer barrier, not a concurrent background producer. */
+/** Task delivery owns its startup independently of manual audit recovery. */
 export async function startProjectWriters(
   commands: OwnerCommands,
   runs: TaskRuns,
@@ -18,7 +18,6 @@ export async function startProjectWriters(
     },
     true,
   );
-  await audits.recover();
   commands.activate();
   startProjectRecovery(runs, chats, audits);
 }

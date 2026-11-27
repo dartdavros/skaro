@@ -138,6 +138,9 @@
           <Composer
             placeholder={controller.placeholder}
             running={controller.running}
+            canStop={controller.stopControl.canStop}
+            stopping={controller.stopControl.stopping}
+            stopLabel={stage ? undefined : t('task.stop')}
             agent={agentInfo?.id ?? settings.agent}
             model={controller.modelLabel}
             effort={controller.effort.effort}
@@ -150,7 +153,7 @@
             commands={() => window.skaro.invoke('agents.commands', settings.agent, projectId)}
             suggest={(q) => window.skaro.invoke('files.suggest', projectId, taskId, q)}
             onsend={controller.send}
-            onstop={() => void window.skaro.invoke('task.interrupt', projectId, taskId)}
+            onstop={() => void controller.stopControl.stop().catch(() => undefined)}
             onmodel={() => (controller.modal = true)}
             onpermission={controller.setPermission}
           />

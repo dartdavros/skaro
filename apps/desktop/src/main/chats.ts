@@ -33,10 +33,17 @@ import { chatDecisionSources } from './chat-decision-sources';
 import { clearChat } from './chat-clear';
 import { historyText, historyPage } from './task-history-context';
 import { publishChatArchitecture } from './chat-architecture';
+import { ownerQuestionReply, sameOwnerQuestion, type OwnerQuestion } from './owner-question-tool';
 export { titleOf } from './chat-settings-helpers';
 export { projectContextText } from './chat-context-text';
 
 export class ChatSessions implements ProjectToolHandlers {
+  async askOwner(scope: SkaroScope, interaction: OwnerQuestion): Promise<ToolResult> {
+    const live = this.engine.context.caller(scope);
+    if (!live.timeline.state.interactions.some((i) => sameOwnerQuestion(i, interaction)))
+      this.engine.history.skaroEvent(live, { t: 'interaction.opened', interaction });
+    return ownerQuestionReply();
+  }
   cancelQuestion(project: string, chat: string, id: string, reason: string) {
     return cancelChatQuestion(this.engine, project, chat, id, reason);
   }
@@ -134,10 +141,14 @@ export class ChatSessions implements ProjectToolHandlers {
       ),
     };
   }
-  async open(projectId: string, chatId: string, options?: { paged: boolean }): Promise<ChatView> {
+  async open(
+    projectId: string,
+    chatId: string,
+    options?: { paged: boolean },
+    restoreArchitecture?: () => Promise<void>,
+  ): Promise<ChatView> {
     const view = await this.engine.views.open(projectId, chatId, options);
-    const live = this.engine.live.get(chatId);
-    if (live) this.engine.planningContinuation.schedule(live);
+    this.engine.workflowRecovery.schedule(chatId, view.decisionEpoch, restoreArchitecture);
     return view;
   }
   async create(

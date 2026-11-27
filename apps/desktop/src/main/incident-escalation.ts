@@ -15,9 +15,16 @@ import { decisionHash } from './decision-projection';
 import { retireLegacyIncidentQuestion } from './incident-legacy-question';
 import { DecisionNotDispatched } from './decision-not-dispatched';
 import type { ActiveRun } from './task-run-model';
+import { environmentFailureHandoff } from './environment-incident-handoff';
 
 /** Unsupported recovery needs a durable, pinned decision, not an invisible waiting record. */
 export async function escalateIncident(ctx: TaskRunEngine, row: CoordinationBlocker) {
+  const recovery = environmentFailureHandoff(ctx.deps.db, row);
+  if (recovery) {
+    await retireLegacyIncidentQuestion(ctx, row);
+    await diagnoseIncident(ctx, row, recovery);
+    return;
+  }
   const plan = incidentModelPlan(ctx.deps.db, row);
   if (!plan) {
     await retireLegacyIncidentQuestion(ctx, row);

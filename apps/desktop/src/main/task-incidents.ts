@@ -28,6 +28,7 @@ import { bindIncidentEnvironment } from './incident-environment-verification';
 import { bindIncidentSession } from './incident-session-verification';
 import { retireTerminalIncident } from './incident-retirement';
 import { recoverTaskTransitions } from './task-lifecycle-recovery';
+import { SETTLED_ENVIRONMENT_FAILURE } from './environment-remedy-receipt';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -38,7 +39,6 @@ export interface TaskBlockerDetails {
 
 export class TaskIncidents {
   private readonly running = new Map<string, Promise<void>>();
-  private readonly retirements = new Map<string, Promise<void>>();
   readonly decisions: IncidentDecisions;
   readonly work: IncidentWork;
   private readonly ctx: TaskRunEngine;
@@ -54,10 +54,16 @@ export class TaskIncidents {
     });
   }
   get store() {
-    return new IncidentStore(this.ctx.deps.db, this.ctx.deps.coordinators!);
+    return (
+      this.ctx.deps.incidentHistory?.store ??
+      new IncidentStore(this.ctx.deps.db, this.ctx.deps.coordinators!)
+    );
   }
   get policy() {
-    return new IncidentPolicy(this.ctx.deps.db, this.ctx.deps.coordinators!);
+    return (
+      this.ctx.deps.incidentHistory?.policy ??
+      new IncidentPolicy(this.ctx.deps.db, this.ctx.deps.coordinators!)
+    );
   }
   escalate(row: CoordinationBlocker) {
     return escalateIncident(this.ctx, row);
@@ -74,23 +80,6 @@ export class TaskIncidents {
   bindSession(row: CoordinationBlocker) {
     return bindIncidentSession(this.ctx, row);
   }
-  projectChanged(projectId: string): void {
-    if (this.ctx.deps.coordinators && !this.ctx.closing)
-      void this.retireTerminal(projectId).catch((error: unknown) =>
-        console.error('Terminal incident retirement:', error),
-      );
-  }
-  retireTerminal(projectId: string): Promise<void> {
-    const existing = this.retirements.get(projectId);
-    if (existing) return existing;
-    const pending = (async () => {
-      for (const row of this.store.list(projectId))
-        if (row.state === 'open') await retireTerminalIncident(this.ctx, row);
-    })().finally(() => this.retirements.delete(projectId));
-    this.retirements.set(projectId, pending);
-    return pending;
-  }
-
   report(
     active: ActiveRun,
     reason: string,
@@ -109,12 +98,15 @@ export class TaskIncidents {
         : String(error);
     await this.report(active, message, details, 'controller');
   }
-  async afterTurn(active: ActiveRun): Promise<boolean> {
+  async afterTurn(active: ActiveRun): Promise<void> {
     const id = this.ctx.continuation.execution(active).read().blockedIncident;
     if (id) await this.reconcile(active.projectId, id);
-    return !!id;
   }
   reconcile(projectId: string, id: string): Promise<void> {
+    if (!this.ctx.deps.coordinators)
+      return Promise.reject(
+        new Error('Historical incidents cannot resume or change a task. Use its task chat.'),
+      );
     const key = `${projectId}:${id}`;
     const existing = this.running.get(key);
     if (existing) return existing;
@@ -123,7 +115,7 @@ export class TaskIncidents {
     return pending;
   }
   async idle(): Promise<void> {
-    await Promise.allSettled([...this.running.values(), ...this.retirements.values()]);
+    await Promise.allSettled(this.running.values());
   }
   private async advance(projectId: string, id: string): Promise<void> {
     let row = this.store.get(projectId, id);
@@ -197,12 +189,23 @@ export class TaskIncidents {
     requireCoordinationDispatch(this.ctx.deps.db, projectId);
     // An interrupted dispatch is not permission to repeat an unknown external effect.
     if (row.protocol!.phase === 'executing' || row.protocol!.phase === 'verifying') {
-      await escalateIncident(this.ctx, row);
-      return;
+      const id = row.protocol!.operationId;
+      const op = id && this.store.db.coordination.getOperation(projectId, id);
+      if (
+        op &&
+        op.state === 'failed' &&
+        ['environment_preflight_failed', SETTLED_ENVIRONMENT_FAILURE].includes(
+          op.evidence?.code ?? '',
+        )
+      ) {
+        row = this.store.update(row, { phase: 'waiting' });
+      } else {
+        await escalateIncident(this.ctx, row);
+        return;
+      }
     }
     if (row.protocol!.attempts >= 2) {
-      this.store.update(row, { phase: 'exhausted' });
-      await escalateIncident(this.ctx, row);
+      await escalateIncident(this.ctx, this.store.update(row, { phase: 'exhausted' }));
       return;
     }
     const action = await incidentAction(this.ctx, row).catch((error: unknown) => {
@@ -245,9 +248,13 @@ export class TaskIncidents {
         await this.decisions.request(row, action);
       return;
     }
-    await executeIncident(this.ctx, this, row, action);
+    const failure = await executeIncident(this.ctx, this, row, action);
+    if (failure) await escalateIncident(this.ctx, failure);
   }
-  async resolved(row: CoordinationBlocker): Promise<void> {
+  async resolved(
+    row: CoordinationBlocker,
+    currentTurn?: { runId: string; intent: number },
+  ): Promise<void> {
     if (row.protocol!.operationId) {
       const op = this.ctx.deps.db.coordination.getOperation(
         row.projectId,
@@ -275,6 +282,6 @@ export class TaskIncidents {
       incident: row.id,
       resource: row.subject.id,
     });
-    await continueResolvedIncident(this.ctx, resolved);
+    await continueResolvedIncident(this.ctx, resolved, currentTurn);
   }
 }

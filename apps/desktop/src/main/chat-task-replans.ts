@@ -172,10 +172,13 @@ export class ChatTaskReplans {
   }
 
   async recover(live: LiveChat): Promise<void> {
+    const journal = new TaskReplanJournal(this.ctx.deps.db, live.projectId);
+    if (!journal.list().some((decision) => decision.chatId === live.chat.id)) return;
     await serializeTaskMutation(
       this.ctx.project(live.projectId),
       async () => {
-        for (const decision of new TaskReplanJournal(this.ctx.deps.db, live.projectId).list()) {
+        if (this.ctx.closing || this.ctx.live.get(live.chat.id) !== live) return;
+        for (const decision of journal.list()) {
           if (decision.chatId !== live.chat.id) continue;
           const clearedAt = this.ctx.deps.db.getSetting(`chat.${live.chat.id}.clearedAt`, 0);
           if (

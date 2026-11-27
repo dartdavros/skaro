@@ -11,6 +11,13 @@ export interface C4SemanticVerdict {
   evidence: { path: string; hash: string | null; detail: string }[];
   conflicts: { requirement: string; source: string; detail: string }[];
 }
+
+export function c4ReviewedImplementationAligned(verdict: C4SemanticVerdict | undefined) {
+  return (
+    verdict?.implementation === 'aligned' &&
+    (verdict.category === 'aligned' || verdict.category === 'optional')
+  );
+}
 /** A separately started reviewer supplies semantics; the host owns scope, hashes and permissions. */
 export function parseC4SemanticVerdict(
   text: string,

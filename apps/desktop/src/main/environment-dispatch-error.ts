@@ -5,6 +5,8 @@ export class EnvironmentNotDispatched extends Error {
   }
 }
 
+export class EnvironmentPreflightFailed extends EnvironmentNotDispatched {}
+
 /** The owned shell has exited; failure is known, but partial Docker/data effects may remain. */
 export class EnvironmentCommandFailed extends Error {
   constructor(cause: unknown) {

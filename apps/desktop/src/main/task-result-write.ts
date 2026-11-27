@@ -3,10 +3,7 @@ import { setCriteria, taskSections } from './task-body';
 import type { ActiveRun } from './task-run-model';
 import type { TaskRunEngine } from './task-run-engine';
 import { readSubject, updateSubject } from './task-subject';
-import { assertC4TaskReview } from './c4-review';
 import { completedTaskReply } from './task-merge-result';
-import { C4ValidationError } from '@skaro/core';
-import { c4ToolFailure, recordC4Diagnostic } from './c4-tool-diagnostic';
 import { operationFailure } from '@skaro/mcp-server';
 import { saveTaskAcceptanceReport } from './task-acceptance-report';
 
@@ -41,42 +38,9 @@ export async function writeTaskResult(
   const met = criteria.map((_, index) => verdicts.get(index + 1)!.met);
   try {
     await beforeWrite?.();
-    if (met.every(Boolean)) {
-      const pending = await ctx.architecture.submission(active);
-      if (pending) return reply(pending);
-    }
-    if (met.every(Boolean))
-      await assertC4TaskReview(
-        ctx.deps.db,
-        context,
-        task.id,
-        active.run.worktree ?? context.root,
-        active.run.id,
-      );
   } catch (error) {
-    if (error instanceof C4ValidationError) {
-      recordC4Diagnostic(
-        ctx.deps.db,
-        { kind: 'task', projectId: active.projectId, taskId: active.taskId, runId: active.run.id },
-        error.diagnostic,
-      );
-      ctx.changed(active.projectId, active.taskId);
-      return reply(c4ToolFailure(error));
-    }
-    recordC4Diagnostic(
-      ctx.deps.db,
-      { kind: 'task', projectId: active.projectId, taskId: active.taskId, runId: active.run.id },
-      null,
-    );
-    ctx.changed(active.projectId, active.taskId);
     return reply(operationFailure(error, 'submit_result'));
   }
-  if (met.every(Boolean))
-    recordC4Diagnostic(
-      ctx.deps.db,
-      { kind: 'task', projectId: active.projectId, taskId: active.taskId, runId: active.run.id },
-      null,
-    );
   const body = setCriteria(task.body, met);
   await updateSubject(context, task.id, { body });
   saveTaskAcceptanceReport(

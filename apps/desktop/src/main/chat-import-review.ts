@@ -14,8 +14,6 @@ import { importKey, type ImportWords, IMPORT_RU, IMPORT_EN, fieldsOf } from './c
 
 import type { ChatEngine } from './chat-engine';
 import { serializeTaskMutation } from './project-task-mutations';
-import { prepareImportC4 } from './c4-import';
-import { saveState } from './imports';
 import { c4ImportBody, c4ImportRefs, c4ImportAttachment } from './c4-import-preview';
 import { authoredBody } from '@skaro/core';
 
@@ -82,30 +80,18 @@ export class ChatImportReview {
     if (!keys.length) throw new Error('Nothing is selected');
     let applied;
     try {
-      const artifacts = await context.load();
-      const allSelected = state.staged.every((s) => keys.includes(s.key));
-      const architecture =
-        allSelected && state.c4Package
-          ? state.c4Package
-          : await prepareImportC4(context.root, artifacts, state, keys, this.ctx.deps.locale());
-      if (architecture) {
-        state.c4Package = architecture;
-        await saveState(state);
-      }
+      if (state.c4Package || state.c4)
+        throw new Error(
+          'Finish and review this import again to import its documents independently of C4.',
+        );
       applied = await serializeTaskMutation(context, async () =>
-        applyImport(
-          context.store,
-          await context.load(),
-          state.staged,
-          keys,
-          (done, total) =>
-            this.ctx.deps.emit('import.progress', {
-              projectId: live.projectId,
-              chatId: live.chat.id,
-              done,
-              total,
-            }),
-          architecture,
+        applyImport(context.store, await context.load(), state.staged, keys, (done, total) =>
+          this.ctx.deps.emit('import.progress', {
+            projectId: live.projectId,
+            chatId: live.chat.id,
+            done,
+            total,
+          }),
         ),
       );
     } catch (error) {

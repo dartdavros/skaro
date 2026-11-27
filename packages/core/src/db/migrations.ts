@@ -123,4 +123,8 @@ export const MIGRATIONS: string[] = [
   RESOURCE_MIGRATION,
   COORDINATION_MIGRATION,
   ADMISSION_MIGRATION,
+  // Only an executing operation owns a lane. An unknown receipt retains its own identity.
+  `DROP INDEX coordination_scope_owner;
+   CREATE UNIQUE INDEX coordination_scope_owner ON coordination_operations(project_id,scope_key)
+     WHERE state='dispatching';`,
 ];

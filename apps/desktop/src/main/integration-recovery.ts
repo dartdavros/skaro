@@ -3,7 +3,7 @@ import { transitionPending } from './task-lifecycle-journal';
 import type { TaskRunEngine } from './task-run-engine';
 import { errorText } from './session-log';
 import { settingsKey } from './task-run-helpers';
-import { requireStartupGeneration } from './task-startup-generation';
+import { requireTaskStartup } from './task-startup-generation';
 
 /** Resume only preserved requests with verified current dispatch authority. */
 export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void> {
@@ -30,7 +30,7 @@ export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void
         const startup = ctx.startup.read(project.id, task.id);
         if (startup?.inputs.length && !startup.error) {
           try {
-            requireStartupGeneration(ctx.deps.db, project.id, startup.dispatchRevision);
+            requireTaskStartup(ctx.deps.db, ctx.startup, project.id, task.id);
             if (startup.transition) {
               const run = ctx.deps.db.latestRun(project.id, task.id);
               if (run?.id !== startup.transition.runId)
@@ -53,7 +53,6 @@ export async function recoverIntegrationStarts(ctx: TaskRunEngine): Promise<void
           ctx.queue.enqueue([`${project.id}\n${task.id}`]);
           continue;
         }
-        if (await ctx.architecture.recover(project.id, task.id)) continue;
         if (await ctx.continuation.recover(project.id, task)) continue;
         // An old diagnostic is never a substitute for a preserved, current owner instruction.
       }

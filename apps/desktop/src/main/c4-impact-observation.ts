@@ -134,7 +134,7 @@ export async function observeC4Impact(
       (await canonicalGitPath(context.root, '--git-common-dir'))
   )
     throw new Error('C4 observation checkout does not belong to the registered Git project');
-  const artifacts = await context.store.load();
+  const artifacts = await context.store.load(false, true);
   const inputs = await taskInputSnapshot(db, context, artifacts, taskId);
   const saved = db.getSetting<TaskInputSnapshot | undefined>(
     `coordination.inputs.${runId}`,
@@ -221,7 +221,7 @@ export async function observeC4Impact(
       )
   )
     throw new Error('C4 observation changed during collection');
-  const after = await context.store.load();
+  const after = await context.store.load(false, true);
   if (
     inputs.version !== (await taskInputSnapshot(db, context, after, taskId)).version ||
     baseHead !== (await base(after)) ||

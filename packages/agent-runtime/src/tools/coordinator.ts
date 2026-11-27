@@ -9,7 +9,7 @@ import { schemas, writeTools, isToolName } from './schemas.ts';
 import type { RuntimeExtensionHost } from '../extensions/registry.ts';
 import { UnknownToolOutcome } from './effect-error.ts';
 import type { RuntimeVerificationHost } from '../verification/host.ts';
-import { unresolvedOperationalEffects } from '../context/effect-boundary.ts';
+import { hasUnknownToolRequest } from '../context/effect-boundary.ts';
 
 export class ToolCoordinator {
   readonly registry: ToolRegistry;
@@ -113,6 +113,7 @@ export class ToolCoordinator {
   }
   private async authorize(
     id: string,
+    hash: string,
     name: string,
     args: Record<string, unknown>,
     signal: AbortSignal,
@@ -136,9 +137,11 @@ export class ToolCoordinator {
       (extensionWrite || (isToolName(name) && writeTools.has(name))) &&
       name !== 'stop_process' &&
       name !== 'update_plan' &&
-      unresolvedOperationalEffects(this.journal).some(([, effect]) => effect.state === 'unknown')
+      hasUnknownToolRequest(state, hash)
     )
-      throw new Error('An unknown effect outcome blocks new tools');
+      throw new Error(
+        'The same tool request has an unknown outcome. Inspect its result before any repeat.',
+      );
     const command =
       name === 'exec_command' ||
       name === 'run_check' ||
@@ -207,7 +210,7 @@ export class ToolCoordinator {
           value: candidate,
         });
       }
-      await this.authorize(command.id, tool.name, tool.args, signal);
+      await this.authorize(command.id, hash, tool.name, tool.args, signal);
       signal.throwIfAborted();
       if (tool.name === 'ask_user') {
         const { questions } = schemas.ask_user.parse(tool.args);

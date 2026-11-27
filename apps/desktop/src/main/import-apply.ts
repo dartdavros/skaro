@@ -90,8 +90,6 @@ export async function applyImport(
   };
 
   const imported: Applied['imported'] = [];
-  if (chosen.some((s) => s.type === 'architecture' || s.type === 'spec') && !architecture)
-    throw new Error('Architecture and specification imports require a validated C4 package.');
   if (architecture) await applyC4Package(store.root, architecture);
   const order: StagedType[] = ['brief', 'architecture', 'doc', 'adr', 'spec', 'milestone', 'task'];
   const sorted = [...chosen].sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));

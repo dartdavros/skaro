@@ -5,7 +5,6 @@ import type { LiveChat } from './chat-model';
 import { PlanJournal } from './chat-plan-journal';
 import { preparedPlanProblem, qualifiedPlan } from './chat-planning-store';
 import { planningReadiness } from './chat-planning-readiness';
-import { pendingC4PlanProblem } from './chat-plan-c4';
 import { currentTurn } from './chat-settings-helpers';
 
 /** One durable revision retires old approval IDs before the corrected draft can be accepted. */
@@ -66,13 +65,7 @@ export async function reviseChatPlan(
       text: 'The saved draft already has these contents. No duplicate revision was created.',
     };
   const artifacts = await ctx.project(live.projectId).load();
-  const problem =
-    preparedPlanProblem(normalized, artifacts) ??
-    (await pendingC4PlanProblem(
-      ctx.deps.db,
-      live.projectId,
-      normalized.milestones.flatMap((m) => m.tasks),
-    ));
+  const problem = preparedPlanProblem(normalized, artifacts);
   if (problem) return { text: problem, isError: true };
   const readiness = planningReadiness(
     normalized.milestones.flatMap((m) => m.tasks),

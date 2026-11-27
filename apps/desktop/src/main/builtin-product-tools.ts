@@ -12,6 +12,9 @@ export async function productSessionTools(
   input: BuiltinSessionPreparation,
 ) {
   const reads = new Set([
+    // Conversation questions and reconciliation grant no authority for the requested action.
+    'ask_owner',
+    'reconcile_task_merge',
     'read_project_incidents',
     'read_project_memory',
     'get_project_context',

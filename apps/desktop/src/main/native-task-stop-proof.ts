@@ -26,3 +26,15 @@ export function requireNativeTaskStopProof(db: AppDb, run: RunRecord, proof: Coo
   )
     throw new Error('Native task transport shutdown has not been verified');
 }
+
+export function requireTaskStopProof(
+  db: AppDb,
+  project: string,
+  task: string,
+  proof: CoordinationRef,
+) {
+  const run = proof.kind === 'run' && db.getRun(proof.id);
+  if (!run || run.projectId !== project || run.taskId !== task)
+    throw new Error('Confirmed stop belongs to another task runtime');
+  if (run.agent !== 'skaro') requireNativeTaskStopProof(db, run, proof);
+}

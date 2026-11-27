@@ -56,7 +56,7 @@ export function taskBlockerReceipt(
     return;
   const execution = new TaskExecution(db, proof.runId).read();
   return {
-    text: `The blocker report is recorded as ${row.id}; current incident state: ${row.state}. Read the current project state before continuing. Registration does not accept, complete or merge the task.`,
+    text: `The coordinator registered incident ${row.id}; current state: ${row.state}. Continue independent work and use the incident tools for diagnosis or an owner decision.`,
     structuredContent: {
       blocker: {
         recorded: true,
@@ -64,7 +64,7 @@ export function taskBlockerReceipt(
         state: row.state,
         taskId: proof.taskId,
         runId: proof.runId,
-        continuationSuspended: execution.blockedIncident === row.id,
+        continuationSuspended: !execution.enabled,
       },
       coordination: { operationId, registrationConfirmed: true },
     },

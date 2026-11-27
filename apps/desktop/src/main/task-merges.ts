@@ -177,7 +177,11 @@ export class TaskMerges {
           integration.state === 'ready' &&
           integration.results[0]?.head === result.head &&
           integration.baseHead === (await context.git.head(base));
-        const check = await context.git.checkMerge(base, verified ? integration.head : result.head);
+        const check = await context.git.checkMerge(
+          base,
+          verified ? integration.head : result.head,
+          true,
+        );
         check.blockers = check.blockers.filter((blocker) => blocker !== 'no_changes');
         const card = mergeInteraction(previous?.id ?? randomUUID(), result.branch, base, check);
         card.message =

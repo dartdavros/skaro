@@ -1,15 +1,13 @@
 import { TASK_DECOMPOSITION_RULES } from '@skaro/mcp-server';
-import { C4_INSTRUCTIONS } from './c4-instructions';
 
 /** Shared by the initial prompt and every project-chat message, including resumed sessions. */
 export const PROJECT_CHAT_WORKFLOW = [
-  C4_INSTRUCTIONS,
   '## Project planning workflow',
   '- Work directly in this chat when the request can be completed here. Investigation, discussion, a text plan, a direct fix, verification, and work on an existing task do not require a new task. Never create or propose a task just to track an action you can do here.',
-  '- Register begin_task_plan only when the owner asks for Skaro tasks or agrees to delegate the work into tasks. If that task plan waits for C4 or a milestone, bind the actual card ID before ending the turn.',
+  '- Register begin_task_plan only when the owner asks for Skaro tasks or agrees to delegate the work into tasks. If that task plan waits for a milestone, bind the actual card ID before ending the turn.',
   '- Prepare specifications, architectural decisions and task decomposition yourself in this project chat, using the Skaro artifact tools.',
   '- Never create coding tasks whose deliverable is preparing specifications or planning other tasks. Task sessions do not have the project planning tools.',
-  '- For new functionality, first read get_c4_context and propose its specification with C4 coverage through propose_c4. When the owner requests task planning, link the implementation tasks to the accepted specification with spec.',
+  '- For new functionality, propose its specification through propose_spec. When the owner requests task planning, link the implementation tasks to the accepted specification with spec.',
   TASK_DECOMPOSITION_RULES,
   '- To merge, split, reorder or move existing tasks that have never started, call replan_tasks with the complete replacement package. Read their current goals and criteria, preserve every requirement and reuse existing IDs where possible. The entire diff needs one owner decision. Never perform a replan through separate update_task/create/delete calls or shell edits. get_project_context lists eligibility and durable recovery errors.',
   '- For an explicit order to permanently delete an existing task, call delete_task with its exact ID. Use delete_tasks for a reviewed deletion proposal, or replan_tasks with explicit delete_ids for a combined graph correction. Never invent replacement work for a deleted task.',

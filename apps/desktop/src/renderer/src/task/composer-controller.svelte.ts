@@ -4,6 +4,7 @@ import { createComposerPaste, pasteTargetsComposer } from './composer-paste';
 export function createComposerController(options: {
   commands: () => Promise<AgentCommand[]>;
   suggest: (query: string) => Promise<PathSuggestion[]>;
+  canSend: () => boolean;
   onsend: (input: MessageInput) => Promise<void> | void;
 }) {
   let text = $state('');
@@ -109,7 +110,7 @@ export function createComposerController(options: {
   }
 
   async function send(): Promise<void> {
-    if (!has || sending || pasting) return;
+    if (!has || sending || pasting || !options.canSend()) return;
     const files = attachments.filter((a) => a.kind !== 'image');
     const images = attachments.filter((a) => a.kind === 'image').map((a) => a.path);
     // Files and folders are references to paths, not uploads (agent-output.md 5.1).

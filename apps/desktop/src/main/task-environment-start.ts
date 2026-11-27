@@ -13,8 +13,9 @@ import type { EnvironmentDescription } from './task-environment-description';
 import type { EnvironmentRegistry } from './task-environment-registry';
 import type { EnvironmentDocker } from './task-environment-docker';
 import { environmentReadinessProblems } from './task-environment-readiness';
-import { EnvironmentNotDispatched } from './environment-dispatch-error';
+import { EnvironmentNotDispatched, EnvironmentPreflightFailed } from './environment-dispatch-error';
 import { runEnvironmentCommand } from './environment-launch-command';
+import { resourceExecution } from './resource-execution';
 
 export interface EnvironmentStartOptions {
   /** Whether to wait for a concrete ownership/cleanup conflict; never physical capacity. */
@@ -35,6 +36,8 @@ export interface EnvironmentStartTiming {
   readyMs: number;
   reusedData: boolean;
   error?: string;
+  operationId?: string;
+  preflightFailed?: true;
 }
 
 /** One launch, including its measured preparation cost. Data is copied only on first use. */
@@ -64,6 +67,7 @@ export async function startEnvironmentServices(
     startMs: 0,
     readyMs: 0,
     reusedData: false,
+    operationId: resourceExecution.getStore()?.intentId,
   };
   const timed = async <T>(
     part: 'prepareMs' | 'createMs' | 'startMs' | 'readyMs',
@@ -84,7 +88,16 @@ export async function startEnvironmentServices(
     } catch (error) {
       throw new EnvironmentNotDispatched(error);
     }
-    const description = await timed('prepareMs', async () => {
+    const preflight = async <T>(action: () => Promise<T>) => {
+      try {
+        return await timed('prepareMs', action);
+      } catch (error) {
+        timing.preflightFailed = true;
+        deps.registry.rememberPreflightFailure(key, timing);
+        throw new EnvironmentPreflightFailed(error);
+      }
+    };
+    const description = await preflight(async () => {
       await deps.prepare();
       const description = await deps.describe();
       if (!existsSync(description.identity.worktree))
@@ -94,7 +107,7 @@ export async function startEnvironmentServices(
     });
     const { identity, config, variables, compose } = description;
     const portBindings = compose
-      ? await timed('prepareMs', () => admitCompose(identity, compose))
+      ? await preflight(() => admitCompose(identity, compose))
       : undefined;
     const run = async (label: 'create' | 'start', command: string) => {
       const recordObjects = await deps.provenance(description);

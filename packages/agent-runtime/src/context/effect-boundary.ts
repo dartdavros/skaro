@@ -4,15 +4,22 @@ import type { RuntimeJournal } from '../journal.ts';
 type ContextState = Pick<RuntimeState, 'effects' | 'interactions'>;
 const models = new Set(['model:chat', 'model:openai.responses', 'model:anthropic.messages']);
 
-/** A fresh owner input never replays a prior model POST or resolves its unknown billing. */
+/** Fresh input can inspect unresolved effects. Compaction still requires complete evidence. */
 export function contextProjectionBlocked(state: ContextState, freshOwnerInput = false) {
   return (
     Object.keys(state.interactions).length > 0 ||
     Object.values(state.effects).some(
-      (effect) =>
-        effect.state !== 'completed' &&
-        !(freshOwnerInput && effect.state === 'unknown' && models.has(effect.name)),
+      (effect) => effect.state !== 'completed' && !(freshOwnerInput && effect.state === 'unknown'),
     )
+  );
+}
+
+export function hasUnknownToolRequest(
+  state: Pick<RuntimeState, 'toolRequests' | 'effects'>,
+  hash: string,
+) {
+  return Object.entries(state.effects).some(
+    ([id, effect]) => effect.state === 'unknown' && state.toolRequests[id]?.hash === hash,
   );
 }
 

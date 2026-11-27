@@ -1,6 +1,7 @@
 import ELK, { type ElkNode, type ElkExtendedEdge } from 'elkjs/lib/elk-api.js';
 import ELKWorker from 'elkjs/lib/elk-worker.min.js?worker';
 import type { C4Graph, C4Node, C4Edge } from './graph';
+import { waitForC4 } from './lifetime';
 
 function dynamic(graph: C4Graph): C4Graph {
   const height = Math.max(...graph.nodes.map((n) => n.height ?? 180));
@@ -48,7 +49,7 @@ function dynamic(graph: C4Graph): C4Graph {
   return { nodes, edges };
 }
 
-async function layout(graph: C4Graph): Promise<C4Graph> {
+async function layout(graph: C4Graph, signal: AbortSignal): Promise<C4Graph> {
   const elk = new ELK({ workerFactory: () => new ELKWorker() });
   let timeout: ReturnType<typeof setTimeout>;
   const children = (parent?: string): ElkNode[] =>
@@ -67,52 +68,55 @@ async function layout(graph: C4Graph): Promise<C4Graph> {
             }
           : {}),
       }));
-  const root = await Promise.race([
-    Promise.all(
-      ['RIGHT', 'DOWN'].map((direction) =>
-        elk.layout<ElkNode>({
-          id: 'root',
-          layoutOptions: {
-            'elk.algorithm': 'layered',
-            'elk.direction': direction,
-            'elk.edgeRouting': 'ORTHOGONAL',
-            'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-            'elk.separateConnectedComponents': 'false',
-            'elk.spacing.nodeNode': '36',
-            'elk.layered.spacing.nodeNodeBetweenLayers': '64',
-            'elk.spacing.edgeNode': '20',
-            'elk.layered.crossingMinimization.semiInteractive': 'true',
-            'elk.layered.nodePlacement.favorStraightEdges': 'true',
-            'elk.randomSeed': '1',
-          },
-          children: children(),
-          edges: graph.edges.map((edge) => ({
-            id: edge.id,
-            sources: [edge.source],
-            targets: [edge.target],
-            labels: [
-              {
-                id: `${edge.id}-label`,
-                text: edge.data!.text,
-                width: 220,
-                height: edge.data!.labelHeight ?? 44,
-              },
-            ],
-          })),
-        }),
+  const root = await waitForC4(
+    Promise.race([
+      Promise.all(
+        ['RIGHT', 'DOWN'].map((direction) =>
+          elk.layout<ElkNode>({
+            id: 'root',
+            layoutOptions: {
+              'elk.algorithm': 'layered',
+              'elk.direction': direction,
+              'elk.edgeRouting': 'ORTHOGONAL',
+              'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+              'elk.separateConnectedComponents': 'false',
+              'elk.spacing.nodeNode': '36',
+              'elk.layered.spacing.nodeNodeBetweenLayers': '64',
+              'elk.spacing.edgeNode': '20',
+              'elk.layered.crossingMinimization.semiInteractive': 'true',
+              'elk.layered.nodePlacement.favorStraightEdges': 'true',
+              'elk.randomSeed': '1',
+            },
+            children: children(),
+            edges: graph.edges.map((edge) => ({
+              id: edge.id,
+              sources: [edge.source],
+              targets: [edge.target],
+              labels: [
+                {
+                  id: `${edge.id}-label`,
+                  text: edge.data!.text,
+                  width: 220,
+                  height: edge.data!.labelHeight ?? 44,
+                },
+              ],
+            })),
+          }),
+        ),
+      ).then(
+        (candidates) =>
+          candidates.sort(
+            (a, b) =>
+              Math.min(1440 / (b.width ?? 1), 800 / (b.height ?? 1)) -
+              Math.min(1440 / (a.width ?? 1), 800 / (a.height ?? 1)),
+          )[0]!,
       ),
-    ).then(
-      (candidates) =>
-        candidates.sort(
-          (a, b) =>
-            Math.min(1440 / (b.width ?? 1), 800 / (b.height ?? 1)) -
-            Math.min(1440 / (a.width ?? 1), 800 / (a.height ?? 1)),
-        )[0]!,
-    ),
-    new Promise<never>((_resolve, reject) => {
-      timeout = setTimeout(() => reject(new Error('C4: layout timed out')), 60_000);
-    }),
-  ]).finally(() => {
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error('C4: layout timed out')), 60_000);
+      }),
+    ]),
+    signal,
+  ).finally(() => {
     clearTimeout(timeout);
     elk.terminateWorker();
   });
@@ -174,6 +178,11 @@ async function layout(graph: C4Graph): Promise<C4Graph> {
   return { nodes, edges };
 }
 
-export async function layoutC4Graph(graph: C4Graph, isDynamic: boolean): Promise<C4Graph> {
-  return isDynamic ? dynamic(graph) : layout(graph);
+export async function layoutC4Graph(
+  graph: C4Graph,
+  isDynamic: boolean,
+  signal: AbortSignal,
+): Promise<C4Graph> {
+  signal.throwIfAborted();
+  return isDynamic ? dynamic(graph) : layout(graph, signal);
 }

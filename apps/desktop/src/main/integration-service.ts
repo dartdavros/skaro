@@ -14,7 +14,6 @@ import { runIntegrationChecks } from './integration-check-runner';
 import type { IntegrationCheck } from '@skaro/mcp-server';
 import type { Item } from '@skaro/timeline';
 import { integrationHeads, checkpointLocalLayers } from './integration-local-changes';
-import { assertIntegrationC4 } from './integration-c4';
 import { C4PublicationError } from './c4-candidate';
 
 export interface IntegrationDeps {
@@ -217,7 +216,6 @@ export class IntegrationService {
     if (op.state === 'resolving')
       throw new Error(`Resolve the next conflict: ${op.conflicts.join(', ')}`);
     const plan = integrationChecks(op);
-    await assertIntegrationC4(context, op);
     op.failureKind = undefined;
     if (!plan.length)
       throw new Error('Provide the real build and affected behavior checks for both inputs.');
@@ -263,6 +261,5 @@ export class IntegrationService {
       throw new Error('Integration has no checks for its current commit.');
     if ((await git(op.worktree, ['status', '--porcelain', '--untracked-files=no'])).stdout.trim())
       throw new Error('The candidate changed after verification; verify the new resolution.');
-    await assertIntegrationC4(this.deps.project(op.projectId), op);
   }
 }

@@ -45,15 +45,18 @@ it('requires a fresh successful assessment over every authoritative criterion', 
     expect(() => requireSubmissionAssessment(changed, host)).toThrow();
 });
 
-it('refuses stopped execution, stale C4, open decisions and host blockers even with a positive DTO', () => {
+it('refuses stopped execution, open decisions and host blockers even with a positive DTO', () => {
   for (const changed of [
-    { ...host, c4: 'stale' },
     { ...host, continuation: 'stopped' },
     { ...host, openDecisions: ['owner-decision'] },
     { ...host, reasons: ['dependency missing'] },
     { ...host, binding: { ...host.binding!, execution: 'blocked' } },
   ])
     expect(() => requireSubmissionAssessment(value, changed as RuntimeAcceptanceState)).toThrow();
+});
+
+it('ignores historical C4 status when verifying the task evidence', () => {
+  expect(requireSubmissionAssessment(value, { ...host, c4: 'stale' })).toEqual(value.verdicts);
 });
 
 it('preserves partial reporting while requiring evidence for each positively claimed criterion', () => {

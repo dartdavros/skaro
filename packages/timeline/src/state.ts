@@ -9,7 +9,7 @@ import type {
   PlanStep,
   TimelineEvent,
 } from './model.ts';
-import { isAsyncQuestion, persistsAfterTurn } from './async-question.ts';
+import { isAsyncQuestion, isDeferredInteraction, persistsAfterTurn } from './async-question.ts';
 import { StateIndex } from './state-index.ts';
 import { StateMemory } from './state-memory.ts';
 
@@ -44,6 +44,14 @@ export interface TimelineState {
 
 export function emptyTimeline(): TimelineState {
   return { turns: [], items: [], interactions: [], status: 'idle' };
+}
+
+function requiresAnswer(interaction: Interaction): boolean {
+  return interaction.kind === 'question' && !isDeferredInteraction(interaction);
+}
+
+function waitsForInteraction(interaction: Interaction): boolean {
+  return interaction.kind !== 'merge' && !isDeferredInteraction(interaction);
 }
 
 /** Applies events to a timeline in place (fast path for live sessions). */
@@ -89,8 +97,15 @@ export class Timeline {
   static restore(state: TimelineState): Timeline {
     const timeline = new Timeline();
     Object.assign(timeline.state, state);
-    if (timeline.state.interactions.some((i) => i.kind === 'question'))
-      timeline.state.status = 'waiting';
+    if (timeline.state.interactions.some(requiresAnswer)) timeline.state.status = 'waiting';
+    else if (
+      timeline.state.status === 'waiting' &&
+      timeline.state.interactions.some(isDeferredInteraction) &&
+      !timeline.state.interactions.some(waitsForInteraction)
+    )
+      timeline.state.status = timeline.state.turns.some((turn) => !turn.outcome)
+        ? 'working'
+        : 'idle';
     timeline.indexed.rebuild();
     timeline.memory.rebuild();
     return timeline;
@@ -108,7 +123,7 @@ export class Timeline {
         return;
       case 'turn.started':
         this.memory.turn(this.indexed.turn(event.turnId));
-        s.status = s.interactions.some((i) => i.kind === 'question') ? 'waiting' : 'working';
+        s.status = s.interactions.some(requiresAnswer) ? 'waiting' : 'working';
         return;
       case 'turn.completed': {
         const turn = this.indexed.turn(event.turnId);
@@ -133,7 +148,7 @@ export class Timeline {
         delete s.activity;
         // Async questions wait for a later user message, even after the agent finishes.
         s.interactions = s.interactions.filter(persistsAfterTurn);
-        s.status = s.interactions.some((i) => i.kind === 'question') ? 'waiting' : 'idle';
+        s.status = s.interactions.some(requiresAnswer) ? 'waiting' : 'idle';
         return;
       }
       case 'item.upsert': {
@@ -168,12 +183,11 @@ export class Timeline {
           ...s.interactions.filter((i) => i.id !== event.interaction.id),
           event.interaction,
         ];
-        // A merge card asks the agent nothing: Skaro shows it, also when no turn is running.
-        if (event.interaction.kind !== 'merge') s.status = 'waiting';
+        if (waitsForInteraction(event.interaction)) s.status = 'waiting';
         return;
       case 'interaction.closed':
         s.interactions = s.interactions.filter((i) => i.id !== event.id);
-        if (!s.interactions.some((i) => i.kind !== 'merge') && s.status === 'waiting')
+        if (!s.interactions.some(waitsForInteraction) && s.status === 'waiting')
           s.status = this.indexed.working ? 'working' : 'idle';
         return;
       case 'usage':
@@ -194,7 +208,7 @@ export class Timeline {
         s.activity = { state: event.state, ...(event.target ? { target: event.target } : {}) };
         return;
       case 'status':
-        s.status = s.interactions.some((i) => i.kind === 'question') ? 'waiting' : event.state;
+        s.status = s.interactions.some(requiresAnswer) ? 'waiting' : event.state;
         return;
       case 'rewound':
         s.interactions = s.interactions.filter((i) => !isAsyncQuestion(i));

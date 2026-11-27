@@ -63,8 +63,6 @@ function emit<E extends EventName>(event: E, payload: Events[E]): void {
     )
   )
     tray?.schedule();
-  if (event === 'project.changed')
-    void graph?.rebuild((payload as Events['project.changed']).projectId).catch(() => undefined);
   if (event === 'project.changed' || event === 'task.changed')
     taskRuns?.projectChanged((payload as { projectId: string }).projectId);
   const decisionProject = state && observeProjectDecisions(state.db, event, payload);
@@ -161,7 +159,8 @@ if (!locked) {
       await ready;
       return services;
     }, picked);
-    createMainWindow();
+    const releaseGraph = () => void graph?.deactivate();
+    createMainWindow(releaseGraph);
     // Services and the renderer are independent: history requests must not wait for first paint.
     const { createServices } = await import('./app-services');
     const services = await createServices(appState, dataDir, emit, {
@@ -224,7 +223,7 @@ if (!locked) {
     trace('handlers registered');
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+      if (BrowserWindow.getAllWindows().length === 0) createMainWindow(releaseGraph);
       else focusWindow();
     });
   });

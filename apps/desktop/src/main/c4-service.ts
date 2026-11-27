@@ -2,7 +2,7 @@ import { dirname } from 'node:path';
 import { c4Coordination, bindC4Packages } from './c4-coordination-binding';
 import { taskC4Protocol } from './c4-protocol';
 import { background } from './background/client';
-import { C4ValidationError, type C4Package, type AppDb } from '@skaro/core';
+import { C4ValidationError, readAcceptedC4Model, type C4Package, type AppDb } from '@skaro/core';
 import type {
   C4Handlers,
   ProposeC4Args,
@@ -15,7 +15,7 @@ import type { Projects } from './projects';
 import { legacyC4ServiceReview } from './c4-service-review';
 import { c4RecordProtocol } from './c4-record-protocol';
 import { classifiedC4Package } from './c4-package-review';
-import { decideC4Package } from './c4-package-decision';
+import { decideC4Package, type C4PackageAction } from './c4-package-decision';
 import {
   beginC4ProposalDiagnostic,
   c4ToolFailure,
@@ -42,7 +42,7 @@ export interface C4ServiceDeps {
 
 export class C4Service implements C4Handlers {
   private readonly deps: C4ServiceDeps;
-  private readonly deciding = new Map<string, Promise<void>>();
+  private readonly deciding = new Map<string, Promise<boolean>>();
   constructor(deps: C4ServiceDeps) {
     this.deps = deps;
     bindC4Packages(deps.db, {
@@ -56,6 +56,12 @@ export class C4Service implements C4Handlers {
   records(projectId: string, ownerId?: string): Promise<C4ProposalRecord[]> {
     return background(this.dataDir, 'c4.list', projectId, ownerId);
   }
+  record(projectId: string, itemId: string) {
+    return background(this.dataDir, 'c4.record', projectId, itemId);
+  }
+  unresolved(projectId: string, referencedIds: string[] = []) {
+    return background(this.dataDir, 'c4.recoverable', projectId, referencedIds);
+  }
   private save(record: C4ProposalRecord): Promise<void> {
     return background(this.dataDir, 'c4.save', record);
   }
@@ -64,6 +70,9 @@ export class C4Service implements C4Handlers {
   }
   files(projectId: string, itemId: string): Promise<string[]> {
     return background(this.dataDir, 'c4.files', projectId, itemId);
+  }
+  model(projectId: string) {
+    return readAcceptedC4Model(this.deps.projects.get(projectId).root);
   }
   file(projectId: string, itemId: string, path: string, side: 'before' | 'after'): Promise<string> {
     return background(this.dataDir, 'c4.file', projectId, itemId, path, side);
@@ -130,8 +139,9 @@ export class C4Service implements C4Handlers {
     scope: SkaroScope,
     checkout: string,
   ): Promise<ToolResult> {
-    if (scope.importId) return this.deps.stageImport(args, scope);
-    if (scope.chatId && this.deps.db.getSetting(`c4.audit.chat.${scope.chatId}`, undefined)) {
+    if (scope.kind !== 'project_chat' || !scope.chatId || scope.importId)
+      throw new Error('Start a C4 audit in the C4 section to build a model');
+    {
       const audit = this.deps.db.getSetting<import('../shared/c4-audit').C4Audit | undefined>(
         `c4.audit.${scope.projectId}`,
         undefined,
@@ -149,10 +159,7 @@ export class C4Service implements C4Handlers {
         throw new Error('The audit already has one saved package awaiting its original decision');
     }
     const context = this.deps.projects.get(scope.projectId);
-    const protocol =
-      scope.kind === 'task' && scope.runId
-        ? taskC4Protocol(this.deps.db, scope.projectId, scope.runId)
-        : 'package-v1';
+    const protocol = 'package-v1';
     const record = await background(
       this.dataDir,
       'c4.prepare',
@@ -166,7 +173,6 @@ export class C4Service implements C4Handlers {
       scope,
     );
     const item = record.item;
-    if (protocol === 'impact-v1') return c4Coordination(this.deps.db)!.requestScope(scope, item.id);
     await this.deps.publish(scope, item);
     const facts = await this.reviewPackage(scope.projectId, item.id);
     return {
@@ -220,9 +226,9 @@ export class C4Service implements C4Handlers {
   decide(
     projectId: string,
     id: string,
-    action: 'apply' | 'reject',
+    action: C4PackageAction,
     fingerprint?: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const previous = this.deciding.get(projectId) ?? Promise.resolve();
     const operation = previous
       .catch(() => undefined)
@@ -230,7 +236,7 @@ export class C4Service implements C4Handlers {
         decideC4Package(
           this.deps,
           {
-            records: (p) => this.records(p),
+            record: (p, itemId) => this.record(p, itemId),
             save: (r) => this.save(r),
             review: (p, id) => this.reviewPackage(p, id),
           },

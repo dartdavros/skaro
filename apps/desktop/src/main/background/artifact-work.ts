@@ -4,13 +4,19 @@ import { artifactBytes } from './artifact-weight';
 import type { PayloadStore } from './payload-store';
 
 export function artifactWork(store: PayloadStore) {
-  return async (root: string, defaults: ConfigDefaults, _revision: number, summary = false) => {
+  return async (
+    root: string,
+    defaults: ConfigDefaults,
+    _revision: number,
+    summary = false,
+    includeC4 = false,
+  ) => {
     const artifacts = await new ArtifactStore(
       root,
       () => defaults,
       () => [],
       new ArtifactIndex(store, root),
-    ).load(summary);
+    ).load(summary, includeC4);
     const value = !summary
       ? artifacts
       : {

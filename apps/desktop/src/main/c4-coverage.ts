@@ -1,4 +1,4 @@
-import { c4BodyHash, type ProjectArtifacts } from '@skaro/core';
+import { matchesC4BodyHash, type ProjectArtifacts } from '@skaro/core';
 import type { ReviewC4Args } from '@skaro/mcp-server';
 import { reviewedC4Ids, taskC4Scope } from './c4-task-scope';
 
@@ -23,7 +23,7 @@ export function c4CoverageProblems(
   const spec = task?.spec ? model.specifications.find((s) => s.id === task.spec) : undefined;
   if (task?.spec && !spec) problems.push(`SPEC-${task.spec}: missing C4 coverage`);
   const document = artifacts.specs.find((item) => item.id === task?.spec);
-  if (spec && document && spec.bodyHash !== c4BodyHash(document.body))
+  if (spec && document && !matchesC4BodyHash(document.body, spec.bodyHash))
     problems.push(`SPEC-${spec.id}: C4 binding is stale after document edits`);
   for (const requirement of scope.requirements)
     if (!spec?.requirements.some((item) => item.id === requirement))

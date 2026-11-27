@@ -26,7 +26,7 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
     readCurrent = async () => (await reader.fresh(entry.origin)).find((row) => row.id === entry.id),
   ) => {
     try {
-      if (!decisionIsSafety(action))
+      if (entry.origin.kind !== 'task' && !decisionIsSafety(action))
         requireCoordinationDispatch(services.db, entry.origin.projectId);
       const expected =
         entry.kind === 'proposal'
@@ -202,16 +202,14 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
     ) => {
       reader.requireProject(p);
       if (action === 'reject') {
-        const readPending = async () => taskC4Rejection(await services.c4.records(p), p, raw);
+        const readPending = async () => {
+          const record = await services.c4.record(p, raw);
+          return record && taskC4Rejection([record], p, raw);
+        };
         const pending = await readPending();
         if (pending) return execute(pending, { kind: 'proposal', action: { action } }, readPending);
       }
-      if (
-        action === 'apply' &&
-        (await services.c4.records(p)).some(
-          (record) => record.item.id === raw && record.item.state === 'accepted',
-        )
-      )
+      if (action === 'apply' && (await services.c4.record(p, raw))?.item.state === 'accepted')
         return original['c4.decide']!(p, raw, action);
       const entry = (await reader.list(p)).find(
         (row) => row.kind === 'proposal' && row.item.id === raw,

@@ -50,7 +50,7 @@ export async function inspectSemanticC4Review(
     (verdict.category !== 'aligned' && verdict.category !== 'optional')
   )
     throw new C4ValidationError([c4Issue(verdict.summary, 'review_required')], 'submission');
-  const artifacts = await context.store.load();
+  const artifacts = await context.store.load(false, true);
   if (current.preservation && verdict.realized.length)
     throw new Error('A behavior-preserving move cannot realize planned architecture');
   const review: C4TaskReview = {

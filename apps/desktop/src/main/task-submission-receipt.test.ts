@@ -14,6 +14,9 @@ import {
 import { CompletionStore } from './completion-store';
 import { reconcileTaskSubmission } from './task-submission-recovery';
 import { TaskExecution } from './task-execution';
+import { taskAcceptanceRecoveryNote } from './operation-reissue';
+import { coordinationToolReceipt } from './coordination-tool-receipt';
+import { taskAgentInput } from './task-agent-input';
 
 // Real SQLite and repository reads only. No task checkout, API/runtime fixture or source mutation.
 function observedSubmission(db: AppDb) {
@@ -46,6 +49,46 @@ function observedSubmission(db: AppDb) {
   };
   return { project, run, scope, request, identity };
 }
+
+it('gives the owner follow-up the exact recovery path for an undispatched submission', async () => {
+  const db = AppDb.open(':memory:');
+  try {
+    const { project, scope, request } = observedSubmission(db);
+    const controllers = new ProjectCoordinators(db);
+    const queued = db.coordination.accept(coordinationRequest(request));
+    controllers.recover();
+    expect(db.coordination.getOperation(project.id, queued.id)).toMatchObject({
+      state: 'rejected',
+      evidence: { code: 'restart_requires_new_request' },
+    });
+    const receipt = await reconcileTaskSubmission(db, process.cwd(), scope, queued.id);
+    expect(receipt).toMatchObject({
+      structuredContent: { coordination: { dispatched: false, freshCallAllowed: true } },
+    });
+    expect(receipt.isError).toBeUndefined();
+    const note = taskAcceptanceRecoveryNote(db, project.id, scope.taskId);
+    expect(taskAgentInput({ text: 'продолжи' }, undefined, true, false, note).text).toContain(
+      `mcp.submit_result (${queued.id}) never dispatched`,
+    );
+    let executions = 0;
+    const effect = () => {
+      executions += 1;
+      return { text: 'Accepted on fresh evidence' };
+    };
+    const sameCall = await coordinationToolReceipt('submit_result', () =>
+      controllers.execute(request, effect),
+    );
+    expect(sameCall.structuredContent).toMatchObject({
+      coordination: { retryAllowed: false, dispatched: false, freshCallAllowed: true },
+    });
+    expect(executions).toBe(0);
+    await controllers.execute({ ...request, id: randomUUID() }, effect);
+    expect(executions).toBe(1);
+    expect(taskAcceptanceRecoveryNote(db, project.id, scope.taskId)).toBe('');
+  } finally {
+    db.close();
+  }
+});
 
 it('records a known native failure as terminal and replays it without dispatch or a project-wide fence', async () => {
   const db = AppDb.open(':memory:');

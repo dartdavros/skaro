@@ -1,8 +1,9 @@
 import type { Interaction, InteractionAnswer } from './model.ts';
 import type { TimelineState } from './state.ts';
+import { isDeferredInteraction } from './async-question.ts';
 
 export function assertQuestionsAnswered(state: TimelineState): void {
-  if (state.interactions.some((i) => i.kind === 'question'))
+  if (state.interactions.some((i) => i.kind === 'question' && !isDeferredInteraction(i)))
     throw new Error('Answer the open questions before continuing this session.');
 }
 

@@ -56,4 +56,18 @@ export class DbEvents extends DbTable {
       at: Number(r['at']),
     }));
   }
+
+  /** Exact incident events in execution order, independent of the UI history page. */
+  since(projectId: string, kind: string, at: number): EventRecord[] {
+    const rows = this.db
+      .prepare('SELECT * FROM events WHERE project_id=? AND kind=? AND at>=? ORDER BY at,id')
+      .all(projectId, kind, at) as Row[];
+    return rows.map((r) => ({
+      id: Number(r.id),
+      projectId: String(r.project_id),
+      kind: String(r.kind),
+      data: JSON.parse(String(r.data)) as Record<string, unknown>,
+      at: Number(r.at),
+    }));
+  }
 }

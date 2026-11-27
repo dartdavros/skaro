@@ -1,16 +1,23 @@
 import { afterAll, expect, it } from 'vitest';
 import { AppDb } from '@skaro/core';
-import { emptyTimeline, Timeline, type Interaction } from '@skaro/timeline';
+import { emptyTimeline, Timeline, withSkaroNote, type Interaction } from '@skaro/timeline';
 import { taskResumeTool } from '@skaro/mcp-server';
 import { TaskExecution } from './task-execution';
-import { prepareTaskFollowUp } from './task-follow-up';
-import { resumeTaskExecution } from './task-resume';
+import { ownerResumeText, prepareTaskFollowUp } from './task-follow-up';
+import { resumeTaskExecution, taskAcceptsContinuation } from './task-resume';
 import { taskAgentInput } from './task-agent-input';
 import { QuestionAnswers } from './question-answers';
 
 // Real SQLite settings and timeline DTOs only; no project, fake agent or API is created.
 const db = AppDb.open(':memory:');
 afterAll(() => db.close());
+
+it('accepts continuation for work awaiting publication and preserves terminal task states', () => {
+  expect(taskAcceptsContinuation({ status: 'review', archived: false })).toBe(true);
+  expect(taskAcceptsContinuation({ status: 'review', archived: true })).toBe(false);
+  expect(taskAcceptsContinuation({ status: 'done', archived: false })).toBe(false);
+  expect(taskAcceptsContinuation({ status: 'cancelled', archived: false })).toBe(false);
+});
 const question: Extract<Interaction, { kind: 'question' }> = {
   kind: 'question',
   id: 'decision',
@@ -97,6 +104,34 @@ it('resumes only the current owner instruction and rejects stale quotes and call
   expect(
     (await tool.call({ command_id: 'new', instruction: 'Исправь проверку' }, scope)).isError,
   ).toBe(true);
+});
+
+it('carries an environment incident into a renewed intent only when its controller retains it', () => {
+  const execution = new TaskExecution(db, 'follow-up-environment');
+  execution.start();
+  execution.block('Compose preflight failed', 'environment-incident');
+  const instruction = 'Исправь окружение и продолжай';
+  execution.followUp('environment-repair', instruction);
+  expect(execution.resume('environment-repair', instruction, true)).toBe(true);
+  expect(execution.read().blockedIncident).toBe('environment-incident');
+  execution.followUp('new-intent', instruction);
+  expect(execution.resume('new-intent', instruction)).toBe(true);
+  expect(execution.read().blockedIncident).toBeUndefined();
+});
+
+it('resumes from ordinary owner text and keeps mailbox answers and orchestration separate', () => {
+  const execution = new TaskExecution(db, 'follow-up-composer');
+  const state = emptyTimeline();
+  const input = { commandId: 'composer', text: withSkaroNote('Retired question', 'Ок') };
+  expect(ownerResumeText(input)).toBe('Ок');
+  expect(ownerResumeText(input, input)).toBe('');
+  expect(ownerResumeText({ ...input, internal: true })).toBe('');
+  expect(ownerResumeText({ ...input, text: withSkaroNote('Internal note', ' ') })).toBe('');
+  prepareTaskFollowUp(execution, input, state);
+  expect(execution.resume(input.commandId, ownerResumeText(input))).toBe(true);
+  const message = taskAgentInput(input, state, true, true);
+  expect(message.text).toContain('Skaro resumed task execution');
+  expect(message.text).not.toContain('immediately call resume_task');
 });
 
 it('keeps option cards open through clarification, completion and replay; only a complete answer resumes prior work', () => {

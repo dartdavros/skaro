@@ -31,7 +31,7 @@ export class ProjectArtifactStore extends ArtifactStore {
   override writeDocumentBody(path: string, body: string): Promise<void> {
     return background(this.dataDir, 'artifacts.writeDocumentBody', this.root, path, body);
   }
-  override load(summary = false): Promise<ProjectArtifacts> {
+  override load(summary = false, includeC4 = false): Promise<ProjectArtifacts> {
     return background(
       this.dataDir,
       'artifacts.load',
@@ -39,6 +39,7 @@ export class ProjectArtifactStore extends ArtifactStore {
       this.configDefaults(),
       0,
       summary,
+      includeC4,
     ).then((snapshot) => snapshot.value);
   }
 }

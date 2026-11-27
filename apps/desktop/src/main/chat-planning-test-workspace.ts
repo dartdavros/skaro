@@ -88,6 +88,13 @@ export async function planningWorkspace() {
   };
 }
 
+export async function openRecoveredChat(engine: ChatEngine, live: LiveChat) {
+  const { projectId, chat } = live;
+  const view = await engine.views.open(projectId, chat.id);
+  await engine.workflowRecovery.schedule(chat.id, view.decisionEpoch);
+  return engine.views.open(projectId, chat.id);
+}
+
 export function dialoguePlan(): PreparePlanArgs {
   const sizes = [8, 6, 6, 8, 5, 6, 6, 6, 6, 6, 6, 6];
   return {

@@ -21,7 +21,7 @@ export function incidentModelTools(
         'Diagnose a current project incident. Supply actionable owner options with consequences. ' +
         'For an already authorized repair, set requires_owner_decision=false and bind an existing configured ' +
         'project check by name, registered task environment, or verification_agent=true for a recorded process exit. ' +
-        'Bind the verifier before offering owner options too: an answer alone is not recovery evidence. ' +
+        'Ask for an owner decision even if the verification method still depends on the answer. ' +
         'This grants no new permission and does not resolve or resume the task.',
       available: (s) => s.kind === 'project_chat' || s.kind === 'task',
       inputSchema: {
@@ -98,13 +98,17 @@ export function incidentModelTools(
                 row,
                 publicationRequest(args.verification_workflow),
               );
-        if (isWorkflowIncident(row) && !workflow)
+        if (isWorkflowIncident(row) && !workflow && !args.requires_owner_decision)
           throw new Error(
             'Bind verification_workflow to the exact PR, commit and workflow of this incident.',
           );
         if ([check, environment, session, workflow].filter(Boolean).length > 1)
           throw new Error('Bind exactly one verification method');
-        assertIncidentVerification(row.protocol!, !!(check || environment || session || workflow));
+        if (!args.requires_owner_decision)
+          assertIncidentVerification(
+            row.protocol!,
+            !!(check || environment || session || workflow),
+          );
         const fresh = await controller.prepareIncident(scope, row.id);
         if (fresh.revision !== row.revision) throw new Error('Incident changed during diagnosis');
         controller.incidents.store.db.setSetting(incidentPlanKey(row.id), {
@@ -128,7 +132,7 @@ export function incidentModelTools(
         if (workflow && !args.requires_owner_decision) return publicationReply(workflow);
         return {
           text: args.requires_owner_decision
-            ? 'The diagnosed resolution question is open above the composer. Wait for its answer.'
+            ? 'The resolution question is open above the composer. Continue the independent task work. The action covered by the question needs the owner’s answer.'
             : 'The verification condition is bound. Perform only the authorized repair, then call verify_project_incident.',
         };
       },

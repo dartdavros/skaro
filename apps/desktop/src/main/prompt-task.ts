@@ -4,7 +4,6 @@ import { taskSections } from './task-body';
 import { agentInteractionInstructions } from './agent-interaction-instructions';
 import { taskEnvironmentInstructions } from './task-environment-instructions';
 import { LANGUAGES, terms, instructionsOf } from './prompt-context';
-import { C4_INSTRUCTIONS } from './c4-instructions';
 
 export function taskInstructions(options: {
   task: Task;
@@ -45,7 +44,6 @@ export function taskInstructions(options: {
     });
 
   const parts = [
-    C4_INSTRUCTIONS,
     `You are working on task ${task.id} "${task.title}" in a project managed by Skaro.`,
     task.status === 'done'
       ? 'The task is done and merged into the base branch. The user may ask follow-up ' +
@@ -84,8 +82,8 @@ export function taskInstructions(options: {
         '- Starting a task authorizes its implementation, affected verification and submission. ' +
           'A model final answer is not task completion: Skaro continues unfinished execution automatically. ' +
           'Do not end a turn merely to request continue, repeat established decisions or ask the owner ' +
-          'to perform routine environment preparation. Ask concrete missing decisions through the blocking ' +
-          'question tool, then perform the selected action. For an evidenced external blocker or an explicit ' +
+          'to perform routine environment preparation. Ask concrete missing decisions through Skaro ask_owner, ' +
+          'continue independent steps, then perform the selected action. For an evidenced external incident or an explicit ' +
           'owner pause/read-only limitation, call report_task_blocker with requires_owner_permission=false. ' +
           'A rule requiring separate consent is a pending permission request, not an owner pause. ' +
           'Never use a blocker for missing consent or unfinished routine work.',
@@ -101,7 +99,7 @@ export function taskInstructions(options: {
         '- If submit_result has an uncertain outcome, call reconcile_task_submission with its original ' +
           'operation_id. It inspects saved evidence without resubmitting. Checked criteria alone do not ' +
           'prove acceptance. After reconciliation inspect current task state before a fresh submission; ' +
-          'never repeat an unknown effect or ask the owner to repair coordinator metadata manually.',
+          'never repeat an unknown effect.',
         '- Use the task-local Playwright MCP for changed UI or directly affected browser behavior when applicable. ' +
           'When the change does not affect browser behavior, do not start a browser or report its absence as a blocker.',
         '- If required verification needs an API key, password or other credential from the owner, ' +
@@ -110,7 +108,7 @@ export function taskInstructions(options: {
           'needed. Do not ask for a secret in ordinary chat, claim a field was shown without a ' +
           'successful call, submit an incomplete result, or report missing owner credentials as ' +
           'an external blocker before offering the protected input. After request_secret succeeds, ' +
-          'end the turn and wait; the answer resumes this task. If a real project settings form is ' +
+          'continue steps independent of the credential. The protected answer will reach this task. If a real project settings form is ' +
           'the required destination, identify its actual URL and use the provided credential there.',
         '- Keep the user informed while you work: before each step write one short sentence ' +
           'about what you are doing now. Work in small steps; do not think the whole task ' +

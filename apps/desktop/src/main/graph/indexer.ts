@@ -19,16 +19,16 @@ export interface IndexJob {
   database: string;
   generation: number;
   force?: boolean;
-  cancellation?: SharedArrayBuffer;
 }
 export async function buildIndex(
   job: IndexJob,
   progress: (done: number, total: number, stage: string) => void,
+  signal: AbortSignal,
 ): Promise<GraphSnapshot> {
   const store = new GraphStore(job.database);
   try {
     progress(0, 1, 'scan');
-    const manifest = await scan(job.root, (done, total) => progress(done, total, 'scan')),
+    const manifest = await scan(job.root, (done, total) => progress(done, total, 'scan'), signal),
       current = store.current();
     if (
       !job.force &&
@@ -111,7 +111,7 @@ export async function buildIndex(
       ...manifest.skipped.slice(0, Math.max(0, 1000 - coverage.diagnostics.length)),
     );
     progress(4, 5, 'verify');
-    const verified = await scan(job.root, (done, total) => progress(done, total, 'verify'));
+    const verified = await scan(job.root, (done, total) => progress(done, total, 'verify'), signal);
     if (
       verified.fingerprint !== manifest.fingerprint ||
       verified.checkoutId !== manifest.checkoutId
@@ -141,10 +141,7 @@ export async function buildIndex(
         : {}),
     };
     progress(4, 5, 'persist');
-    store.publish(snapshot, facts, model, () => {
-      if (job.cancellation && Atomics.load(new Int32Array(job.cancellation), 0) !== 1)
-        throw new Error('graph-cancelled');
-    });
+    store.publish(snapshot, facts, model, () => signal.throwIfAborted());
     progress(5, 5, 'ready');
     return snapshot;
   } finally {

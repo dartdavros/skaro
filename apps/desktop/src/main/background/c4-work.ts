@@ -93,6 +93,19 @@ export function c4Work(store: PayloadStore) {
     }
     db.prepare('INSERT OR IGNORE INTO migrations VALUES (?)').run(key);
   }
+  function record(row: { [key: string]: unknown }): C4ProposalRecord {
+    const value = JSON.parse(String(row['metadata'])) as C4ProposalRecord;
+    if (value.item.proposal.type === 'architecture')
+      value.item.proposal = architecturePresentation(value.item.proposal, value.item.id);
+    return value;
+  }
+  function byId(projectId: string, itemId: string) {
+    migrate(projectId);
+    const row = db
+      .prepare('SELECT metadata FROM records WHERE project=? AND id=?')
+      .get(projectId, itemId);
+    return row ? record(row) : undefined;
+  }
   function list(projectId: string, ownerId?: string): C4ProposalRecord[] {
     migrate(projectId);
     const rows =
@@ -101,12 +114,7 @@ export function c4Work(store: PayloadStore) {
         : db
             .prepare('SELECT metadata FROM records WHERE project=? AND owner=?')
             .all(projectId, ownerId);
-    return rows.map((r) => {
-      const record = JSON.parse(String(r['metadata'])) as C4ProposalRecord;
-      if (record.item.proposal.type === 'architecture')
-        record.item.proposal = architecturePresentation(record.item.proposal, record.item.id);
-      return record;
-    });
+    return rows.map(record);
   }
   function pkg(projectId: string, itemId: string, paths?: string[]): C4Package {
     migrate(projectId);
@@ -197,7 +205,7 @@ export function c4Work(store: PayloadStore) {
     'c4.context': async (root, defaults, scope, checkout) => {
       const legacy = new DatabaseSync(join(store.dataDir, 'skaro.db'), { readOnly: true });
       try {
-        const { value: artifacts } = await artifactWork(store)(root, defaults, 0);
+        const { value: artifacts } = await artifactWork(store)(root, defaults, 0, false, true);
         return await c4Context(
           { root, load: async () => artifacts, invalidate: () => undefined },
           {
@@ -216,11 +224,28 @@ export function c4Work(store: PayloadStore) {
       }
     },
     'c4.list': list,
+    'c4.record': byId,
+    'c4.recoverable': (project, replyIds) => {
+      migrate(project);
+      const open = db
+        .prepare(
+          "SELECT metadata FROM records WHERE project=? AND state IN ('pending', 'accepted')",
+        )
+        .all(project)
+        .map(record);
+      const seen = new Set(open.map((record) => record.item.id));
+      for (const id of replyIds) {
+        if (seen.has(id)) continue;
+        const value = byId(project, id);
+        if (value) open.push(value);
+      }
+      return open;
+    },
     'c4.package': pkg,
     'c4.save': save,
     'c4.content': (project, id, side) => c4PackageText(pkg(project, id), side),
     ...c4ApplicationWork(store, pkg, (project, id) => {
-      const value = list(project).find((r) => r.item.id === id);
+      const value = byId(project, id);
       if (!value) throw new Error('Unknown C4 application');
       return value;
     }),

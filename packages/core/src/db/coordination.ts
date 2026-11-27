@@ -73,6 +73,22 @@ export class DbCoordination {
       .all(projectId, action, inputHash)
       .map((row) => this.getOperation(projectId, String(row.id))!);
   }
+  latestTaskAcceptance(projectId: string, taskId: string) {
+    metadataId(projectId);
+    metadataId(taskId);
+    if (!this.get(projectId)) return [];
+    const latest = this.context.db.prepare(
+      `SELECT id FROM coordination_operations WHERE project_id=?
+       AND json_extract(value,'$.action')=?
+       AND json_extract(value,'$.subject.kind')='task'
+       AND json_extract(value,'$.subject.id')=?
+       ORDER BY created_at DESC,rowid DESC LIMIT 1`,
+    );
+    return ['mcp.review_c4', 'mcp.submit_result'].flatMap((action) => {
+      const row = latest.get(projectId, action, taskId);
+      return row ? [this.getOperation(projectId, String(row.id))!] : [];
+    });
+  }
   claim(projectId: string, id: string, input: { expectedRevision: number; claimId: string }) {
     return coordinationAtomic(this.context.db, () =>
       claimOperation(this.context, projectId, id, input),

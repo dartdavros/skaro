@@ -7,7 +7,6 @@ import type { NewAdr, NewSpec } from './inputs.ts';
 import { getFields, parseMarkdown, serializeMarkdown, setFields } from './frontmatter.ts';
 import type { MarkdownFile } from './frontmatter.ts';
 import { slugify } from './slug.ts';
-import { inspectC4Project } from '../c4/project.ts';
 
 export async function createAdr(files: ArtifactFiles, input: NewAdr): Promise<Adr> {
   const existing = await files.readAll('adr', [], toAdr);
@@ -51,10 +50,6 @@ export async function writeAdr(files: ArtifactFiles, id: string, body: string): 
 }
 
 export async function createSpec(files: ArtifactFiles, input: NewSpec): Promise<Spec> {
-  if (input.status === 'accepted')
-    throw new Error(
-      'Accepted specifications require a coherent C4 package; drafts may be created independently.',
-    );
   const existing = await files.readAll('specs', [], toSpec);
   const id = String(
     nextNumber(
@@ -74,6 +69,8 @@ export async function createSpec(files: ArtifactFiles, input: NewSpec): Promise<
     input.body ??
     '## Проблема\n\n\n## Сценарии\n- \n\n## Требования\n- R-1 \n\n## Не входит\n- \n\n## Открытые вопросы\n- \n';
   await files.writeFile(`specs/${id}-${slugify(input.title)}.md`, serializeMarkdown(file));
+  if (input.status === 'accepted' && input.replaces)
+    await supersedeIn(files, 'specs', toSpec, input.replaces, id);
   return (await files.findFile('specs', id, toSpec)).item;
 }
 
@@ -82,16 +79,6 @@ export async function setSpecStatus(
   id: string,
   status: SpecStatus,
 ): Promise<Spec> {
-  if (status === 'accepted') {
-    const architecture = await inspectC4Project(files.root);
-    if (
-      !architecture.model?.specifications.some((s) => s.id === id) ||
-      architecture.problems.length
-    )
-      throw new Error(
-        `SPEC-${id}: prepare and accept its C4 package first. ${architecture.problems.join('; ')}`,
-      );
-  }
   const { file, path, item } = await files.findFile('specs', id, toSpec);
   setFields(file, { status });
   await files.writeFile(path, serializeMarkdown(file));

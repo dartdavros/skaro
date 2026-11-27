@@ -153,7 +153,10 @@ export class AppState {
       throw new Error('Builtin configuration requires its validated host API');
     if (
       this.db.shell.projectScope &&
-      (key.startsWith('ui.') || key.startsWith('settings.') || key.startsWith('window.'))
+      (key.startsWith('ui.') ||
+        key.startsWith('settings.') ||
+        key.startsWith('window.') ||
+        key.startsWith('graph.view.'))
     ) {
       this.sessionSettings.set(key, value);
       return;

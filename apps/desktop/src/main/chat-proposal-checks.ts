@@ -6,7 +6,6 @@ import type { SkaroScope } from '@skaro/mcp-server';
 import type { Item } from '@skaro/timeline';
 import { beforeEach, expect, it } from 'vitest';
 import type { ChatSessions } from './chats';
-import { prepareFixtureArchitecture } from './c4-test-support';
 
 type ProposalItem = Extract<Item, { kind: 'proposal' }>;
 interface Context {
@@ -176,17 +175,14 @@ export function registerChatProposalChecks(context: () => Context): void {
     expect((await proposals(chatId)).map((p) => p.state)).toEqual(['applied', 'rejected']);
   });
 
-  it('requires a coherent C4 package before accepting or editing a specification', async () => {
+  it('accepts and edits a specification in project chat without building C4', async () => {
     const spec = '## Проблема\n\nВозвраты вручную.\n\n## Требования\n\n- R-1 Полный возврат\n';
     const store = new ArtifactStore(root);
-    await store.createSpec({ title: 'Возвраты', body: spec });
-    await prepareFixtureArchitecture(root, ['0001']);
-    // Prepare persisted inputs before opening the cached project/chat context.
     const { chatId, scope } = await startChat();
-    const rejected = await chats.proposeSpec({ title: 'Возвраты', content: spec }, scope);
-    expect(rejected.isError).toBe(true);
-    expect(rejected.text).toContain('C4');
-    expect(await proposals(chatId)).toEqual([]);
+    const proposed = await chats.proposeSpec({ title: 'Возвраты', content: spec }, scope);
+    expect(proposed.isError).not.toBe(true);
+    const specification = (await proposals(chatId)).at(-1)!;
+    await chats.proposal(projectId, chatId, specification.id, { action: 'apply' });
     let artifacts = await store.load();
     expect(artifacts.specs.map((s) => [s.id, s.title, s.status])).toEqual([
       ['0001', 'Возвраты', 'accepted'],
@@ -209,15 +205,15 @@ export function registerChatProposalChecks(context: () => Context): void {
     const plan = (await proposals(chatId)).at(-1)!;
     await chats.proposal(projectId, chatId, plan.id, { action: 'apply' });
 
-    // Ordinary document auto-apply cannot bypass architectural coherence.
     const change = await chats.proposeSpec(
       { id: '0001', content: `${spec}- R-2 Частичный возврат\n` },
       scope,
     );
-    expect(change.isError).toBe(true);
-    expect(change.text).toContain('C4');
+    expect(change.isError).not.toBe(true);
+    const revision = (await proposals(chatId)).at(-1)!;
+    await chats.proposal(projectId, chatId, revision.id, { action: 'apply' });
     artifacts = await new ArtifactStore(root).load();
     expect(artifacts.tasks.find((t) => t.title === 'Возврат')?.spec).toBe('0001');
-    expect(artifacts.specs[0]?.body).not.toContain('R-2 Частичный возврат');
+    expect(artifacts.specs[0]?.body).toContain('R-2 Частичный возврат');
   });
 }

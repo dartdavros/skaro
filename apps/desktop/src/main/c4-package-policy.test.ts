@@ -5,6 +5,9 @@ import { c4SemanticFingerprint, type C4SemanticVerdict } from './c4-semantic-res
 import { C4SemanticStore, type C4SemanticJob } from './c4-semantic-store';
 import { c4PackageBlocks, saveC4PackagePolicy } from './c4-package-policy';
 import type { C4ProposalRecord } from './c4-service';
+import { Timeline } from '@skaro/timeline';
+import { awaitsDecision } from './task-wait-card';
+import { taskTimelineRuntime } from './task-runtime-state';
 
 /** Isolated protocol metadata only. No project/task/native agent/backend is registered or simulated. */
 it('requires a matching independent classification for optional bypass and keeps required decisions blocking', async () => {
@@ -19,7 +22,7 @@ it('requires a matching independent classification for optional bypass and keeps
       protocol: 'impact-v1',
       scope: { kind: 'task', projectId, taskId, runId },
       package: {
-        id,
+        id: `package-${id}`,
         title: 'Protocol classification',
         summary: 'Metadata check',
         baseRevision: 1,
@@ -36,14 +39,14 @@ it('requires a matching independent classification for optional bypass and keeps
         native: { agent: 'skaro', type: 'proposal', ref: 'architecture' },
         proposal: {
           type: 'architecture',
-          packageId: id,
+          packageId: `package-${id}`,
           title: 'Protocol classification',
           summary: 'Metadata check',
           baseRevision: 1,
         },
       },
     });
-    const classify = (entry: C4ProposalRecord, category: 'optional' | 'decision') => {
+    const classify = (entry: C4ProposalRecord, category: 'aligned' | 'optional' | 'decision') => {
       const id = C4SemanticStore.id(projectId, runId, fingerprint, 1, entry.item.id);
       const job: C4SemanticJob = {
         version: 1,
@@ -65,7 +68,7 @@ it('requires a matching independent classification for optional bypass and keeps
         version: 1,
         fingerprint,
         category,
-        implementation: category === 'optional' ? 'aligned' : 'unknown',
+        implementation: category === 'decision' ? 'unknown' : 'aligned',
         summary: 'Protocol metadata result',
         realized: [],
         evidence: observation.files.map((f) => ({
@@ -88,12 +91,28 @@ it('requires a matching independent classification for optional bypass and keeps
       return verified;
     };
     const optional = record('optional-protocol');
+    const legacy = { ...optional, protocol: undefined };
+    expect(c4PackageBlocks(db, legacy, runId)).toBe(false);
+    expect(
+      c4PackageBlocks(db, { ...legacy, item: { ...legacy.item, state: 'accepted' } }, runId),
+    ).toBe(true);
     expect(c4PackageBlocks(db, optional, runId)).toBe(true);
     const verified = classify(optional, 'optional');
     saveC4PackagePolicy(db, optional, verified.id, false);
     expect(c4PackageBlocks(db, optional, runId)).toBe(true); // outbox not delivered
     store.update(verified, { delivered: true });
     expect(c4PackageBlocks(db, optional, runId)).toBe(false);
+    const timeline = new Timeline();
+    timeline.apply({ t: 'turn.started', turnId: 'work' });
+    timeline.apply({ t: 'turn.completed', turnId: 'work', outcome: 'done' });
+    timeline.apply({ t: 'item.upsert', item: { ...optional.item, turnId: 'work' } });
+    expect(awaitsDecision(timeline.state)).toBe(false);
+    expect(taskTimelineRuntime(timeline.state, 'queued')).toBe('queued');
+    timeline.apply({
+      t: 'item.upsert',
+      item: { ...optional.item, turnId: 'work', state: 'accepted' },
+    });
+    expect(taskTimelineRuntime(timeline.state, 'queued')).toBe('queued');
     expect(c4PackageBlocks(db, optional, 'another-run')).toBe(true);
     expect(
       c4PackageBlocks(db, { ...optional, package: { ...optional.package, id: 'changed' } }, runId),
@@ -101,6 +120,11 @@ it('requires a matching independent classification for optional bypass and keeps
     expect(
       c4PackageBlocks(db, { ...optional, item: { ...optional.item, state: 'accepted' } }, runId),
     ).toBe(true);
+    const routine = record('aligned-protocol');
+    const aligned = classify(routine, 'aligned');
+    saveC4PackagePolicy(db, routine, aligned.id, true); // Older releases marked this verdict as blocking.
+    store.update(aligned, { delivered: true });
+    expect(c4PackageBlocks(db, routine, runId)).toBe(false);
     const required = record('required-protocol'),
       decision = classify(required, 'decision');
     expect(() => saveC4PackagePolicy(db, required, decision.id, false)).toThrow();

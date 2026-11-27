@@ -7,6 +7,7 @@ import { inspectC4ReviewCandidate } from './c4-review-candidate';
 import { readTaskC4Scope, reviewedTaskScope } from './c4-task-scope';
 import type { C4TaskReview } from './c4-review';
 import { taskC4Base } from './c4-task-base';
+import { preservesC4Implementation } from './c4-preservation';
 
 /** A saved review certifies preflight as well as coverage, without publishing architecture. */
 export async function writeC4TaskReview(
@@ -19,7 +20,7 @@ export async function writeC4TaskReview(
 ): Promise<ToolResult> {
   db.setSetting(c4ReviewKey(context.id, scope.taskId!), null);
   context.invalidate();
-  const artifacts = await context.load();
+  const artifacts = await context.load(true);
   const base = (input: typeof artifacts) =>
     taskC4Base(db, input, {
       projectId: scope.projectId,
@@ -31,8 +32,15 @@ export async function writeC4TaskReview(
   const baseHead = await base(artifacts);
   const taskScope = await readTaskC4Scope(checkout, baseHead, artifacts, scope.taskId!);
   const reviewedScope = reviewedTaskScope(taskScope, args, artifacts.c4);
-  const issues = c4CoverageProblems(artifacts, scope.taskId!, args, taskScope).map((message) =>
-    c4Issue(message),
+  const preserved = await preservesC4Implementation(
+    checkout,
+    baseHead,
+    taskScope,
+    { root: context.root, model: artifacts.c4 },
+    args.realized,
+  );
+  const issues = c4CoverageProblems(artifacts, scope.taskId!, args, taskScope, preserved).map(
+    (message) => c4Issue(message),
   );
   if (args.changeHash !== (await c4ChangeHash(checkout, baseHead)))
     issues.push(c4Issue('Code changed since context was read.', 'stale_review'));
@@ -54,7 +62,7 @@ export async function writeC4TaskReview(
   if (issues.length) throw new C4ValidationError(issues, 'review');
   // File checks await I/O; never save an already stale successful review.
   context.invalidate();
-  const after = await context.load();
+  const after = await context.load(true);
   if (
     baseHead !== (await base(after)) ||
     args.changeHash !== (await c4ChangeHash(checkout, baseHead)) ||

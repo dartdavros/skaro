@@ -30,10 +30,25 @@ export async function parkTask(
   const context = ctx.project(projectId);
   const ownerStop = !recovering && status === 'stopped';
   const owner = key(projectId, taskId);
+  const receiptKey = `task.park.${projectId}.${requestId}`;
+  const saved = ctx.deps.db.getSetting<
+    { taskId: string; requested: ParkedTaskStatus; receipt: TaskParkReceipt } | undefined
+  >(receiptKey, undefined);
+  const requested = status;
+  if (saved) {
+    if (saved.taskId !== taskId || saved.requested !== requested)
+      throw new Error('Task lifecycle request identity changed');
+    return saved.receipt;
+  }
+  const remember = (receipt: TaskParkReceipt) => {
+    ctx.deps.db.setSetting(receiptKey, { taskId, requested, receipt });
+    return receipt;
+  };
   const previous = ctx.parking.get(owner);
   if (previous) {
     const reached = await previous;
-    if (reached.status === 'stopped' || reached.status === status) return { ...reached, requestId };
+    if (reached.status === 'stopped' || reached.status === status)
+      return remember({ ...reached, requestId });
     return parkTask(ctx, projectId, taskId, status, recovering, requestId);
   }
   const db = ctx.deps.db;
@@ -66,7 +81,7 @@ export async function parkTask(
       !busy &&
       (before.status === status || before.status === 'stopped')
     )
-      return { requestId, status: before.status, revision: pending?.revision ?? 0 };
+      return remember({ requestId, status: before.status, revision: pending?.revision ?? 0 });
     if (before.status === 'stopped') status = 'stopped';
     const canPark =
       !before.archived &&
@@ -118,7 +133,11 @@ export async function parkTask(
           previousStatus: entry.from,
         });
         if (!transitionPhase(db, projectId, entry, 'settled')) throw new CommandCancelled();
-        return { requestId, status, revision: currentTransition(db, projectId, taskId)!.revision };
+        return remember({
+          requestId,
+          status,
+          revision: currentTransition(db, projectId, taskId)!.revision,
+        });
       });
     });
     ctx.changed(projectId, taskId);

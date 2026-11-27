@@ -2,8 +2,6 @@ import { afterEach, expect, it } from 'vitest';
 import { AppDb, type ProjectArtifacts, type Task } from '@skaro/core';
 import { recordInPlaceResult } from './completion-in-place';
 import { CompletionStore, criteriaRevision } from './completion-store';
-import type { C4TaskReview } from './c4-review';
-
 // Native SQLite and metadata DTOs only: no project checkout, services or seeded environment.
 const databases: AppDb[] = [];
 afterEach(() => databases.splice(0).forEach((db) => db.close()));
@@ -22,22 +20,10 @@ const task: Task = {
   path: '.skaro/tasks/T-002.md',
   body: '## Goal\nPreserve the source\n\n## Acceptance criteria\n- [x] Source verified\n',
 };
-const c4: C4TaskReview = {
-  runId: 'run',
-  baseHead: 'base',
-  modelHash: 'model',
-  changeHash: 'committed-source',
-  revision: 1,
-  elements: [],
-  relationships: [],
-  realized: [],
-  aligned: true,
-  evidence: 'Reviewed',
-};
 const commit = {
   head: 'immutable-commit',
   branch: 'refs/skaro/results/T-002/immutable-commit',
-  c4,
+  runId: 'run',
 };
 const artifacts = (tasks: Task[]) => ({ tasks }) as ProjectArtifacts;
 
@@ -50,7 +36,8 @@ it('durably saves exact in-place acceptance before done without changing the tas
   });
   expect(new CompletionStore(db, 'project').result(task.id)).toEqual(result);
   expect(result).toMatchObject({
-    ...commit,
+    head: commit.head,
+    branch: commit.branch,
     inPlace: true,
     sharedCheckout: true,
     pendingReview: true,

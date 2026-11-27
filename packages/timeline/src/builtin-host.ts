@@ -92,7 +92,8 @@ export interface RuntimeAcceptanceState {
   criteriaRevision: string;
   criteria: readonly { id: string; text?: string; met: boolean; evidenceIds: readonly string[] }[];
   openDecisions: readonly string[];
-  c4: 'not-required' | 'current' | 'missing' | 'stale';
+  /** May be present in older host snapshots. */
+  c4?: 'not-required' | 'current' | 'missing' | 'stale';
   result: 'not-submitted' | 'accepted' | 'stale';
   continuation: 'allowed' | 'stopped' | 'waiting-decision' | 'blocked' | 'budget-exhausted';
   reasons: readonly string[];

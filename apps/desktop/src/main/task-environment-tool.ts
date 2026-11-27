@@ -7,7 +7,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { ResourceAdmissionUnavailable } from './resource-manager';
 import { EnvironmentNotDispatched } from './environment-dispatch-error';
 import { inPlaceEnvironmentResult } from './task-environment-mode';
-import { incidentStartProhibition } from './incident-worker-repair';
+import { isTaskParked } from '@skaro/core';
 
 /** `start_environment`: the agent of a task asks Skaro for running services. */
 export async function startTaskEnvironment(
@@ -20,10 +20,14 @@ export async function startTaskEnvironment(
   if (!active || active.run.id !== scope.runId) {
     return { text: 'This session is no longer the current run of the task.', isError: true };
   }
+  const task = await ctx.project(scope.projectId).store.readTask(scope.taskId);
+  if (isTaskParked(task.status))
+    return {
+      text: 'Call resume_task with the current owner instruction before starting services.',
+      isError: true,
+    };
   const shared = inPlaceEnvironmentResult(ctx.project(scope.projectId).root, active.run);
   if (shared) return shared;
-  const prohibited = await incidentStartProhibition(ctx, active);
-  if (prohibited) return { text: prohibited, isError: true };
   try {
     const info = await ctx.environments.start(checkoutKey(active), { waitForResources: false });
     const { variables } = await ctx.environments.describe(checkoutKey(active));
@@ -47,26 +51,6 @@ export async function startTaskEnvironment(
     };
   } catch (failure) {
     const error = failure instanceof EnvironmentNotDispatched ? failure.cause : failure;
-    if (ctx.deps.coordinators) {
-      await ctx.incidents
-        .report(
-          active,
-          errorText(error),
-          {
-            cause: 'environment',
-            code:
-              error instanceof ResourceAdmissionUnavailable
-                ? 'environment_resource_conflict'
-                : 'environment_start_failed',
-            condition: 'environment-ready',
-          },
-          'controller',
-        )
-        .catch((reportError: unknown) => {
-          // A secondary diagnostic failure must not turn a known start failure into an unknown effect.
-          ctx.history.notice(active, 'other', 'error', errorText(reportError));
-        });
-    }
     if (error instanceof ResourceAdmissionUnavailable)
       return {
         text: `Environment cannot acquire its current ownership lock: ${error.reason}. Wait for the existing owner or cleanup to settle. Do not retry in a loop or start substitute services.`,
@@ -89,9 +73,9 @@ export async function startTaskEnvironment(
         'Skaro starts only existing declared containers and waits for health; no source data or accounts are created or reset. ' +
         'If the output shows a defect in the task sources, fix it and retry. If the known repair ' +
         'requires separate owner consent, immediately ask for that exact permission through the ' +
-        'structured question tool and wait; do not report missing consent as a blocker. Otherwise ' +
-        'use report_task_blocker with the exact external failure, not a question asking the owner to do routine startup. Do not start ' +
-        'substitute services or another copy.',
+        'structured question tool and wait. Repair documented inputs in the task checkout yourself. ' +
+        'For an external prerequisite, report the exact missing input and evidence. ' +
+        'Do not start substitute services or another copy.',
       isError: true,
     };
   }

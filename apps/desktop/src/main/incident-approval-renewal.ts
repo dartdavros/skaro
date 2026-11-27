@@ -41,6 +41,7 @@ export function canRenewIncidentApproval(
     operation.inputHash === hash &&
     [
       'environment_not_dispatched_before_admission',
+      'environment_preflight_failed',
       'environment_start_failed_partial_effects_possible',
     ].includes(operation.evidence?.code ?? '')
   );

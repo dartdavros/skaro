@@ -1,7 +1,9 @@
+import { inspectTaskTool } from './task-tool-receipts';
 import type { AppDb } from '@skaro/core';
 import { operationFailure, type SkaroScope, type Tool, type ToolResult } from '@skaro/mcp-server';
 import { background } from './background/client';
 import { confirmSubmissionReceipt, recordSubmissionReceipt } from './task-submission-receipt';
+import { mayReissueUndispatched, REISSUE_UNDISPATCHED } from './operation-reissue';
 
 /** Reconcile only recorded outcomes. No shell, Git, model, acceptance or service executor runs here. */
 export async function reconcileTaskSubmission(
@@ -17,6 +19,8 @@ export async function reconcileTaskSubmission(
     };
   if (db.shell.projectScope && db.shell.projectScope !== scope.projectId)
     throw new Error('Submission recovery is outside verification scope');
+  const direct = inspectTaskTool(db, scope, 'submit_result', id);
+  if (direct) return direct;
   const op = db.coordination.getOperation(scope.projectId, id);
   if (
     !op ||
@@ -25,6 +29,18 @@ export async function reconcileTaskSubmission(
     (scope.kind === 'task' && scope.taskId !== op.subject.id)
   )
     return { text: 'The original submission is outside this conversation scope.', isError: true };
+  if (mayReissueUndispatched(op))
+    return {
+      text: REISSUE_UNDISPATCHED,
+      structuredContent: {
+        coordination: {
+          operationId: id,
+          state: op.state,
+          dispatched: false,
+          freshCallAllowed: true,
+        },
+      },
+    };
   let receipt = confirmSubmissionReceipt(db, scope.projectId, id);
   if (!receipt && op.state === 'uncertain') {
     const peers = db.coordination.matching(scope.projectId, op.action, op.inputHash);
@@ -55,7 +71,7 @@ export async function reconcileTaskSubmission(
   }
   if (!receipt)
     return {
-      text: 'No authoritative terminal receipt was found. The original operation remains fenced; missing result data or checked criteria alone do not prove its outcome. No operation was retried.',
+      text: 'No terminal receipt was found for this submission. Checked criteria alone do not prove its outcome. Inspect the actual result and continue independent work.',
       isError: true,
       structuredContent: {
         coordination: { operationId: id, state: op.state, retryAllowed: false },
@@ -68,6 +84,7 @@ export async function reconcileTaskSubmission(
       queued.action !== op.action ||
       queued.subject.kind !== 'task' ||
       queued.subject.id !== op.subject.id ||
+      queued.inputHash !== op.inputHash ||
       queued.state !== 'queued' ||
       queued.createdAt < op.createdAt
     )

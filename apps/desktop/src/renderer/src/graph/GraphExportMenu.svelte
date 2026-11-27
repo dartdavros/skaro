@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ActionMenu, IconButton, t } from '@skaro/ui';
   import { Download } from '@lucide/svelte';
+  import { onDestroy } from 'svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import type { GraphExportSource } from './export-graph';
   import type { ProjectGraph } from './data.svelte';
@@ -16,15 +17,17 @@
     surface?: HTMLElement | undefined;
   } = $props();
   let busy = $state(false);
+  const lifetime = new AbortController();
+  onDestroy(() => lifetime.abort());
   const disabled = $derived(!surface || !model.snapshot?.nodes || !model.page || model.loading);
   async function run(format: 'png' | 'gexf', all: boolean): Promise<void> {
     if (!surface || busy || disabled || (!all && !live)) return;
     busy = true;
     model.error = '';
     try {
-      await exportGraph(model, live, format, all, surface);
+      await exportGraph(model, live, format, all, surface, lifetime.signal);
     } catch (error) {
-      model.error = exportError(error);
+      if (!lifetime.signal.aborted) model.error = exportError(error);
     } finally {
       busy = false;
     }

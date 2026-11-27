@@ -1,6 +1,5 @@
 import { interruptForNewInputs } from './task-input-interruption';
 import type { MessageInput } from '../shared/ipc';
-import { requireCoordinationDispatch } from './coordination-dispatch';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
 import { CommandCancelled } from './owner-commands';
@@ -12,9 +11,10 @@ import { requireTaskNotStopping } from './builtin-task-stop';
 import { hasOwnerCommand } from './owner-command-history';
 import { QuestionAnswers } from './question-answers';
 import { isTaskParked } from '@skaro/core';
-import { resumeParkedTask } from './task-park';
-import { beginTransition, currentTransition, transitionPhase } from './task-lifecycle-journal';
-import { reportLifecycleConflict } from './task-lifecycle-conflict';
+import { currentTransition } from './task-lifecycle-journal';
+import { ownerResumeText, prepareTaskFollowUp } from './task-follow-up';
+import { FINISH } from './task-wait-card';
+import { confirmTaskResume } from './task-resume';
 
 /** One serialized delivery owns the old turn, its queue slot and its replacement. */
 export async function deliverTaskInput(
@@ -51,9 +51,16 @@ export async function deliverTaskInput(
   let inputs = await readTaskInputs(ctx, active);
   current();
   const task = inputs.artifacts.tasks.find((item) => item.id === taskId);
-  if (task && original.resumeTask && !isTaskParked(task.status)) throw new CommandCancelled();
-  if (task && isTaskParked(task.status) && (original.internal || !original.resumeTask))
-    throw new CommandCancelled();
+  const parked = !!task && isTaskParked(task.status);
+  if (parked && original.internal) throw new CommandCancelled();
+  const execution = ctx.continuation.execution(active);
+  const answers = new QuestionAnswers(ctx.deps.db, `active.${run.id}`);
+  const pendingAnswer = answers.pending(active.timeline.state);
+  if (pendingAnswer?.resumeTask && original.commandId === pendingAnswer.commandId) {
+    original = prepareTaskFollowUp(execution, original, active.timeline.state, pendingAnswer);
+  } else if ((parked || original.resumeTask) && !original.commandId?.startsWith('answers-')) {
+    original = prepareTaskFollowUp(execution, original, active.timeline.state, pendingAnswer);
+  }
   const turn = active.timeline.state.turns.at(-1);
   let replacing = false;
   let checkpointed = false;
@@ -63,24 +70,17 @@ export async function deliverTaskInput(
       turn &&
       !turn.outcome &&
       (previous.version !== inputs.snapshot.version ||
-        new QuestionAnswers(ctx.deps.db, `active.${run.id}`).replacesNativeTurn(
-          original.commandId,
-          turn.id,
-        ))
+        answers.replacesNativeTurn(original.commandId, turn.id))
     ) {
       replacing = true;
       if (active.afterTurn) throw new Error('Task completion is already in progress');
       // Persist the original, still sealed input. Startup recovery validates dispatch and the
       // native echo before dispatching. Stop clears this same inbox.
       if (original.commandId) {
-        ctx.startup.begin(
-          projectId,
-          taskId,
-          [original],
-          requireCoordinationDispatch(ctx.deps.db, projectId).revision,
-          undefined,
-          { runId: run.id, commandId: original.commandId },
-        );
+        ctx.startup.begin(projectId, taskId, [original], undefined, {
+          runId: run.id,
+          commandId: original.commandId,
+        });
         checkpointed = true;
       }
       ctx.deps.db.addEvent(projectId, 'task_inputs_interrupt_requested', {
@@ -114,6 +114,28 @@ export async function deliverTaskInput(
     current();
     const session = await ctx.sessions.attach(active);
     current();
+    const subject = inputs.artifacts.tasks.find((item) => item.id === taskId);
+    const finish =
+      original.resumeTask &&
+      original.commandId?.startsWith('answers-') &&
+      execution.matchesFollowUp(original.commandId, FINISH);
+    const instruction = finish ? FINISH : ownerResumeText(original, pendingAnswer);
+    const resumed = !!(
+      subject &&
+      original.commandId &&
+      instruction &&
+      (isTaskParked(subject.status) || original.resumeTask) &&
+      (await confirmTaskResume(
+        ctx,
+        active,
+        subject,
+        inputs.snapshot.version,
+        original.commandId,
+        instruction,
+        current,
+      ))
+    );
+    current();
     assertQuestionMessageAllowed(active.timeline.state, input.internal);
     const latest = active.timeline.state.turns.at(-1);
     if (replacing && latest && !latest.outcome)
@@ -121,34 +143,15 @@ export async function deliverTaskInput(
     const message = taskAgentInput(
       input,
       active.timeline.state,
-      ctx.continuation.execution(active).read().followUp?.commandId === input.commandId &&
-        !!input.commandId,
+      execution.read().followUp?.commandId === input.commandId && !!input.commandId,
+      resumed,
     );
     // Once a native write is possible the durable owner-command receipt governs uncertain delivery.
     ctx.startup.consumeTransition(projectId, taskId, run.id, original.commandId);
     active.inputTransition = undefined;
-    const resume =
-      task && isTaskParked(task.status)
-        ? beginTransition(ctx.deps.db, projectId, {
-            id: taskId,
-            run: run.id,
-            target: 'in_progress',
-            from: task.status,
-            commandId: original.commandId,
-          })
-        : undefined;
     if (!latest || latest.outcome) await session.send(message, input.commandId);
     else await session.steer(message, input.commandId);
-    if (resume && transitionPhase(ctx.deps.db, projectId, resume, 'confirmed')) {
-      current();
-      await resumeParkedTask(ctx, projectId, taskId, current);
-      transitionPhase(ctx.deps.db, projectId, resume, 'settled');
-      ctx.changed(projectId, taskId);
-    }
   } catch (error) {
-    const pending = currentTransition(ctx.deps.db, projectId, taskId);
-    if (pending?.target === 'in_progress' && pending.commandId === original.commandId)
-      await reportLifecycleConflict(ctx, projectId, pending);
     if (replacing) {
       if (
         checkpointed &&

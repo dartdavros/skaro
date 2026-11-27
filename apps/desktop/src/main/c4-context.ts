@@ -14,6 +14,7 @@ import { readTaskC4Scope } from './c4-task-scope';
 import { c4CoverageProblems } from './c4-coverage';
 import { readC4Diagnostic } from './c4-tool-diagnostic';
 import { taskC4Base } from './c4-task-base';
+import { preservesC4Implementation } from './c4-preservation';
 
 /** Send the model once, authored document text and durable proposal facts, without repeated preview payloads. */
 export async function c4Context(
@@ -25,7 +26,7 @@ export async function c4Context(
   readPackage?: (id: string) => Promise<C4Package>,
 ): Promise<ToolResult> {
   context.invalidate();
-  const artifacts = await context.load();
+  const artifacts = await context.load(true);
   const documents = [...(await readC4Documents(context.root))];
   const baseHead =
     scope.kind === 'task'
@@ -40,13 +41,20 @@ export async function c4Context(
   const taskScope = baseHead
     ? await readTaskC4Scope(checkout, baseHead, artifacts, scope.taskId ?? '')
     : undefined;
+  const preserved =
+    baseHead && taskScope
+      ? await preservesC4Implementation(checkout, baseHead, taskScope, {
+          root: context.root,
+          model: artifacts.c4,
+        })
+      : false;
   return {
     text: JSON.stringify(
       {
         schema: C4_MODEL_SCHEMA,
         model: artifacts.c4 ?? null,
         problems: taskScope
-          ? c4CoverageProblems(artifacts, scope.taskId ?? '', undefined, taskScope)
+          ? c4CoverageProblems(artifacts, scope.taskId ?? '', undefined, taskScope, preserved)
           : artifacts.c4Problems,
         ...(taskScope
           ? {

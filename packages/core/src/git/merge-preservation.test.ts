@@ -2,7 +2,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { git, GitService } from './git.ts';
-import { repo, service, write, commit, taskWithChange, log } from './git-test-support.ts';
+import { dir, repo, service, write, commit, taskWithChange, log } from './git-test-support.ts';
+import { isBaseCheckedOut, recoverBasePublications } from './merge-base-worktree.ts';
 
 const options = (branch = 'skaro/T-001-a') => ({
   base: 'main',
@@ -12,6 +13,69 @@ const options = (branch = 'skaro/T-001-a') => ({
 });
 const diff = async (staged = false) =>
   (await git(repo, ['diff', ...(staged ? ['--cached'] : []), '--binary'])).stdout;
+
+it('publishes an accepted result to an unoccupied base without changing the owner checkout', async () => {
+  await taskWithChange({ 'README.md': 'accepted result\n' });
+  await git(repo, ['switch', '-qc', 'owner-work']);
+  await commit(repo, 'owner branch tip', { 'owner.txt': 'owner commit\n' });
+  const tip = await service.head();
+  const base = await service.head('main');
+  await write(repo, 'README.md', 'owner staged\n');
+  await git(repo, ['add', 'README.md']);
+  await write(repo, 'README.md', 'owner unstaged\n');
+  const staged = await diff(true);
+  const unstaged = await diff();
+  const check = await service.checkMerge('main', 'skaro/T-001-a', true);
+  expect(check).toMatchObject({ isolatedBase: true, blockers: [] });
+  const merged = await service.merge({ ...options(), publishOffCheckout: true });
+  expect(merged.before).toBe(base);
+  expect(await service.head('main')).toBe(merged.commit);
+  expect((await git(repo, ['show', 'main:README.md'])).stdout).toBe('accepted result\n');
+  expect(await service.currentBranch()).toBe('owner-work');
+  expect(await service.head()).toBe(tip);
+  expect(await diff(true)).toBe(staged);
+  expect(await diff()).toBe(unstaged);
+  expect(await isBaseCheckedOut(repo, 'main')).toBe(false);
+  expect(
+    (await readdir(join(repo, '.git'))).filter((name) =>
+      name.startsWith('skaro-base-publication-'),
+    ),
+  ).toEqual([]);
+}, 30_000);
+
+it('leaves a base that another worktree checked out during verification untouched', async () => {
+  await taskWithChange({ 'feature.txt': 'ready\n' });
+  await git(repo, ['switch', '-qc', 'owner-work']);
+  const before = await service.head('main');
+  const linked = join(dir, 'owner-base');
+  await expect(
+    service.merge({
+      ...options(),
+      publishOffCheckout: true,
+      verify: async () => {
+        await service.createWorktree({ path: linked, branch: 'main', base: 'main' });
+        await write(linked, 'README.md', 'another owner edit\n');
+      },
+    }),
+  ).rejects.toThrow('The base branch changed');
+  expect(await service.head('main')).toBe(before);
+  expect(await isBaseCheckedOut(repo, 'main')).toBe(true);
+  expect(await readFile(join(linked, 'README.md'), 'utf8')).toBe('another owner edit\n');
+}, 30_000);
+
+it('releases an interrupted empty branch reservation without moving its published ref', async () => {
+  await git(repo, ['switch', '-qc', 'owner-work']);
+  const base = await service.head('main');
+  const reservation = join(repo, '.git', 'skaro-base-publication-interrupted');
+  await write(reservation, 'owner', String(process.pid));
+  await git(repo, ['worktree', 'add', '--no-checkout', '--', join(reservation, 'base'), 'main']);
+  await recoverBasePublications(repo, () => true);
+  expect(await isBaseCheckedOut(repo, 'main')).toBe(true);
+  await recoverBasePublications(repo, () => false);
+  expect(await isBaseCheckedOut(repo, 'main')).toBe(false);
+  expect(await service.head('main')).toBe(base);
+  expect(await service.currentBranch()).toBe('owner-work');
+}, 30_000);
 
 it('preserves separate staged and unstaged edits when two independent tasks merge concurrently', async () => {
   await taskWithChange({ 'one.txt': 'one\n' });

@@ -65,6 +65,24 @@ export class DbCommands extends DbTable {
       .all(owner)
       .map((row) => this.get(String(row['id']))!);
   }
+  /** Keep an unknown receipt in the journal after a newer owner instruction has replaced it. */
+  forDisplay(owner: string): OwnerCommand[] {
+    return this.db
+      .prepare(
+        `SELECT id FROM owner_commands
+       WHERE owner=? AND (
+         state IN ('accepted','delivering') OR
+         (state='uncertain' AND id=(
+           SELECT id FROM owner_commands
+           WHERE owner=? AND json_extract(args,'$[2].internal') IS NOT 1
+           ORDER BY rowid DESC LIMIT 1
+         ))
+       )
+       ORDER BY rowid DESC LIMIT 100`,
+      )
+      .all(owner, owner)
+      .map((row) => this.get(String(row['id']))!);
+  }
   hasOutstanding(owner: string): boolean {
     return !!this.db
       .prepare(

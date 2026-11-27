@@ -2,12 +2,14 @@
 
 import type { InteractionAnswer } from '@skaro/timeline';
 import { getContext, setContext } from 'svelte';
+import type { C4ApplicationOperation } from '../../../shared/c4-review';
 import type { FileDiff, MergeAction, ProposalAction } from '../../../shared/ipc';
 
 export interface FeedActions {
   readonly draftOwner?: string;
   responseAccepted?(id: string): boolean;
   architectureReview?(id: string): Promise<import('@skaro/core/c4-view').C4PackageReview>;
+  architectureApplication?(id: string, operation: C4ApplicationOperation): Promise<boolean>;
   architectureReviewDetail?(
     id: string,
     key: string,

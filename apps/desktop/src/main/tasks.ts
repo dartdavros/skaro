@@ -1,4 +1,4 @@
-import { recoverCoordinatorIncidents } from './coordinator-recovery';
+import { recoverTaskQueue } from './task-queue-recovery';
 import { taskUpdateBusy } from './task-update-activity';
 import { type ProjectArtifacts, type Task, type TaskStatus } from '@skaro/core';
 import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
@@ -30,7 +30,7 @@ import { builtinTaskAdmission } from './builtin-task-admission';
 import { submitTaskResult } from './task-submit';
 import { taskArchitectureEvent } from './task-architecture-events';
 import { requestTaskSecret } from './task-secret-input';
-import { resumeTaskExecution } from './task-resume';
+import { resumeTaskFromInstruction } from './task-resume';
 import { reportTaskBlocker } from './task-blocker-report';
 import { cancelTaskQuestion } from './question-cancel-handlers';
 import { prepareModelIncident, verifyModelIncident } from './incident-model-access';
@@ -38,10 +38,14 @@ import { prepareBuiltinTaskReview } from './builtin-task-review';
 import { setTaskBoardStatus } from './task-board-status';
 import { parkTask, type ParkedTaskStatus } from './task-park';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
+import { openTaskOwnerQuestion, type OwnerQuestion } from './owner-question-tool';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
 /** Public API: composes focused task-run services without owning their workflows. */
 export class TaskRuns {
+  askOwner(scope: SkaroScope, interaction: OwnerQuestion) {
+    return openTaskOwnerQuestion(this.engine, scope, interaction);
+  }
   cancelIntegrationQuestion(id: string, reason: string, scope: SkaroScope) {
     return this.engine.integrations.cancelQuestion(id, reason, scope);
   }
@@ -82,7 +86,6 @@ export class TaskRuns {
   projectChanged(projectId: string): void {
     this.engine.merges.coordinator.changed(projectId);
     this.catalog.invalidate(projectId);
-    this.engine.incidents.projectChanged(projectId);
   }
   scopedTool(scope: SkaroScope, action: () => Promise<ToolResult>): Promise<ToolResult> {
     return taskTool(this.engine, scope, action);
@@ -238,18 +241,9 @@ export class TaskRuns {
     return reportTaskBlocker(this.engine, reason, scope, details, operationId);
   }
   resumeTask(commandId: string, instruction: string, scope: SkaroScope): Promise<ToolResult> {
-    return taskTool(this.engine, scope, async () => {
-      const active = this.engine.requireActive(scope.projectId, scope.taskId!);
-      const task = await this.engine.project(scope.projectId).load();
-      if (!task.tasks.some((task) => task.id === scope.taskId && task.status === 'in_progress'))
-        return { text: 'Only an in-progress task can resume execution.', isError: true };
-      return resumeTaskExecution(
-        this.engine.continuation.execution(active),
-        active.timeline.state,
-        commandId,
-        instruction,
-      );
-    });
+    return taskTool(this.engine, scope, () =>
+      resumeTaskFromInstruction(this.engine, scope, commandId, instruction),
+    );
   }
   requestSecret(questions: import('@skaro/mcp-server').SecretQuestion[], scope: SkaroScope) {
     return requestTaskSecret(this.engine, questions, scope);
@@ -264,8 +258,8 @@ export class TaskRuns {
     return taskTool(this.engine, scope, () => configureTaskEnvironment(this.engine, args, scope));
   }
 
-  recoverCoordination() {
-    return recoverCoordinatorIncidents(this.engine);
+  recoverTaskQueue() {
+    return recoverTaskQueue(this.engine);
   }
   decisionSources(projectId: string, only?: string) {
     return taskDecisionSources(this.engine, projectId, only);

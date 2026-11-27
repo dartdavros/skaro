@@ -6,7 +6,18 @@ import { readC4Model } from './shape.ts';
 import { validateC4Model } from './validate.ts';
 import { C4Problems, c4Issue, type C4Issue } from './diagnostics.ts';
 import { validateC4Documents } from './documents.ts';
-import { readC4File } from './io.ts';
+import { readC4File, withC4Lock } from './io.ts';
+
+export async function readAcceptedC4Model(root: string): Promise<C4Model | null> {
+  return withC4Lock(root, async () => {
+    const source = await readC4File(root, C4_MODEL_PATH);
+    if (source === null) return null;
+    const model = readC4Model(JSON.parse(source));
+    const errors = validateC4Model(model);
+    if (errors.length) throw new Error(errors.join('; '));
+    return model;
+  });
+}
 
 export async function readC4Documents(root: string): Promise<Map<string, string>> {
   const docs = new Map<string, string>();

@@ -19,6 +19,7 @@ import { ChatPlanningContinuation } from './chat-planning-continuation';
 import { ChatPlanDecisions } from './chat-plan-decisions';
 import { ChatPlanReview } from './chat-plan-review';
 import { ChatTaskReplans } from './chat-task-replans';
+import { ChatWorkflowRecovery } from './chat-workflow-recovery';
 export class ChatEngine {
   closing = false;
   readonly live = new Map<string, LiveChat>();
@@ -40,6 +41,7 @@ export class ChatEngine {
   readonly planDecisions = new ChatPlanDecisions(this);
   readonly planReview = new ChatPlanReview(this);
   readonly replans = new ChatTaskReplans(this);
+  readonly workflowRecovery = new ChatWorkflowRecovery(this);
   readonly deps: Deps;
   constructor(deps: Deps) {
     this.deps = deps;

@@ -21,7 +21,7 @@ export async function runSemanticC4Review(
   packageText?: string,
 ) {
   const context = ctx.project(job.projectId),
-    artifacts = await context.load();
+    artifacts = await context.load(true);
   const task = artifacts.tasks.find((t) => t.id === job.taskId);
   if (!task) throw new Error('C4 review task disappeared');
   const settings = await ctx.views.withDefaults(

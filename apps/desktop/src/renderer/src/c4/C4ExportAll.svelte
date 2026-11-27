@@ -4,11 +4,13 @@
   import type { C4Model } from '@skaro/core/c4-view';
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import { c4Png } from './export-png';
+  import { useC4Layout } from './layout';
   import { exportName } from '../diagram-export/image';
   import '../diagram-export/i18n';
   let { model, onerror }: { model: C4Model; onerror: (error: string) => void } = $props();
   let busy = $state(false),
     button: HTMLSpanElement;
+  const layout = useC4Layout();
   async function exportAll(): Promise<void> {
     if (busy) return;
     busy = true;
@@ -20,13 +22,15 @@
       token = await window.skaro.invoke('diagram.pickFolder');
       if (!token) return;
       for (const [index, view] of snapshot.views.entries()) {
-        const bytes = await c4Png(snapshot, view, button);
+        const bytes = await c4Png(snapshot, view, button, layout);
+        layout.signal.throwIfAborted();
         const name = `${exportName(String(index + 1).padStart(3, '0'), view.id, view.state, `r${snapshot.revision}`)}.png`;
         await window.skaro.invoke('diagram.saveInFolder', token, name, bytes);
         saved++;
       }
     } catch {
-      onerror(t('export.batchFailed', { n: saved, reason: t('export.c4Failed') }));
+      if (!layout.signal.aborted)
+        onerror(t('export.batchFailed', { n: saved, reason: t('export.c4Failed') }));
     } finally {
       if (token) await window.skaro.invoke('diagram.closeFolder', token).catch(() => undefined);
       busy = false;

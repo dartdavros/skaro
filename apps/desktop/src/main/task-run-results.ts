@@ -4,7 +4,7 @@ import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@s
 import { AUTO_MERGE_KEY } from '../shared/ipc';
 import { errorText } from './session-log';
 import { taskSections } from './task-body';
-import { type MergeInteraction } from './task-merge-card';
+import { mergeToolReply, type MergeInteraction } from './task-merge-card';
 import { mergedTaskReply, unmetReply } from './task-merge-result';
 import { key, findTask } from './task-run-helpers';
 import { ActiveRun } from './task-run-model';
@@ -12,7 +12,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { lastAgentText } from './task-merges';
 import { updateSubject } from './task-subject';
 import { IntegrationPending } from './integration-model';
-import { completeInPlaceC4 } from './c4-in-place';
+import { completeInPlace } from './complete-in-place';
 import { writeTaskResult } from './task-result-write';
 import { serializeTaskMutation } from './project-task-mutations';
 
@@ -94,10 +94,19 @@ export class TaskRunResults {
     if (!active || active.run.id !== scope.runId) {
       return { text: 'This session is no longer the current run of the task.', isError: true };
     }
+    const context = this.ctx.project(active.projectId);
     try {
-      return await this.ctx.merges.request(args, active, this.ctx.project(active.projectId));
+      return await this.ctx.merges.request(args, active, context);
     } catch (error) {
       if (error instanceof IntegrationPending) return { text: error.message };
+      if (error instanceof MergeBlockedError) {
+        if (error.check.blockers.includes('conflicts')) {
+          await this.ctx.mergeActions.conflicted(active, error.check.conflicts);
+          return { text: active.conflictOrder! };
+        }
+        const card = await this.ctx.merges.showCard(active, context);
+        if (card) return { text: mergeToolReply(card) };
+      }
       return { text: errorText(error), isError: true };
     }
   }
@@ -136,7 +145,7 @@ export class TaskRunResults {
       return 'open';
     }
     if (!active.run.worktree || !active.run.branch) {
-      await completeInPlaceC4(this.ctx.deps.db, context, taskId, active.run.id, {
+      await completeInPlace(this.ctx.deps.db, context, taskId, active.run.id, {
         message: active.commitMessage,
         summary: active.mergeSummary,
         verification: active.verification,
@@ -230,7 +239,7 @@ export class TaskRunResults {
     }
     const context = this.ctx.project(active.projectId);
     const write = () => writeTaskResult(this.ctx, active, args, beforeWrite);
-    const prepared = beforeWrite ? await serializeTaskMutation(context, write) : await write();
+    const prepared = await serializeTaskMutation(context, write);
     if (prepared.kind === 'reply') return prepared.reply;
     const { task, met } = prepared;
     active.mergeSummary = args.summary;

@@ -2,6 +2,7 @@ import type { CoordinationOperation } from '@skaro/core';
 import type { ToolResult } from '@skaro/mcp-server';
 import { CoordinationPending } from './project-coordinator-errors';
 import { coordinationHash } from './project-coordinator-request';
+import { mayReissueUndispatched, REISSUE_UNDISPATCHED } from './operation-reissue';
 
 /** Reporting a blocker must remain available while unrelated task controls await reconciliation. */
 export function coordinationToolScopeKey(
@@ -40,11 +41,15 @@ export async function coordinationToolReceipt(
 
 function pendingReceipt(operation: string, saved: CoordinationOperation): ToolResult {
   const pending = ['queued', 'dispatching'].includes(saved.state);
-  const nextStep =
-    saved.state === 'uncertain'
+  const mayReissue = mayReissueUndispatched(saved);
+  const nextStep = mayReissue
+    ? REISSUE_UNDISPATCHED
+    : saved.state === 'uncertain'
       ? operation === 'submit_result'
         ? `Call reconcile_task_submission with operation_id="${saved.id}" to inspect the original durable outcome. Do not repeat submit_result or infer acceptance from checked criteria.`
-        : 'Read the actual project state and saved evidence before any new action. The controller must reconcile the outcome; do not repeat an unknown effect or claim it succeeded.'
+        : operation === 'merge_task' && saved.subject.kind === 'task'
+          ? `Call reconcile_task_merge with operation_id="${saved.id}" to inspect the merge and Git evidence. Continue independent work.`
+          : 'Inspect the affected action and saved evidence. Continue independent work without repeating the unknown effect.'
       : pending
         ? 'The handler has no confirmed completion receipt. Read the project context for the actual result; do not claim the requested effect or repeat this operation blindly.'
         : 'Inspect the saved evidence and actual project state. This receipt grants no retry permission.';
@@ -63,6 +68,7 @@ function pendingReceipt(operation: string, saved: CoordinationOperation): ToolRe
         state: saved.state,
         evidence: saved.evidence,
         retryAllowed: false,
+        ...(mayReissue ? { dispatched: false, freshCallAllowed: true } : {}),
       },
     },
   };

@@ -2,11 +2,11 @@ import { expect, it } from 'vitest';
 import { AppDb } from '@skaro/core';
 import { TaskStartup } from './task-startup';
 import { TaskExecution } from './task-execution';
-import { requireStartupGeneration } from './task-startup-generation';
+import { requireStartupGeneration, requireTaskStartup } from './task-startup-generation';
 import { setCoordinationDispatch } from './coordination-dispatch';
-import { requireIntegrationDispatch, renewIntegrationDispatch } from './integration-dispatch-fence';
+import { requireIntegrationDispatch } from './integration-dispatch-fence';
 
-it('retains queued input while fencing legacy and old generations, and requires fresh owner intent after off/on', () => {
+it('keeps task execution, queued input and integration independent of project chat dispatch; Stop invalidates the task epoch', () => {
   const db = AppDb.open(':memory:');
   try {
     const project = db.addProject({ name: 'Observed repository', path: process.cwd() });
@@ -28,48 +28,23 @@ it('retains queued input while fencing legacy and old generations, and requires 
       state: 'resolving',
     });
     startup.begin(project.id, run.taskId, [input], 0);
-    requireStartupGeneration(
-      db,
-      project.id,
-      startup.read(project.id, run.taskId)?.dispatchRevision,
-    );
+    const queued = startup.read(project.id, run.taskId)!;
     const off = setCoordinationDispatch(db, project.id, false, 0);
-    setCoordinationDispatch(db, project.id, true, off.revision);
-    expect(() => requireIntegrationDispatch(db, project.id, 'observed-candidate')).toThrow(
-      'suspended',
-    );
-    renewIntegrationDispatch(db, project.id, 'observed-candidate');
+    requireTaskStartup(db, startup, project.id, run.taskId);
     requireIntegrationDispatch(db, project.id, 'observed-candidate');
-    expect(execution.read().enabled).toBe(false);
-    expect(execution.resume('owner-request', input.text)).toBe(false);
+    expect(execution.read().enabled).toBe(true);
     expect(startup.read(project.id, run.taskId)?.inputs).toEqual([input]);
-    expect(() =>
-      requireStartupGeneration(
-        db,
-        project.id,
-        startup.read(project.id, run.taskId)?.dispatchRevision,
-      ),
-    ).toThrow('suspended');
-    expect(() =>
-      startup.begin(
-        project.id,
-        run.taskId,
-        [{ commandId: 'new', text: 'New bounded instruction' }],
-        2,
-      ),
-    ).toThrow('earlier dispatch');
+    setCoordinationDispatch(db, project.id, true, off.revision);
+    startup.delivered(project.id, run.taskId);
+    requireTaskStartup(db, startup, project.id, run.taskId, queued);
     startup.cancel(project.id, run.taskId);
-    startup.begin(
-      project.id,
-      run.taskId,
-      [{ commandId: 'fresh', text: 'New bounded instruction' }],
-      2,
+    expect(() => requireTaskStartup(db, startup, project.id, run.taskId, queued)).toThrow(
+      'cancelled',
     );
-    requireStartupGeneration(
-      db,
-      project.id,
-      startup.read(project.id, run.taskId)?.dispatchRevision,
-    );
+    expect(startup.cancellationEpoch(project.id, run.taskId)).toBe(queued.taskEpoch! + 1);
+    expect(startup.read(project.id, run.taskId)).toBeUndefined();
+    startup.begin(project.id, run.taskId, [{ commandId: 'fresh', text: input.text }]);
+    requireTaskStartup(db, startup, project.id, run.taskId);
     startup.begin(project.id, 'legacy', [input]);
     expect(() =>
       requireStartupGeneration(

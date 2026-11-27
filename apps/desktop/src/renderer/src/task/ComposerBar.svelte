@@ -10,7 +10,9 @@
   let {
     controller,
     running,
+    canStop,
     stopping = false,
+    stopLabel = t('composer.stop'),
     agent,
     model,
     modelTip,
@@ -26,7 +28,9 @@
   }: {
     controller: ComposerController;
     running: boolean;
+    canStop: boolean;
     stopping?: boolean;
+    stopLabel?: string | undefined;
     agent: AgentId;
     model: string;
     modelTip?: string;
@@ -117,27 +121,26 @@
     <Icon name="chevronDown" size={11} stroke={2.4} />
   </button>
 
-  {#if !running || controller.has}
+  {#if controller.has || !canStop}
     <button
       type="button"
       class="send"
       class:ready={controller.has}
-      disabled={!controller.has || controller.sending}
+      disabled={!controller.has || controller.sending || stopping}
       data-tip={running ? t('composer.queue') : t('composer.send')}
       aria-label={running ? t('composer.queue') : t('composer.send')}
       onclick={() => void controller.send()}
     >
       <Icon name="send" size={14} stroke={2.3} />
     </button>
-  {/if}
-  {#if running && !controller.has}
+  {:else}
     <button
       type="button"
       class="stop"
       disabled={stopping}
       aria-busy={stopping}
-      data-tip={t('composer.stop')}
-      aria-label={t('composer.stop')}
+      data-tip={stopLabel}
+      aria-label={stopLabel}
       onclick={onstop}
     >
       <svg width="16" height="16" viewBox="0 0 16 16"

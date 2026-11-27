@@ -9,3 +9,18 @@ export function requireStartupGeneration(db: AppDb, project: string, revision: n
     );
   requireCoordinationDispatch(db, project, revision);
 }
+
+export function requireTaskStartup(
+  db: AppDb,
+  startup: import('./task-startup').TaskStartup,
+  project: string,
+  task: string,
+  saved = startup.read(project, task),
+) {
+  if (saved?.taskEpoch === undefined) {
+    requireStartupGeneration(db, project, saved?.dispatchRevision);
+    return;
+  }
+  if (saved.taskEpoch !== startup.cancellationEpoch(project, task))
+    throw new Error('Queued input was cancelled by the owner');
+}

@@ -5,6 +5,7 @@ export const CLOSE_TO_TRAY_DEFAULT = true;
 export const HELP_CENTER_URL = 'https://help.skaro.dev/';
 
 export interface ShellEvents {
+  'window.hidden': undefined;
   'app.navigate': 'settings' | 'updates';
   'app.shutdown': ShutdownState;
 }

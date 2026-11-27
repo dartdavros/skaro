@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { feedRows, type ProposedTask } from '@skaro/timeline';
 import { PlanJournal } from './chat-plan-journal';
-import { dialoguePlan, planningWorkspace } from './chat-planning-test-workspace';
+import { dialoguePlan, openRecoveredChat, planningWorkspace } from './chat-planning-test-workspace';
 
 const task = (ref: string, deps: string[] = []): ProposedTask => ({
   ref,
@@ -25,7 +25,7 @@ it('combines legacy interleaved milestone cards into one confirmation, preservin
       );
     }
     w.engine.proposals.addProposal(w.live, { type: 'plan', tasks: [task('unrelated')] }, 'pending');
-    await w.engine.views.open(w.live.projectId, w.live.chat.id);
+    await openRecoveredChat(w.engine, w.live);
     const cards = w.engine.proposals.proposals(w.live);
     expect(cards).toHaveLength(2);
     const plan = cards[0]!;
@@ -68,7 +68,7 @@ it('consolidates a partially accepted legacy plan and preserves created tasks an
         },
       },
     });
-    await w.engine.views.open(w.live.projectId, w.live.chat.id);
+    await openRecoveredChat(w.engine, w.live);
     const plan = w.engine.proposals.proposals(w.live)[0]!;
     expect(w.engine.proposals.proposals(w.live)).toHaveLength(1);
     expect(plan.state).toBe('pending');
@@ -85,7 +85,7 @@ it('consolidates a partially accepted legacy plan and preserves created tasks an
       ['privacy', []],
       ['draft', ['T-002']],
     ]);
-    await w.engine.views.open(w.live.projectId, w.live.chat.id);
+    await openRecoveredChat(w.engine, w.live);
     expect((await w.store.load()).tasks).toHaveLength(3);
   } finally {
     await w.close();
@@ -103,7 +103,7 @@ it('restores the full saved plan when only the first milestone had been proposed
       { type: 'plan', planKey: plan.key, tasks: tasks.slice(0, 8) },
       'pending',
     );
-    await w.engine.views.open(w.live.projectId, w.live.chat.id);
+    await openRecoveredChat(w.engine, w.live);
     const cards = w.engine.proposals.proposals(w.live);
     expect(cards).toHaveLength(1);
     expect(cards[0]!.proposal.type === 'plan' && cards[0]!.proposal.tasks.length).toBe(75);
@@ -131,7 +131,7 @@ it('recovers the rest of a saved plan when every card in the first batch was alr
       created.push({ id: t.id, title: t.title, ref: task.ref });
     }
     new PlanJournal(w.engine, w.live).save({ item: { ...old, result: { tasks: created } } });
-    await w.engine.views.open(w.live.projectId, w.live.chat.id);
+    await openRecoveredChat(w.engine, w.live);
     const review = w.engine.proposals.proposals(w.live)[0]!;
     expect(review.state).toBe('pending');
     expect(review.result?.tasks).toHaveLength(8);

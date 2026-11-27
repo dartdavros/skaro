@@ -11,7 +11,7 @@ import { modelEffort, modelName } from '../feed/format';
 import { TaskSession } from './session.svelte';
 import { TaskStartState } from './task-start-state';
 import { watchOwnerCommands } from '../feed/command-events';
-import type { TaskLifecycleAction } from './task-lifecycle-actions';
+import { createTaskStopControl } from './task-stop-control.svelte';
 
 export function createTaskController(
   projectId: string,
@@ -59,6 +59,18 @@ export function createTaskController(
   const settings = $derived(view?.settings);
   const started = $derived((timeline?.items.length ?? 0) > 0 || view?.queued === true);
   const running = $derived(timeline !== undefined && timeline.status !== 'idle');
+  const task = $derived(session.controls.task ?? view?.task);
+  const stopControl = createTaskStopControl({
+    task: () => task,
+    stage: () => !!view?.stage,
+    running: () => running,
+    stop: () =>
+      guard(() =>
+        view?.stage
+          ? window.skaro.invoke('task.interrupt', projectId, taskId)
+          : session.park('stopped'),
+      ),
+  });
   $effect(() => {
     startRequest.update({
       hasFeed:
@@ -129,7 +141,12 @@ export function createTaskController(
     );
 
   async function send(input: MessageInput): Promise<void> {
-    if (!openQuestion && openApproval?.kind === 'approval') {
+    if (
+      task?.stage !== 'stopped' &&
+      task?.stage !== 'paused' &&
+      !openQuestion &&
+      openApproval?.kind === 'approval'
+    ) {
       return respond(openApproval.id, { kind: 'approval', choice: 'deny', message: input.text });
     }
     await deliver({ ...input, supersededQuestions: session.questionReferences(timeline) });
@@ -146,12 +163,6 @@ export function createTaskController(
   }
 
   const respond = dispatch.respond;
-  async function lifecycle(action: TaskLifecycleAction): Promise<void> {
-    if (action === 'start') return start();
-    if (action === 'resume') return deliver({ text: t('task.resume.message'), resumeTask: true });
-    const status = action === 'pause' ? 'paused' : 'stopped';
-    await guard(() => session.park(status));
-  }
 
   async function saveSettings(next: AgentSettings): Promise<void> {
     await guard(() => window.skaro.invoke('task.setSettings', projectId, taskId, next));
@@ -224,7 +235,7 @@ export function createTaskController(
     session,
     send,
     start,
-    lifecycle,
+    stopControl,
     saveSettings,
     setPermission,
     stopEnvironmentReview: () =>

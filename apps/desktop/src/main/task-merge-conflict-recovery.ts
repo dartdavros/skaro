@@ -3,11 +3,6 @@ import { AUTO_MERGE_KEY } from '../shared/ipc';
 import { CompletionStore, criteriaRevision } from './completion-store';
 import { acceptedResult, assertResultUnchanged } from './completion-results';
 import { assertPublicationDependencies } from './completion-dependencies';
-import {
-  dispatchState,
-  migrationBlocksDispatch,
-  requireCoordinationDispatch,
-} from './coordination-dispatch';
 import { IntegrationPending } from './integration-model';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
@@ -19,7 +14,7 @@ export async function resolveRepeatedTaskConflict(ctx: TaskRunEngine, active: Ac
   const { projectId, taskId } = active;
   const { db } = ctx.deps;
   if (!new CompletionStore(db, projectId).conflicts().includes(taskId)) return false;
-  const dispatch = requireCoordinationDispatch(db, projectId);
+  const epoch = active.deliveryEpoch;
   const context = ctx.project(projectId);
   try {
     await ctx.merges.coordinator.serialized(projectId, async () => {
@@ -29,7 +24,12 @@ export async function resolveRepeatedTaskConflict(ctx: TaskRunEngine, active: Ac
         throw new Error('The result is no longer awaiting merge.');
       const result = await acceptedResult(db, context, task);
       await assertResultUnchanged(context, result);
-      requireCoordinationDispatch(db, projectId, dispatch.revision);
+      if (
+        ctx.closing ||
+        active.deliveryEpoch !== epoch ||
+        ctx.active.get(projectId + '\n' + taskId) !== active
+      )
+        throw new Error('The task changed during conflict recovery');
       const candidate = await prepareConflictCandidate(
         ctx.integrations.service,
         context,
@@ -73,18 +73,12 @@ export async function checkTaskMergeConflict(ctx: TaskRunEngine, row: Coordinati
 export async function handoffStalledMerge(ctx: TaskRunEngine, active: ActiveRun, task: Task) {
   const { projectId, taskId } = active;
   const { db } = ctx.deps;
-  if (!ctx.deps.coordinators) return false;
   const store = new CompletionStore(db, projectId);
   if (!store.conflicts().includes(taskId)) return false;
-  const dispatch = dispatchState(db, projectId);
-  if (!dispatch.enabled || migrationBlocksDispatch(db, projectId)) return false;
   const execution = ctx.continuation.execution(active);
   const intent = execution.intentVersion();
   const current = () =>
-    !ctx.closing &&
-    execution.read().enabled &&
-    execution.intentVersion() === intent &&
-    dispatchState(db, projectId).revision === dispatch.revision;
+    !ctx.closing && execution.read().enabled && execution.intentVersion() === intent;
 
   const context = ctx.project(projectId);
   const accepted = store.result(taskId);

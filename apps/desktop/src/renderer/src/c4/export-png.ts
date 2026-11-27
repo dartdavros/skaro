@@ -3,7 +3,8 @@ import { toCanvas } from 'html-to-image';
 import type { C4Model, C4View } from '@skaro/core/c4-view';
 import { EXPORT_MAX_PIXELS, EXPORT_MAX_SIDE } from '../../../shared/diagram-export';
 import { graphBounds } from './viewport';
-import { layoutC4 } from './layout';
+import type { createC4Layout } from './layout';
+import { waitForC4 } from './lifetime';
 import C4ExportScene from './C4ExportScene.svelte';
 import { canvasBlob, exportHost, imageSize, painted, pngBytes } from '../diagram-export/image';
 
@@ -11,8 +12,10 @@ export async function c4Png(
   model: C4Model,
   view: C4View,
   source: HTMLElement,
+  layout: ReturnType<typeof createC4Layout>,
 ): Promise<Uint8Array> {
-  const graph = await layoutC4(model, view);
+  const { signal } = layout;
+  const graph = await layout.layout(model, view);
   const bounds = graphBounds(graph);
   const width = Math.ceil(bounds.width),
     height = Math.ceil(bounds.height);
@@ -27,42 +30,40 @@ export async function c4Png(
     Math.max(1, Math.floor(height * scale)),
     1,
   );
-  await document.fonts.ready;
+  await waitForC4(document.fonts.ready, signal);
+  signal.throwIfAborted();
   const host = exportHost(source, width, height);
   const scene = document.createElement('div');
   scene.style.cssText = 'position:relative;width:100%;height:100%;overflow:hidden';
   host.append(scene);
   let component: ReturnType<typeof mount> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('c4-export-render')), 15000);
-      try {
+    await waitForC4(
+      new Promise<void>((resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('c4-export-render')), 15000);
         component = mount(C4ExportScene, {
           target: scene,
-          props: {
-            graph,
-            onready: () => {
-              clearTimeout(timer);
-              resolve();
-            },
-          },
+          props: { graph, onready: resolve },
         });
-      } catch (error) {
-        clearTimeout(timer);
-        reject(error);
-      }
-    });
-    await painted();
-    const canvas = await toCanvas(scene, {
-      width,
-      height,
-      canvasWidth: output.width,
-      canvasHeight: output.height,
-      pixelRatio: 1,
-      skipAutoScale: true,
-      filter: (element) =>
-        !(element instanceof Element) || !element.classList.contains('svelte-flow__attribution'),
-    });
+      }),
+      signal,
+    );
+    clearTimeout(timer);
+    await painted(signal);
+    const canvas = await waitForC4(
+      toCanvas(scene, {
+        width,
+        height,
+        canvasWidth: output.width,
+        canvasHeight: output.height,
+        pixelRatio: 1,
+        skipAutoScale: true,
+        filter: (element) =>
+          !(element instanceof Element) || !element.classList.contains('svelte-flow__attribution'),
+      }),
+      signal,
+    );
     const context = canvas.getContext('2d');
     if (!context) throw new Error('c4-export-render');
     if (graph.nodes.length) {
@@ -99,6 +100,7 @@ export async function c4Png(
     context.fillRect(0, 0, width, height);
     return pngBytes(await canvasBlob(canvas));
   } finally {
+    clearTimeout(timer);
     if (component) await unmount(component);
     host.remove();
   }

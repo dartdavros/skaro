@@ -1,13 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { prepareC4Package, c4Hash, type C4Package, type ProjectArtifacts } from '@skaro/core';
-import type { ProjectContext } from './projects';
 import { candidateC4Model, type C4Candidate } from './c4-candidate';
 
 /** Architecture realization is committed and published by the same Git transaction as its code. */
 export async function prepareC4Publication(
-  context: ProjectContext,
-  artifacts: ProjectArtifacts,
+  root: string,
+  artifacts: Pick<ProjectArtifacts, 'c4' | 'architecture'>,
   realizedIds: string[],
   candidate?: C4Candidate,
 ): Promise<C4Package | undefined> {
@@ -18,7 +17,7 @@ export async function prepareC4Publication(
   if (!realized.length && JSON.stringify(model) === JSON.stringify(artifacts.c4)) return undefined;
   model.revision++;
   // Current code paths are checked in the merged candidate, where all task results coexist.
-  return prepareC4Package(context.root, {
+  return prepareC4Package(root, {
     title: artifacts.c4.title,
     summary: realized.length
       ? `Published implementation of ${realized.join(', ')}`

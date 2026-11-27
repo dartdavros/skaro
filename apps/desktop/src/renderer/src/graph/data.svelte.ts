@@ -16,6 +16,7 @@ import { mergePage } from './page-data';
 import { GraphAnalysis } from './analysis.svelte';
 import { saveGraphView, restoreGraphView, restoreGraphSelection } from './view-state.svelte';
 import { activateScenario } from './scenario-data';
+import { connectGraph } from './view-connection';
 
 export class ProjectGraph {
   readonly projectId: string;
@@ -40,7 +41,7 @@ export class ProjectGraph {
   saved?: GraphViewState;
   camera?: GraphViewState['camera'];
   positions: NonNullable<GraphViewState['positions']> = {};
-  private off?: () => void;
+  private connection?: ReturnType<typeof connectGraph>;
   private revision = 0;
   private disposed = false;
   private persistTimer?: ReturnType<typeof setTimeout>;
@@ -60,15 +61,13 @@ export class ProjectGraph {
     };
   }
   async start(): Promise<void> {
-    this.off = window.skaro.on('graph.changed', (status) => {
-      if (status.projectId === this.projectId && !this.disposed) {
-        if (this.initializing) this.pendingStatus = status;
-        else void this.receive(status);
-      }
+    this.connection = connectGraph(this.projectId, (status) => {
+      if (this.initializing) this.pendingStatus = status;
+      else void this.receive(status);
     });
     try {
       const [status, saved] = await Promise.all([
-        window.skaro.invoke('graph.status', this.projectId),
+        this.connection.open(),
         window.skaro.invoke('graph.view', this.projectId),
       ]);
       if (this.disposed) return;
@@ -113,7 +112,7 @@ export class ProjectGraph {
             expanded: this.expanded,
           }),
         ),
-        window.skaro.invoke('graph.model', this.projectId, scope),
+        window.skaro.invoke('graph.model', scope),
         window.skaro.invoke('graph.scenarios', scope),
       ]);
       if (serial !== this.revision || this.disposed) return;
@@ -292,7 +291,7 @@ export class ProjectGraph {
   dispose(): void {
     this.playback.pause();
     saveGraphView(this);
-    this.off?.();
+    this.connection?.close();
     this.disposed = true;
     ++this.revision;
     clearTimeout(this.persistTimer);

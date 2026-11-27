@@ -75,6 +75,8 @@ it('requires actionable distinct options with consequences and invalidates plans
         condition: 'owner-evidence' as const,
       },
     };
+    expect(incidentModelPlan(db, uncheckable)).toEqual(plan);
+    db.setSetting(incidentPlanKey(row.id), { ...plan, options: [] });
     expect(incidentModelPlan(db, uncheckable)).toBeUndefined();
     db.setSetting(incidentPlanKey(row.id), {
       ...plan,

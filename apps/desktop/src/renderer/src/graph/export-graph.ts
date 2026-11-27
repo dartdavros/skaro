@@ -38,7 +38,9 @@ export async function exportGraph(
   format: 'png' | 'gexf',
   all: boolean,
   surface: HTMLElement,
+  signal: AbortSignal,
 ): Promise<void> {
+  signal.throwIfAborted();
   if (!model.page || !model.snapshot || model.page.snapshotId !== model.snapshot.id)
     throw new Error('graph-snapshot-expired');
   if (!all && shown?.page !== model.page) throw new Error('Graph is not ready');
@@ -69,9 +71,9 @@ export async function exportGraph(
   // Reducers reference the live renderer: freeze their result before any asynchronous work.
   if (format === 'png' && !all) freezeStyle(capture);
   if (all) {
-    ({ page, snapshot } = await fullGraph(scope));
+    ({ page, snapshot } = await fullGraph(scope, signal));
     capture.graph = renderGraph(page, t('c4.planned'));
-    await layoutForExport(capture.graph);
+    await layoutForExport(capture.graph, signal);
     capture.active.clear();
     capture.past.clear();
     capture.selected = '';
@@ -79,8 +81,9 @@ export async function exportGraph(
   }
   const bytes =
     format === 'png'
-      ? await graphPng(capture, source, all)
+      ? await graphPng(capture, source, all, signal)
       : gexf(page, snapshot, capture.graph, all ? 'all' : 'current', phase);
+  signal.throwIfAborted();
   await window.skaro.invoke('diagram.save', {
     name: `${exportName('graph', all ? 'all' : 'view', snapshot.id)}.${format}`,
     format,

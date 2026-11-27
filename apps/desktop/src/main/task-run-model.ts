@@ -13,6 +13,10 @@ import type { BuiltinTaskModels } from './builtin-task-models';
 import type { InputTurnBoundary } from './input-turn-boundary';
 
 export interface TaskRunDeps {
+  incidentHistory?: {
+    store: import('./incident-store').IncidentStore;
+    policy: import('./incident-policy').IncidentPolicy;
+  };
   coordinators?: import('./project-coordinators').ProjectCoordinators;
   db: AppDb;
   /** App data folder: runs/, worktrees/. */

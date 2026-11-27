@@ -1,7 +1,7 @@
 import type { FeedActions } from './context.svelte';
 import type { HistoryPage } from '../../../shared/history';
 
-/** History-backed content is read only when a corresponding existing viewer is opened. */
+/** Shared actions for history-backed feed cards. */
 export function historyActions(
   projectId: string,
   onerror: (error: string) => void,
@@ -15,6 +15,7 @@ export function historyActions(
   | 'architectureFile'
   | 'architectureContent'
   | 'architectureReview'
+  | 'architectureApplication'
   | 'architectureReviewDetail'
   | 'architectureReviewModel'
   | 'rememberHistoryPage'
@@ -24,6 +25,8 @@ export function historyActions(
     refreshHistory: onrefresh,
     rememberHistoryPage: onpage,
     architectureReview: (id) => window.skaro.invoke('c4.review', projectId, id),
+    architectureApplication: (id, operation) =>
+      window.skaro.invoke('c4.application', projectId, id, operation),
     architectureReviewDetail: (id, key) =>
       window.skaro.invoke('c4.reviewDetail', projectId, id, key),
     architectureReviewModel: (id, side) =>

@@ -4,6 +4,7 @@ import type { Projects } from './projects';
 import type { C4ProposalRecord } from './c4-service';
 import { writeC4TaskReview } from './c4-review-write';
 import { recordC4Diagnostic, c4ToolFailure } from './c4-tool-diagnostic';
+import { c4PackageBlocks } from './c4-package-policy';
 
 export async function legacyC4ServiceReview(
   deps: { db: AppDb; projects: Projects; changed(project: string): void },
@@ -21,8 +22,7 @@ export async function legacyC4ServiceReview(
       scope,
       async () =>
         (await records()).some(
-          (r) =>
-            r.package.task?.id === scope.taskId && ['pending', 'accepted'].includes(r.item.state),
+          (r) => r.package.task?.id === scope.taskId && c4PackageBlocks(deps.db, r, scope.runId!),
         ),
     );
     recordC4Diagnostic(deps.db, scope, null);

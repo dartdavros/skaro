@@ -1,3 +1,4 @@
+import { isAuditChat } from './c4-audit-admission';
 import type { Handlers } from './ipc';
 import { taskControlView } from './task-control-view';
 import { c4ProtocolHandlers } from './c4-protocol-handlers';
@@ -27,11 +28,11 @@ export function sessionHandlers(
   | 'history.page'
   | 'history.find'
   | 'history.copy'
+  | 'c4.model'
   | 'c4.files'
   | 'c4.file'
   | 'c4.content'
-  | 'c4.decide'
-  | keyof import('../shared/c4-review').C4ReviewMethods
+  | keyof import('../shared/c4-review').C4PackageMethods
   | keyof import('../shared/task-catalog').TaskCatalogMethods
   | 'tasks.list'
   | 'tasks.run'
@@ -105,11 +106,18 @@ export function sessionHandlers(
       'history.copy': async (source, pending) => {
         await clipboard.writeText(await historyReads().copy(source, pending));
       },
+      'c4.model': (projectId) => c4.model(projectId),
       'c4.files': (projectId, itemId) => c4.files(projectId, itemId),
       'c4.file': (projectId, itemId, path, side) => c4.file(projectId, itemId, path, side),
       'c4.content': (projectId, itemId, side) => c4.content(projectId, itemId, side),
-      'c4.decide': (projectId, itemId, action, fingerprint) =>
-        c4.decide(projectId, itemId, action, fingerprint),
+      'c4.decide': async (projectId, itemId, action, fingerprint) => {
+        await c4.decide(projectId, itemId, action, fingerprint);
+      },
+      'c4.application': (projectId, itemId, operation) => {
+        if (operation !== 'check' && operation !== 'retry') throw new Error('Invalid C4 operation');
+        // The saved package owns recovery. A new project decision can reject an already answered card.
+        return c4.decide(projectId, itemId, operation);
+      },
       'c4.review': (projectId, itemId) => c4.reviewPackage(projectId, itemId),
       'c4.reviewDetail': (projectId, itemId, key) => c4.reviewDetail(projectId, itemId, key),
       'c4.reviewModel': (projectId, itemId, side) => c4.reviewModel(projectId, itemId, side),
@@ -164,10 +172,7 @@ export function sessionHandlers(
       'plan.placeTask': (projectId, taskId, milestoneId, index) =>
         plan.placeTask(projectId, taskId, milestoneId, index),
       'task.controls': (project, task) => taskControlView(db, services.projects.get(project), task),
-      'task.open': async (projectId, taskId, options) => {
-        await c4.restore({ kind: 'task', projectId, taskId });
-        return runs.open(projectId, taskId, options);
-      },
+      'task.open': (projectId, taskId, options) => runs.open(projectId, taskId, options),
       'task.send': (projectId, taskId, input) => runs.send(projectId, taskId, input),
       'task.respond': (projectId, taskId, id, answer) =>
         runs.respond(projectId, taskId, id, answer),
@@ -188,10 +193,15 @@ export function sessionHandlers(
       'chats.page': (source, start) => chats.page(source, start),
       'chats.find': (source, id) => chats.find(source, id),
       'chats.defaults': (projectId) => chats.defaults(projectId),
-      'chat.open': async (projectId, chatId, options) => {
-        await c4.restore({ kind: 'project_chat', projectId, chatId });
-        return chats.open(projectId, chatId, options);
-      },
+      'chat.open': (projectId, chatId, options) =>
+        chats.open(
+          projectId,
+          chatId,
+          options,
+          isAuditChat(db, chatId)
+            ? () => c4.restore({ kind: 'project_chat', projectId, chatId })
+            : undefined,
+        ),
       'chat.create': (projectId, settings, input) => chats.create(projectId, settings, input),
       'chat.send': (projectId, chatId, input) => chats.send(projectId, chatId, input),
       'chat.respond': (projectId, chatId, id, answer) =>
@@ -201,15 +211,16 @@ export function sessionHandlers(
         chats.setSettings(projectId, chatId, settings),
       'chat.archive': (projectId, chatId, archived) => chats.archive(projectId, chatId, archived),
       'chat.clear': (projectId, chatId) => chats.clear(projectId, chatId),
-      'chat.proposal': (projectId, chatId, itemId, action) =>
-        itemId.startsWith('skaro-c4-') && action.action !== 'revert'
-          ? c4.decide(
-              projectId,
-              itemId,
-              action.action,
-              action.action === 'apply' ? action.fingerprint : undefined,
-            )
-          : chats.proposal(projectId, chatId, itemId, action),
+      'chat.proposal': async (projectId, chatId, itemId, action) => {
+        if (itemId.startsWith('skaro-c4-') && action.action !== 'revert')
+          await c4.decide(
+            projectId,
+            itemId,
+            action.action,
+            action.action === 'apply' ? action.fingerprint : undefined,
+          );
+        else await chats.proposal(projectId, chatId, itemId, action);
+      },
     },
     coordinators,
     db,

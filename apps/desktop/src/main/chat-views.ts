@@ -3,7 +3,6 @@ import { ownerDispatchPending } from './session-dispatch-pending';
 import { type ChatRecord } from '@skaro/core';
 import type { ChatSettings, ChatSummary, ChatView } from '../shared/ipc';
 import { lastKey } from './chat-settings-helpers';
-import { serializeChatMutation } from './chat-mutations';
 import { retireChatHistories } from './chat-memory';
 import { QuestionAnswers } from './question-answers';
 import { presentationState } from './timeline-presentation';
@@ -86,11 +85,6 @@ export class ChatViews {
     void retireChatHistories(this.ctx, chatId).catch((error: unknown) =>
       console.error('Chat history retirement:', error),
     );
-    await serializeChatMutation(live, async () => {
-      await this.ctx.replans.recover(live);
-      await this.ctx.planReview.consolidate(live);
-      await this.ctx.planDecisions.drain(live);
-    });
     const read = options?.paged
       ? await historyReads().sync(owner, live.seq, live.timeline.state)
       : undefined;

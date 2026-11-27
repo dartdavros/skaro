@@ -13,6 +13,7 @@ import { assertPublicationDependencies } from './completion-dependencies';
 import { publishWithLocalChanges } from './completion-local-publication';
 import { assertLocalIntegration } from './integration-local-changes';
 import { retryLocalIntegration } from './completion-local-retry';
+import { currentMergeOperation } from './merge-operation-context';
 
 export type { CompletionHooks } from './completion-hooks';
 import type { CompletionHooks } from './completion-hooks';
@@ -224,7 +225,13 @@ export class CompletionCoordinator {
             op.base === artifacts.config.baseBranch &&
             JSON.stringify(op.results.map((r) => r.head)) ===
               JSON.stringify(results.map((r) => r.head)),
-        ) ?? store.create(artifacts.config.baseBranch, results, artifacts.config.merge.strategy);
+        ) ??
+      store.create(
+        artifacts.config.baseBranch,
+        results,
+        artifacts.config.merge.strategy,
+        !candidate && results.length === 1 ? currentMergeOperation(projectId, target) : undefined,
+      );
     const text =
       message?.trim() ||
       (stage
@@ -259,7 +266,6 @@ export class CompletionCoordinator {
             operation,
             text,
             this.hooks.integrations,
-            this.hooks.deps.db,
           );
         } finally {
           this.mergingNow.delete(projectId);

@@ -16,6 +16,27 @@ interface Link extends Omit<Reply, 'state'> {
 }
 const key = (project: string, id: string) => `c4.owner-reply.${project}.${id}`;
 
+export function c4ReplyRecoveryIds(db: AppDb, project: string): string[] {
+  const prefix = key(project, '');
+  const ids = new Set(
+    db.coordination
+      .pending(project)
+      .flatMap((operation) =>
+        operation.state === 'uncertain' &&
+        operation.subject.kind === 'decision' &&
+        operation.action === 'ipc.c4.decide'
+          ? [operation.subject.id]
+          : [],
+      ),
+  );
+  for (const recordKey of db.settings.keysWithPrefix(prefix)) {
+    const link = db.getSetting<Link | undefined>(recordKey, undefined, { strict: true });
+    const receipt = link && db.getSetting<Reply | undefined>(link.key, undefined, { strict: true });
+    if (receipt?.state === 'uncertain') ids.add(recordKey.slice(prefix.length));
+  }
+  return [...ids];
+}
+
 /** The exact original answer is linked before dispatch; recovery never manufactures consent. */
 export function linkC4DecisionReply(
   db: AppDb,

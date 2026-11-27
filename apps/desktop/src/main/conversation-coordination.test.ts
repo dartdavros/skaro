@@ -5,24 +5,23 @@ import { ProjectCoordinators } from './project-coordinators';
 import { coordinationHash, coordinationRequest } from './project-coordinator-request';
 import { sessionCommand, sessionCommandScope } from './session-command-catalogue';
 
-it('registers and replays a conversation while an actual uncertain submission retains the project mutation fence', async () => {
+it('registers a conversation and runs an unrelated task mutation after an interrupted merge', async () => {
   const db = AppDb.open(':memory:');
   try {
     const project = db.addProject({ name: 'Observed Skaro', path: process.cwd() });
     const controller = new ProjectCoordinators(db);
-    const blocked = db.coordination.accept(
-      coordinationRequest({
-        id: randomUUID(),
-        projectId: project.id,
-        action: 'mcp.submit_result',
-        source: { kind: 'worker', id: 'observed-run' },
-        subject: { kind: 'task', id: 'T-188' },
-        mode: 'mutation',
-        scopeKey: 'project',
-        expectedVersion: 0,
-        inputHash: coordinationHash('observed-input'),
-      }),
-    );
+    const merge = {
+      id: randomUUID(),
+      projectId: project.id,
+      action: 'mcp.merge_task',
+      source: { kind: 'worker' as const, id: 'observed-run' },
+      subject: { kind: 'task' as const, id: 'T-020' },
+      mode: 'mutation' as const,
+      scopeKey: 'project',
+      expectedVersion: 0,
+      inputHash: coordinationHash('observed-input'),
+    };
+    const blocked = db.coordination.accept(coordinationRequest(merge));
     db.coordination.claim(project.id, blocked.id, {
       expectedRevision: blocked.revision,
       claimId: randomUUID(),
@@ -75,6 +74,20 @@ it('registers and replays a conversation while an actual uncertain submission re
     expect(repeated.id).toBe(created.id);
     expect(registrations).toBe(1);
     expect(db.coordination.get(project.id)?.version).toBe(1);
+    await expect(
+      controller.execute(merge, () => {
+        throw new Error('An interrupted merge must not be dispatched again');
+      }),
+    ).rejects.toHaveProperty('operation.state', 'uncertain');
+    const submission = {
+      ...merge,
+      id: randomUUID(),
+      action: 'mcp.submit_result',
+      subject: { kind: 'task' as const, id: 'T-024' },
+      expectedVersion: 1,
+    };
+    await expect(controller.execute(submission, () => 'accepted')).resolves.toBe('accepted');
+    expect(db.coordination.getOperation(project.id, submission.id)?.state).toBe('succeeded');
     expect(db.coordination.getOperation(project.id, blocked.id)?.state).toBe('uncertain');
   } finally {
     db.close();

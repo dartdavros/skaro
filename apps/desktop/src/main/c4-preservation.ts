@@ -10,6 +10,22 @@ export interface C4Preservation {
   existing?: C4ExistingSource[];
 }
 
+/** Open questions still apply to any change that could alter behavior or realize planned work. */
+export async function preservesC4Implementation(
+  root: string,
+  base: string,
+  scope: C4TaskScope,
+  baseline: { root: string; model?: C4Model },
+  realized: string[] = [],
+) {
+  return (
+    !!baseline.model?.questions.length &&
+    scope.kind === 'implementation' &&
+    !realized.length &&
+    !!(await inspectC4Preservation(root, base, scope, baseline))
+  );
+}
+
 /** Only exact Git blob moves plus exact textual path replacements preserve existing behavior. */
 export async function inspectC4Preservation(
   root: string,

@@ -3,6 +3,8 @@ import { AppDb } from '@skaro/core';
 import { ProjectCoordinators } from './project-coordinators';
 import { OwnerCommands } from './owner-commands';
 import { coordinationHash } from './project-coordinator-request';
+import { OwnerCommandCoordination } from './owner-command-coordination';
+import { registerOwnerOrigin } from './owner-command-provenance';
 
 // SQLite ownership/receipt metadata only. No native process, backend or runtime stop is fabricated.
 it('requires current verified native teardown before releasing an unknown writer and admits a fresh request only afterward', async () => {
@@ -44,6 +46,22 @@ it('requires current verified native teardown before releasing an unknown writer
     ),
   ).rejects.toThrow();
   db.commands.update(command.id, 'uncertain');
+  const next = {
+    ...command,
+    id: 'fresh-task-command',
+    args: [project, 'bounded-owner', { text: 'Continue', commandId: 'fresh-task-command' }],
+  };
+  registerOwnerOrigin(db, next);
+  db.commands.accept(next);
+  await new OwnerCommandCoordination(db, coordinators, process.cwd()).deliver(next, async () => {
+    db.commands.update(next.id, 'delivered');
+  });
+  expect(db.commands.get(next.id)?.state).toBe('delivered');
+  expect(db.commands.get(command.id)?.state).toBe('uncertain');
+  expect(db.coordination.getOperation(project, `owner-command:${command.id}`)?.state).toBe(
+    'uncertain',
+  );
+
   const ids = commands.captureStop(project, 'bounded-owner'),
     proof = { kind: 'run' as const, id: run.id, version: 2 };
   expect(ids).toContain(command.id);
