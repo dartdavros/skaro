@@ -85,6 +85,7 @@ export interface Methods
     GraphMethods,
     DiagramExportMethods,
     C4ReviewMethods {
+  'c4.model': (projectId: string) => import('@skaro/core/c4-view').C4Model | null;
   'c4.files': (projectId: string, itemId: string) => string[];
   'c4.file': (projectId: string, itemId: string, path: string, side: 'before' | 'after') => string;
   'session.remember': (key: string, view: ChatView | TaskView) => void;

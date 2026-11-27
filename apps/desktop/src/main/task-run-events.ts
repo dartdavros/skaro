@@ -1,4 +1,5 @@
 import { taskTimelineRuntime } from './task-runtime-state';
+import { taskC4WaitPolicy } from './c4-package-policy';
 import { currentActivity, persistsAfterTurn, type TimelineEvent } from '@skaro/timeline';
 import { errorText } from './session-log';
 import { FLUSH_MS, key } from './task-run-helpers';
@@ -100,7 +101,7 @@ export class TaskRunEvents {
       state.turns.at(-1)?.outcome !== 'done' ||
       state.turns.some((turn) => !turn.outcome) ||
       state.interactions.some((item) => item.kind === 'question') ||
-      awaitsDecision(state) ||
+      awaitsDecision(state, taskC4WaitPolicy(this.ctx.deps.db, active.projectId, active.run.id)) ||
       this.ctx.queuedInputs.get(key(active.projectId, active.taskId))?.length
     )
       return;
@@ -188,6 +189,7 @@ export class TaskRunEvents {
           ? 'running'
           : 'queued'
         : undefined,
+      taskC4WaitPolicy(this.ctx.deps.db, active.projectId, active.run.id),
     );
     // After a failed turn the agent stays idle: "failed" holds until it works again.
     const current = this.ctx.deps.db.getTaskRuntime(active.projectId).get(active.taskId)?.state;

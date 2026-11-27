@@ -120,6 +120,8 @@ export interface BackgroundMethods
     path: string,
   ) => Promise<import('@skaro/core').C4DocumentSnapshot>;
   'c4.list': (projectId: string, ownerId?: string) => C4ProposalRecord[];
+  'c4.recoverable': (projectId: string, replyIds: string[]) => C4ProposalRecord[];
+  'c4.record': (projectId: string, itemId: string) => C4ProposalRecord | undefined;
   'c4.package': (projectId: string, itemId: string) => C4Package;
   'c4.save': (record: C4ProposalRecord) => void;
   'c4.prepare': (

@@ -3,9 +3,11 @@
   import C4Preview from './C4Preview.svelte';
   import C4List from './C4List.svelte';
   import C4GalleryToolbar from './C4GalleryToolbar.svelte';
+  import { provideC4Layout } from './layout';
   import { Banner } from '@skaro/ui';
   import './i18n';
   let { model, onopen }: { model: C4Model; onopen: (viewId: string) => void } = $props();
+  provideC4Layout();
   let view = $state(localStorage.getItem('skaro.c4.gallery') === 'list' ? 'list' : 'grid');
   let kinds = $state<C4ViewKind[]>([]);
   let states = $state<C4State[]>([]);

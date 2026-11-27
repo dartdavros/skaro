@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ViewerModal, Select, Segmented, IconButton, Icon, Banner, t } from '@skaro/ui';
+  import { ViewerModal, Select, Segmented, IconButton, Icon, Banner, Button, t } from '@skaro/ui';
   import type { C4PackageReview } from '@skaro/core/c4-view';
   import { useFeed } from './context.svelte';
   import { architectureEntries } from './architecture-review';
@@ -12,6 +12,8 @@
   let error = $state('');
   let selected = $state('');
   let mode = $state<'changes' | 'before' | 'after'>('changes');
+  let diagram = $state<'before' | 'after'>();
+  $effect(() => window.skaro.on('window.hidden', () => (diagram = undefined)));
   $effect(() => {
     let current = true;
     void feed.architectureReview?.(itemId).then(
@@ -32,34 +34,61 @@
   const entries = $derived(review ? architectureEntries(review) : []);
 </script>
 
-<ViewerModal label={title} expanded {onclose}>
-  <div class="review-head">
-    <span class="review-title">{title}</span>
-    <IconButton tip={t('ui.close')} onclick={onclose}><Icon name="close" size={16} /></IconButton>
-  </div>
-  {#if error}<Banner kind="error" text={error} />{/if}
-  {#if review}
-    <div class="review-controls">
-      <Select
-        options={entries}
-        bind:value={selected}
-        label={t('c4.review.select')}
-        width="min(480px, 50vw)"
-      />
-      <Segmented
-        bind:value={mode}
-        options={(['changes', 'before', 'after'] as const).map((value) => ({
-          value,
-          label: t(`c4.review.${value}`),
-        }))}
-      />
+{#snippet diagramStatus(error?: string)}
+  <ViewerModal label={t('c4.review.diagram')} expanded onclose={() => (diagram = undefined)}>
+    <div class="review-loading">
+      {#if error}<Banner kind="error" text={error} />{:else}<LoadingIndicator />{/if}
     </div>
-    <div class="revision">
-      {t('c4.review.revision', { before: review.baseRevision, after: review.revision })}
+  </ViewerModal>
+{/snippet}
+
+{#if diagram && review}
+  {#await import('./ArchitectureReviewDiagram.svelte')}
+    {@render diagramStatus()}
+  {:then { default: ArchitectureReviewDiagram }}
+    <ArchitectureReviewDiagram
+      {itemId}
+      side={diagram}
+      {selected}
+      {review}
+      onclose={() => (diagram = undefined)}
+    />
+  {:catch reason}
+    {@render diagramStatus(String(reason))}
+  {/await}
+{:else}<ViewerModal label={title} expanded {onclose}>
+    <div class="review-head">
+      <span class="review-title">{title}</span>
+      <IconButton tip={t('ui.close')} onclick={onclose}><Icon name="close" size={16} /></IconButton>
     </div>
-    {#if selected}<ArchitectureReviewDetail {itemId} {selected} {mode} />{/if}
-  {:else if !error}<div class="review-loading"><LoadingIndicator /></div>{/if}
-</ViewerModal>
+    {#if error}<Banner kind="error" text={error} />{/if}
+    {#if review}
+      <div class="review-controls">
+        <Select
+          options={entries}
+          bind:value={selected}
+          label={t('c4.review.select')}
+          width="min(480px, 50vw)"
+        />
+        <Segmented
+          bind:value={mode}
+          options={(['changes', 'before', 'after'] as const).map((value) => ({
+            value,
+            label: t(`c4.review.${value}`),
+          }))}
+        />
+        {#if feed.architectureReviewModel}<Button
+            size="sm"
+            onclick={() => (diagram = mode === 'before' ? 'before' : 'after')}
+            >{t('c4.review.diagram')}</Button
+          >{/if}
+      </div>
+      <div class="revision">
+        {t('c4.review.revision', { before: review.baseRevision, after: review.revision })}
+      </div>
+      {#if selected}<ArchitectureReviewDetail {itemId} {selected} {mode} />{/if}
+    {:else if !error}<div class="review-loading"><LoadingIndicator /></div>{/if}
+  </ViewerModal>{/if}
 
 <style>
   .review-head {

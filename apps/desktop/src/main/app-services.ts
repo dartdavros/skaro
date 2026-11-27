@@ -265,7 +265,6 @@ export async function createServices(
   auditObserver.current = c4Audits;
   await startProjectWriters(commands, runs, chats, c4Audits);
 
-  graph.start();
   return {
     localVersions,
     memory,

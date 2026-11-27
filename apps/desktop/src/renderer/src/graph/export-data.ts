@@ -3,6 +3,7 @@ import { EXPORT_MAX_BYTES } from '../../../shared/diagram-export';
 
 export async function fullGraph(
   scope: GraphScope,
+  signal: AbortSignal,
 ): Promise<{ page: GraphPage; snapshot: GraphSnapshot }> {
   const nodes: GraphPage['nodes'] = [],
     edges: GraphPage['edges'] = [];
@@ -11,7 +12,9 @@ export async function fullGraph(
   for (const kind of ['nodes', 'edges'] as const) {
     let after: string | undefined;
     do {
+      signal.throwIfAborted();
       const result = await window.skaro.invoke('graph.exportPage', scope, kind, after);
+      signal.throwIfAborted();
       if (result.snapshot.id !== scope.snapshotId) throw new Error('graph-snapshot-expired');
       snapshot = result.snapshot;
       size += JSON.stringify(result.nodes).length + JSON.stringify(result.edges).length;

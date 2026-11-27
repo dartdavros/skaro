@@ -6,9 +6,11 @@
   import C4ViewerToolbar from './C4ViewerToolbar.svelte';
   import type { C4ViewerState } from './viewer-state.svelte';
   import { c4Png } from './export-png';
+  import { provideC4Layout } from './layout';
   import { exportName } from '../diagram-export/image';
   import '../diagram-export/i18n';
   let exporting = $state(false);
+  const layout = provideC4Layout();
   async function exportPng(): Promise<void> {
     if (!element || exporting) return;
     const model = viewer.model,
@@ -16,14 +18,15 @@
       source = element;
     exporting = true;
     try {
-      const bytes = await c4Png(model, view, source);
+      const bytes = await c4Png(model, view, source, layout);
+      layout.signal.throwIfAborted();
       await window.skaro.invoke('diagram.save', {
         name: `${exportName(model.title, view.id, view.state, `r${model.revision}`)}.png`,
         format: 'png',
         bytes,
       });
     } catch {
-      viewer.error = t('export.c4Failed');
+      if (!layout.signal.aborted) viewer.error = t('export.c4Failed');
     } finally {
       exporting = false;
     }

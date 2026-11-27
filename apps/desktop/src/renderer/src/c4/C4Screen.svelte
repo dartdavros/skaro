@@ -22,11 +22,10 @@
   onMount(() => {
     let disposed = false,
       revision = 0;
-    let hash: string | undefined;
     const read = async () => {
       const serial = ++revision;
       try {
-        const result = await window.skaro.invoke('graph.model', projectId);
+        const result = await window.skaro.invoke('c4.model', projectId);
         if (!disposed && serial === revision) {
           model = result;
           error = '';
@@ -36,11 +35,8 @@
       }
     };
     void read();
-    const off = window.skaro.on('graph.changed', (status) => {
-      if (status.projectId === projectId && status.snapshot && status.snapshot.c4Hash !== hash) {
-        hash = status.snapshot.c4Hash;
-        void read();
-      }
+    const off = window.skaro.on('project.changed', (change) => {
+      if (change.projectId === projectId) void read();
     });
     return () => {
       disposed = true;

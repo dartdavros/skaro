@@ -4,7 +4,7 @@ import type { BackgroundJob } from '../shared/background';
 
 const indexing = new Map<string, BackgroundJob>();
 
-/** Code indexing runs by itself on every change: the title bar shows each run and its outcome. */
+/** The title bar shows indexing requested by the open graph view. */
 export function reportGraph(status: GraphStatus, project: string): void {
   let job = indexing.get(status.projectId);
   if (status.phase === 'indexing') {

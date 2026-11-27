@@ -157,16 +157,12 @@ export function appHandlers(
     'projects.add': async (path) => {
       const folder = await inspectFolder(path);
       if (!folder.exists) throw new Error('folder not found');
-      const project = appState.addProject(path);
-      void graph.register(project.id).catch(() => undefined);
-      return project;
+      return appState.addProject(path);
     },
     'projects.create': async (parent, name) => {
       const path = await createFolder(parent, name);
       appState.setSetting('projects.parent', parent);
-      const project = appState.addProject(path);
-      void graph.register(project.id).catch(() => undefined);
-      return project;
+      return appState.addProject(path);
     },
     'projects.remove': async (id) => {
       appState.removeProject(id);
@@ -211,7 +207,6 @@ export function appHandlers(
       const folder = await inspectFolder(path);
       if (!folder.exists) throw new Error('folder not found');
       const project = appState.relocateProject(id, path);
-      void graph.register(id).catch(() => undefined);
       projects.forget(id);
       return project;
     },

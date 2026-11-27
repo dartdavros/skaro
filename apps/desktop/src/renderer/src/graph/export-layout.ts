@@ -1,18 +1,19 @@
 import LayoutWorker from '../graph-preview/layout.worker?worker';
 import type { PreviewGraph } from '../graph-preview/projection';
 
-export async function layoutForExport(graph: PreviewGraph): Promise<void> {
+export async function layoutForExport(graph: PreviewGraph, signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
   if (!graph.order) return;
   const worker = new LayoutWorker();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let abort: (() => void) | undefined;
   try {
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Graph export layout timeout')), 60000);
-      worker.onerror = () => {
-        clearTimeout(timer);
-        reject(new Error('Graph export layout failed'));
-      };
+      timer = setTimeout(() => reject(new Error('Graph export layout timeout')), 60000);
+      abort = () => reject(signal.reason);
+      signal.addEventListener('abort', abort, { once: true });
+      worker.onerror = () => reject(new Error('Graph export layout failed'));
       worker.onmessage = (event: MessageEvent<{ id: string; x: number; y: number }[]>) => {
-        clearTimeout(timer);
         try {
           if (event.data.length !== graph.order) throw new Error('Invalid graph export layout');
           for (const node of event.data) {
@@ -31,6 +32,8 @@ export async function layoutForExport(graph: PreviewGraph): Promise<void> {
       });
     });
   } finally {
+    if (abort) signal.removeEventListener('abort', abort);
+    clearTimeout(timer);
     worker.terminate();
   }
 }

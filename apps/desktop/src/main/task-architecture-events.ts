@@ -4,6 +4,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { taskC4Protocol } from './c4-protocol';
 import { queueOwnerMessage } from './owner-commands';
 import { taskRequestsInactive } from './task-decision-lifecycle';
+import { taskC4WaitPolicy } from './c4-package-policy';
 
 /** Preserve the existing C4 decision delivery while the facade composes task services. */
 export async function taskArchitectureEvent(
@@ -15,12 +16,22 @@ export async function taskArchitectureEvent(
   const active = await ctx.history.restore(scope.projectId, scope.taskId);
   if (!active) throw new Error('Architecture task history is unavailable');
   await ctx.history.drain(active);
+  if (item.proposal.type === 'architecture' && item.state === 'pending') {
+    const blocksTask = taskC4WaitPolicy(
+      ctx.deps.db,
+      scope.projectId,
+      scope.runId ?? active.run.id,
+      false,
+    )(item.id, item.proposal.packageId);
+    item = { ...item, proposal: { ...item.proposal, blocksTask } };
+  }
   const previous = active.timeline.state.items.find((i) => i.id === item.id);
   if (
     previous?.kind === 'proposal' &&
     previous.proposal.type === 'architecture' &&
     item.proposal.type === 'architecture' &&
     previous.proposal.packageId === item.proposal.packageId &&
+    previous.proposal.blocksTask === item.proposal.blocksTask &&
     previous.state === item.state &&
     previous.result?.error === item.result?.error &&
     previous.proposal.contentRef === item.proposal.contentRef
@@ -37,6 +48,16 @@ export async function taskArchitectureEvent(
   const task = (await context.load()).tasks.find((t) => t.id === scope.taskId);
   if (taskRequestsInactive(task) || (scope.runId && active.run.id !== scope.runId)) return;
   if (taskC4Protocol(ctx.deps.db, scope.projectId, active.run.id) === 'impact-v1') {
+    if (
+      item.proposal.type === 'architecture' &&
+      !taskC4WaitPolicy(
+        ctx.deps.db,
+        scope.projectId,
+        active.run.id,
+        false,
+      )(item.id, item.proposal.packageId)
+    )
+      return;
     const execution = ctx.continuation.execution(active);
     if (active.run.id === scope.runId && execution.read().enabled)
       queueOwnerMessage('task.send', scope.projectId, scope.taskId, {

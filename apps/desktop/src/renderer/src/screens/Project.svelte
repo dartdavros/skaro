@@ -37,7 +37,16 @@
   let limitsOpen = $state(false);
   let graphTarget = $state<{ elementId: string; viewId?: string }>();
   let c4Target = $state<{ viewId: string; elementId?: string }>();
+  let requestedDiagram = $state<'graph' | 'c4'>();
   let leaveSection: ((proceed: () => void) => void) | undefined;
+
+  $effect(() =>
+    window.skaro.on('window.hidden', () => {
+      requestedDiagram = undefined;
+      graphTarget = undefined;
+      c4Target = undefined;
+    }),
+  );
 
   function openDoc(path: string): void {
     doc = path;
@@ -56,7 +65,7 @@
   onDestroy(() => data.dispose());
 
   const current = $derived(
-    ['tasks', 'c4', 'graph', 'docs', 'plan', 'chat', 'params'].includes(section)
+    section === requestedDiagram || ['tasks', 'docs', 'plan', 'chat', 'params'].includes(section)
       ? section
       : 'tasks',
   );
@@ -67,6 +76,7 @@
   function go(id: string): void {
     const proceed = () => {
       if (id === 'tasks' || stageOpen) task = undefined;
+      requestedDiagram = id === 'graph' || id === 'c4' ? id : undefined;
       section = id;
     };
     if (section === 'docs' && leaveSection && id !== section) leaveSection(proceed);

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TimelineState } from '@skaro/timeline';
-  import { pendingProposals } from '../../../shared/feed-actions';
+  import { isBlockingTaskProposal, pendingProposals } from '../../../shared/feed-actions';
   import InteractionCard from './InteractionCard.svelte';
   import ProposalCard from './ProposalCard.svelte';
 
@@ -8,7 +8,9 @@
     timeline,
     mergeMessage = '',
   }: { timeline: TimelineState; mergeMessage?: string | undefined } = $props();
-  const proposals = $derived(pendingProposals(timeline.items));
+  const proposals = $derived(
+    pendingProposals(timeline.items).filter((item) => isBlockingTaskProposal(item)),
+  );
   const firstApproval = $derived(timeline.interactions.find((i) => i.kind === 'approval')?.id);
 </script>
 

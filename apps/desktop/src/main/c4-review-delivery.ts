@@ -7,6 +7,7 @@ import { queueOwnerMessage } from './owner-commands';
 import { TaskExecution } from './task-execution';
 import { requireC4ReviewEvidence } from './c4-review-evidence';
 import { publishC4ReviewNotice } from './c4-review-notice';
+import { c4ReviewedImplementationAligned } from './c4-semantic-result';
 
 /** Saved review first, then recoverable history/inbox delivery with stable identities. */
 export async function deliverC4Review(
@@ -22,12 +23,11 @@ export async function deliverC4Review(
   }
   await fresh();
   await requireC4ReviewEvidence(job);
+  const aligned = c4ReviewedImplementationAligned(job.verdict);
   if (job.packageId) {
-    const record = (await background(ctx.deps.dataDir, 'c4.list', job.projectId, job.taskId)).find(
-      (r) => r.item.id === job.packageId,
-    );
+    const record = await background(ctx.deps.dataDir, 'c4.record', job.projectId, job.packageId);
     if (!record) throw new Error('C4 proposal disappeared');
-    saveC4PackagePolicy(ctx.deps.db, record, job.id, job.verdict!.category !== 'optional');
+    saveC4PackagePolicy(ctx.deps.db, record, job.id, !aligned);
     await c4Packages(ctx.deps.db)!.publish(record);
   }
   await fresh();
@@ -43,10 +43,7 @@ export async function deliverC4Review(
       throw new Error('C4 continuation authority changed');
     const saved = store.get(job.id)!;
     if (saved.delivered) return;
-    if (
-      job.verdict!.implementation === 'aligned' &&
-      ['aligned', 'optional'].includes(job.verdict!.category)
-    )
+    if (aligned)
       queueOwnerMessage('task.send', job.projectId, job.taskId, {
         internal: true,
         commandId: `continue-c4-${job.id}`,

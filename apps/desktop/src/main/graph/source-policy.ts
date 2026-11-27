@@ -35,7 +35,7 @@ async function sourceInside(canonical: string, path: string): Promise<string> {
   if (!allowed(slash(inside))) throw new Error('Graph source resolves to an excluded file');
   return file;
 }
-export async function git(root: string, args: string[]): Promise<string> {
+export async function git(root: string, args: string[], signal?: AbortSignal): Promise<string> {
   try {
     return (
       await exec('git', ['-c', 'core.fsmonitor=false', '-C', root, ...args], {
@@ -43,9 +43,11 @@ export async function git(root: string, args: string[]): Promise<string> {
         timeout: 15_000,
         maxBuffer: 16 * 1024 * 1024,
         windowsHide: true,
+        signal,
       })
     ).stdout;
   } catch {
+    signal?.throwIfAborted();
     return '';
   }
 }
@@ -73,16 +75,18 @@ export interface Manifest {
 export async function scan(
   root: string,
   progress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<Manifest> {
   root = await realpath(root);
   const [tracked, head, gitDir] = await Promise.all([
-    git(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard']),
-    git(root, ['rev-parse', 'HEAD']),
-    git(root, ['rev-parse', '--absolute-git-dir']),
+    git(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], signal),
+    git(root, ['rev-parse', 'HEAD'], signal),
+    git(root, ['rev-parse', '--absolute-git-dir'], signal),
   ]);
   const skipped: Manifest['skipped'] = [];
   const paths = new Set(tracked.split('\0').filter(Boolean).map(slash));
   async function walk(directory: string, rules = ignore(), depth = 0): Promise<void> {
+    signal?.throwIfAborted();
     if (depth > 40 || paths.size > 30_000) {
       skipped.push({ path: directory, message: 'directory limit' });
       return;
@@ -164,6 +168,7 @@ export async function scan(
     done = 0;
   async function readSources(): Promise<void> {
     while (next < ordered.length) {
+      signal?.throwIfAborted();
       const path = ordered[next++]!;
       if (!allowed(path)) {
         skipped.push({ path, message: 'excluded by source policy' });

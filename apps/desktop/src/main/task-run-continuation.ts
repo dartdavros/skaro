@@ -3,6 +3,7 @@ import { TaskExecution } from './task-execution';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
 import { awaitsDecision } from './task-wait-card';
+import { taskC4WaitPolicy } from './c4-package-policy';
 import { key } from './task-run-helpers';
 import { c4ChangeHash } from './c4-fingerprint';
 import { checkoutKey } from './task-stage';
@@ -75,7 +76,7 @@ export class TaskRunContinuation {
       active.timeline.state.turns.at(-1)?.outcome === 'failed' ||
       active.timeline.state.status !== 'idle' ||
       active.timeline.state.interactions.some((interaction) => interaction.kind !== 'merge') ||
-      awaitsDecision(active.timeline.state)
+      awaitsDecision(active.timeline.state, taskC4WaitPolicy(this.ctx.deps.db, projectId, run.id))
     )
       return true;
     await this.ctx.scheduling.enqueue(projectId, task.id, {
@@ -94,6 +95,7 @@ export class TaskRunContinuation {
     if (!execution.read().enabled || task.status !== 'in_progress' || this.ctx.closing)
       return false;
     const state = active.timeline.state;
+    const blocksC4 = taskC4WaitPolicy(this.ctx.deps.db, active.projectId, active.run.id);
     const turn = state.turns.at(-1);
     if (!turn || turn.outcome !== 'done') return false;
     const available = () =>
@@ -103,7 +105,7 @@ export class TaskRunContinuation {
       state.turns.at(-1)?.id === turn.id &&
       state.status === 'idle' &&
       !state.interactions.some((interaction) => interaction.kind !== 'merge') &&
-      !awaitsDecision(state) &&
+      !awaitsDecision(state, blocksC4) &&
       !this.ctx.queuedInputs.get(key(active.projectId, active.taskId))?.length &&
       !this.ctx.startup.read(active.projectId, active.taskId)?.inputs.length;
     if (!available()) return true;

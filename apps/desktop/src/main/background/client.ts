@@ -98,7 +98,7 @@ export function background<M extends keyof BackgroundMethods>(
   ...args: Parameters<BackgroundMethods[M]>
 ): Promise<Awaited<ReturnType<BackgroundMethods[M]>>> {
   const lane =
-    method === 'c4.list'
+    method === 'c4.list' || method === 'c4.recoverable' || method === 'c4.record'
       ? 'c4-metadata'
       : method === 'models.usage'
         ? 'model-usage'

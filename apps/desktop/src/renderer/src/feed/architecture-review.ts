@@ -39,12 +39,14 @@ export function reviewedView(
   const change = review?.model.find((c) => c.key === key);
   const path = key.startsWith('document:') ? key.slice('document:'.length) : undefined;
   const bound = path && model.specifications.find((s) => s.path === path)?.views[0];
+  const affectedViews = new Set(review?.model.filter((c) => c.group === 'views').map((c) => c.id));
   return (
     model.views.find((v) => v.id === bound || (change?.group === 'views' && v.id === change.id))
       ?.id ??
     model.views.find(
       (v) => change && (v.elements.includes(change.id) || v.relationships.includes(change.id)),
     )?.id ??
+    model.views.find((v) => affectedViews.has(v.id))?.id ??
     model.views[0]!.id
   );
 }

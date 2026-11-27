@@ -8,7 +8,7 @@
   import C4EdgeView from './C4Edge.svelte';
   import C4CanvasTools from './C4CanvasTools.svelte';
   import type { C4Node, C4Edge, C4Graph } from './graph';
-  import { layoutC4 } from './layout';
+  import { useC4Layout } from './layout';
   import { graphBounds, selectedBounds, loadViewport, saveViewport, viewportKey } from './viewport';
   import '@xyflow/svelte/dist/style.css';
   import '../canvas-background.css';
@@ -39,6 +39,7 @@
     height = $state(0);
   const hasSize = $derived(width > 0 && height > 0);
   const flow = useSvelteFlow<C4Node, C4Edge>();
+  const layout = useC4Layout();
   const nodeTypes = { c4: C4NodeView },
     edgeTypes = { c4: C4EdgeView };
   const key = $derived(viewportKey(model, view.id));
@@ -51,7 +52,8 @@
     let stale = false;
     loading = true;
     error = '';
-    void layoutC4(currentModel, currentView)
+    void layout
+      .layout(currentModel, currentView)
       .then(async (placed) => {
         if (stale) return;
         graph = placed;

@@ -4,7 +4,7 @@
   import { Maximize2 } from '@lucide/svelte';
   import LoadingIndicator from '../LoadingIndicator.svelte';
   import type { C4Model, C4View } from '@skaro/core/c4-view';
-  import { layoutC4 } from './layout';
+  import { useC4Layout } from './layout';
   import C4PreviewSvg from './C4PreviewSvg.svelte';
   import { viewKindIcons } from './view-kinds';
   import './styles.css';
@@ -12,7 +12,8 @@
   let { model, view, onopen }: { model: C4Model; view: C4View; onopen: () => void } = $props();
   let root: HTMLElement;
   let visible = $state(false);
-  const placed = $derived(visible ? layoutC4(model, view) : undefined);
+  const layout = useC4Layout();
+  const placed = $derived(visible ? layout.layout(model, view) : undefined);
   onMount(() => {
     const observer = new IntersectionObserver(
       (entries) => {

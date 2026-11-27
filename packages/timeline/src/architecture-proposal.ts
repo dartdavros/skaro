@@ -8,6 +8,8 @@ export interface ArchitectureProposal {
   /** Legacy payloads only; new feed projections never carry package files. */
   files?: { path: string; before: string | null; after: string }[];
   task?: { id: string; runId: string };
+  /** Task execution does not wait for deferred architecture proposals. */
+  blocksTask?: boolean;
   before?: string;
   after?: string;
   /** Full immutable package is loaded only by the viewer/domain, never with every feed snapshot. */
@@ -34,5 +36,6 @@ export function architecturePresentation(
     baseRevision: proposal.baseRevision,
     contentRef,
     ...(proposal.task ? { task: proposal.task } : {}),
+    ...(proposal.blocksTask === undefined ? {} : { blocksTask: proposal.blocksTask }),
   };
 }

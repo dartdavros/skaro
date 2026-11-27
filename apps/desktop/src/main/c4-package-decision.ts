@@ -13,7 +13,7 @@ export const c4ApplicationFailureState = (physical: string | undefined) =>
 export async function decideC4Package(
   deps: C4ServiceDeps,
   api: {
-    records(project: string): Promise<C4ProposalRecord[]>;
+    record(project: string, id: string): Promise<C4ProposalRecord | undefined>;
     save(record: C4ProposalRecord): Promise<void>;
     review(project: string, id: string): Promise<C4PackageReview>;
   },
@@ -22,7 +22,7 @@ export async function decideC4Package(
   action: 'apply' | 'reject',
   fingerprint?: string,
 ) {
-  const record = (await api.records(projectId)).find((r) => r.item.id === id);
+  const record = await api.record(projectId, id);
   if (!record) throw new Error('Unknown C4 package');
   const protocol = c4RecordProtocol(record);
   if (record.item.state === 'applied' && action === 'apply') return;

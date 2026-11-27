@@ -1,5 +1,6 @@
 import type { Interaction, TimelineState } from '@skaro/timeline';
 import { taskSections, toggleCriterion } from './task-body';
+import { isBlockingTaskProposal, type TaskC4WaitPolicy } from '../shared/feed-actions';
 
 /** Skaro's own question about accepting unmet task criteria. */
 export const WAIT_CARD = 'skaro-wait-';
@@ -69,6 +70,11 @@ export function acceptedBody(body: string): string {
 }
 
 /** A pending proposal card (an architecture package, a plan) already asks the owner. */
-export function awaitsDecision(timeline: TimelineState): boolean {
-  return timeline.items.some((item) => item.kind === 'proposal' && item.state === 'pending');
+export function awaitsDecision(timeline: TimelineState, blocksC4?: TaskC4WaitPolicy): boolean {
+  return timeline.items.some(
+    (item) =>
+      item.kind === 'proposal' &&
+      item.state === 'pending' &&
+      isBlockingTaskProposal(item, blocksC4),
+  );
 }

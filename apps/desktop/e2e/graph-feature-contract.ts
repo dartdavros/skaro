@@ -37,7 +37,7 @@ export async function verifyGraphContract(page: Page, status: GraphStatus, accep
           break;
         }
       }
-      const model = await window.skaro.invoke('graph.model', status.projectId, scope);
+      const model = await window.skaro.invoke('graph.model', scope);
       const ref = (
         await window.skaro.invoke('graph.query', {
           ...scope,

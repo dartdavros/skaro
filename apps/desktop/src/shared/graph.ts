@@ -10,12 +10,14 @@ import type {
 } from '@skaro/core/graph-view';
 
 export interface GraphMethods {
+  'graph.open': (projectId: string, token: string) => GraphStatus;
+  'graph.close': (token: string) => void;
   'graph.status': (projectId: string) => GraphStatus;
   'graph.rebuild': (projectId: string) => GraphStatus;
   'graph.cancel': (projectId: string) => GraphStatus;
   'graph.query': (query: GraphQuery) => GraphPage;
   'graph.scenarios': (scope: GraphScope) => GraphScenario[];
-  'graph.model': (projectId: string, scope?: GraphScope) => C4Model | null;
+  'graph.model': (scope: GraphScope) => C4Model | null;
   'graph.source': (
     scope: GraphScope,
     ref: SourceRef,
@@ -24,5 +26,5 @@ export interface GraphMethods {
   'graph.saveView': (projectId: string, state: GraphViewState) => void;
 }
 export interface GraphEvents {
-  'graph.changed': GraphStatus;
+  'graph.changed': GraphStatus & { token: string };
 }

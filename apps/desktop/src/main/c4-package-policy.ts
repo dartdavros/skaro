@@ -2,6 +2,8 @@ import type { AppDb } from '@skaro/core';
 import type { C4ProposalRecord } from './c4-service';
 import { C4SemanticStore } from './c4-semantic-store';
 import { c4RecordProtocol } from './c4-record-protocol';
+import { taskC4Protocol } from './c4-protocol';
+import { c4ReviewedImplementationAligned } from './c4-semantic-result';
 
 interface Policy {
   version: 1;
@@ -26,8 +28,7 @@ export function saveC4PackagePolicy(
     job.projectId !== record.scope.projectId ||
     job.runId !== record.scope.runId ||
     job.packageId !== record.item.id ||
-    (!blocking &&
-      (job.verdict?.category !== 'optional' || job.verdict.implementation !== 'aligned'))
+    (!blocking && !c4ReviewedImplementationAligned(job.verdict))
   )
     throw new Error('C4 package classification requires its independent verified review');
   const policy: Policy = {
@@ -41,25 +42,45 @@ export function saveC4PackagePolicy(
 }
 export function c4PackageBlocks(db: AppDb, record: C4ProposalRecord, run: string) {
   if (!['pending', 'accepted'].includes(record.item.state)) return false;
-  if (c4RecordProtocol(record) !== 'impact-v1' || record.item.state === 'accepted') return true;
-  const policy = db.getSetting<Policy | undefined>(
-    key(record.scope.projectId, record.item.id),
-    undefined,
-    { strict: true },
+  if (record.item.state === 'accepted') return true;
+  if (c4RecordProtocol(record) !== 'impact-v1') return false;
+  return !nonblockingPackage(
+    db,
+    record.scope.projectId,
+    record.item.id,
+    record.package.id,
+    run,
+    true,
   );
+}
+
+export function taskC4WaitPolicy(db: AppDb, project: string, run: string, delivered = true) {
+  return (id: string, packageId: string) =>
+    taskC4Protocol(db, project, run) === 'impact-v1' &&
+    !nonblockingPackage(db, project, id, packageId, run, delivered);
+}
+
+function nonblockingPackage(
+  db: AppDb,
+  project: string,
+  id: string,
+  packageId: string,
+  run: string,
+  delivered: boolean,
+) {
+  const policy = db.getSetting<Policy | undefined>(key(project, id), undefined, { strict: true });
   const job = policy?.review ? new C4SemanticStore(db).get(policy.review) : undefined;
-  return !(
+  return (
     policy?.version === 1 &&
-    policy.packageId === record.package.id &&
+    policy.packageId === packageId &&
     policy.runId === run &&
-    policy.blocking === false &&
     job?.state === 'verified' &&
-    job.delivered &&
+    (!delivered || job.delivered) &&
     !!job.reviewer &&
-    job.projectId === record.scope.projectId &&
+    job.projectId === project &&
     job.runId === run &&
-    job.packageId === record.item.id &&
-    job.verdict?.category === 'optional' &&
-    job.verdict.implementation === 'aligned'
+    job.packageId === id &&
+    (policy.blocking === false || job.verdict?.category === 'aligned') &&
+    c4ReviewedImplementationAligned(job.verdict)
   );
 }

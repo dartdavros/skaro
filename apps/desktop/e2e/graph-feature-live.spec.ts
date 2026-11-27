@@ -13,7 +13,7 @@ const root = process.env.SKARO_GRAPH_VERIFY_ROOT;
 const evidence = process.env.SKARO_GRAPH_EVIDENCE;
 test.skip(!root || !evidence, 'Requires a genuine project and an evidence directory');
 
-test('background graph and native graph/C4 sections on the real Chatballs checkout', async () => {
+test('opens the native graph and C4 sections for the specified checkout', async () => {
   test.setTimeout(300_000);
   await mkdir(evidence!, { recursive: true });
   const fingerprint = async () =>
@@ -47,7 +47,11 @@ test('background graph and native graph/C4 sections on the real Chatballs checko
       });
       return project;
     }, root!);
-    // No graph or C4 section has been opened: indexing must already be running.
+    await page.reload();
+    expect(
+      await page.evaluate((id) => window.skaro.invoke('graph.status', id), project.id),
+    ).toMatchObject({ generation: 0, phase: 'cancelled' });
+    await page.getByRole('button', { name: 'Граф связей', exact: true }).click();
     await expect
       .poll(
         async () => {
@@ -83,14 +87,6 @@ test('background graph and native graph/C4 sections on the real Chatballs checko
       });
     }, status);
     await writeFile(join(evidence!, 'overview-data.json'), JSON.stringify(overview, null, 2));
-    await app.evaluate(
-      async ({ BrowserWindow }, index) => {
-        await BrowserWindow.getAllWindows()[0]!.webContents.loadFile(index);
-      },
-      join(__dirname, '../out/renderer/index.html'),
-    );
-    console.log(await page.locator('.project-nav').innerText());
-    await page.getByRole('button', { name: 'Граф связей', exact: true }).click();
     await page.locator('[data-project-graph]').waitFor({ timeout: 30_000 });
     for (const name of [
       'Архитектурное состояние',
@@ -197,6 +193,8 @@ test('background graph and native graph/C4 sections on the real Chatballs checko
     expect(await page.locator('[data-doc-tree]').filter({ hasText: 'Граф связей' }).count()).toBe(
       0,
     );
+    await page.getByRole('button', { name: 'Граф связей', exact: true }).click();
+    await page.locator('[data-project-graph] .sigma-host').waitFor();
     const cancelled = await page.evaluate(async (id) => {
       const before = await window.skaro.invoke('graph.status', id);
       await window.skaro.invoke('graph.rebuild', id);

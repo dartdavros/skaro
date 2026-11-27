@@ -27,6 +27,7 @@ export function sessionHandlers(
   | 'history.page'
   | 'history.find'
   | 'history.copy'
+  | 'c4.model'
   | 'c4.files'
   | 'c4.file'
   | 'c4.content'
@@ -105,6 +106,7 @@ export function sessionHandlers(
       'history.copy': async (source, pending) => {
         await clipboard.writeText(await historyReads().copy(source, pending));
       },
+      'c4.model': (projectId) => c4.model(projectId),
       'c4.files': (projectId, itemId) => c4.files(projectId, itemId),
       'c4.file': (projectId, itemId, path, side) => c4.file(projectId, itemId, path, side),
       'c4.content': (projectId, itemId, side) => c4.content(projectId, itemId, side),

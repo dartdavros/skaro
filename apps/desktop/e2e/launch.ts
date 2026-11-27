@@ -1,5 +1,6 @@
 import { _electron as electron, type ElectronApplication } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { once } from 'node:events';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { tmpdir } from 'node:os';
@@ -29,6 +30,29 @@ function packagedExecutable(): string {
 /** Without a ready agent the app stays on Settings, so project screens need installed agents. */
 export const noAgents = !process.env['SKARO_AGENTS_DIR'];
 export const noAgentsReason = 'SKARO_AGENTS_DIR with installed agents is not set';
+
+/** Exercise the actual shutdown path even when the live profile has a busy confirmation. */
+export async function closeLiveApp(app: ElectronApplication): Promise<void> {
+  const child = app.process();
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  let trace = '';
+  const capture = (chunk: Buffer) => (trace = (trace + chunk.toString()).slice(-4000));
+  child.stdout?.on('data', capture);
+  child.stderr?.on('data', capture);
+  try {
+    const exited = once(child, 'exit', { signal: AbortSignal.timeout(55_000) });
+    await app.evaluate(({ powerMonitor }) => {
+      setImmediate(() => powerMonitor.emit('shutdown'));
+    });
+    await exited;
+  } catch (error) {
+    if (trace) console.error(trace);
+    throw error;
+  } finally {
+    child.stdout?.off('data', capture);
+    child.stderr?.off('data', capture);
+  }
+}
 
 /** A fresh app data dir for one test. */
 export function tempUserData(): string {

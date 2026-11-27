@@ -25,16 +25,19 @@ export async function graphPng(
   capture: GraphCapture,
   source: HTMLElement,
   all: boolean,
+  signal: AbortSignal,
 ): Promise<Uint8Array> {
   const { graph, width, height } = capture;
   const size = imageSize(width, height);
+  await document.fonts.ready;
+  signal.throwIfAborted();
   // Render geometry at 2× as well; enlarging an existing bitmap would blur labels.
   const host = exportHost(source, size.width, size.height);
   const effects = document.createElement('canvas');
   effects.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+  const output = document.createElement('canvas');
   let renderer: Sigma<NodeData, EdgeData> | undefined;
   try {
-    await document.fonts.ready;
     // Freeze reducers before awaiting or constructing a separate renderer.
     const settings = capture.settings;
     renderer = new Sigma(graph, host, {
@@ -67,8 +70,7 @@ export async function graphPng(
     effects.style.width = `${width}px`;
     effects.style.height = `${height}px`;
     host.append(effects);
-    await painted();
-    const output = document.createElement('canvas');
+    await painted(signal);
     output.width = size.width;
     output.height = size.height;
     const context = output.getContext('2d');
@@ -98,9 +100,10 @@ export async function graphPng(
       2,
     );
     context.drawImage(effects, 0, 0, output.width, output.height);
-    return pngBytes(await canvasBlob(output));
   } finally {
     renderer?.kill();
     host.remove();
   }
+  signal.throwIfAborted();
+  return pngBytes(await canvasBlob(output));
 }

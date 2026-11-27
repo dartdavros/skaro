@@ -48,7 +48,7 @@ function savedBounds(): Bounds {
   return visible ? saved : { width: saved.width, height: saved.height, maximized: saved.maximized };
 }
 
-export function createMainWindow(): void {
+export function createMainWindow(onRendererClosed: () => void): void {
   const locale = app.getLocale();
   // Capture the first bounded viewport before background services initialize read models.
   const initial = state?.bootstrap(locale);
@@ -95,9 +95,18 @@ export function createMainWindow(): void {
     current.show();
   });
   current.webContents.once('did-finish-load', () => trace('renderer loaded'));
-  current.webContents.on('render-process-gone', (_e, details) =>
-    trace(`renderer gone: ${details.reason}`),
-  );
+  current.webContents.on('render-process-gone', (_e, details) => {
+    trace(`renderer gone: ${details.reason}`);
+    onRendererClosed();
+  });
+  current.webContents.on('did-start-navigation', (event) => {
+    if (event.isMainFrame && !event.isSameDocument) onRendererClosed();
+  });
+  current.webContents.once('destroyed', onRendererClosed);
+  current.on('hide', () => {
+    onRendererClosed();
+    sendEvent(current.webContents, 'window.hidden', undefined);
+  });
   current.on('unresponsive', () => trace('window unresponsive'));
 
   const saveBounds = () => {

@@ -4,19 +4,18 @@
   import C4Node from './C4Node.svelte';
   import C4Edge from './C4Edge.svelte';
   import { graphBounds } from './viewport';
+  import { painted } from '../diagram-export/image';
+  import { onDestroy } from 'svelte';
   import '@xyflow/svelte/dist/style.css';
   import './styles.css';
   let { graph, onready }: { graph: C4Graph; onready: () => void } = $props();
   let root: HTMLDivElement;
-  let active = true;
-  import { onDestroy } from 'svelte';
-  onDestroy(() => {
-    active = false;
-  });
+  const lifetime = new AbortController();
+  onDestroy(() => lifetime.abort());
   async function waitForScene(): Promise<void> {
-    while (active) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      if (!active) return;
+    while (!lifetime.signal.aborted) {
+      await painted(lifetime.signal).catch(() => undefined);
+      if (lifetime.signal.aborted) return;
       const nodes = Array.from(root.querySelectorAll<HTMLElement>('.svelte-flow__node'));
       const edges = root.querySelectorAll('.svelte-flow__edge-path');
       if (

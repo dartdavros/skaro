@@ -2,6 +2,8 @@ import { assertQuestionsAnswered, type TimelineState } from '@skaro/timeline';
 import type { SkaroScope, ToolResult } from '@skaro/mcp-server';
 import type { TaskExecution } from './task-execution';
 import { awaitsDecision } from './task-wait-card';
+import { taskC4WaitPolicy } from './c4-package-policy';
+import type { TaskC4WaitPolicy } from '../shared/feed-actions';
 import { incidentSubscribers, isTaskParked } from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
 import { readTaskInputs } from './task-preflight';
@@ -17,9 +19,10 @@ export function resumeTaskExecution(
   commandId: string,
   instruction: string,
   retainBlocker = false,
+  blocksC4?: TaskC4WaitPolicy,
 ): ToolResult {
   assertQuestionsAnswered(state);
-  if (awaitsDecision(state))
+  if (awaitsDecision(state, blocksC4))
     return { text: 'Answer the pending proposal before continuing.', isError: true };
   return execution.resume(commandId, instruction, retainBlocker)
     ? { text: 'Task execution resumed for the current owner instruction.' }
@@ -42,6 +45,7 @@ export async function resumeTaskFromInstruction(
   const active = ctx.requireActive(project, task);
   const epoch = active.deliveryEpoch;
   const execution = ctx.continuation.execution(active);
+  const blocksC4 = taskC4WaitPolicy(ctx.deps.db, project, active.run.id);
   const current = () => {
     requireTaskNotStopping(active);
     if (
@@ -55,10 +59,17 @@ export async function resumeTaskFromInstruction(
     )
       throw new CommandCancelled();
     assertQuestionsAnswered(active.timeline.state);
-    if (awaitsDecision(active.timeline.state)) throw new CommandCancelled();
+    if (awaitsDecision(active.timeline.state, blocksC4)) throw new CommandCancelled();
   };
   if (!execution.matchesFollowUp(commandId, instruction))
-    return resumeTaskExecution(execution, active.timeline.state, commandId, instruction);
+    return resumeTaskExecution(
+      execution,
+      active.timeline.state,
+      commandId,
+      instruction,
+      false,
+      blocksC4,
+    );
   const { artifacts, snapshot } = await readTaskInputs(ctx, active);
   const subject = artifacts.tasks.find((item) => item.id === task);
   if (
@@ -87,6 +98,7 @@ export async function resumeTaskFromInstruction(
       commandId,
       instruction,
       !!environment,
+      blocksC4,
     );
     if (result.isError) return { result };
     if (environment) {

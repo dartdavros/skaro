@@ -1,7 +1,7 @@
 import { c4Hash, type AppDb } from '@skaro/core';
 import type { C4Service, C4ProposalRecord } from './c4-service';
 import { c4RecordProtocol } from './c4-record-protocol';
-import { recoverC4DecisionReply } from './c4-decision-recovery';
+import { c4ReplyRecoveryIds, recoverC4DecisionReply } from './c4-decision-recovery';
 
 /** Add a route alongside legacy records. Package bytes, decisions and protocol bindings stay intact. */
 export function mapC4Operations(db: AppDb, project: string, records: C4ProposalRecord[]) {
@@ -47,11 +47,15 @@ export function mapC4Operations(db: AppDb, project: string, records: C4ProposalR
   });
 }
 export async function recoverC4Operations(db: AppDb, c4: C4Service, project: string) {
-  const records = await c4.records(project);
+  const replyIds = c4ReplyRecoveryIds(db, project);
+  const recoverable = () => c4.unresolved(project, replyIds);
+  const records = await recoverable();
   mapC4Operations(db, project, records);
+  let attempted = false;
   for (const record of records) {
     if (record.item.state !== 'accepted') continue;
     try {
+      attempted = true;
       await c4.decide(project, record.item.id, 'apply');
     } catch (error) {
       db.addEvent(project, 'c4_recovery_conflict', {
@@ -60,5 +64,8 @@ export async function recoverC4Operations(db: AppDb, c4: C4Service, project: str
       });
     }
   }
-  for (const record of await c4.records(project)) recoverC4DecisionReply(db, record);
+  if (!replyIds.length) return;
+  const replies = new Set(replyIds);
+  for (const record of attempted ? await recoverable() : records)
+    if (replies.has(record.item.id)) recoverC4DecisionReply(db, record);
 }

@@ -1,5 +1,5 @@
 import type { AppDb } from '@skaro/core';
-import type { DecisionOrigin, ProjectDecision } from '../shared/project-decisions';
+import type { DecisionOrigin, DecisionSource, ProjectDecision } from '../shared/project-decisions';
 import type { Services } from './app-services';
 import { projectDecisionProjection } from './decision-projection';
 import { decisionReplyStatus } from './decision-replies';
@@ -65,16 +65,17 @@ export class DecisionSources {
   }
   private async read(project: string): Promise<ProjectDecision[]> {
     this.requireProject(project);
-    const records = await this.services.c4.records(project);
     let sources = this.cache.get(project);
     if (!sources) {
       sources = new Map();
       this.cache.set(project, sources);
       try {
-        for (const source of [
+        const rows = [
           ...(await this.services.runs.decisionSources(project)),
           ...(await this.services.chats.decisionSources(project)),
-        ])
+        ];
+        const records = await this.c4Records(project, rows);
+        for (const source of rows)
           sources.set(
             `${source.kind}:${source.id}`,
             projectDecisionProjection([canonicalC4Decisions(source, records)]),
@@ -94,6 +95,7 @@ export class DecisionSources {
         kind === 'task'
           ? await this.services.runs.decisionSources(project, id)
           : await this.services.chats.decisionSources(project, id);
+      const records = await this.c4Records(project, rows);
       sources.set(
         owner,
         projectDecisionProjection(rows.map((source) => canonicalC4Decisions(source, records))),
@@ -116,10 +118,18 @@ export class DecisionSources {
       origin.kind === 'task'
         ? await this.services.runs.decisionSources(origin.projectId, origin.id)
         : await this.services.chats.decisionSources(origin.projectId, origin.id);
-    const records = await this.services.c4.records(origin.projectId);
+    const records = await this.c4Records(origin.projectId, rows);
     return this.eligible(
       projectDecisionProjection(rows.map((source) => canonicalC4Decisions(source, records))),
     );
+  }
+  private c4Records(project: string, sources: DecisionSource[]) {
+    const referenced = new Set<string>();
+    for (const source of sources)
+      for (const item of source.timeline.items)
+        if (item.kind === 'proposal' && item.proposal.type === 'architecture')
+          referenced.add(item.id);
+    return this.services.c4.unresolved(project, [...referenced]);
   }
 }
 

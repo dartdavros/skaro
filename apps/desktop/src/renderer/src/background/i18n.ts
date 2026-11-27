@@ -12,7 +12,7 @@ addMessages('ru', {
   'background.done.graph.index': 'Код проекта {project} проиндексирован',
   'background.fail.graph.index': 'Не удалось проиндексировать код проекта {project}',
   'background.about.graph.index':
-    'Индекс нужен для графа кода и поиска. Обновляется после изменений в файлах.',
+    'Индекс нужен для графа кода и поиска. Проверяется при открытии графа.',
   'background.job.environment.task': 'Удаляет окружение задачи {task} · {project}',
   'background.done.environment.task': 'Окружение задачи {task} удалено · {project}',
   'background.fail.environment.task': 'Не удалось удалить окружение задачи {task} · {project}',
@@ -49,7 +49,7 @@ addMessages('en', {
   'background.done.graph.index': 'Code of {project} indexed',
   'background.fail.graph.index': 'Could not index the code of {project}',
   'background.about.graph.index':
-    'The index serves the code graph and search. It is refreshed after file changes.',
+    'The index serves the code graph and search. It is checked when the graph opens.',
   'background.job.environment.task': 'Removing the environment of task {task} · {project}',
   'background.done.environment.task': 'Environment of task {task} removed · {project}',
   'background.fail.environment.task': 'Could not remove the environment of task {task} · {project}',

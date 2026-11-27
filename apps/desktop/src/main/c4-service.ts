@@ -2,7 +2,7 @@ import { dirname } from 'node:path';
 import { c4Coordination, bindC4Packages } from './c4-coordination-binding';
 import { taskC4Protocol } from './c4-protocol';
 import { background } from './background/client';
-import { C4ValidationError, type C4Package, type AppDb } from '@skaro/core';
+import { C4ValidationError, readAcceptedC4Model, type C4Package, type AppDb } from '@skaro/core';
 import type {
   C4Handlers,
   ProposeC4Args,
@@ -56,6 +56,12 @@ export class C4Service implements C4Handlers {
   records(projectId: string, ownerId?: string): Promise<C4ProposalRecord[]> {
     return background(this.dataDir, 'c4.list', projectId, ownerId);
   }
+  record(projectId: string, itemId: string) {
+    return background(this.dataDir, 'c4.record', projectId, itemId);
+  }
+  unresolved(projectId: string, referencedIds: string[] = []) {
+    return background(this.dataDir, 'c4.recoverable', projectId, referencedIds);
+  }
   private save(record: C4ProposalRecord): Promise<void> {
     return background(this.dataDir, 'c4.save', record);
   }
@@ -64,6 +70,9 @@ export class C4Service implements C4Handlers {
   }
   files(projectId: string, itemId: string): Promise<string[]> {
     return background(this.dataDir, 'c4.files', projectId, itemId);
+  }
+  model(projectId: string) {
+    return readAcceptedC4Model(this.deps.projects.get(projectId).root);
   }
   file(projectId: string, itemId: string, path: string, side: 'before' | 'after'): Promise<string> {
     return background(this.dataDir, 'c4.file', projectId, itemId, path, side);
@@ -153,6 +162,12 @@ export class C4Service implements C4Handlers {
       scope.kind === 'task' && scope.runId
         ? taskC4Protocol(this.deps.db, scope.projectId, scope.runId)
         : 'package-v1';
+    if (scope.kind === 'task' && protocol === 'package-v1')
+      return {
+        isError: true,
+        text: 'Task execution uses the accepted architecture. Continue independent work and verify it with review_c4. If a new architecture decision is required for this task, report the exact dependency as a blocker and prepare the decision in the project chat. No task approval was created.',
+        structuredContent: { state: 'project_decision_required', packageCreated: false },
+      };
     const record = await background(
       this.dataDir,
       'c4.prepare',
@@ -230,7 +245,7 @@ export class C4Service implements C4Handlers {
         decideC4Package(
           this.deps,
           {
-            records: (p) => this.records(p),
+            record: (p, itemId) => this.record(p, itemId),
             save: (r) => this.save(r),
             review: (p, id) => this.reviewPackage(p, id),
           },
