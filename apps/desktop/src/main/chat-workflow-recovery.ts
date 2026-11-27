@@ -3,20 +3,22 @@ import { serializeChatMutation } from './chat-mutations';
 
 /** Recover approved project changes after history has been returned to the renderer. */
 export class ChatWorkflowRecovery {
-  private readonly pending = new Set<string>();
+  private readonly pending = new Map<string, Promise<void>>();
   private readonly ctx: ChatEngine;
   constructor(ctx: ChatEngine) {
     this.ctx = ctx;
   }
 
   schedule(chatId: string, logPath: string | undefined, restoreArchitecture?: () => Promise<void>) {
-    if (!logPath || this.ctx.closing || this.pending.has(chatId)) return;
-    this.pending.add(chatId);
-    setImmediate(() => {
-      void this.recover(chatId, logPath, restoreArchitecture)
-        .catch((error: unknown) => console.error('Project chat workflow recovery:', error))
-        .finally(() => this.pending.delete(chatId));
-    });
+    if (!logPath || this.ctx.closing) return;
+    const previous = this.pending.get(chatId);
+    if (previous) return previous;
+    const work = new Promise<void>((resolve) => setImmediate(resolve))
+      .then(() => this.recover(chatId, logPath, restoreArchitecture))
+      .catch((error: unknown) => console.error('Project chat workflow recovery:', error))
+      .finally(() => this.pending.delete(chatId));
+    this.pending.set(chatId, work);
+    return work;
   }
 
   private async recover(

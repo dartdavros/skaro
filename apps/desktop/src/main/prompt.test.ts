@@ -144,10 +144,13 @@ it('separates runtime approvals from owner decisions in tasks, chats and imports
     expect(text).toContain('Actually call the structured question tool');
     expect(text).toContain('submit_result does not create a question card');
     expect(text).toContain('without a successful tool invocation');
-    expect(text).toContain('suspend this session until every question has been answered');
-    expect(text).toContain('wait for its complete answer before performing any further task work');
+    expect(text).toContain(
+      'Continue independent work while awaiting authorization for that action',
+    );
+    expect(text).toContain('wait for its complete answer before performing that action');
     expect(text).toContain('A selected answer does not itself change settings or start services');
-    expect(text).toContain('immediately invoke the structured question tool with the exact action');
+    expect(text).toContain('immediately call Skaro ask_owner');
+    expect(text).not.toContain('plan_project_incident');
     expect(text).toContain('Missing consent is not an external prerequisite failure');
     expect(text).toContain('do not call report_task_blocker');
     expect(text).toContain('Existing denials and stop requests remain binding');

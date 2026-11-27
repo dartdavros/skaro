@@ -9,7 +9,7 @@ import {
 import { secretInteraction } from './task-secret-input';
 import { withoutSecrets } from './session-log';
 
-it('opens protected fields that block continuation and remain answerable after the turn ends', () => {
+it('keeps protected fields answerable after the turn while independent work can continue', () => {
   const interaction = secretInteraction([
     { id: 'api_key', header: 'API-ключ', question: 'Введите API-ключ интеграции.' },
     { id: 'folder_id', header: 'Каталог', question: 'Введите ID каталога.' },
@@ -18,7 +18,7 @@ it('opens protected fields that block continuation and remain answerable after t
   expect(persistsAfterTurn(interaction)).toBe(true);
   expect(() =>
     assertQuestionsAnswered({ ...emptyTimeline(), interactions: [interaction] }),
-  ).toThrow('Answer the open questions');
+  ).not.toThrow();
   expect(interaction.questions.every((q) => q.secret && q.allowFreeText && !q.options.length)).toBe(
     true,
   );

@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { git } from '@skaro/core';
+import { git, readAcceptedC4Model } from '@skaro/core';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { AUTO_MERGE_KEY } from '../shared/ipc';
 import { CompletionFixture } from './completion-test-support';
@@ -117,7 +117,7 @@ it('completes an accepted task on an unoccupied base while the owner stays on an
   const context = fixture.context;
   const modelPath = '.skaro/c4/model.json';
   const modelFile = join(fixture.repo, modelPath);
-  const baseModel = (await context.load()).c4!;
+  const baseModel = (await readAcceptedC4Model(fixture.repo))!;
   baseModel.elements[0]!.code = ['README.md'];
   await writeFile(modelFile, JSON.stringify(baseModel));
   await fixture.commit();
@@ -143,14 +143,10 @@ it('completes an accepted task on an unoccupied base while the owner stays on an
   expect(await context.git.head('main')).toBe(published.commit);
   expect(await readFile(join(fixture.repo, 'README.md'), 'utf8')).toBe('uncommitted owner notes\n');
   expect(await readFile(modelFile, 'utf8')).toBe(localArchitecture);
-  baseModel.revision++;
-  baseModel.elements[0]!.code = ['renamed.md'];
   expect(JSON.parse((await git(fixture.repo, ['show', `main:${modelPath}`])).stdout)).toEqual(
     baseModel,
   );
-  expect(
-    (await git(fixture.repo, ['show', `main:.skaro/c4/history/${baseModel.revision}.json`])).stdout,
-  ).toContain('renamed.md');
+  expect((await git(fixture.repo, ['diff', owner, 'main', '--', '.skaro/c4'])).stdout).toBe('');
   expect((await context.store.readTask(task.id)).status).toBe('done');
   expect((await git(fixture.repo, ['show', `main:${task.path}`])).stdout).toContain('status: done');
   expect(fixture.db.listMerges(fixture.projectId, task.id)).toMatchObject([

@@ -31,6 +31,7 @@ it('retains a stop, blocker and stall bound across handoff without reusing old t
     expect(successor.read()).toEqual({
       enabled: false,
       blocked: 'Actual external prerequisite is unavailable',
+      environmentBlocked: false,
       stalls: 1,
       fingerprint: 'unchanged',
     });

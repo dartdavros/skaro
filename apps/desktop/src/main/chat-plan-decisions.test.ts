@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { finished } from 'node:stream/promises';
 import { ChatEngine } from './chat-engine';
 import { PlanJournal } from './chat-plan-journal';
-import { dialoguePlan, planningWorkspace } from './chat-planning-test-workspace';
+import { dialoguePlan, openRecoveredChat, planningWorkspace } from './chat-planning-test-workspace';
 
 function task(ref: string, dependsOn: string[] = []): ProposedTask {
   return {
@@ -36,7 +36,7 @@ it('creates all 75 tasks including M17 and M19 with one confirmation', async () 
     expect(tasks.filter((t) => t.milestone === 'M19')).toHaveLength(6);
     expect(tasks.filter((t) => t.dependsOn.length)).toHaveLength(11);
     expect(w.engine.proposals.proposals(w.live).every((i) => i.state === 'applied')).toBe(true);
-    await w.engine.views.open(w.live.projectId, w.live.chat.id);
+    await openRecoveredChat(w.engine, w.live);
     expect((await w.store.load()).tasks).toHaveLength(75);
   } finally {
     await w.close();
@@ -67,7 +67,7 @@ it('rejects an incomplete selection before writing any tasks and accepts a valid
       action: 'apply',
       tasks: ['independent'],
     });
-    await w.engine.views.open(w.live.projectId, w.live.chat.id);
+    await openRecoveredChat(w.engine, w.live);
     expect((await w.store.load()).tasks.map((t) => t.title)).toEqual(['independent']);
     expect(w.engine.proposals.proposals(w.live)[0]!.state).toBe('applied');
   } finally {
@@ -109,7 +109,7 @@ it('recovers a saved approval and an already-written task with independent SQLit
     const db = AppDb.open(join(w.root, 'skaro.db'));
     const recovered = new ChatEngine({ ...w.engine.deps, db });
     try {
-      const opened = await recovered.views.open(w.live.projectId, w.live.chat.id);
+      const opened = await openRecoveredChat(recovered, w.live);
       expect(opened.timeline.items.find((i) => i.id === card.id)).toMatchObject({
         state: 'applied',
       });
@@ -119,7 +119,7 @@ it('recovers a saved approval and an already-written task with independent SQLit
         ['first', []],
         ['later', ['T-001']],
       ]);
-      await recovered.views.open(w.live.projectId, w.live.chat.id);
+      await openRecoveredChat(recovered, w.live);
       expect((await w.store.load()).tasks).toHaveLength(2);
     } finally {
       const live = recovered.live.get(w.live.chat.id)!;
@@ -174,7 +174,7 @@ it.each([false, true])(
       await w.engine.proposals.proposal(w.live.projectId, w.live.chat.id, record.item.id, {
         action: 'reject',
       });
-      await w.engine.views.open(w.live.projectId, w.live.chat.id);
+      await openRecoveredChat(w.engine, w.live);
       expect((await w.store.load()).tasks).toHaveLength(written ? 1 : 0);
       const result = w.engine.proposals.proposals(w.live)[0]!;
       expect(result.state).toBe('rejected');

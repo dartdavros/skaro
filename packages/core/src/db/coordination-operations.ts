@@ -77,9 +77,9 @@ export function claimOperation(
   const busy = context.db
     .prepare(
       `SELECT id FROM coordination_operations WHERE project_id=? AND scope_key=?
-    AND state='dispatching' LIMIT 1`,
+    AND (state='dispatching' OR (?=1 AND state='uncertain')) LIMIT 1`,
     )
-    .get(projectId, operation.scopeKey);
+    .get(projectId, operation.scopeKey, Number(operation.scopeKey.startsWith('question-reply:')));
   if (busy) return { operation, acquired: false };
   if (operation.mode === 'mutation') {
     const updated = context.db

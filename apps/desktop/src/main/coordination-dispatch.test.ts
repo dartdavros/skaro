@@ -28,7 +28,7 @@ it('fences accepted deliveries and waiting model admission across off/on, preser
     await resources.scope(project.id, 'protocol-observation', async () => {
       const guarded = modelDispatchScope(db, 'model', resourceExecution.getStore())!;
       const off = setCoordinationDispatch(db, project.id, false, 0);
-      expect(db.commands.get(command.id)).toMatchObject({ state: 'uncertain', args: command.args });
+      expect(db.commands.get(command.id)).toMatchObject({ state: 'accepted', args: command.args });
       expect(() => modelDispatchScope(db, 'model', resourceExecution.getStore())).toThrow(
         'suspended',
       );
@@ -37,7 +37,7 @@ it('fences accepted deliveries and waiting model admission across off/on, preser
         'suspended',
       );
       await expect(guarded.requireCurrent()).rejects.toThrow('suspended');
-      expect(() => requireOwnerOrigin(db, command)).toThrow('suspended');
+      expect(() => requireOwnerOrigin(db, command)).not.toThrow();
     });
     expect(resources.holdings(project.id, 'protocol-observation')).toEqual([]);
     expect(dispatchState(db, project.id)).toEqual({ enabled: true, revision: 2 });
