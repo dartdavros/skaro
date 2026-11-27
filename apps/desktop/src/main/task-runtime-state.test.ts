@@ -19,7 +19,8 @@ it('keeps environment recovery distinct from an actual owner question across tur
       questions: [],
     },
   });
-  expect(taskTimelineRuntime(timeline.state, 'running')).toBe('waiting');
+  expect(taskTimelineRuntime(timeline.state, 'running')).toBe('running');
+  expect(taskTimelineRuntime(timeline.state, undefined)).toBe('waiting');
   timeline.apply({
     t: 'interaction.closed',
     id: 'coordinator:owner-decision',

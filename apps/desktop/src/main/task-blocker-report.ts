@@ -22,7 +22,7 @@ export function reportTaskBlocker(
       }
     } else ctx.continuation.block(active, reason);
     return {
-      text: 'The external blocker is recorded. The task remains incomplete; automatic continuation is suspended. Report the precise blocker without asking for a generic continue message.',
+      text: 'The incident is recorded. Continue the available task work and ask the owner only for a concrete missing decision.',
     };
   });
 }

@@ -8,6 +8,7 @@ import { incidentModelTools } from './incident-model-tools';
 import { TaskExecution } from './task-execution';
 import { incidentModelPlan } from './incident-model-plan';
 import { pendingTransitions } from './task-lifecycle-journal';
+import { ownerQuestionTool } from './owner-question-tool';
 export function coordinatorTools(
   memory: ProjectMemory,
   runs: () => TaskRuns,
@@ -15,6 +16,9 @@ export function coordinatorTools(
 ): Tool<SkaroScope>[] {
   return [
     ...incidentModelTools(runs, chats),
+    ownerQuestionTool((scope, question) =>
+      scope.kind === 'task' ? runs().askOwner(scope, question) : chats().askOwner(scope, question),
+    ),
     questionCancelTool(async (id, reason, scope) => {
       if (scope.kind === 'integration') await runs().cancelIntegrationQuestion(id, reason, scope);
       else if (scope.kind === 'task' && scope.taskId && scope.runId)
@@ -41,6 +45,15 @@ export function coordinatorTools(
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       call: async (_args, scope) => ({
         text: JSON.stringify({
+          unconfirmedMerges: runs()
+            .incidents.store.db.coordination.pending(scope.projectId)
+            .filter(
+              (op) =>
+                op.state === 'uncertain' &&
+                op.action === 'mcp.merge_task' &&
+                op.subject.kind === 'task',
+            )
+            .map((op) => ({ operationId: op.id, task: op.subject.id })),
           lifecycleRequests: pendingTransitions(runs().incidents.store.db, scope.projectId).map(
             (entry) => ({
               task: entry.id,
@@ -49,7 +62,7 @@ export function coordinatorTools(
               phase: entry.phase,
               incident: entry.incidentId,
               recovery:
-                'The owner can request Stop to retire this writer and then resume from the task panel.',
+                'Use verify_project_incident with the recorded incident ID to reconcile the lifecycle request. Continue work on other tasks.',
             }),
           ),
           incidents: runs()

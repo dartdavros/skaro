@@ -77,7 +77,7 @@ export function claimOperation(
   const busy = context.db
     .prepare(
       `SELECT id FROM coordination_operations WHERE project_id=? AND scope_key=?
-    AND state IN ('dispatching','uncertain') LIMIT 1`,
+    AND state='dispatching' LIMIT 1`,
     )
     .get(projectId, operation.scopeKey);
   if (busy) return { operation, acquired: false };

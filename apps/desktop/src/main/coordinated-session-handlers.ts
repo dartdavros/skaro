@@ -3,7 +3,7 @@ import type { AppDb } from '@skaro/core';
 import type { Handlers } from './ipc';
 import type { MethodName, MessageInput } from '../shared/ipc';
 import type { ProjectCoordinators } from './project-coordinators';
-import { coordinationHash } from './project-coordinator-request';
+import { coordinationHash, taskAcceptanceScope } from './project-coordinator-request';
 import { parkCommandId, parkDelivery } from './task-park-delivery';
 import { sessionCommand, sessionCommandScope } from './session-command-catalogue';
 import { resourcesFor } from './resource-execution';
@@ -31,6 +31,7 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
         const descriptor = sessionCommand(method, args, id);
         if (!descriptor) return handler(...args);
         const { projectId, subject, mode } = descriptor;
+        const acceptance = method === 'task.toggleCriterion' && subject.kind === 'task';
         const question = ['task.respond', 'chat.respond'].includes(method)
           ? currentQuestionReply(projectId, subject)
           : undefined;
@@ -55,8 +56,10 @@ export function coordinatedSessionHandlers<T extends Partial<Handlers>>(
               mode,
               scopeKey: question
                 ? `question-reply:${question.entry.revision}`
-                : sessionCommandScope(descriptor, id),
-              ...(mode === 'mutation'
+                : acceptance
+                  ? taskAcceptanceScope(subject.id)
+                  : sessionCommandScope(descriptor, id),
+              ...(mode === 'mutation' && !acceptance
                 ? { expectedVersion: existing?.expectedVersion ?? version }
                 : {}),
             },

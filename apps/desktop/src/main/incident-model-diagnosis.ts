@@ -1,4 +1,5 @@
 import { incidentHash, type CoordinationBlocker } from '@skaro/core';
+import { isDeferredInteraction } from '@skaro/timeline';
 import type { TaskRunEngine } from './task-run-engine';
 import { currentIncidentSubscriber } from './incident-condition';
 import { incidentDiagnosisId, incidentModelPlan } from './incident-model-plan';
@@ -23,7 +24,8 @@ export async function diagnoseIncident(
   for (const subscription of row.protocol!.subscriptions) {
     if (!(await currentIncidentSubscriber(ctx, row.projectId, subscription))) continue;
     const active = await ctx.history.restore(row.projectId, subscription.taskId);
-    if (!active || active.timeline.state.interactions.length) continue;
+    if (!active || active.timeline.state.interactions.some((i) => !isDeferredInteraction(i)))
+      continue;
     const execution = ctx.continuation.execution(active).read();
     const assignment = {
       incident: row.id,
@@ -43,7 +45,7 @@ export async function diagnoseIncident(
           : 'Skaro project coordinator assigns diagnosis of incident ' +
             row.id +
             '. ' +
-            'The task is incomplete and its original continuation remains blocked. Diagnose the actual ' +
+            'Diagnose this incident and continue any independent task work. Investigate the actual ' +
             'cause using the project instructions and real environment. Recorded failure: ' +
             execution.blocked +
             '. ' +
@@ -60,9 +62,9 @@ export async function diagnoseIncident(
             'Never emit a generic blocker code or ask the owner to invent a solution. For a checkable external ' +
             'prerequisite, bind an existing configured project check by name using plan_project_incident; do not invent a check. ' +
             'For a recorded agent process exit, bind verification_agent=true: Skaro verifies a later live native turn. ' +
-            'Bind a supported verifier even when asking an owner question. Do not report another blocker for an invalid verifier; correct the plan for this same incident. ' +
-            'Repair alone is not success: verify_project_incident must confirm the recorded condition before continuation. ' +
-            'Do not call submit_result or resume_task to bypass this incident. End after the plan or verified repair.',
+            'Ask the owner even if a verifier is not yet available. An answer is not proof of repair. ' +
+            'Use verify_project_incident to confirm the recorded condition when evidence is available. ' +
+            'Respect any permissions or criteria that still depend on the incident.',
       });
     });
     return false;

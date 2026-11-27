@@ -155,8 +155,6 @@ export function coordinationOperation(input: unknown): CoordinationOperationInpu
     'control',
     'observation',
   ] as const);
-  if (mode === 'mutation' && operation.expectedVersion === undefined)
-    throw new Error('A mutation requires an expected project version');
   return {
     id: metadataId(operation.id),
     projectId: metadataId(operation.projectId),

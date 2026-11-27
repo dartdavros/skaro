@@ -6,6 +6,7 @@ import { finishCompletion } from './completion-projection';
 import { withSummary } from './task-body';
 import { reconcileCompletedPublicationResources } from './completion-recovery-resources';
 import { completeInPlaceC4 } from './c4-in-place';
+import { recoverMergeOperation } from './merge-operation-recovery';
 
 export async function reconcileCompletions(
   context: ProjectContext,
@@ -30,9 +31,10 @@ export async function reconcileCompletions(
       store.save(op);
       hooks.deps.emit('project.changed', { projectId: context.id });
     }
-    if (op.state === 'completed' || op.state === 'reverted' || !op.commit) continue;
-    if (await containsCommit(context, op.base, op.commit))
+    if (op.state === 'reverted' || !op.commit) continue;
+    if (op.state !== 'completed' && (await containsCommit(context, op.base, op.commit)))
       await finishCompletion(hooks, context, store, op);
+    await recoverMergeOperation(hooks.deps.db, context, op);
   }
   await reconcileCompletedPublicationResources(context, hooks, store.operations());
   const artifacts = await context.summary();

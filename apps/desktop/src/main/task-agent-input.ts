@@ -27,7 +27,7 @@ export function taskAgentInput(
       'Skaro resumed task execution when the owner submitted this message. ' +
         'Address the message and continue work from the saved task state in this turn. ' +
         RESUMED_ENVIRONMENT +
-        ' If you need a decision from the owner, use the structured question tool.',
+        ' If you need a decision from the owner, use Skaro ask_owner and continue independent work.',
     followUp &&
       !resumed &&
       !input.internal &&
@@ -37,8 +37,8 @@ export function taskAgentInput(
         'instructions for a cancelled protected form before ending the turn. ' +
         'For a command to perform or continue task work, immediately call resume_task with this ' +
         'command_id and an exact quote of that instruction, then carry it out in this turn. ' +
-        'If your next action requires an owner decision, invoke the structured question tool ' +
-        'with concrete options and wait for the complete answer. Do not ask in plain chat.',
+        'If your next action requires an owner decision, call Skaro ask_owner with concrete options. ' +
+        'Await the answer for that action and continue independent work.',
   ]
     .filter(Boolean)
     .join('\n');

@@ -1,7 +1,7 @@
 import type { AppDb, CoordinationRef } from '@skaro/core';
 import type { SkaroScope, Tool, ToolResult } from '@skaro/mcp-server';
 import type { ProjectCoordinators } from './project-coordinators';
-import { coordinationHash } from './project-coordinator-request';
+import { coordinationHash, taskAcceptanceScope } from './project-coordinator-request';
 import { resourcesFor } from './resource-execution';
 import { auditToolsAllowed, isAuditChat } from './c4-audit-admission';
 import { environmentToolPolicy } from './coordinated-tool-policy';
@@ -9,6 +9,7 @@ import { coordinationToolReceipt, coordinationToolScopeKey } from './coordinatio
 import { taskBlockerReceipt, confirmTaskBlockerReport } from './task-blocker-receipt';
 import { submissionOperation } from './task-submission-operation';
 import { confirmSubmissionReceipt, submissionReceipt } from './task-submission-receipt';
+import { withMergeOperation } from './merge-operation-context';
 
 const reads = new Set([
   'read_project_incidents',
@@ -17,8 +18,10 @@ const reads = new Set([
   'get_c4_context',
   'read_task_history',
   'read_chat_history',
+  'reconcile_task_merge',
 ]);
 const controls = new Set([
+  'ask_owner',
   'plan_project_incident',
   'verify_project_incident',
   'cancel_question',
@@ -120,6 +123,8 @@ export function coordinatedTools(
           ? { mode: 'control' as const, scopeKey: `stop:${identity.id}` }
           : environmentToolPolicy(db, tool.name, args, scope);
         const mode = policy?.mode ?? (controls.has(tool.name) ? 'control' : 'mutation');
+        const acceptance =
+          subject.kind === 'task' && ['review_c4', 'submit_result'].includes(tool.name);
         return coordinationToolReceipt(
           tool.name,
           () =>
@@ -136,22 +141,27 @@ export function coordinatedTools(
                   tool.name,
                   identity.id,
                   policy?.scopeKey ??
+                    (acceptance
+                      ? (previous?.scopeKey ?? taskAcceptanceScope(subject.id))
+                      : undefined) ??
                     (mode === 'mutation' ? 'project' : `control:${subject.kind}:${subject.id}`),
                   args,
                   scope.projectId,
                 ),
-                ...(mode === 'mutation'
+                ...(mode === 'mutation' && (!acceptance || previous?.expectedVersion !== undefined)
                   ? { expectedVersion: previous?.expectedVersion ?? version }
                   : {}),
               },
               () => {
                 const resources = resourcesFor(db);
-                const effect = () =>
-                  tool.name === 'submit_result'
-                    ? submissionOperation(db, scope, identity.id, () =>
-                        tool.call(args, scope, identity),
-                      )
-                    : tool.call(args, scope, identity);
+                const handler = () => tool.call(args, scope, identity);
+                const effect = () => {
+                  if (tool.name === 'submit_result')
+                    return submissionOperation(db, scope, identity.id, handler);
+                  if (tool.name === 'merge_task')
+                    return withMergeOperation(scope, args, identity.id, handler);
+                  return handler();
+                };
                 return resources
                   ? resources.scope(scope.projectId, `${subject.kind}:${subject.id}`, effect, {
                       intentId: identity.id,

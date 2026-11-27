@@ -56,6 +56,7 @@ import { LocalVersions } from './local-versions';
 import { managedCacheServices } from './managed-cache-services';
 import { startProjectWriters } from './project-recovery-startup';
 import { submissionRecoveryTool } from './task-submission-recovery';
+import { mergeRecoveryTool } from './merge-operation-recovery';
 import { publishDispatchChange } from './session-dispatch-pending';
 import { projectTaskLifecycleTools } from './project-task-lifecycle-tools';
 
@@ -126,6 +127,7 @@ export async function createServices(
     tools: coordinatedTools(db, coordinators, [
       ...coordinatorTools(memory, currentRuns, currentChats),
       submissionRecoveryTool(db, dataDir),
+      mergeRecoveryTool(db, (id) => projects.get(id)),
       ...cacheTools,
       ...c4AuditTools(() => c4Audits),
       ...c4Tools({

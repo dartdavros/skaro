@@ -1,11 +1,7 @@
 import type { CoordinationBlocker } from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
 import { cancelIncidentApproval } from './incident-feed';
-import {
-  incidentPlanKey,
-  incidentPlanVerifiable,
-  type IncidentModelPlan,
-} from './incident-model-plan';
+import { incidentPlanKey, incidentPlanUsable, type IncidentModelPlan } from './incident-model-plan';
 
 /** Upgrade the old controller-generated empty form through canonical cancellation. */
 export async function retireLegacyIncidentQuestion(ctx: TaskRunEngine, row: CoordinationBlocker) {
@@ -15,7 +11,7 @@ export async function retireLegacyIncidentQuestion(ctx: TaskRunEngine, row: Coor
     incidentPlanKey(row.id),
     undefined,
   );
-  if (plan && !incidentPlanVerifiable(plan, row)) {
+  if (plan && !incidentPlanUsable(plan, row)) {
     await cancelIncidentApproval(ctx, row, id, 'incident_verification_plan_invalid');
     return;
   }

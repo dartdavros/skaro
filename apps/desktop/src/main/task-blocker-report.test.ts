@@ -113,7 +113,7 @@ it('records a blocker independently of an uncertain task control and acknowledge
     });
     expect(receipt.isError).toBeUndefined();
     expect(receipt.structuredContent).toMatchObject({
-      blocker: { recorded: true, taskId: m.subscription.taskId, continuationSuspended: true },
+      blocker: { recorded: true, taskId: m.subscription.taskId, continuationSuspended: false },
       coordination: { operationId: id, registrationConfirmed: true },
     });
     const row = store.list(m.project.id)[0]!;

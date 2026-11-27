@@ -84,8 +84,8 @@ export function taskInstructions(options: {
         '- Starting a task authorizes its implementation, affected verification and submission. ' +
           'A model final answer is not task completion: Skaro continues unfinished execution automatically. ' +
           'Do not end a turn merely to request continue, repeat established decisions or ask the owner ' +
-          'to perform routine environment preparation. Ask concrete missing decisions through the blocking ' +
-          'question tool, then perform the selected action. For an evidenced external blocker or an explicit ' +
+          'to perform routine environment preparation. Ask concrete missing decisions through Skaro ask_owner, ' +
+          'continue independent steps, then perform the selected action. For an evidenced external incident or an explicit ' +
           'owner pause/read-only limitation, call report_task_blocker with requires_owner_permission=false. ' +
           'A rule requiring separate consent is a pending permission request, not an owner pause. ' +
           'Never use a blocker for missing consent or unfinished routine work.',
@@ -110,7 +110,7 @@ export function taskInstructions(options: {
           'needed. Do not ask for a secret in ordinary chat, claim a field was shown without a ' +
           'successful call, submit an incomplete result, or report missing owner credentials as ' +
           'an external blocker before offering the protected input. After request_secret succeeds, ' +
-          'end the turn and wait; the answer resumes this task. If a real project settings form is ' +
+          'continue steps independent of the credential. The protected answer will reach this task. If a real project settings form is ' +
           'the required destination, identify its actual URL and use the provided credential there.',
         '- Keep the user informed while you work: before each step write one short sentence ' +
           'about what you are doing now. Work in small steps; do not think the whole task ' +

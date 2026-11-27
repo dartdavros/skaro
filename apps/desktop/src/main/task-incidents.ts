@@ -110,10 +110,9 @@ export class TaskIncidents {
         : String(error);
     await this.report(active, message, details, 'controller');
   }
-  async afterTurn(active: ActiveRun): Promise<boolean> {
+  async afterTurn(active: ActiveRun): Promise<void> {
     const id = this.ctx.continuation.execution(active).read().blockedIncident;
     if (id) await this.reconcile(active.projectId, id);
-    return !!id;
   }
   reconcile(projectId: string, id: string): Promise<void> {
     const key = `${projectId}:${id}`;

@@ -19,6 +19,8 @@ export interface ProjectOperationRequest {
   causationId?: string;
 }
 
+export const taskAcceptanceScope = (taskId: string) => `acceptance:task:${taskId}`;
+
 /** Canonical digest only: arguments and secret answers never enter the coordination journal. */
 export function coordinationHash(value: unknown): string {
   const seen = new Set<object>();

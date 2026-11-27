@@ -20,7 +20,7 @@ export async function suspendWaitingTask(
   const { projectId, taskId, run, deliveryEpoch, stopError } = active;
   const state = active.timeline.state;
   const execution = ctx.continuation.execution(active);
-  const waiting = !!execution.read().blocked || state.interactions.some(persistsAfterTurn);
+  const waiting = state.interactions.some(persistsAfterTurn);
   if (
     !waiting ||
     ctx.closing ||

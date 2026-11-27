@@ -30,6 +30,7 @@ export interface TaskResult {
 
 export interface CompletionOperation {
   id: string;
+  mergeRequestId?: string;
   base: string;
   results: TaskResult[];
   strategy: 'merge' | 'squash' | 'rebase';
@@ -105,9 +106,15 @@ export class CompletionStore {
     this.db.collections.put(this.operationKey(), operation);
   }
 
-  create(base: string, results: TaskResult[], strategy: CompletionOperation['strategy']) {
+  create(
+    base: string,
+    results: TaskResult[],
+    strategy: CompletionOperation['strategy'],
+    mergeRequestId?: string,
+  ) {
     const operation: CompletionOperation = {
       id: randomUUID(),
+      ...(mergeRequestId ? { mergeRequestId } : {}),
       base,
       results,
       strategy,

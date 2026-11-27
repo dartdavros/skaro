@@ -33,10 +33,17 @@ import { chatDecisionSources } from './chat-decision-sources';
 import { clearChat } from './chat-clear';
 import { historyText, historyPage } from './task-history-context';
 import { publishChatArchitecture } from './chat-architecture';
+import { ownerQuestionReply, sameOwnerQuestion, type OwnerQuestion } from './owner-question-tool';
 export { titleOf } from './chat-settings-helpers';
 export { projectContextText } from './chat-context-text';
 
 export class ChatSessions implements ProjectToolHandlers {
+  async askOwner(scope: SkaroScope, interaction: OwnerQuestion): Promise<ToolResult> {
+    const live = this.engine.context.caller(scope);
+    if (!live.timeline.state.interactions.some((i) => sameOwnerQuestion(i, interaction)))
+      this.engine.history.skaroEvent(live, { t: 'interaction.opened', interaction });
+    return ownerQuestionReply();
+  }
   cancelQuestion(project: string, chat: string, id: string, reason: string) {
     return cancelChatQuestion(this.engine, project, chat, id, reason);
   }

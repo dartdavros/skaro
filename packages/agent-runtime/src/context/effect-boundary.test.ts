@@ -1,5 +1,9 @@
 import { expect, it } from 'vitest';
-import { contextProjectionBlocked, unresolvedOperationalEffects } from './effect-boundary.ts';
+import {
+  contextProjectionBlocked,
+  hasUnknownToolRequest,
+  unresolvedOperationalEffects,
+} from './effect-boundary.ts';
 import type { RuntimeState } from '../model.ts';
 import { emptyRuntimeState } from '../state.ts';
 
@@ -28,7 +32,7 @@ it('keeps unknown command outcomes blocking and refuses unproven model-billing m
   expect(() => unresolvedOperationalEffects({ state, records: [] })).toThrow('primary provenance');
 });
 
-it('keeps pending requests, unknown tools and open interactions blocking', () => {
+it('allows fresh context to inspect unknown tools and retains active requests and interactions', () => {
   const effects: RuntimeState['effects'][] = [
     { request: { name: 'model:chat', state: 'pending' } },
     { request: { name: 'model:unrecognized', state: 'unknown' } },
@@ -38,8 +42,12 @@ it('keeps pending requests, unknown tools and open interactions blocking', () =>
       tool: { name: 'write_file', state: 'unknown' },
     },
   ];
-  for (const value of effects)
-    expect(contextProjectionBlocked({ interactions: {}, effects: value }, true)).toBe(true);
+  for (const value of effects) {
+    expect(contextProjectionBlocked({ interactions: {}, effects: value })).toBe(true);
+    expect(contextProjectionBlocked({ interactions: {}, effects: value }, true)).toBe(
+      Object.values(value).some((effect) => effect.state === 'pending'),
+    );
+  }
   expect(
     contextProjectionBlocked(
       { interactions: { open: {} as RuntimeState['interactions'][string] }, effects: {} },
@@ -52,4 +60,12 @@ it('keeps pending requests, unknown tools and open interactions blocking', () =>
       true,
     ),
   ).toBe(false);
+});
+
+it('prevents repeating the same unknown request and admits a distinct action', () => {
+  const state = emptyRuntimeState();
+  state.effects = { previous: { name: 'exec_command', state: 'unknown' } };
+  state.toolRequests = { previous: { name: 'exec_command', hash: 'original' } };
+  expect(hasUnknownToolRequest(state, 'original')).toBe(true);
+  expect(hasUnknownToolRequest(state, 'independent')).toBe(false);
 });

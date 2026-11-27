@@ -22,13 +22,13 @@ export function taskBlockerTool(
   return {
     name: 'report_task_blocker',
     description:
-      'Stop automatic task continuation only for an evidenced external blocker or an explicit owner pause. ' +
+      'Report an evidenced external incident or record an explicit owner pause. Continue independent work on an incident. ' +
       'Include the exact failed prerequisite, diagnostic code, registered resource_id when known, and condition. ' +
       'Skaro coordinates a bounded repair once under project permissions, then verifies it before resuming subscribers. ' +
       'Do not repeatedly repair a shared resource or poll the model while blocked. This does not accept criteria, ' +
-      'complete or merge the task. Missing owner decisions use the blocking question tool instead. ' +
+      'complete or merge the task. Missing owner decisions use ask_owner instead. ' +
       'If a known recovery action only lacks owner permission (including shared-service updates/restarts), ' +
-      'immediately request the exact action and its consequences in that card and wait. ' +
+      'request the exact action and its consequences in that card while completing independent work. ' +
       'This tool rejects missing permission without recording a blocker. ' +
       'Missing owner API keys/passwords use request_secret; its protected question is the waiting state. ' +
       'Claim registration only after a successful recorded acknowledgement. A queued or uncertain ' +
@@ -45,7 +45,7 @@ export function taskBlockerTool(
           type: 'boolean',
           description:
             'Does the known next action require owner consent that has not been granted? ' +
-            'If true, use the structured question tool instead. Set false only for an external ' +
+            'If true, use ask_owner instead. Set false only for an external ' +
             'prerequisite failure that permission cannot resolve, or an explicit owner pause.',
         },
         cause: { type: 'string', enum: INCIDENT_CAUSES },
@@ -75,8 +75,8 @@ export function taskBlockerTool(
         return {
           text:
             'No blocker was recorded. If the known next action requires owner permission, ' +
-            'immediately invoke the structured question tool with the exact action, affected ' +
-            'services/data, consequences and concrete allow/decline options, then wait. ' +
+            'call ask_owner with the exact action, affected services/data, consequences and ' +
+            'concrete allow/decline options. Continue independent work. ' +
             'Do not ask the owner to invent a resolution or finish with a blocker summary. ' +
             'For an actual external prerequisite failure or explicit owner pause, confirm ' +
             'requires_owner_permission=false before reporting it.',
@@ -96,7 +96,7 @@ export function taskBlockerTool(
         !isIncidentOwnerPause(String(args['cause']), String(args['code']))
       )
         return {
-          text: 'No blocker was recorded. Use the structured question tool for a missing owner decision or permission, with concrete options and consequences. Use request_secret for protected inputs.',
+          text: 'Use ask_owner for a missing owner decision or permission, with concrete options and consequences. Use request_secret for protected inputs.',
           isError: true,
         };
       if (

@@ -38,10 +38,14 @@ import { prepareBuiltinTaskReview } from './builtin-task-review';
 import { setTaskBoardStatus } from './task-board-status';
 import { parkTask, type ParkedTaskStatus } from './task-park';
 import type { BuiltinTaskLaunchRequest, BuiltinTaskHandoffRequest } from './builtin-task-start';
+import { openTaskOwnerQuestion, type OwnerQuestion } from './owner-question-tool';
 export { ActiveRun, type TaskRunDeps } from './task-run-model';
 export { requirementsOf } from './task-run-helpers';
 /** Public API: composes focused task-run services without owning their workflows. */
 export class TaskRuns {
+  askOwner(scope: SkaroScope, interaction: OwnerQuestion) {
+    return openTaskOwnerQuestion(this.engine, scope, interaction);
+  }
   cancelIntegrationQuestion(id: string, reason: string, scope: SkaroScope) {
     return this.engine.integrations.cancelQuestion(id, reason, scope);
   }
