@@ -141,10 +141,14 @@ export class ChatSessions implements ProjectToolHandlers {
       ),
     };
   }
-  async open(projectId: string, chatId: string, options?: { paged: boolean }): Promise<ChatView> {
+  async open(
+    projectId: string,
+    chatId: string,
+    options?: { paged: boolean },
+    restoreArchitecture?: () => Promise<void>,
+  ): Promise<ChatView> {
     const view = await this.engine.views.open(projectId, chatId, options);
-    const live = this.engine.live.get(chatId);
-    if (live) this.engine.planningContinuation.schedule(live);
+    this.engine.workflowRecovery.schedule(chatId, view.decisionEpoch, restoreArchitecture);
     return view;
   }
   async create(

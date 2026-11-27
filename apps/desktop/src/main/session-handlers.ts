@@ -190,10 +190,10 @@ export function sessionHandlers(
       'chats.page': (source, start) => chats.page(source, start),
       'chats.find': (source, id) => chats.find(source, id),
       'chats.defaults': (projectId) => chats.defaults(projectId),
-      'chat.open': async (projectId, chatId, options) => {
-        await c4.restore({ kind: 'project_chat', projectId, chatId });
-        return chats.open(projectId, chatId, options);
-      },
+      'chat.open': (projectId, chatId, options) =>
+        chats.open(projectId, chatId, options, () =>
+          c4.restore({ kind: 'project_chat', projectId, chatId }),
+        ),
       'chat.create': (projectId, settings, input) => chats.create(projectId, settings, input),
       'chat.send': (projectId, chatId, input) => chats.send(projectId, chatId, input),
       'chat.respond': (projectId, chatId, id, answer) =>
