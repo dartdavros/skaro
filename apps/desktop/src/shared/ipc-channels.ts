@@ -72,6 +72,7 @@ export const METHODS = [
   'commands.list',
   'c4.content',
   'c4.decide',
+  'c4.application',
   'task.revertMerge',
   'window.minimize',
   'window.toggleMaximize',

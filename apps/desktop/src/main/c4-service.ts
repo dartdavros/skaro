@@ -15,7 +15,7 @@ import type { Projects } from './projects';
 import { legacyC4ServiceReview } from './c4-service-review';
 import { c4RecordProtocol } from './c4-record-protocol';
 import { classifiedC4Package } from './c4-package-review';
-import { decideC4Package } from './c4-package-decision';
+import { decideC4Package, type C4PackageAction } from './c4-package-decision';
 import {
   beginC4ProposalDiagnostic,
   c4ToolFailure,
@@ -42,7 +42,7 @@ export interface C4ServiceDeps {
 
 export class C4Service implements C4Handlers {
   private readonly deps: C4ServiceDeps;
-  private readonly deciding = new Map<string, Promise<void>>();
+  private readonly deciding = new Map<string, Promise<boolean>>();
   constructor(deps: C4ServiceDeps) {
     this.deps = deps;
     bindC4Packages(deps.db, {
@@ -235,9 +235,9 @@ export class C4Service implements C4Handlers {
   decide(
     projectId: string,
     id: string,
-    action: 'apply' | 'reject',
+    action: C4PackageAction,
     fingerprint?: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const previous = this.deciding.get(projectId) ?? Promise.resolve();
     const operation = previous
       .catch(() => undefined)

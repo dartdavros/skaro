@@ -31,8 +31,7 @@ export function sessionHandlers(
   | 'c4.files'
   | 'c4.file'
   | 'c4.content'
-  | 'c4.decide'
-  | keyof import('../shared/c4-review').C4ReviewMethods
+  | keyof import('../shared/c4-review').C4PackageMethods
   | keyof import('../shared/task-catalog').TaskCatalogMethods
   | 'tasks.list'
   | 'tasks.run'
@@ -110,8 +109,14 @@ export function sessionHandlers(
       'c4.files': (projectId, itemId) => c4.files(projectId, itemId),
       'c4.file': (projectId, itemId, path, side) => c4.file(projectId, itemId, path, side),
       'c4.content': (projectId, itemId, side) => c4.content(projectId, itemId, side),
-      'c4.decide': (projectId, itemId, action, fingerprint) =>
-        c4.decide(projectId, itemId, action, fingerprint),
+      'c4.decide': async (projectId, itemId, action, fingerprint) => {
+        await c4.decide(projectId, itemId, action, fingerprint);
+      },
+      'c4.application': (projectId, itemId, operation) => {
+        if (operation !== 'check' && operation !== 'retry') throw new Error('Invalid C4 operation');
+        // The saved package owns recovery. A new project decision can reject an already answered card.
+        return c4.decide(projectId, itemId, operation);
+      },
       'c4.review': (projectId, itemId) => c4.reviewPackage(projectId, itemId),
       'c4.reviewDetail': (projectId, itemId, key) => c4.reviewDetail(projectId, itemId, key),
       'c4.reviewModel': (projectId, itemId, side) => c4.reviewModel(projectId, itemId, side),
@@ -203,15 +208,16 @@ export function sessionHandlers(
         chats.setSettings(projectId, chatId, settings),
       'chat.archive': (projectId, chatId, archived) => chats.archive(projectId, chatId, archived),
       'chat.clear': (projectId, chatId) => chats.clear(projectId, chatId),
-      'chat.proposal': (projectId, chatId, itemId, action) =>
-        itemId.startsWith('skaro-c4-') && action.action !== 'revert'
-          ? c4.decide(
-              projectId,
-              itemId,
-              action.action,
-              action.action === 'apply' ? action.fingerprint : undefined,
-            )
-          : chats.proposal(projectId, chatId, itemId, action),
+      'chat.proposal': async (projectId, chatId, itemId, action) => {
+        if (itemId.startsWith('skaro-c4-') && action.action !== 'revert')
+          await c4.decide(
+            projectId,
+            itemId,
+            action.action,
+            action.action === 'apply' ? action.fingerprint : undefined,
+          );
+        else await chats.proposal(projectId, chatId, itemId, action);
+      },
     },
     coordinators,
     db,
