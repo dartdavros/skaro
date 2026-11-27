@@ -22,18 +22,11 @@ export function taskBlockerTool(
   return {
     name: 'report_task_blocker',
     description:
-      'Report an evidenced external incident or record an explicit owner pause. Continue independent work on an incident. ' +
-      'Include the exact failed prerequisite, diagnostic code, registered resource_id when known, and condition. ' +
-      'Skaro coordinates a bounded repair once under project permissions, then verifies it before resuming subscribers. ' +
-      'Do not repeatedly repair a shared resource or poll the model while blocked. This does not accept criteria, ' +
-      'complete or merge the task. Missing owner decisions use ask_owner instead. ' +
+      'Pause task execution with the exact failed prerequisite and evidence after completing independent work. ' +
       'If a known recovery action only lacks owner permission (including shared-service updates/restarts), ' +
       'request the exact action and its consequences in that card while completing independent work. ' +
       'This tool rejects missing permission without recording a blocker. ' +
       'Missing owner API keys/passwords use request_secret; its protected question is the waiting state. ' +
-      'Claim registration only after a successful recorded acknowledgement. A queued or uncertain ' +
-      'operation is not a recorded blocker; inspect the actual project incident state instead of ' +
-      'inventing confirmation or blindly repeating an unknown effect. ' +
       'Ordinary chat follow-ups already suspend automatic continuation; answer a question and end ' +
       'the turn without inventing a task blocker. An explicit owner pause uses cause="owner-decision" ' +
       'and code="owner_pause"; it disables execution intent and never starts model diagnosis.',

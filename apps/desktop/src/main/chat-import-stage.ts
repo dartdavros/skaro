@@ -19,7 +19,6 @@ import { currentTurn } from './chat-settings-helpers';
 import { adrId } from './chat-proposal-helpers';
 import { readC4Model } from '@skaro/core';
 import type { ProposeC4Args } from '@skaro/mcp-server';
-import { prepareImportC4 } from './c4-import';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -160,17 +159,8 @@ export class ChatImportStage {
     const artifacts = await this.ctx.project(live.projectId).load();
     const problems = importLinks(state.staged, artifacts);
     if (problems.length) return { text: problems.join('\n'), isError: true };
-    try {
-      state.c4Package = await prepareImportC4(
-        this.ctx.project(live.projectId).root,
-        artifacts,
-        state,
-        state.staged.map((s) => s.key),
-        this.ctx.deps.locale(),
-      );
-    } catch (error) {
-      return { isError: true, text: String(error) };
-    }
+    delete state.c4;
+    delete state.c4Package;
     const manifest = await loadManifest(state.dir);
     const skipped = [
       ...(manifest?.files ?? [])

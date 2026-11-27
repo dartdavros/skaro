@@ -17,11 +17,6 @@ export class ChatDocuments {
     this.ctx = ctx;
   }
   async writeDoc(args: WriteDocArgs, scope: SkaroScope): Promise<ToolResult> {
-    if (args.path === 'architecture.md')
-      return {
-        isError: true,
-        text: 'Architecture must include shared C4 coverage. Read get_c4_context and propose_c4 with the complete architecture/model/document package.',
-      };
     const live = this.ctx.context.caller(scope);
     if (!DOC_PATH.test(args.path)) {
       return {
@@ -107,16 +102,51 @@ export class ChatDocuments {
 
   async proposeSpec(args: ProposeSpecArgs, scope: SkaroScope): Promise<ToolResult> {
     const live = this.ctx.context.caller(scope);
-    if (args.id) {
-      const id = adrId(args.id);
-      const spec = (await this.ctx.project(live.projectId).load()).specs.find((s) => s.id === id);
-      if (!spec) return { text: `There is no specification ${args.id}.`, isError: true };
-      if (args.content !== undefined && sameText(spec.body, args.content))
-        return { text: `SPEC-${id} already has this text; nothing changed.` };
-    }
-    return {
-      isError: true,
-      text: 'Specifications require C4 requirement coverage. Read get_c4_context and use propose_c4 with the specification and its model changes as one package.',
-    };
+    const context = this.ctx.project(live.projectId);
+    const { specs } = await context.load();
+    const existing = args.id ? specs.find((s) => s.id === adrId(args.id!)) : undefined;
+    if (args.id && !existing) return { text: 'Unknown specification ID.', isError: true };
+    if (!args.content?.trim() || (!existing && !args.title?.trim()))
+      return {
+        text: 'Supply specification content and a title for a new specification.',
+        isError: true,
+      };
+    if (
+      existing &&
+      sameText(existing.body, args.content) &&
+      (!args.title || existing.title === args.title)
+    )
+      return { text: 'The specification is current.' };
+    const replaces = args.replaces && adrId(args.replaces);
+    if (replaces && !specs.some((s) => s.id === replaces))
+      return { text: 'Unknown replaced specification.', isError: true };
+    const pending = this.ctx.proposals.proposals(live).filter((p) => p.proposal.type === 'spec');
+    this.ctx.proposals.addProposal(
+      live,
+      existing
+        ? {
+            type: 'spec_change',
+            id: existing.id,
+            title: args.title ?? existing.title,
+            before: existing.body,
+            after: args.content,
+            summary: args.summary,
+          }
+        : {
+            type: 'spec',
+            id: String(
+              nextNumber(
+                specs.map((s) => s.id),
+                /^(\d+)$/,
+              ) + pending.length,
+            ).padStart(4, '0'),
+            title: args.title!,
+            body: args.content,
+            replaces,
+            summary: args.summary,
+          },
+      'pending',
+    );
+    return { text: 'The specification is awaiting owner review.' };
   }
 }

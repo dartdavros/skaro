@@ -1,3 +1,4 @@
+import { FINISH } from './task-wait-card';
 import { randomUUID } from 'node:crypto';
 import { withoutSkaroNote, type TimelineState } from '@skaro/timeline';
 import type { MessageInput } from '../shared/ipc';
@@ -12,9 +13,14 @@ export function prepareTaskFollowUp(
 ): MessageInput {
   if (input.internal) return input;
   if (isPendingAnswer(input, pendingAnswer)) {
+    if (pendingAnswer?.resumeTask && input.commandId) {
+      execution.followUp(input.commandId, FINISH);
+      return { ...input, resumeTask: true };
+    }
     execution.decisionAnswered();
     return input;
   }
+  if (input.commandId?.startsWith('answers-')) return input;
   const accepted = { ...input, commandId: input.commandId ?? randomUUID() };
   execution.followUp(
     accepted.commandId,
@@ -25,6 +31,7 @@ export function prepareTaskFollowUp(
 }
 
 export function ownerResumeText(input: MessageInput, pendingAnswer?: MessageInput): string {
+  if (input.commandId?.startsWith('answers-')) return '';
   return input.internal || input.privateText || isPendingAnswer(input, pendingAnswer)
     ? ''
     : withoutSkaroNote(input.text).trim();

@@ -1,17 +1,17 @@
 import type { Interaction, TimelineState } from '@skaro/timeline';
 import { taskSections, toggleCriterion } from './task-body';
-import { isBlockingTaskProposal, type TaskC4WaitPolicy } from '../shared/feed-actions';
+import { isBlockingTaskProposal } from '../shared/feed-actions';
 
 /** Skaro's own question about accepting unmet task criteria. */
 export const WAIT_CARD = 'skaro-wait-';
 export const ACCEPT_AS_IS = 'Принять как есть';
-const FINISH = 'Доделать';
+export const FINISH = 'Доделать';
 
 type Question = Extract<Interaction, { kind: 'question' }>;
 
 /**
  * A refused submission needs an explicit decision about unmet criteria. Merely ending a turn
- * does not ask a question: a pending architecture package already carries its own decision.
+ * does not by itself require an owner decision.
  */
 export function waitCard(
   runId: string,
@@ -20,13 +20,19 @@ export function waitCard(
 ): Question | undefined {
   const lastTurn = timeline.turns.at(-1)?.id;
   const submitted = timeline.items.some(
-    (item) => item.turnId === lastTurn && item.kind === 'tool' && item.name === 'submit_result',
+    (item) =>
+      item.turnId === lastTurn &&
+      item.kind === 'tool' &&
+      ['submit_result', 'mcp__skaro__submit_result'].includes(item.name),
   );
   const unmet = taskSections(body)
     .criteria.map((criterion, index) => ({ ...criterion, number: index + 1 }))
     .filter((criterion) => !criterion.done);
   const id = `${WAIT_CARD}${runId}-${lastTurn ?? Date.now()}`;
-  if (submitted && unmet.length)
+  const answered = timeline.items.some(
+    (item) => item.kind === 'decision' && item.interaction.id === id,
+  );
+  if (submitted && unmet.length && !answered)
     return {
       kind: 'question',
       id,
@@ -70,11 +76,8 @@ export function acceptedBody(body: string): string {
 }
 
 /** A pending proposal card (an architecture package, a plan) already asks the owner. */
-export function awaitsDecision(timeline: TimelineState, blocksC4?: TaskC4WaitPolicy): boolean {
+export function awaitsDecision(timeline: TimelineState): boolean {
   return timeline.items.some(
-    (item) =>
-      item.kind === 'proposal' &&
-      item.state === 'pending' &&
-      isBlockingTaskProposal(item, blocksC4),
+    (item) => item.kind === 'proposal' && item.state === 'pending' && isBlockingTaskProposal(item),
   );
 }

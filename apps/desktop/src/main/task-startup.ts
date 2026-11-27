@@ -6,9 +6,9 @@ import { parseBuiltinTaskStart, type BuiltinTaskStart } from './builtin-task-sta
 
 interface Startup {
   inputs: MessageInput[];
+  taskEpoch?: number;
   transition?: { runId: string; commandId: string };
   dispatchRevision?: number;
-  c4Protocol?: import('@skaro/core').C4Protocol;
   error?: string;
   updatedAt: number;
   builtin?: BuiltinTaskStart;
@@ -17,9 +17,8 @@ interface Startup {
 
 /** Preparation failures exist before an agent run; their input and diagnostic must survive. */
 export class TaskStartup {
-  private readonly epochs = new Map<string, number>();
-  private readonly db: Pick<AppDb, 'getSetting' | 'setSetting' | 'listEvents'>;
-  constructor(db: Pick<AppDb, 'getSetting' | 'setSetting' | 'listEvents'>) {
+  private readonly db: Pick<AppDb, 'getSetting' | 'setSetting' | 'listEvents' | 'settings'>;
+  constructor(db: Pick<AppDb, 'getSetting' | 'setSetting' | 'listEvents' | 'settings'>) {
     this.db = db;
   }
   private key(project: string, task: string) {
@@ -29,7 +28,7 @@ export class TaskStartup {
     return this.db.getSetting<Startup | null>(this.key(project, task), null) ?? undefined;
   }
   cancellationEpoch(project: string, task: string): number {
-    return this.epochs.get(this.key(project, task)) ?? 0;
+    return this.db.getSetting(this.key(project, task) + '.epoch', 0);
   }
   selectBuiltin(project: string, task: string, settings: BuiltinTaskStart): void {
     if (this.read(project, task)?.inputs.length)
@@ -63,7 +62,6 @@ export class TaskStartup {
     task: string,
     inputs: MessageInput[],
     dispatchRevision?: number,
-    c4Protocol?: import('@skaro/core').C4Protocol,
     transition?: Startup['transition'],
   ): MessageInput[] {
     const saved = this.read(project, task);
@@ -82,8 +80,12 @@ export class TaskStartup {
         combined.push(input);
     this.db.setSetting(this.key(project, task), {
       inputs: combined,
+      ...(saved?.inputs.length
+        ? saved.taskEpoch === undefined
+          ? {}
+          : { taskEpoch: saved.taskEpoch }
+        : { taskEpoch: this.cancellationEpoch(project, task) }),
       ...(transition && { transition }),
-      ...((c4Protocol ?? saved?.c4Protocol) ? { c4Protocol: c4Protocol ?? saved?.c4Protocol } : {}),
       ...((dispatchRevision ?? saved?.dispatchRevision) !== undefined
         ? { dispatchRevision: dispatchRevision ?? saved?.dispatchRevision }
         : {}),
@@ -108,15 +110,20 @@ export class TaskStartup {
     );
   }
   cancel(project: string, task: string): void {
-    this.epochs.set(this.key(project, task), this.cancellationEpoch(project, task) + 1);
-    this.delivered(project, task);
+    this.db.settings.atomic(() => {
+      this.db.setSetting(
+        this.key(project, task) + '.epoch',
+        this.cancellationEpoch(project, task) + 1,
+      );
+      this.delivered(project, task);
+    });
   }
   fail(project: string, task: string, error: string): void {
     const saved = this.read(project, task);
     this.db.setSetting(this.key(project, task), {
       inputs: saved?.inputs ?? [],
+      taskEpoch: saved?.taskEpoch,
       ...(saved?.transition && { transition: saved.transition }),
-      ...(saved?.c4Protocol ? { c4Protocol: saved.c4Protocol } : {}),
       ...(saved?.dispatchRevision !== undefined
         ? { dispatchRevision: saved.dispatchRevision }
         : {}),

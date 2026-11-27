@@ -93,10 +93,8 @@ export function taskEnvironmentInstructions(kind: TaskEnvironmentKind): string {
         'question tool and wait. Do not register a blocker for missing consent. Report the exact ' +
         'environment failure as a blocker only when it cannot be resolved by an owner permission ' +
         'and cannot be repaired within the authorized setup. Routine authorized checks need no new permission.',
-      '- When a prerequisite needs information or action outside your task, hand it to the project ' +
-        'coordinator with report_task_blocker. Include the precise missing input, observed evidence ' +
-        'and what you already checked. Use read_project_incidents to follow the recorded handoff. ' +
-        'Continue in-scope work that can proceed while the coordinator handles the dependency.',
+      '- Complete independent work. If a prerequisite still prevents further progress, use ' +
+        'report_task_blocker with the missing input and the evidence you checked.',
       '- Never replace missing APIs with mock responses, temporary servers, seed accounts or ' +
         'reset credentials or volumes. Follow explicit project restrictions on verification ' +
         'actions.',

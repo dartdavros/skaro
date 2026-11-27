@@ -1,3 +1,4 @@
+import { inspectTaskTool } from './task-tool-receipts';
 import type { AppDb } from '@skaro/core';
 import { operationFailure, type SkaroScope, type Tool, type ToolResult } from '@skaro/mcp-server';
 import { background } from './background/client';
@@ -18,6 +19,8 @@ export async function reconcileTaskSubmission(
     };
   if (db.shell.projectScope && db.shell.projectScope !== scope.projectId)
     throw new Error('Submission recovery is outside verification scope');
+  const direct = inspectTaskTool(db, scope, 'submit_result', id);
+  if (direct) return direct;
   const op = db.coordination.getOperation(scope.projectId, id);
   if (
     !op ||

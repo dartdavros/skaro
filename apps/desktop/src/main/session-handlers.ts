@@ -1,3 +1,4 @@
+import { isAuditChat } from './c4-audit-admission';
 import type { Handlers } from './ipc';
 import { taskControlView } from './task-control-view';
 import { c4ProtocolHandlers } from './c4-protocol-handlers';
@@ -171,10 +172,7 @@ export function sessionHandlers(
       'plan.placeTask': (projectId, taskId, milestoneId, index) =>
         plan.placeTask(projectId, taskId, milestoneId, index),
       'task.controls': (project, task) => taskControlView(db, services.projects.get(project), task),
-      'task.open': async (projectId, taskId, options) => {
-        await c4.restore({ kind: 'task', projectId, taskId });
-        return runs.open(projectId, taskId, options);
-      },
+      'task.open': (projectId, taskId, options) => runs.open(projectId, taskId, options),
       'task.send': (projectId, taskId, input) => runs.send(projectId, taskId, input),
       'task.respond': (projectId, taskId, id, answer) =>
         runs.respond(projectId, taskId, id, answer),
@@ -196,8 +194,13 @@ export function sessionHandlers(
       'chats.find': (source, id) => chats.find(source, id),
       'chats.defaults': (projectId) => chats.defaults(projectId),
       'chat.open': (projectId, chatId, options) =>
-        chats.open(projectId, chatId, options, () =>
-          c4.restore({ kind: 'project_chat', projectId, chatId }),
+        chats.open(
+          projectId,
+          chatId,
+          options,
+          isAuditChat(db, chatId)
+            ? () => c4.restore({ kind: 'project_chat', projectId, chatId })
+            : undefined,
         ),
       'chat.create': (projectId, settings, input) => chats.create(projectId, settings, input),
       'chat.send': (projectId, chatId, input) => chats.send(projectId, chatId, input),

@@ -1,3 +1,4 @@
+import { matchesInPlaceTree } from './in-place-tree';
 import { existsSync } from 'node:fs';
 import { git, type AppDb, type Task } from '@skaro/core';
 import type { ProjectContext } from './projects';
@@ -6,9 +7,6 @@ import { taskSections } from './task-body';
 import { readLedger } from './task-stage';
 import { stageIdOf } from './task-stage';
 import { dependencySnapshot, preparedDependencies } from './completion-dependencies';
-import { c4ArchitectureHash, c4ChangeHash } from './c4-review';
-import { c4SemanticContext, c4SemanticContextHash } from './c4-semantic-context';
-import { c4RecordProtocol } from './c4-record-protocol';
 
 /** Import an accepted legacy result once. Never include unsubmitted work at a shared tip. */
 export async function acceptedResult(
@@ -82,7 +80,6 @@ export async function assertResultUnchanged(
   result: TaskResult,
 ): Promise<void> {
   context.invalidate();
-  const artifacts = await context.load();
   if (
     result.worktree &&
     existsSync(result.worktree) &&
@@ -97,34 +94,12 @@ export async function assertResultUnchanged(
       : false);
   if (!shared && (await context.git.head(task.branch ?? result.branch)) !== result.head)
     throw new Error(`${result.taskId}: branch changed after submission; submit the result again`);
-  const review = result.c4;
-  const impact =
-    review && c4RecordProtocol(review) === 'impact-v1' && review.scope?.kind !== 'artifacts';
-  const currentModel = impact
-    ? !!review.semanticReceipt &&
-      !!review.scope &&
-      review.semanticContextHash ===
-        c4SemanticContextHash({
-          ...c4SemanticContext(artifacts, result.taskId, review.scope),
-          preservation: review.preservation,
-        })
-    : review?.modelHash === c4ArchitectureHash(artifacts, review?.scope);
-  if (
-    !result.c4 ||
-    !currentModel ||
-    (result.worktree &&
-      result.c4.changeHash !==
-        (await c4ChangeHash(
-          shared ? context.root : result.worktree,
-          result.c4.baseHead,
-          // A legacy shared checkout may already contain another accepted task.
-          // Verify this result's immutable commit, never that checkout's later tip.
-          shared ? result.head : undefined,
-        )))
-  )
-    throw new Error(
-      `${result.taskId}: C4 acceptance is missing or stale; review architecture and submit the result again`,
-    );
+  if (result.inPlace) {
+    if (!(await matchesInPlaceTree(context.root, result.head)))
+      throw new Error(`${result.taskId}: source changed after in-place submission`);
+  }
+  if (shared && !(await containsCommit(context, result.branch, result.head)))
+    throw new Error(`${result.taskId}: the shared branch no longer contains the accepted commit`);
 }
 
 /** A revised accepted result is required after an explicit revert. */

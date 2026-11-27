@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'node:util';
 import { indexTasks, startBlocker } from '@skaro/core';
-import { dispatchState } from './coordination-dispatch';
+import { requireTaskStartup } from './task-startup-generation';
 import { hasOwnerOrigin } from './owner-command-provenance';
 import { key } from './task-run-helpers';
 import { transitionPending } from './task-lifecycle-journal';
@@ -8,8 +8,6 @@ import type { TaskRunEngine } from './task-run-engine';
 
 /** An acknowledged owner message can still be waiting for a checkout with no run. */
 export async function recoverQueuedTaskStarts(ctx: TaskRunEngine, projectId: string) {
-  const dispatch = dispatchState(ctx.deps.db, projectId);
-  if (!dispatch.enabled) return;
   const { tasks } = await ctx.project(projectId).load();
   const index = indexTasks(tasks);
   for (const task of tasks) {
@@ -23,7 +21,6 @@ export async function recoverQueuedTaskStarts(ctx: TaskRunEngine, projectId: str
       saved.error ||
       saved.builtin ||
       saved.transition ||
-      saved.dispatchRevision !== dispatch.revision ||
       startBlocker(task, index) ||
       ctx.deps.db.latestRun(projectId, id)
     )
@@ -42,6 +39,7 @@ export async function recoverQueuedTaskStarts(ctx: TaskRunEngine, projectId: str
       })
     )
       continue;
+    requireTaskStartup(ctx.deps.db, ctx.startup, projectId, id);
     const owner = key(projectId, id);
     const queue = ctx.queue.state();
     if (queue.running.includes(owner) || queue.queued.includes(owner)) continue;

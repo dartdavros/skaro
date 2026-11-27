@@ -32,12 +32,7 @@ export async function prepareImportC4(
         'C4 architecture, specifications and ADRs are one coherent package. Select all its related documents or leave the whole package unselected.',
       );
   }
-  if (!chosen.some((s) => s.type === 'architecture' || s.type === 'spec') && !state.c4)
-    return undefined;
-  if (!state.c4)
-    throw new Error(
-      'Import contains architecture/specifications without C4. Prepare and stage their shared model with propose_c4 before finish_import.',
-    );
+  if (!state.c4) return undefined;
   const next = (ids: string[]) => Math.max(0, ...ids.map(Number)) + 1;
   let spec = next(artifacts.specs.map((s) => s.id)),
     adr = next(artifacts.adrs.map((s) => s.id));

@@ -13,6 +13,7 @@ import { withoutSecrets } from './session-log';
 import { queueOwnerMessage } from './owner-commands';
 import { openPrivate, sealPrivate } from './private-input';
 import type { MessageInput } from '../shared/ipc';
+import { FINISH, WAIT_CARD } from './task-wait-card';
 import { TaskExecution } from './task-execution';
 import { QuestionRetirements } from './question-retirements';
 import { recordQuestionAcceptance } from './question-answer-proof';
@@ -229,6 +230,19 @@ export class QuestionAnswers {
       text,
       ...(secrets.length ? { privateText: sealPrivate({ text: textOf(decoded), secrets }) } : {}),
       commandId: this.commandId(entries),
+      ...(this.owner.startsWith('active.') &&
+      entries.some(
+        ({ interaction, answer }) =>
+          interaction.id.startsWith(WAIT_CARD + this.owner.slice('active.'.length) + '-') &&
+          interaction.questions.some(
+            (q) => q.id === 'criteria' && q.options.some((o) => o.label === FINISH),
+          ) &&
+          answer.kind === 'question' &&
+          answer.answers['criteria']?.length === 1 &&
+          answer.answers['criteria'][0] === FINISH,
+      )
+        ? { resumeTask: true as const }
+        : {}),
     };
   }
   delivered(): void {

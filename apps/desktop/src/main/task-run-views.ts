@@ -19,7 +19,6 @@ import { trackRun } from './task-run-access';
 import { withAgentDefaults } from './agent-model-defaults';
 import type { TaskAgentPreferences } from './task-agent-preferences';
 import { taskViewSettings } from './task-view-settings';
-import { readC4Diagnostic } from './c4-tool-diagnostic';
 import { accessTaskWorktree } from './task-worktree-retention';
 import { validateBuiltinTaskSettings } from './builtin-task-settings-validation';
 import { terminalTaskHistory, terminalTaskTimeline } from './terminal-task-requests';
@@ -130,18 +129,6 @@ export class TaskRunViews {
           integration.timeline,
         )
       : undefined;
-    const diagnostic =
-      active && !['done', 'cancelled'].includes(task.status)
-        ? readC4Diagnostic(this.ctx.deps.db, active.run.id)
-        : undefined;
-    const c4Diagnostic =
-      diagnostic?.stage === 'proposal' && active
-        ? readC4Diagnostic(
-            this.ctx.deps.db,
-            active.run.id,
-            (await context.load()).c4?.revision ?? 0,
-          )
-        : diagnostic;
     return {
       projectId,
       dispatchPending: taskDispatchPending(
@@ -150,7 +137,6 @@ export class TaskRunViews {
         projectId,
         taskId,
       ),
-      c4Diagnostic,
       environmentReview: this.ctx.reviews.state(projectId, taskId),
       task: shown,
       ...(stage

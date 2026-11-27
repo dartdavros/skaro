@@ -7,7 +7,6 @@ import { type PlanProposal, LiveChat } from './chat-model';
 import { adrId, findCycle } from './chat-proposal-helpers';
 import { applyChatPlan } from './chat-plan-apply';
 import { planSpecProblem } from './chat-plan-specs';
-import { pendingC4PlanProblem } from './chat-plan-c4';
 
 import type { ChatEngine } from './chat-engine';
 
@@ -84,8 +83,6 @@ export class ChatPlan {
     artifacts: ProjectArtifacts,
     tasks: ProposedTaskArgs[],
   ): Promise<string | undefined> {
-    const architecture = await pendingC4PlanProblem(this.ctx.deps.db, live.projectId, tasks);
-    if (architecture) return architecture;
     const earlier = this.earlierRefs(live);
     const refs = new Set(tasks.map((t) => t.ref));
     const ids = new Set(artifacts.tasks.map((t) => t.id));
@@ -98,7 +95,7 @@ export class ChatPlan {
         'call or of earlier cards, or ids of existing tasks.'
       );
     }
-    const specProblem = planSpecProblem(tasks, artifacts.specs, artifacts);
+    const specProblem = planSpecProblem(tasks, artifacts.specs);
     if (specProblem) return specProblem;
     const self = tasks.filter((t) => t.dependsOn.includes(t.ref));
     if (self.length) return `A task cannot depend on itself: ${self.map((t) => t.ref).join(', ')}.`;

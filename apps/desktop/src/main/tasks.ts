@@ -1,4 +1,4 @@
-import { recoverCoordinatorIncidents } from './coordinator-recovery';
+import { recoverTaskQueue } from './task-queue-recovery';
 import { taskUpdateBusy } from './task-update-activity';
 import { type ProjectArtifacts, type Task, type TaskStatus } from '@skaro/core';
 import type { MergeTaskArgs, SubmitResultArgs, SkaroScope, ToolResult } from '@skaro/mcp-server';
@@ -86,7 +86,6 @@ export class TaskRuns {
   projectChanged(projectId: string): void {
     this.engine.merges.coordinator.changed(projectId);
     this.catalog.invalidate(projectId);
-    this.engine.incidents.projectChanged(projectId);
   }
   scopedTool(scope: SkaroScope, action: () => Promise<ToolResult>): Promise<ToolResult> {
     return taskTool(this.engine, scope, action);
@@ -259,8 +258,8 @@ export class TaskRuns {
     return taskTool(this.engine, scope, () => configureTaskEnvironment(this.engine, args, scope));
   }
 
-  recoverCoordination() {
-    return recoverCoordinatorIncidents(this.engine);
+  recoverTaskQueue() {
+    return recoverTaskQueue(this.engine);
   }
   decisionSources(projectId: string, only?: string) {
     return taskDecisionSources(this.engine, projectId, only);

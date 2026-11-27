@@ -116,7 +116,7 @@ export class ChatPlanningContinuation {
         internal: true,
         text:
           'Continue the registered owner request for implementation tasks. Read get_project_context ' +
-          'and current C4 when relevant. Call propose_tasks for a single task or prepare_plan for the full graph. ' +
+          'and the accepted specifications. Call propose_tasks for a single task or prepare_plan for the full graph. ' +
           'If a prerequisite needs a new decision, open the actual proposal and bind it with begin_task_plan, ' +
           'or ask a structured question for indispensable missing information.',
       },

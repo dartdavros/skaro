@@ -48,7 +48,7 @@ export function agentInteractionInstructions(): string {
           return `${agent.questionTool} in ${agent.questionAgentName}`;
         }).join(', ') +
         '), so Skaro shows a question card. Do not finish a turn ' +
-        'with a plain-text permission question. If question delivery fails, report the exact failure to the coordinator.',
+        'with a plain-text permission question. If question delivery fails, report the exact failure in the conversation.',
       '- Actually call the structured question tool before saying a question was sent. A plan, ' +
         'a blocker summary or submit_result does not create a question card. Never claim that a ' +
         'card was sent or shown without a successful tool invocation. If the call fails, report ' +

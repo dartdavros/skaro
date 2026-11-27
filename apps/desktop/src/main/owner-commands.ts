@@ -5,7 +5,13 @@ import type { MessageInput } from '../shared/ipc';
 import type { ProjectCoordinators } from './project-coordinators';
 import { OwnerCommandCoordination } from './owner-command-coordination';
 import { CoordinationPending } from './project-coordinator-errors';
-import { registerOwnerOrigin } from './owner-command-provenance';
+import { requireTaskStopProof } from './native-task-stop-proof';
+import { savedOwnerCommand } from './owner-command-evidence';
+import {
+  registerOwnerOrigin,
+  isTaskInboxCommand,
+  requireOwnerOrigin,
+} from './owner-command-provenance';
 
 type SendMethod = 'chat.send' | 'task.send';
 type DeliveryHandlers = Pick<Handlers, SendMethod>;
@@ -57,6 +63,7 @@ export async function confirmOwnerMessagesStopped(
 /** Acceptance is synchronous and durable; agent attachment runs after the IPC acknowledgement. */
 export class OwnerCommands {
   private readonly db: AppDb;
+  private readonly dataDir?: string;
   private readonly publish: (command: OwnerCommand) => void;
   private readonly queues = new Map<string, Promise<void>>();
   private readonly deliveries = new Map<string, Promise<void>>();
@@ -73,6 +80,7 @@ export class OwnerCommands {
     dataDir?: string,
   ) {
     this.db = db;
+    this.dataDir = dataDir;
     this.publish = publish;
     if (coordinators && dataDir)
       this.coordination = new OwnerCommandCoordination(db, coordinators, dataDir);
@@ -81,7 +89,12 @@ export class OwnerCommands {
     if (this.closing) throw new Error('The command inbox is closing.');
     const blocked = blockedOwners.get(`${projectId}:${ownerId}`);
     if (blocked) throw new Error(blocked);
-    this.requireCoordination().validate(projectId);
+    if (method === 'chat.send') this.requireCoordination().validate(projectId);
+    else if (
+      !this.db.getProject(projectId) ||
+      (this.db.shell.projectScope && this.db.shell.projectScope !== projectId)
+    )
+      throw new Error('Task command is outside the project scope');
     const id = input.commandId ?? randomUUID();
     const request: OwnerCommand = {
       id,
@@ -99,7 +112,6 @@ export class OwnerCommands {
   }
   start(handlers: DeliveryHandlers, deferDispatch = false): void {
     if (this.closing) throw new Error('The command inbox is closing.');
-    this.requireCoordination();
     this.handlers = handlers;
     // The module routes durable answers through the one application inbox.
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -111,23 +123,30 @@ export class OwnerCommands {
     if (this.closing || this.dispatchReady) return;
     this.dispatchReady = true;
     const commands = new Map(
-      [...this.db.commands.pending(), ...this.requireCoordination().unresolved()].map((command) => [
+      [...this.db.commands.pending(), ...(this.coordination?.unresolved() ?? [])].map((command) => [
         command.id,
         command,
       ]),
     );
     for (const command of commands.values()) {
       if (this.db.shell.projectScope && command.args[0] !== this.db.shell.projectScope) continue;
-      if (command.state === 'delivering' || this.requireCoordination().uncertain(command)) {
+      if (
+        command.state === 'delivering' ||
+        (!isTaskInboxCommand(this.db, command) && this.coordination?.uncertain(command))
+      ) {
         const recovery = this.reconcile(command);
         this.recoveries.add(recovery);
         void recovery.finally(() => this.recoveries.delete(recovery)).catch(() => undefined);
       } else this.schedule(command);
     }
   }
-  private async reconcile(command: OwnerCommand): Promise<boolean> {
+  private async reconcile(command: OwnerCommand, cause?: unknown): Promise<boolean> {
     try {
-      const outcome = await this.requireCoordination().reconcile(command);
+      const outcome = isTaskInboxCommand(this.db, command)
+        ? this.dataDir && (await savedOwnerCommand(this.db, this.dataDir, command))
+          ? 'delivered'
+          : undefined
+        : await this.requireCoordination().reconcile(command);
       if (outcome) {
         if (this.db.commands.get(command.id)?.state !== 'cancelled')
           this.publish(this.db.commands.update(command.id, outcome));
@@ -146,7 +165,9 @@ export class OwnerCommands {
       this.db.commands.update(
         command.id,
         'uncertain',
-        'Delivery was interrupted before native acknowledgement. Check the saved conversation before resending.',
+        cause instanceof Error
+          ? cause.message
+          : 'Delivery was interrupted before native acknowledgement. Check the saved conversation before resending.',
       ),
     );
     return false;
@@ -173,15 +194,21 @@ export class OwnerCommands {
           ...args: unknown[]
         ) => Promise<void>;
         try {
-          for (const prior of this.requireCoordination().prior(command))
-            await this.reconcile(prior);
-          await this.requireCoordination().deliver(command, async () => {
+          const effect = async () => {
             if (this.db.commands.get(command.id)?.state !== 'accepted') return;
             this.db.commands.update(command.id, 'delivering');
             await handler(...command.args);
             if (this.db.commands.get(command.id)?.state !== 'cancelled')
               this.publish(this.db.commands.update(command.id, 'delivered'));
-          });
+          };
+          if (isTaskInboxCommand(this.db, command)) {
+            requireOwnerOrigin(this.db, command);
+            await effect();
+          } else {
+            for (const prior of this.requireCoordination().prior(command))
+              await this.reconcile(prior);
+            await this.requireCoordination().deliver(command, effect);
+          }
         } catch (error) {
           // Shutdown fenced an effect before dispatch; its durable inbox arguments remain valid.
           if (
@@ -191,8 +218,13 @@ export class OwnerCommands {
           )
             return;
           const state = this.db.commands.get(command.id)?.state;
-          if (state !== 'cancelled' && this.requireCoordination().uncertain(command)) {
-            await this.reconcile(command);
+          if (
+            state !== 'cancelled' &&
+            (isTaskInboxCommand(this.db, command)
+              ? state === 'delivering'
+              : this.coordination?.uncertain(command))
+          ) {
+            await this.reconcile(command, error);
             return;
           }
           if (state !== 'cancelled' && state !== 'delivered')
@@ -229,6 +261,8 @@ export class OwnerCommands {
   captureStop(project: string, owner: string): string[] {
     const scope = `${project}:${owner}`;
     const ids = this.cancel(scope);
+    for (const command of this.db.commands.forOwner(scope))
+      if (command.state === 'uncertain') ids.push(command.id);
     for (const operation of this.db.coordination.pending(project)) {
       if (!operation.id.startsWith('owner-command:')) continue;
       const id = operation.id.slice('owner-command:'.length),
@@ -252,7 +286,9 @@ export class OwnerCommands {
         command?.owner === `${project}:${owner}` &&
         ['cancelled', 'uncertain', 'failed'].includes(command.state)
       ) {
-        this.requireCoordination().stopped(command, proof);
+        if (isTaskInboxCommand(this.db, command))
+          requireTaskStopProof(this.db, project, owner, proof);
+        else this.requireCoordination().stopped(command, proof);
         if (command.state !== 'cancelled') this.publish(this.db.commands.update(id, 'cancelled'));
       }
     }

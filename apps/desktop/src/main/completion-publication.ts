@@ -1,12 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import {
-  ArtifactStore,
-  git,
-  readAcceptedC4Model,
-  type MergeOptions,
-  type ProjectArtifacts,
-} from '@skaro/core';
+import { ArtifactStore, git, type MergeOptions, type ProjectArtifacts } from '@skaro/core';
 import type { ProjectContext } from './projects';
 import { CompletionStore, criteriaRevision, type CompletionOperation } from './completion-store';
 import { taskSections } from './task-body';
@@ -16,9 +10,6 @@ import type { IntegrationOperation } from './integration-model';
 import { assertPublicationDependencies } from './completion-dependencies';
 import { withCompletionCheckout } from './completion-checkout';
 import { runChecks } from './check-runner';
-import { prepareC4Publication, writeC4Publication } from './c4-publication';
-import { assertCandidateC4 } from './c4-candidate';
-
 /** What every publication does besides Git: task metadata, guards and the durable record. */
 async function publication(
   context: ProjectContext,
@@ -40,21 +31,8 @@ async function publication(
       operation.results.length > 1
         ? `${message.split('\n\n')[0]}\n\n${operation.results.map((result) => result.message).join('\n')}`
         : message,
-    managedPaths: async (baseCheckout, isolatedBase) => {
-      const model = isolatedBase ? await readAcceptedC4Model(baseCheckout) : artifacts.c4;
-      return [
-        ...tasks.map((task) => task.path),
-        ...(model
-          ? [
-              '.skaro/c4/model.json',
-              '.skaro/architecture.md',
-              `.skaro/c4/history/${model.revision + 1}.json`,
-            ]
-          : []),
-      ];
-    },
+    managedPaths: async () => tasks.map((task) => task.path),
     guardPaths: [
-      '.skaro/c4/model.json',
       '.skaro/architecture.md',
       '.skaro/config.yaml',
       ...artifacts.specs
@@ -62,26 +40,10 @@ async function publication(
         .map((spec) => spec.path),
     ],
     allowMetadataOnly: true,
-    beforeCommit: async (candidate, { baseHead, isolatedBase }) => {
+    beforeCommit: async (candidate) => {
       context.invalidate();
       assertPublicationDependencies(await context.load(), operation.results, store);
       const target = new ArtifactStore(candidate);
-      // The restored metadata in a detached candidate belongs to the destination branch.
-      const publicationArtifacts = isolatedBase ? await target.load() : artifacts;
-      const codeCandidate = { root: candidate, base: baseHead, staged: true };
-      const architecture = await prepareC4Publication(
-        isolatedBase ? candidate : context.root,
-        publicationArtifacts,
-        operation.results.flatMap((result) => result.c4?.realized ?? []),
-        codeCandidate,
-      );
-      const c4Files = await writeC4Publication(candidate, architecture);
-      const c4Model = architecture
-        ? JSON.parse(architecture.files.find((f) => f.path === 'c4/model.json')!.after)
-        : publicationArtifacts.c4;
-      if (c4Model) {
-        await assertCandidateC4(c4Model, codeCandidate);
-      }
       for (const task of tasks) {
         const path = join(candidate, task.path);
         await mkdir(dirname(path), { recursive: true });
@@ -96,7 +58,7 @@ async function publication(
           throw new Error(`${task.id}: acceptance changed during merge`);
         await target.updateTask(task.id, { status: 'done' });
       }
-      return [...tasks.map((task) => task.path), ...c4Files];
+      return tasks.map((task) => task.path);
     },
     prepared: async ({ before, commit }) => {
       context.invalidate();

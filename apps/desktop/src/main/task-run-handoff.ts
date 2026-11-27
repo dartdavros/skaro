@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { bindC4Protocol } from './c4-protocol';
 import { join } from 'node:path';
 import { continuationTimeline } from '@skaro/timeline';
 import type { MessageInput } from '../shared/ipc';
@@ -29,6 +28,7 @@ interface Intent {
   next: TaskHandoffSettings;
   inputs: MessageInput[];
   dispatchRevision?: number;
+  taskEpoch?: number;
   interactions: TimelineState['interactions'];
   plan?: TimelineState['plan'];
 }
@@ -132,7 +132,7 @@ export class TaskRunHandoff {
             this.ctx.startup.read(projectId, taskId)?.inputs ?? [],
             this.ctx.queuedInputs.get(k) ?? [],
           ),
-          dispatchRevision: this.ctx.startup.read(projectId, taskId)?.dispatchRevision,
+          taskEpoch: this.ctx.startup.cancellationEpoch(projectId, taskId),
           interactions: structuredClone(active.timeline.state.interactions),
           ...(active.timeline.state.plan
             ? { plan: structuredClone(active.timeline.state.plan) }
@@ -144,7 +144,12 @@ export class TaskRunHandoff {
         db.setSetting(intentKey, intent);
       }
       next = intent.next;
-      if (intent.inputs.length) requireStartupGeneration(db, projectId, intent.dispatchRevision);
+      if (intent.inputs.length) {
+        if (intent.taskEpoch === undefined)
+          requireStartupGeneration(db, projectId, intent.dispatchRevision);
+        else if (intent.taskEpoch !== this.ctx.startup.cancellationEpoch(projectId, taskId))
+          throw new CommandCancelled();
+      }
       // Await actual shutdown. No swallowed close error and no replacement writer on timeout.
       await this.ctx.sessions.stopForHandoff(active);
       await restoreCleanedWorktree(this.ctx, active.run);
@@ -186,7 +191,6 @@ export class TaskRunHandoff {
         setting,
         saved.agent === 'skaro' ? db.getSetting(setting, null) : saved,
         (run) => {
-          bindC4Protocol(db, projectId, run.id, active.run.id);
           if (saved.agent === 'skaro')
             saveBuiltinRunSettings(db, run.id, parseBuiltinTaskStart(saved));
           new TaskExecution(db, run.id).inherit(execution);

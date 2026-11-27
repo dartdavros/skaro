@@ -93,7 +93,6 @@ export class TaskInterrupts {
         : stopManagedTask(this.ctx, active, commands, integrationOwnsDelivery);
     };
     if (current) return stopRun(current);
-    await this.ctx.architecture.stop(projectId, taskId);
     await this.ctx.integrations.controls.interrupt(projectId, taskId);
     for (const run of this.ctx.deps.db.listRuns(projectId, taskId, { includeRetired: true }))
       await this.ctx.processes.stop(run.id);

@@ -1,3 +1,4 @@
+import { inspectTaskTool } from './task-tool-receipts';
 import type { AppDb } from '@skaro/core';
 import type { SkaroScope, Tool } from '@skaro/mcp-server';
 import { containsCommit } from './completion-results';
@@ -13,6 +14,15 @@ export async function recoverMergeOperation(
 ) {
   const { mergeRequestId, commit, base, results } = publication;
   if (!mergeRequestId || !commit || publication.state !== 'completed' || results.length !== 1)
+    return;
+  if (
+    inspectTaskTool(
+      db,
+      { kind: 'task', projectId: context.id, taskId: results[0]!.taskId },
+      'merge_task',
+      mergeRequestId,
+    )
+  )
     return;
   const operation = db.coordination.getOperation(context.id, mergeRequestId);
   const task = results[0]!.taskId;
@@ -57,6 +67,34 @@ export function mergeRecoveryTool(
     },
     call: async (args, scope) => {
       const id = args.operation_id;
+      const direct = typeof id === 'string' && inspectTaskTool(db, scope, 'merge_task', id);
+      if (direct) {
+        if (!direct.isError || direct.structuredContent?.state !== 'started') return direct;
+        const linked = new CompletionStore(db, scope.projectId)
+          .operations()
+          .findLast(
+            (entry) =>
+              entry.mergeRequestId === id &&
+              entry.state === 'completed' &&
+              entry.commit &&
+              entry.results.length === 1 &&
+              (scope.kind !== 'task' || entry.results[0]!.taskId === scope.taskId),
+          );
+        if (
+          linked?.commit &&
+          (await containsCommit(project(scope.projectId), linked.base, linked.commit))
+        )
+          return {
+            text: 'The recorded merge commit is in the base branch.',
+            structuredContent: {
+              operationId: id,
+              commit: linked.commit,
+              base: linked.base,
+              publicationId: linked.id,
+            },
+          };
+        return direct;
+      }
       const operation = typeof id === 'string' && db.coordination.getOperation(scope.projectId, id);
       if (
         !operation ||

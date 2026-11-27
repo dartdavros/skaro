@@ -119,7 +119,7 @@ export async function reviewFixtureResult(
 ): Promise<void> {
   const context = projects.get(projectId);
   context.invalidate();
-  const artifacts = await context.load();
+  const artifacts = await context.load(true);
   const checkout = db.getRun(runId)?.worktree ?? context.root;
   const baseHead = (await git(checkout, ['rev-parse', artifacts.config.baseBranch])).stdout.trim();
   const service = new C4Service({

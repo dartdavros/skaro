@@ -24,10 +24,7 @@ export function createC4Services(
     projects,
     locale,
     publish: async (scope, item) => {
-      if (scope.kind !== 'task') return chats.architectureEvent(scope, item);
-      await runs.architectureEvent(scope, item);
-      if (item.state === 'applied' || item.state === 'rejected')
-        chats.planningChanged(scope.projectId);
+      if (scope.kind === 'project_chat') await chats.architectureEvent(scope, item);
     },
     changed: (projectId) => emit('project.changed', { projectId }),
     stageImport: (args, scope) => chats.stageC4(args, scope),

@@ -1,3 +1,4 @@
+import { isAuditChat } from './c4-audit-admission';
 import type { AppDb } from '@skaro/core';
 import type { DecisionOrigin, DecisionSource, ProjectDecision } from '../shared/project-decisions';
 import type { Services } from './app-services';
@@ -37,6 +38,12 @@ export class DecisionSources {
   }
   private eligible(entries: ProjectDecision[]) {
     return entries.flatMap((entry) => {
+      if (
+        entry.origin.kind === 'task' &&
+        (entry.id.startsWith('coordinator:') ||
+          (entry.kind === 'proposal' && entry.item.proposal.type === 'architecture'))
+      )
+        return [];
       // A committed answer wins even if a crash preceded the canonical log flush.
       if (decisionReplyStatus(this.services.db, entry)) return [];
       if (!entry.id.startsWith('coordinator:')) return [entry];
@@ -124,6 +131,10 @@ export class DecisionSources {
     );
   }
   private c4Records(project: string, sources: DecisionSource[]) {
+    if (
+      !sources.some((source) => source.kind === 'chat' && isAuditChat(this.services.db, source.id))
+    )
+      return Promise.resolve([]);
     const referenced = new Set<string>();
     for (const source of sources)
       for (const item of source.timeline.items)

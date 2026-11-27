@@ -3,8 +3,10 @@ import type { ChatSessions } from './chats';
 import type { C4AuditStore } from './c4-audit-store';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 
+import { C4_INSTRUCTIONS } from './c4-instructions';
+
 const PROMPT = `Полный аудит C4
-Выполни полный read-only аудит текущего кода, брифа, архитектуры, спецификаций, ADR и C4.
+Построй или обнови общую модель C4 по фактическому проекту. Если модели ещё нет, предложи начальную модель через propose_c4. Выполни полный read-only аудит текущего кода, брифа, архитектуры, спецификаций, ADR и C4.
 Сначала вызови get_c4_context: audit содержит fingerprint и перечень реальных файлов.
 Прочитай источники, проверь current/planned и открытые вопросы. Не изменяй код и документы напрямую, не запускай проект, не создавай задачи.
 Если нужно существенное изменение архитектуры, подготовь ОДИН пакет propose_c4. Он сам является запросом решения: после сохранения пакета заверши ход и НЕ создавай дополнительный вопрос или разрешение. Не разбивай связанные документы и модель на отдельные согласования.
@@ -31,7 +33,7 @@ export async function startC4Audit(
     const chat = await chats.create(
       project,
       { ...settings, permissionMode: 'ask' },
-      { text: PROMPT, commandId: audit.id },
+      { text: C4_INSTRUCTIONS + '\n\n' + PROMPT, commandId: audit.id },
     );
     db.setSetting(`c4.audit.chat.${chat.id}`, audit.id);
     db.updateChat(chat.id, { title: 'Полный аудит C4' });

@@ -26,7 +26,7 @@ export async function c4Context(
   readPackage?: (id: string) => Promise<C4Package>,
 ): Promise<ToolResult> {
   context.invalidate();
-  const artifacts = await context.load();
+  const artifacts = await context.load(true);
   const documents = [...(await readC4Documents(context.root))];
   const baseHead =
     scope.kind === 'task'

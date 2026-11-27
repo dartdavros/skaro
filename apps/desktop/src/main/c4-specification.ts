@@ -15,7 +15,7 @@ export async function proposeC4Specification(
       isError: true,
       text: 'Specifications require c4 (base_revision, model, documents). Read get_c4_context or use propose_c4 for the complete package.',
     };
-  const artifacts = await projects.get(scope.projectId).load();
+  const artifacts = await projects.get(scope.projectId).load(true);
   const id =
     args.id?.replace(/^SPEC-/i, '').padStart(4, '0') ??
     String(Math.max(0, ...artifacts.specs.map((s) => Number(s.id))) + 1).padStart(4, '0');

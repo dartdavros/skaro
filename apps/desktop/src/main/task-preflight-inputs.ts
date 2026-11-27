@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import {
   git,
   environmentName,
+  authoredBody,
   assertWorkflowGraph,
   indexTasks,
   isBlocked,
@@ -76,7 +77,9 @@ export async function taskInputSnapshot(
   for (const document of documents)
     versions.push([
       document.path,
-      memoryVersion(await readFile(await requireMemoryPath(context.root, document.path), 'utf8')),
+      memoryVersion(
+        authoredBody(await readFile(await requireMemoryPath(context.root, document.path), 'utf8')),
+      ),
     ]);
   const run = db.latestRun(context.id, taskId);
   const owner = (run && stageIdOf(run)) ?? taskId;

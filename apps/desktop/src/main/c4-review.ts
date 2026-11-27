@@ -58,7 +58,7 @@ async function inspectC4TaskReviewData(
   runId?: string,
 ): Promise<{ review: C4TaskReview; artifactOnly: boolean }> {
   context.invalidate();
-  const artifacts = await context.load();
+  const artifacts = await context.load(true);
   const run = runId ?? db.latestRun(context.id, taskId)?.id;
   const baseHead = await taskC4Base(db, artifacts, {
     projectId: context.id,

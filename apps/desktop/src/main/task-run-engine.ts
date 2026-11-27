@@ -1,5 +1,4 @@
 import { busyTaskEnvironments } from './task-environment-consumers';
-import { C4TaskCoordination } from './c4-task-coordination';
 import { RunQueue, type TaskKey, type TaskRuntime } from '@skaro/core';
 import { updateTaskRuntime } from './task-runtime-state';
 import type { MessageInput } from '../shared/ipc';
@@ -33,7 +32,6 @@ import { TaskResourceCleanup } from './task-resource-cleanup';
 import { executeResourceQueue } from './resource-task-queue';
 import { LocalCandidates } from './local-candidates';
 import { TaskIncidents } from './task-incidents';
-import { captureStartupIncident } from './incident-startup';
 import { TaskFileReads } from './task-file-reads';
 
 function taskKey(k: string): TaskKey {
@@ -44,7 +42,10 @@ function taskKey(k: string): TaskKey {
 /** Shared state and composition of the task-run services. */
 export class TaskRunEngine {
   readonly files = new TaskFileReads(this);
-  readonly incidents = new TaskIncidents(this);
+  private projectIncidents?: TaskIncidents;
+  get incidents(): TaskIncidents {
+    return (this.projectIncidents ??= new TaskIncidents(this));
+  }
   readonly incidentCaptures = new Set<Promise<void>>();
   readonly localCandidates = new LocalCandidates(this);
   closing = false;
@@ -72,10 +73,8 @@ export class TaskRunEngine {
   readonly stages = new TaskRunStages(this);
   readonly handoff = new TaskRunHandoff(this);
   readonly processes: TaskRunProcesses;
-  readonly architecture: C4TaskCoordination;
   constructor(deps: TaskRunDeps) {
     this.deps = deps;
-    this.architecture = new C4TaskCoordination(this);
     this.processes = new TaskRunProcesses(deps.db);
     this.startup = new TaskStartup(deps.db);
     this.integrations = new TaskIntegrations(this);
@@ -123,11 +122,6 @@ export class TaskRunEngine {
       if (event.type === 'queued') setRuntime('queued');
       if (event.type === 'finished' && event.error) {
         this.startup.fail(projectId, taskId, errorText(event.error));
-        const capture = captureStartupIncident(this, projectId, taskId, event.error);
-        this.incidentCaptures.add(capture);
-        void capture
-          .finally(() => this.incidentCaptures.delete(capture))
-          .catch((error) => console.error('Startup incident:', error));
         const active = this.active.get(key(projectId, taskId));
         if (active) this.history.notice(active, 'other', 'error', errorText(event.error));
         setRuntime('failed');

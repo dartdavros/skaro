@@ -1,6 +1,5 @@
 import type { AppDb } from '@skaro/core';
-import { CoordinationSuspended, requireCoordinationDispatch } from './coordination-dispatch';
-import { resourceExecution } from './resource-execution';
+import { CoordinationSuspended } from './coordination-dispatch';
 
 const key = (project: string, id: string) => `coordination.integration-fence.${project}.${id}`;
 export function integrationDispatchCandidates(db: AppDb, project: string) {
@@ -18,6 +17,5 @@ export function requireIntegrationDispatch(db: AppDb, project: string, id: strin
 }
 /** Only the original owner message/decision executor renews an old candidate after off/on. */
 export function renewIntegrationDispatch(db: AppDb, project: string, id: string) {
-  requireCoordinationDispatch(db, project, resourceExecution.getStore()?.dispatchRevision);
   db.setSetting(key(project, id), false);
 }

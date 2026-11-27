@@ -4,7 +4,6 @@ import { taskSections } from './task-body';
 import { agentInteractionInstructions } from './agent-interaction-instructions';
 import { taskEnvironmentInstructions } from './task-environment-instructions';
 import { LANGUAGES, terms, instructionsOf } from './prompt-context';
-import { C4_INSTRUCTIONS } from './c4-instructions';
 
 export function taskInstructions(options: {
   task: Task;
@@ -45,7 +44,6 @@ export function taskInstructions(options: {
     });
 
   const parts = [
-    C4_INSTRUCTIONS,
     `You are working on task ${task.id} "${task.title}" in a project managed by Skaro.`,
     task.status === 'done'
       ? 'The task is done and merged into the base branch. The user may ask follow-up ' +
@@ -101,7 +99,7 @@ export function taskInstructions(options: {
         '- If submit_result has an uncertain outcome, call reconcile_task_submission with its original ' +
           'operation_id. It inspects saved evidence without resubmitting. Checked criteria alone do not ' +
           'prove acceptance. After reconciliation inspect current task state before a fresh submission; ' +
-          'never repeat an unknown effect or ask the owner to repair coordinator metadata manually.',
+          'never repeat an unknown effect.',
         '- Use the task-local Playwright MCP for changed UI or directly affected browser behavior when applicable. ' +
           'When the change does not affect browser behavior, do not start a browser or report its absence as a blocker.',
         '- If required verification needs an API key, password or other credential from the owner, ' +

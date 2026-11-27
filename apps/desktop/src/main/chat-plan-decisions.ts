@@ -9,7 +9,6 @@ import { planSpecProblem } from './chat-plan-specs';
 import { adrId } from './chat-proposal-helpers';
 import { reconcilePlanIdentity } from './chat-plan-identity';
 import { serializePlanCreation } from './chat-plan-mutations';
-import { pendingC4PlanProblem } from './chat-plan-c4';
 
 /** One durable decision covers the validated graph; creation resumes without another approval. */
 export class ChatPlanDecisions {
@@ -154,8 +153,7 @@ export class ChatPlanDecisions {
       ? remaining.find((t) => t.ref === decision.creating!.ref)
       : remaining.find(
           (t) =>
-            t.dependsOn.every((dep) => known.has(dep)) &&
-            !planSpecProblem([t], artifacts.specs, artifacts),
+            t.dependsOn.every((dep) => known.has(dep)) && !planSpecProblem([t], artifacts.specs),
         );
     if (!task) {
       if (remaining.length) throw new Error('The approved task graph cannot be created.');
@@ -255,9 +253,7 @@ export class ChatPlanDecisions {
     artifacts: ProjectArtifacts,
     item?: ProposalItem,
   ) {
-    const architecture = await pendingC4PlanProblem(this.ctx.deps.db, live.projectId, tasks);
-    if (architecture) throw new Error(architecture);
-    const problem = planSpecProblem(tasks, artifacts.specs, artifacts);
+    const problem = planSpecProblem(tasks, artifacts.specs);
     if (problem) throw new Error(problem);
     checkedPlanDependencies(
       tasks,

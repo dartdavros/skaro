@@ -5,7 +5,6 @@ import { acceptedResult, containsCommit, assertResultUnchanged } from './complet
 import { finishCompletion } from './completion-projection';
 import { withSummary } from './task-body';
 import { reconcileCompletedPublicationResources } from './completion-recovery-resources';
-import { completeInPlaceC4 } from './c4-in-place';
 import { recoverMergeOperation } from './merge-operation-recovery';
 
 export async function reconcileCompletions(
@@ -48,12 +47,10 @@ export async function reconcileCompletions(
     if (criteriaRevision(task) !== result.criteria) continue;
     try {
       if (result.inPlace) {
-        if (!result.c4) throw new Error(`${task.id}: in-place acceptance has no C4 review`);
-        await completeInPlaceC4(hooks.deps.db, context, task.id, result.c4.runId, {
-          message: result.message,
-          summary: result.summary,
-          verification: result.verification,
-        });
+        await assertResultUnchanged(context, result);
+        await context.store.updateTask(task.id, { status: 'done' });
+        store.saveResult({ ...result, pendingReview: false });
+        context.invalidate();
         hooks.deps.emit('project.changed', { projectId: context.id });
         continue;
       }

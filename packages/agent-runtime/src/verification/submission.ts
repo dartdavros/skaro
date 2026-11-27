@@ -41,7 +41,6 @@ export function requireSubmissionAssessment(
     value.hostRevision !== host.revision ||
     value.criteriaRevision !== host.criteriaRevision ||
     host.continuation !== 'allowed' ||
-    !['current', 'not-required'].includes(host.c4) ||
     host.reasons.length ||
     host.openDecisions.length ||
     host.binding?.execution !== 'allowed'

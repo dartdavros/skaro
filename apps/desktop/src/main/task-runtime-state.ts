@@ -1,16 +1,15 @@
 import type { AppDb, TaskRuntime } from '@skaro/core';
 import { isDeferredInteraction, type TimelineState } from '@skaro/timeline';
-import { isBlockingTaskProposal, type TaskC4WaitPolicy } from '../shared/feed-actions';
+import { isBlockingTaskProposal } from '../shared/feed-actions';
 
 /** Owner questions, active work and resource waits retain their distinct existing statuses. */
 export function taskTimelineRuntime(
   timeline: Pick<TimelineState, 'status' | 'interactions'> & Partial<Pick<TimelineState, 'items'>>,
   recovery: 'queued' | 'running' | undefined,
-  blocksC4?: TaskC4WaitPolicy,
 ): TaskRuntime {
   if (timeline.interactions.some((i) => i.kind !== 'merge' && !isDeferredInteraction(i)))
     return 'waiting';
-  if (timeline.items?.some((item) => isBlockingTaskProposal(item, blocksC4))) return 'waiting';
+  if (timeline.items?.some((item) => isBlockingTaskProposal(item))) return 'waiting';
   if (timeline.status !== 'idle') return 'running';
   return recovery ?? (timeline.interactions.some(isDeferredInteraction) ? 'waiting' : 'idle');
 }

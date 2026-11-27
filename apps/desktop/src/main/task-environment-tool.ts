@@ -7,9 +7,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { ResourceAdmissionUnavailable } from './resource-manager';
 import { EnvironmentNotDispatched } from './environment-dispatch-error';
 import { inPlaceEnvironmentResult } from './task-environment-mode';
-import { incidentStartProhibition } from './incident-worker-repair';
 import { isTaskParked } from '@skaro/core';
-import { confirmTaskEnvironmentRepair } from './task-environment-repair-confirmation';
 
 /** `start_environment`: the agent of a task asks Skaro for running services. */
 export async function startTaskEnvironment(
@@ -30,15 +28,10 @@ export async function startTaskEnvironment(
     };
   const shared = inPlaceEnvironmentResult(ctx.project(scope.projectId).root, active.run);
   if (shared) return shared;
-  const prohibited = await incidentStartProhibition(ctx, active);
-  if (prohibited) return { text: prohibited, isError: true };
   try {
     const info = await ctx.environments.start(checkoutKey(active), { waitForResources: false });
     const { variables } = await ctx.environments.describe(checkoutKey(active));
     ctx.continuation.execution(active).clearBlock();
-    await confirmTaskEnvironmentRepair(ctx, active).catch((error: unknown) =>
-      console.error('Task environment incident verification:', errorText(error)),
-    );
     const urls = Object.entries(info.urls).map(([name, url]) => `- ${name}: ${url}`);
     return {
       text:
@@ -58,28 +51,6 @@ export async function startTaskEnvironment(
     };
   } catch (failure) {
     const error = failure instanceof EnvironmentNotDispatched ? failure.cause : failure;
-    let incidentId: string | undefined;
-    if (ctx.deps.coordinators) {
-      const incident = await ctx.incidents
-        .report(
-          active,
-          errorText(error),
-          {
-            cause: 'environment',
-            code:
-              error instanceof ResourceAdmissionUnavailable
-                ? 'environment_resource_conflict'
-                : 'environment_start_failed',
-            condition: 'environment-ready',
-          },
-          'controller',
-        )
-        .catch((reportError: unknown) => {
-          // A secondary diagnostic failure must not turn a known start failure into an unknown effect.
-          ctx.history.notice(active, 'other', 'error', errorText(reportError));
-        });
-      incidentId = incident?.id;
-    }
     if (error instanceof ResourceAdmissionUnavailable)
       return {
         text: `Environment cannot acquire its current ownership lock: ${error.reason}. Wait for the existing owner or cleanup to settle. Do not retry in a loop or start substitute services.`,
@@ -103,12 +74,9 @@ export async function startTaskEnvironment(
         'If the output shows a defect in the task sources, fix it and retry. If the known repair ' +
         'requires separate owner consent, immediately ask for that exact permission through the ' +
         'structured question tool and wait. Repair documented inputs in the task checkout yourself. ' +
-        (incidentId
-          ? `Project coordinator incident: ${incidentId}. Use read_project_incidents to inspect it. After a successful retry, call verify_project_incident for the current incident. `
-          : 'For an external prerequisite, call report_task_blocker with the exact missing input and evidence. ') +
+        'For an external prerequisite, report the exact missing input and evidence. ' +
         'Do not start substitute services or another copy.',
       isError: true,
-      ...(incidentId ? { structuredContent: { incidentId } } : {}),
     };
   }
 }

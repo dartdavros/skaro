@@ -157,5 +157,6 @@ export interface BackgroundMethods
     defaults: ConfigDefaults,
     revision: number,
     summary?: boolean,
+    includeC4?: boolean,
   ) => Promise<import('../project-artifact-memory').ArtifactSnapshot>;
 }

@@ -12,7 +12,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { lastAgentText } from './task-merges';
 import { updateSubject } from './task-subject';
 import { IntegrationPending } from './integration-model';
-import { completeInPlaceC4 } from './c4-in-place';
+import { completeInPlace } from './complete-in-place';
 import { writeTaskResult } from './task-result-write';
 import { serializeTaskMutation } from './project-task-mutations';
 
@@ -145,7 +145,7 @@ export class TaskRunResults {
       return 'open';
     }
     if (!active.run.worktree || !active.run.branch) {
-      await completeInPlaceC4(this.ctx.deps.db, context, taskId, active.run.id, {
+      await completeInPlace(this.ctx.deps.db, context, taskId, active.run.id, {
         message: active.commitMessage,
         summary: active.mergeSummary,
         verification: active.verification,
@@ -239,7 +239,7 @@ export class TaskRunResults {
     }
     const context = this.ctx.project(active.projectId);
     const write = () => writeTaskResult(this.ctx, active, args, beforeWrite);
-    const prepared = beforeWrite ? await serializeTaskMutation(context, write) : await write();
+    const prepared = await serializeTaskMutation(context, write);
     if (prepared.kind === 'reply') return prepared.reply;
     const { task, met } = prepared;
     active.mergeSummary = args.summary;

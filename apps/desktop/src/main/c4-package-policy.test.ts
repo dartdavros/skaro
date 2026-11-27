@@ -106,17 +106,13 @@ it('requires a matching independent classification for optional bypass and keeps
     timeline.apply({ t: 'turn.started', turnId: 'work' });
     timeline.apply({ t: 'turn.completed', turnId: 'work', outcome: 'done' });
     timeline.apply({ t: 'item.upsert', item: { ...optional.item, turnId: 'work' } });
-    const blocks = () => c4PackageBlocks(db, optional, runId);
-    expect(awaitsDecision(timeline.state, blocks)).toBe(false);
-    expect(taskTimelineRuntime(timeline.state, 'queued', blocks)).toBe('queued');
-    expect(awaitsDecision(timeline.state, () => c4PackageBlocks(db, optional, 'another-run'))).toBe(
-      true,
-    );
+    expect(awaitsDecision(timeline.state)).toBe(false);
+    expect(taskTimelineRuntime(timeline.state, 'queued')).toBe('queued');
     timeline.apply({
       t: 'item.upsert',
       item: { ...optional.item, turnId: 'work', state: 'accepted' },
     });
-    expect(taskTimelineRuntime(timeline.state, 'queued', blocks)).toBe('waiting');
+    expect(taskTimelineRuntime(timeline.state, 'queued')).toBe('queued');
     expect(c4PackageBlocks(db, optional, 'another-run')).toBe(true);
     expect(
       c4PackageBlocks(db, { ...optional, package: { ...optional.package, id: 'changed' } }, runId),

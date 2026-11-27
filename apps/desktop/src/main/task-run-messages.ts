@@ -1,7 +1,7 @@
 import { QuestionAnswers } from './question-answers';
 import { isTaskParked } from '@skaro/core';
 import { decisionItemId } from './decision-item-id';
-import { CommandCancelled, queueOwnerMessage } from './owner-commands';
+import { CommandCancelled } from './owner-commands';
 import { assertQuestionMessageAllowed, validateQuestionAnswer } from '@skaro/timeline';
 import { isAsyncQuestion, type Interaction, type InteractionAnswer } from '@skaro/timeline';
 import { ACCEPT_AS_IS, WAIT_CARD, acceptedBody } from './task-wait-card';
@@ -107,26 +107,6 @@ export class TaskRunMessages {
     }
   }
 
-  /** Skaro's own message: the agent continues; the feed shows the decision, not this text. */
-  async continueAfter(active: ActiveRun, text: string, decisionId: string): Promise<void> {
-    // The owner's package decision also resumes runs created before execution intent existed.
-    this.ctx.continuation.execution(active).start();
-    // Skaro's own waiting card asked for this very step; it is answered by continuing.
-    for (const open of active.timeline.state.interactions)
-      if (open.id.startsWith(WAIT_CARD))
-        this.ctx.history.skaroEvent(active, {
-          t: 'interaction.closed',
-          id: open.id,
-          resolution: 'cancelled',
-        });
-    const commandId = `continue-c4-decision-${decisionId}-${this.ctx.continuation.execution(active).intentVersion()}`;
-    queueOwnerMessage('task.send', active.projectId, active.taskId, {
-      text,
-      internal: true,
-      commandId,
-    });
-  }
-
   /** Straight to the agent: only for a turn that holds its slot. */
   async deliver(active: ActiveRun, input: MessageInput): Promise<void> {
     const epoch = active.deliveryEpoch;
@@ -160,13 +140,6 @@ export class TaskRunMessages {
     interactionId: string,
     answer: InteractionAnswer,
   ): Promise<void> {
-    if (interactionId.startsWith('coordinator:'))
-      return this.ctx.incidents.decisions.answer(
-        active.projectId,
-        interactionId.slice('coordinator:'.length),
-        answer,
-        active.taskId,
-      );
     const interaction = active.timeline.state.interactions.find((i) => i.id === interactionId);
     try {
       validateQuestionAnswer(interaction, answer);

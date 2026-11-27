@@ -26,7 +26,7 @@ export function projectDecisionHandlers<T extends Partial<Handlers>>(
     readCurrent = async () => (await reader.fresh(entry.origin)).find((row) => row.id === entry.id),
   ) => {
     try {
-      if (!decisionIsSafety(action))
+      if (entry.origin.kind !== 'task' && !decisionIsSafety(action))
         requireCoordinationDispatch(services.db, entry.origin.projectId);
       const expected =
         entry.kind === 'proposal'

@@ -1,5 +1,4 @@
 import { indexTasks, isBlocked, isTaskParked, startBlocker } from '@skaro/core';
-import { projectC4Protocol } from './c4-protocol';
 import { randomUUID } from 'node:crypto';
 import { CommandCancelled } from './owner-commands';
 import { hasOwnerCommand } from './owner-command-history';
@@ -18,7 +17,6 @@ import { capturePendingBuiltinStart } from './builtin-task-pending';
 import { cancelTaskRun } from './task-run-cancel';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { restoreCleanedWorktree } from './task-worktree-retention';
-import { requireCoordinationDispatch } from './coordination-dispatch';
 
 /** scheduling: a focused part of the task-run controller. */
 export class TaskRunScheduling {
@@ -165,7 +163,7 @@ export class TaskRunScheduling {
     input: MessageInput,
     requireCurrent?: () => void,
   ): Promise<void> {
-    const revision = requireCoordinationDispatch(this.ctx.deps.db, projectId).revision;
+    const epoch = this.ctx.startup.cancellationEpoch(projectId, taskId);
     // The task can have been replaced while agent setup was awaiting I/O.
     const task = findTask(await this.ctx.project(projectId).store.load(), taskId);
     requireCurrent?.();
@@ -179,15 +177,10 @@ export class TaskRunScheduling {
     if (input.internal && input.commandId?.startsWith('continue-') && task.status !== 'in_progress')
       return;
     if (active && !this.ctx.continuation.canDeliver(active, input)) return;
-    requireCoordinationDispatch(this.ctx.deps.db, projectId, revision);
+    if (epoch !== this.ctx.startup.cancellationEpoch(projectId, taskId))
+      throw new CommandCancelled();
     const accepted = { ...input, commandId: input.commandId ?? randomUUID() };
-    this.ctx.startup.begin(
-      projectId,
-      taskId,
-      [accepted],
-      revision,
-      projectC4Protocol(this.ctx.deps.db, projectId),
-    );
+    this.ctx.startup.begin(projectId, taskId, [accepted]);
     this.ctx.queuedInputs.set(k, [...(this.ctx.queuedInputs.get(k) ?? []), accepted]);
     this.ctx.queue.enqueue([k]);
     this.ctx.changed(projectId, taskId);
@@ -211,7 +204,7 @@ export class TaskRunScheduling {
       this.ctx.setRuntime(projectId, taskId, 'idle');
       return;
     }
-    requireStartupGeneration(this.ctx.deps.db, projectId, pending?.dispatchRevision);
+    requireTaskStartup(this.ctx.deps.db, this.ctx.startup, projectId, taskId);
     const requireCurrent = pending?.builtin
       ? capturePendingBuiltinStart(this.ctx.startup, projectId, taskId, () => this.ctx.closing)
       : undefined;
@@ -283,5 +276,5 @@ export class TaskRunScheduling {
     await done;
   }
 }
-import { requireStartupGeneration } from './task-startup-generation';
+import { requireTaskStartup } from './task-startup-generation';
 import { transitionPending } from './task-lifecycle-journal';

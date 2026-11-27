@@ -149,8 +149,8 @@ export class ArtifactStore {
       await configOps.writeConfig(this.files, update(current), inherited);
     });
   }
-  load(summary = false): Promise<ProjectArtifacts> {
-    return load.load(this.files, this.defaults, summary);
+  load(summary = false, includeC4 = !summary): Promise<ProjectArtifacts> {
+    return load.load(this.files, this.defaults, summary, includeC4);
   }
   watch(onChange: (paths: string[]) => void, debounceMs = 150): () => void {
     return this.files.watch(onChange, debounceMs);

@@ -6,7 +6,6 @@ import { key } from './task-run-helpers';
 /** Retire the writer before waiting for a handshake or a reader which depends on its exit. */
 export async function shutdownTaskRuntime(ctx: TaskRunEngine, active: ActiveRun) {
   const { projectId, taskId } = active;
-  await ctx.architecture.stop(projectId, taskId);
   await ctx.integrations.controls.interrupt(projectId, taskId);
   ctx.queue.cancel(key(projectId, taskId));
   if (active.session) {

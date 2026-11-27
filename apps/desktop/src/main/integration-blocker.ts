@@ -9,7 +9,7 @@ export function integrationBlockerTool(
   return {
     name: 'report_integration_blocker',
     description:
-      'Record an evidenced obstacle on this integration candidate for the project coordinator. State the exact failed prerequisite, tool outcome, and attempted authorized remedy. Use the existing question or permission tool when an owner decision is needed.',
+      'Record an evidenced obstacle on this integration candidate. State the exact failed prerequisite, tool outcome, and attempted authorized remedy. Use the existing question or permission tool when an owner decision is needed.',
     available: (scope) => scope.kind === 'integration',
     inputSchema: {
       type: 'object',
@@ -43,6 +43,6 @@ export async function recoverUnfinishedIntegration(ctx: TaskRunEngine, op: Integ
   op.nativeAgent = undefined;
   op.nativeSessionId = undefined;
   integration.service.save(op);
-  await integration.history.notice(op, `Координатор продолжит интеграцию. ${reason}`);
+  await integration.history.notice(op, `Интеграция будет продолжена. ${reason}`);
   setImmediate(() => integration.enqueue(op));
 }

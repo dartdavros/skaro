@@ -2,12 +2,10 @@
 // its exact SHA before the task goes to review. The merge reads this record, never the branch tip.
 
 import { git, type ProjectCheck } from '@skaro/core';
-import { isDeepStrictEqual } from 'node:util';
 import type { CompletionHooks } from './completion-coordinator';
 import { CompletionStore, criteriaRevision, type TaskResult } from './completion-store';
 import { dependencySnapshot, preparedDependencies } from './completion-dependencies';
 import { taskSections, withSummary } from './task-body';
-import { assertC4TaskReview, c4ChangeHash, c4ReviewKey, type C4TaskReview } from './c4-review';
 import { stageIdOf } from './task-stage';
 import { submissionIdentity } from './submission-context';
 
@@ -29,16 +27,7 @@ export async function captureResult(hooks: CompletionHooks, work: CapturedWork):
   if (task.status === 'done') return;
   if (taskSections(task.body).criteria.some((criterion) => !criterion.done))
     throw new Error(`${taskId}: acceptance criteria are unfinished`);
-  const c4 = await assertC4TaskReview(hooks.deps.db, context, taskId, worktree);
   await context.git.commitAll(worktree, message);
-  // Committing moves new files from the untracked set into the Git diff. The verified
-  // content is unchanged; preserve the fingerprint of its now committed representation.
-  const committedC4 = { ...c4, changeHash: await c4ChangeHash(worktree, c4.baseHead) };
-  const reviewKey = c4ReviewKey(projectId, taskId);
-  // A repeated/concurrent submission sees the same verified content after commit.
-  // Preserve a newer explicit review if another caller has replaced this one.
-  if (isDeepStrictEqual(hooks.deps.db.getSetting<C4TaskReview | null>(reviewKey, null), c4))
-    hooks.deps.db.setSetting(reviewKey, committedC4);
   const head = await context.git.head('HEAD', worktree);
   const store = new CompletionStore(hooks.deps.db, projectId);
   const result: TaskResult = {
@@ -51,7 +40,6 @@ export async function captureResult(hooks: CompletionHooks, work: CapturedWork):
     message,
     criteria: criteriaRevision(task),
     dependencies: dependencySnapshot(preparedDependencies(hooks.deps.db, projectId, taskId)),
-    c4: committedC4,
     ...(summary ? { summary } : {}),
     ...(verification ? { verification } : {}),
     pendingReview: true,

@@ -3,6 +3,7 @@ import type { AppDb } from '@skaro/core';
 export interface TaskExecutionState {
   enabled: boolean;
   blocked?: string;
+  environmentBlocked?: boolean;
   blockedIncident?: string;
   turn?: string;
   fingerprint?: string;
@@ -76,10 +77,11 @@ export class TaskExecution {
     this.bumpIntent();
     this.db.setSetting(this.key, { ...this.read(), enabled: false, followUp: undefined });
   }
-  block(reason: string, incident?: string): void {
+  block(reason: string, incident?: string, environmentBlocked = false): void {
     this.db.setSetting(this.key, {
       ...this.read(),
       blocked: reason,
+      environmentBlocked,
       ...(incident ? { blockedIncident: incident } : {}),
     });
   }

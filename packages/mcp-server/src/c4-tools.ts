@@ -23,12 +23,12 @@ export interface ReviewC4Args {
 export interface C4Handlers {
   context(scope: SkaroScope): Promise<ToolResult>;
   propose(args: ProposeC4Args, scope: SkaroScope): Promise<ToolResult>;
-  review(args: ReviewC4Args, scope: SkaroScope): Promise<ToolResult>;
+  review?(args: ReviewC4Args, scope: SkaroScope): Promise<ToolResult>;
   migrate?(scope: SkaroScope): Promise<ToolResult>;
 }
 
 export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
-  const available = (scope: SkaroScope) => scope.kind === 'task' || scope.kind === 'project_chat';
+  const available = (scope: SkaroScope) => scope.kind === 'project_chat';
   const call =
     <T>(
       operation: string,
@@ -127,7 +127,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
     },
     {
       name: 'review_c4',
-      available: (scope) => scope.kind === 'task',
+      available: (scope) => !!handlers.review && scope.kind === 'task',
       description:
         'Before submitting implementation, inspect actual changed code against the task requirements and accepted C4. get_c4_context returns task.reviewScope derived from Git and task requirement IDs. Cover that scope, not the entire specification or unrelated parents. Report revision, changeHash, affected IDs, evidence and aligned. Only applicable open questions and stale affected documents block acceptance. Design/document-only Git changes do not require implementation review and cannot realize planned architecture. Required architecture changes still need an accepted propose_c4 package. review_c4 preflights the future publication model and task code files before saving success, using the same candidate checks as submit_result. It does not publish planned architecture. Structured c4_validation diagnostics are data rejections: follow issue.nextStep, preserve planned future work, and re-review. A narrow planned view can describe only the implemented subset; publication automatically promotes eligible views. Code paths must be concrete files. Do not claim a Skaro defect from a validation rejection alone.',
       inputSchema: {
@@ -171,7 +171,7 @@ export function c4Tools(handlers: C4Handlers): Tool<SkaroScope>[] {
             aligned: args.aligned,
           };
         },
-        (args, scope) => handlers.review(args, scope),
+        (args, scope) => handlers.review!(args, scope),
       ),
     },
   ];

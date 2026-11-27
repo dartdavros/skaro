@@ -63,16 +63,16 @@ export class ProjectContext {
   }
 
   /** Artifacts, cached until the files change. */
-  load(): Promise<ProjectArtifacts> {
-    return this.readArtifacts(false);
+  load(includeC4 = false): Promise<ProjectArtifacts> {
+    return this.readArtifacts(false, includeC4);
   }
 
   /** Lists and navigation never need document bodies or the complete C4 model. */
   summary(): Promise<ProjectArtifacts> {
     return this.readArtifacts(true);
   }
-  private readArtifacts(summary: boolean): Promise<ProjectArtifacts> {
-    const key = `${this.id}:${summary ? 'summary' : 'full'}`;
+  private readArtifacts(summary: boolean, includeC4 = false): Promise<ProjectArtifacts> {
+    const key = `${this.id}:${includeC4 ? 'c4' : summary ? 'summary' : 'full'}`;
     return this.memory.read(key, async () => {
       if (this.dataDir)
         return background(
@@ -82,8 +82,9 @@ export class ProjectContext {
           this.defaults(),
           this.revision,
           summary,
+          includeC4,
         );
-      const value = await this.store.load(summary);
+      const value = await this.store.load(summary, includeC4);
       return { value, bytes: artifactBytes(value) };
     });
   }
@@ -108,6 +109,7 @@ export class ProjectContext {
   }
 
   invalidate(paths?: string[]): void {
+    this.memory.forget(`${this.id}:c4`);
     this.memory.forget(`${this.id}:full`);
     this.memory.forget(`${this.id}:summary`);
     this.revision++;
@@ -140,6 +142,7 @@ export class ProjectContext {
   }
 
   close(): void {
+    this.memory.forget(`${this.id}:c4`);
     this.memory.forget(`${this.id}:full`);
     this.memory.forget(`${this.id}:summary`);
     this.stopWatch?.();

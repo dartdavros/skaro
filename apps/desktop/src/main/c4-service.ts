@@ -139,8 +139,9 @@ export class C4Service implements C4Handlers {
     scope: SkaroScope,
     checkout: string,
   ): Promise<ToolResult> {
-    if (scope.importId) return this.deps.stageImport(args, scope);
-    if (scope.chatId && this.deps.db.getSetting(`c4.audit.chat.${scope.chatId}`, undefined)) {
+    if (scope.kind !== 'project_chat' || !scope.chatId || scope.importId)
+      throw new Error('Start a C4 audit in the C4 section to build a model');
+    {
       const audit = this.deps.db.getSetting<import('../shared/c4-audit').C4Audit | undefined>(
         `c4.audit.${scope.projectId}`,
         undefined,
@@ -158,16 +159,7 @@ export class C4Service implements C4Handlers {
         throw new Error('The audit already has one saved package awaiting its original decision');
     }
     const context = this.deps.projects.get(scope.projectId);
-    const protocol =
-      scope.kind === 'task' && scope.runId
-        ? taskC4Protocol(this.deps.db, scope.projectId, scope.runId)
-        : 'package-v1';
-    if (scope.kind === 'task' && protocol === 'package-v1')
-      return {
-        isError: true,
-        text: 'Task execution uses the accepted architecture. Continue independent work and verify it with review_c4. If a new architecture decision is required for this task, report the exact dependency as a blocker and prepare the decision in the project chat. No task approval was created.',
-        structuredContent: { state: 'project_decision_required', packageCreated: false },
-      };
+    const protocol = 'package-v1';
     const record = await background(
       this.dataDir,
       'c4.prepare',
@@ -181,7 +173,6 @@ export class C4Service implements C4Handlers {
       scope,
     );
     const item = record.item;
-    if (protocol === 'impact-v1') return c4Coordination(this.deps.db)!.requestScope(scope, item.id);
     await this.deps.publish(scope, item);
     const facts = await this.reviewPackage(scope.projectId, item.id);
     return {

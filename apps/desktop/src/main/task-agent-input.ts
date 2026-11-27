@@ -8,9 +8,8 @@ import type { MessageInput } from '../shared/ipc';
 
 export const RESUMED_ENVIRONMENT =
   'Continue with start_environment if this task needs services. ' +
-  'The project coordinator checks the earlier recovery receipt and current configuration. ' +
   'Use the live tool result, repair documented task-local prerequisites, and continue the task. ' +
-  'For an external prerequisite, send the exact evidence to the project coordinator with report_task_blocker.';
+  'For an external prerequisite, record the exact evidence with report_task_blocker.';
 
 /** Inbox recovery fields belong to Skaro, not the adapter's durable user input. */
 export function taskAgentInput(

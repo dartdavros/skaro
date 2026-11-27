@@ -266,7 +266,6 @@ export class CompletionCoordinator {
             operation,
             text,
             this.hooks.integrations,
-            this.hooks.deps.db,
           );
         } finally {
           this.mergingNow.delete(projectId);

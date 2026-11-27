@@ -13,8 +13,6 @@ import { taskRunDirectory } from './task-run-directory';
 import { taskBrowserServer } from './task-browser';
 import { resourceSessionAdmission } from './resource-session';
 import { requireTaskInputsCurrent } from './task-preflight';
-import { taskC4Protocol } from './c4-protocol';
-import { C4_IMPACT_INSTRUCTIONS } from './c4-impact-instructions';
 import { taskAcceptanceNote } from './task-acceptance-report';
 
 export type TaskSessionSettings = Pick<
@@ -89,9 +87,6 @@ export async function taskSessionOptions(
           })) +
       (handoff
         ? `\n\n${handoff.context}\n\nUser messages queued before handoff: ${JSON.stringify(handoff.inputs)}`
-        : '') +
-      (taskC4Protocol(ctx.deps.db, projectId, run.id) === 'impact-v1'
-        ? C4_IMPACT_INSTRUCTIONS
         : '') +
       taskAcceptanceNote(ctx.deps.db, run.id, task),
     ...(environment ? { env: environment.variables } : {}),

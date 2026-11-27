@@ -83,12 +83,19 @@ export class ApplicationResources {
       projectId,
       ownerId,
       intentId: options.intentId ?? randomUUID(),
-      dispatchRevision: options.dispatchRevision ?? dispatchState(this.db, projectId).revision,
+      dispatchRevision:
+        options.dispatchRevision ??
+        (/^(task|review|integration):/.test(ownerId)
+          ? undefined
+          : dispatchState(this.db, projectId).revision),
       signal,
       changed: options.changed,
       requireCurrent: async () => {
         signal.throwIfAborted();
-        if (!this.db.getProject(projectId))
+        if (
+          (this.db.shell.projectScope && this.db.shell.projectScope !== projectId) ||
+          !this.db.getProject(projectId)
+        )
           throw new Error('Resource owner project no longer exists');
         await options.requireCurrent?.();
         signal.throwIfAborted();

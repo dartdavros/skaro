@@ -2,7 +2,6 @@ import { mkdtemp, rm, rmdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { git, type AppDb, type ProjectArtifacts, type ProjectCheck, type Task } from '@skaro/core';
 import type { ProjectContext } from './projects';
-import { c4ChangeHash, type C4TaskReview } from './c4-review';
 import { CompletionStore, criteriaRevision, type TaskResult } from './completion-store';
 import { assertDependencyVersions, dependencySnapshot } from './completion-dependencies';
 import { taskSections } from './task-body';
@@ -20,7 +19,7 @@ export function inPlaceResult(
   projectId: string,
   artifacts: ProjectArtifacts,
   task: Task,
-  commit: { head: string; branch: string; c4: C4TaskReview },
+  commit: { head: string; branch: string; runId: string },
   submission: InPlaceSubmission,
 ): TaskResult {
   if (taskSections(task.body).criteria.some((criterion) => !criterion.done))
@@ -34,7 +33,7 @@ export function inPlaceResult(
   const dependencies = dependencySnapshot(inputs);
   assertDependencyVersions(artifacts, dependencies, store, task.id);
   const snapshot = db.getSetting<{ dependencies: { taskId: string; head: string }[] } | null>(
-    `coordination.inputs.${commit.c4.runId}`,
+    `coordination.inputs.${commit.runId}`,
     null,
   );
   for (const input of snapshot?.dependencies ?? [])
@@ -43,7 +42,8 @@ export function inPlaceResult(
   const result: TaskResult = {
     submission: submissionIdentity(projectId, task.id),
     taskId: task.id,
-    ...commit,
+    branch: commit.branch,
+    head: commit.head,
     sharedCheckout: true,
     inPlace: true,
     criteria: criteriaRevision(task),
@@ -68,7 +68,7 @@ export async function captureInPlaceResult(
   db: AppDb,
   context: ProjectContext,
   task: Task,
-  review: C4TaskReview,
+  runId: string,
   submission: InPlaceSubmission,
 ): Promise<TaskResult> {
   const root = context.root;
@@ -101,17 +101,13 @@ export async function captureInPlaceResult(
               input: submission.message ?? `${task.id}: ${task.title}`,
             })
           ).stdout.trim();
-    if (
-      (await context.git.head()) !== before ||
-      review.changeHash !== (await c4ChangeHash(root, review.baseHead))
-    )
-      throw new Error(`${task.id}: code changed during in-place capture; review C4 again`);
+    if ((await context.git.head()) !== before)
+      throw new Error(`${task.id}: HEAD changed during in-place capture`);
     context.invalidate();
     const artifacts = await context.load();
     const current = artifacts.tasks.find((value) => value.id === task.id);
     if (!current || criteriaRevision(current) !== criteriaRevision(task))
       throw new Error(`${task.id}: acceptance changed during in-place capture`);
-    const c4 = { ...review, changeHash: await c4ChangeHash(root, review.baseHead, head) };
     const ref = `refs/skaro/results/${task.id}/${head}`;
     await git(root, ['update-ref', ref, head]);
     return recordInPlaceResult(
@@ -119,7 +115,7 @@ export async function captureInPlaceResult(
       context.id,
       artifacts,
       task,
-      { head, branch: ref, c4 },
+      { head, branch: ref, runId },
       submission,
     );
   } finally {

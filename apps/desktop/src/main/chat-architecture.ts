@@ -1,3 +1,4 @@
+import { isAuditChat } from './c4-audit-admission';
 import type { TimelineState } from '@skaro/timeline';
 import type { ChatEngine } from './chat-engine';
 import type { LiveChat, ProposalItem } from './chat-model';
@@ -30,6 +31,7 @@ export function publishChatArchitecture(ctx: ChatEngine, live: LiveChat, item: P
 
 /** Turn completion repairs lost publication without manufacturing a proposal or owner consent. */
 export async function restoreChatArchitecture(ctx: ChatEngine, live: LiveChat) {
+  if (!isAuditChat(ctx.deps.db, live.chat.id)) return;
   const records = await background(ctx.deps.dataDir, 'c4.list', live.projectId, live.chat.id);
   if (ctx.closing || ctx.live.get(live.chat.id) !== live) return;
   const present = new Set(live.timeline.state.items.map((item) => item.id));
@@ -49,6 +51,7 @@ export async function projectChatArchitecture(
   chatId: string,
   timeline: TimelineState,
 ): Promise<TimelineState> {
+  if (!isAuditChat(ctx.deps.db, chatId)) return timeline;
   const records = await background(ctx.deps.dataDir, 'c4.list', projectId, chatId);
   return chatC4Timeline(projectId, chatId, timeline, records);
 }

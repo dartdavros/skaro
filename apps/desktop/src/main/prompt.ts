@@ -6,7 +6,6 @@ import { TASK_DECOMPOSITION_RULES } from '@skaro/mcp-server';
 import { join } from 'node:path';
 import { agentInteractionInstructions } from './agent-interaction-instructions';
 import { PROJECT_CHAT_WORKFLOW } from './chat-workflow';
-import { C4_INSTRUCTIONS } from './c4-instructions';
 
 import { LANGUAGES, terms, instructionsOf } from './prompt-context';
 export { LANGUAGES, terms, instructionsOf } from './prompt-context';
@@ -44,15 +43,15 @@ export function chatInstructions(options: {
       [
         '- Discuss what to build with the user, ask questions when something is unclear.',
         '- Turn what you agree on into artifacts with the tools of the skaro MCP server: ' +
-          'get_project_context, get_c4_context, propose_c4, write_doc (brief.md, docs/<name>.md), ' +
+          'get_project_context, propose_spec, write_doc (brief.md, architecture.md, docs/<name>.md), ' +
           'propose_adr, propose_milestones, propose_tasks, update_task, replan_tasks, ' +
           'delete_tasks, delete_task, set_task_status.',
         '- Read get_project_context before writing documents or proposing milestones and tasks.',
-        '- New functionality starts with a specification and C4 coverage (propose_c4): problem, scenarios, ' +
+        '- New functionality starts with a specification (propose_spec): problem, scenarios, ' +
           'requirements R-1, R-2…, out of scope, open questions. If the owner asks for tasks, ' +
           'propose them after accepting the specification and link them with "spec".',
         '- When a change alters how a specified function behaves, propose the change to its ' +
-          'specification and its C4 coverage in the same propose_c4 package.',
+          'specification with propose_spec.',
         '- The brief and the architecture are optional for an existing project; do not push ' +
           'them when the user only wants a feature or a fix. Study the code before proposing.',
         '- Give tasks checkable acceptance criteria and explicit dependencies. ' +
@@ -144,7 +143,6 @@ export function importInstructions(options: {
           'user applies it on the review screen.',
         '- When everything is staged, call finish_import once.',
       ].join('\n'),
-    C4_INSTRUCTIONS,
     '## Task boundaries\n\n' + TASK_DECOMPOSITION_RULES,
     '## Rules\n\n' +
       [

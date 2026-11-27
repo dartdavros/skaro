@@ -205,7 +205,7 @@ export function c4Work(store: PayloadStore) {
     'c4.context': async (root, defaults, scope, checkout) => {
       const legacy = new DatabaseSync(join(store.dataDir, 'skaro.db'), { readOnly: true });
       try {
-        const { value: artifacts } = await artifactWork(store)(root, defaults, 0);
+        const { value: artifacts } = await artifactWork(store)(root, defaults, 0, false, true);
         return await c4Context(
           { root, load: async () => artifacts, invalidate: () => undefined },
           {

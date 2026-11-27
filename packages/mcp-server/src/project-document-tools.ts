@@ -2,8 +2,6 @@ import type { Tool } from './server.ts';
 import type { SkaroScope } from './tools.ts';
 import type { ProjectToolHandlers } from './project-tool-model.ts';
 import { guarded, text, optional, inChat, ToolArgsError } from './project-tool-args.ts';
-import { readSpecC4 } from './spec-c4-args.ts';
-import { C4_DOCUMENTS_SCHEMA } from './c4-document-args.ts';
 
 export function documentTools(handlers: ProjectToolHandlers): Tool<SkaroScope>[] {
   return [
@@ -73,22 +71,11 @@ export function documentTools(handlers: ProjectToolHandlers): Tool<SkaroScope>[]
     {
       name: 'propose_spec',
       description:
-        'Include c4 (base_revision, complete model and other related documents) to propose a specification together with its C4 coverage in ONE owner decision. Read get_c4_context first. For multiple specifications use propose_c4 directly. ' +
         'Prepare and propose a specification directly in this project chat, before its implementation tasks are cut. ' +
-        'Do not delegate specification preparation to a coding task. For a new specification, pass the full Markdown content with Problem, Scenarios, numbered Requirements, Out of scope and Open questions. For an existing specification, pass its id and include its path, base_hash and exact edits in c4.documents. The user reviews the resulting diff. The tool returns at once.',
+        'Do not delegate specification preparation to a coding task. For a new specification, pass the full Markdown content with Problem, Scenarios, numbered Requirements, Out of scope and Open questions. For an existing specification, pass its id and the updated full Markdown content. The user reviews the resulting diff. The tool returns at once.',
       inputSchema: {
         type: 'object',
         properties: {
-          c4: {
-            type: 'object',
-            properties: {
-              base_revision: { type: 'integer', minimum: 0 },
-              model: { type: 'object' },
-              documents: C4_DOCUMENTS_SCHEMA,
-            },
-            required: ['base_revision', 'model', 'documents'],
-            additionalProperties: false,
-          },
           id: {
             type: 'string',
             description: 'Number of an existing specification to change (0003).',
@@ -111,15 +98,10 @@ export function documentTools(handlers: ProjectToolHandlers): Tool<SkaroScope>[]
           if (!id.id && !title.title) {
             throw new ToolArgsError('"title" is required for a new specification.');
           }
-          const c4 = a.c4 ? readSpecC4(a.c4) : undefined;
-          const content = id.id ? optional(a, 'content') : { content: text(a, 'content') };
-          if (id.id && !c4 && !content.content)
-            throw new ToolArgsError('Existing specifications require exact edits in c4.documents.');
           return {
-            ...(c4 ? { c4 } : {}),
             ...id,
             ...title,
-            ...content,
+            content: text(a, 'content'),
             ...optional(a, 'replaces'),
             ...optional(a, 'summary'),
           };

@@ -1,6 +1,5 @@
 import { interruptForNewInputs } from './task-input-interruption';
 import type { MessageInput } from '../shared/ipc';
-import { requireCoordinationDispatch } from './coordination-dispatch';
 import type { TaskRunEngine } from './task-run-engine';
 import type { ActiveRun } from './task-run-model';
 import { CommandCancelled } from './owner-commands';
@@ -14,8 +13,8 @@ import { QuestionAnswers } from './question-answers';
 import { isTaskParked } from '@skaro/core';
 import { currentTransition } from './task-lifecycle-journal';
 import { ownerResumeText, prepareTaskFollowUp } from './task-follow-up';
+import { FINISH } from './task-wait-card';
 import { confirmTaskResume } from './task-resume';
-import { taskAcceptanceRecoveryNote } from './operation-reissue';
 
 /** One serialized delivery owns the old turn, its queue slot and its replacement. */
 export async function deliverTaskInput(
@@ -57,7 +56,9 @@ export async function deliverTaskInput(
   const execution = ctx.continuation.execution(active);
   const answers = new QuestionAnswers(ctx.deps.db, `active.${run.id}`);
   const pendingAnswer = answers.pending(active.timeline.state);
-  if (parked || original.resumeTask) {
+  if (pendingAnswer?.resumeTask && original.commandId === pendingAnswer.commandId) {
+    original = prepareTaskFollowUp(execution, original, active.timeline.state, pendingAnswer);
+  } else if ((parked || original.resumeTask) && !original.commandId?.startsWith('answers-')) {
     original = prepareTaskFollowUp(execution, original, active.timeline.state, pendingAnswer);
   }
   const turn = active.timeline.state.turns.at(-1);
@@ -76,14 +77,10 @@ export async function deliverTaskInput(
       // Persist the original, still sealed input. Startup recovery validates dispatch and the
       // native echo before dispatching. Stop clears this same inbox.
       if (original.commandId) {
-        ctx.startup.begin(
-          projectId,
-          taskId,
-          [original],
-          requireCoordinationDispatch(ctx.deps.db, projectId).revision,
-          undefined,
-          { runId: run.id, commandId: original.commandId },
-        );
+        ctx.startup.begin(projectId, taskId, [original], undefined, {
+          runId: run.id,
+          commandId: original.commandId,
+        });
         checkpointed = true;
       }
       ctx.deps.db.addEvent(projectId, 'task_inputs_interrupt_requested', {
@@ -118,7 +115,11 @@ export async function deliverTaskInput(
     const session = await ctx.sessions.attach(active);
     current();
     const subject = inputs.artifacts.tasks.find((item) => item.id === taskId);
-    const instruction = ownerResumeText(original, pendingAnswer);
+    const finish =
+      original.resumeTask &&
+      original.commandId?.startsWith('answers-') &&
+      execution.matchesFollowUp(original.commandId, FINISH);
+    const instruction = finish ? FINISH : ownerResumeText(original, pendingAnswer);
     const resumed = !!(
       subject &&
       original.commandId &&
@@ -144,7 +145,6 @@ export async function deliverTaskInput(
       active.timeline.state,
       execution.read().followUp?.commandId === input.commandId && !!input.commandId,
       resumed,
-      taskAcceptanceRecoveryNote(ctx.deps.db, projectId, taskId),
     );
     // Once a native write is possible the durable owner-command receipt governs uncertain delivery.
     ctx.startup.consumeTransition(projectId, taskId, run.id, original.commandId);

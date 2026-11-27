@@ -2,7 +2,7 @@ import type { TaskRunEngine } from './task-run-engine';
 import { isReviewQueueKey } from './task-environment-reviews';
 import { resourcesFor } from './resource-execution';
 import { CommandCancelled } from './owner-commands';
-import { requireStartupGeneration } from './task-startup-generation';
+import { requireTaskStartup } from './task-startup-generation';
 import { requireIntegrationDispatch } from './integration-dispatch-fence';
 
 /** Queue identity is bound afresh; an unrelated completion must not lend its async owner scope. */
@@ -23,14 +23,13 @@ export async function executeResourceQueue(ctx: TaskRunEngine, key: string): Pro
   const resources = resourcesFor(ctx.deps.db);
   if (!resources) return execute();
   const epoch = ctx.startup.cancellationEpoch(projectId, taskId);
-  const revision =
-    !review && !operation ? ctx.startup.read(projectId, taskId)?.dispatchRevision : undefined;
+  const startup = !review && !operation ? ctx.startup.read(projectId, taskId) : undefined;
   await resources
     .scope(projectId, ownerId, execute, {
-      dispatchRevision: revision,
       changed: () => ctx.changed(projectId, taskId),
       requireCurrent: () => {
-        if (!review && !operation) requireStartupGeneration(ctx.deps.db, projectId, revision);
+        if (!review && !operation)
+          requireTaskStartup(ctx.deps.db, ctx.startup, projectId, taskId, startup);
         if (operation) requireIntegrationDispatch(ctx.deps.db, projectId, operation.id);
         if (
           ctx.closing ||

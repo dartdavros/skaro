@@ -20,7 +20,7 @@ export async function writeC4TaskReview(
 ): Promise<ToolResult> {
   db.setSetting(c4ReviewKey(context.id, scope.taskId!), null);
   context.invalidate();
-  const artifacts = await context.load();
+  const artifacts = await context.load(true);
   const base = (input: typeof artifacts) =>
     taskC4Base(db, input, {
       projectId: scope.projectId,
@@ -62,7 +62,7 @@ export async function writeC4TaskReview(
   if (issues.length) throw new C4ValidationError(issues, 'review');
   // File checks await I/O; never save an already stale successful review.
   context.invalidate();
-  const after = await context.load();
+  const after = await context.load(true);
   if (
     baseHead !== (await base(after)) ||
     args.changeHash !== (await c4ChangeHash(checkout, baseHead)) ||
