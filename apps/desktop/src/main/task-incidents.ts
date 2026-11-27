@@ -28,6 +28,7 @@ import { bindIncidentEnvironment } from './incident-environment-verification';
 import { bindIncidentSession } from './incident-session-verification';
 import { retireTerminalIncident } from './incident-retirement';
 import { recoverTaskTransitions } from './task-lifecycle-recovery';
+import { SETTLED_ENVIRONMENT_FAILURE } from './environment-remedy-receipt';
 
 export interface TaskBlockerDetails {
   cause: IncidentCause;
@@ -199,7 +200,13 @@ export class TaskIncidents {
     if (row.protocol!.phase === 'executing' || row.protocol!.phase === 'verifying') {
       const id = row.protocol!.operationId;
       const op = id && this.store.db.coordination.getOperation(projectId, id);
-      if (op && op.state === 'failed' && op.evidence?.code === 'environment_preflight_failed') {
+      if (
+        op &&
+        op.state === 'failed' &&
+        ['environment_preflight_failed', SETTLED_ENVIRONMENT_FAILURE].includes(
+          op.evidence?.code ?? '',
+        )
+      ) {
         row = this.store.update(row, { phase: 'waiting' });
       } else {
         await escalateIncident(this.ctx, row);
@@ -207,8 +214,7 @@ export class TaskIncidents {
       }
     }
     if (row.protocol!.attempts >= 2) {
-      this.store.update(row, { phase: 'exhausted' });
-      await escalateIncident(this.ctx, row);
+      await escalateIncident(this.ctx, this.store.update(row, { phase: 'exhausted' }));
       return;
     }
     const action = await incidentAction(this.ctx, row).catch((error: unknown) => {
@@ -251,9 +257,13 @@ export class TaskIncidents {
         await this.decisions.request(row, action);
       return;
     }
-    await executeIncident(this.ctx, this, row, action);
+    const failure = await executeIncident(this.ctx, this, row, action);
+    if (failure) await escalateIncident(this.ctx, failure);
   }
-  async resolved(row: CoordinationBlocker): Promise<void> {
+  async resolved(
+    row: CoordinationBlocker,
+    currentTurn?: { runId: string; intent: number },
+  ): Promise<void> {
     if (row.protocol!.operationId) {
       const op = this.ctx.deps.db.coordination.getOperation(
         row.projectId,
@@ -281,6 +291,6 @@ export class TaskIncidents {
       incident: row.id,
       resource: row.subject.id,
     });
-    await continueResolvedIncident(this.ctx, resolved);
+    await continueResolvedIncident(this.ctx, resolved, currentTurn);
   }
 }

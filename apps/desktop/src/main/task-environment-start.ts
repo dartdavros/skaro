@@ -93,6 +93,7 @@ export async function startEnvironmentServices(
         return await timed('prepareMs', action);
       } catch (error) {
         timing.preflightFailed = true;
+        deps.registry.rememberPreflightFailure(key, timing);
         throw new EnvironmentPreflightFailed(error);
       }
     };

@@ -63,6 +63,22 @@ export class EnvironmentRegistry {
     return this.all().find((r) => r.projectId === key.projectId && r.taskId === key.taskId);
   }
 
+  rememberPreflightFailure(key: TaskKey, timing: EnvironmentStartTiming): void {
+    if (timing.operationId)
+      this.db.setSetting(`environment.preflight.${key.projectId}.${timing.operationId}`, {
+        ...key,
+        timing,
+      });
+  }
+
+  preflightFailure(projectId: string, operationId: string) {
+    return this.db.getSetting<{
+      projectId: string;
+      taskId: string;
+      timing: EnvironmentStartTiming;
+    } | null>(`environment.preflight.${projectId}.${operationId}`, null);
+  }
+
   /** The record of the task, created with a name no other task holds. */
   ensure(key: TaskKey, project: string): EnvironmentRecord {
     const existing = this.find(key);

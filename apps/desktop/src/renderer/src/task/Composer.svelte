@@ -14,7 +14,9 @@
   let {
     placeholder,
     running,
+    canStop,
     stopping = false,
+    stopLabel,
     agent,
     model,
     modelTip,
@@ -34,7 +36,9 @@
   }: {
     placeholder: string;
     running: boolean;
+    canStop?: boolean;
     stopping?: boolean;
+    stopLabel?: string | undefined;
     agent: AgentId;
     model: string;
     /** Tip of the model button; the chat says the agent is fixed. */
@@ -58,6 +62,7 @@
   const controller = createComposerController({
     commands: () => commands(),
     suggest: (query) => suggest(query),
+    canSend: () => !stopping,
     onsend: (input) => onsend(input),
   });
   export function prefill(value: string): void {
@@ -84,7 +89,9 @@
   <ComposerBar
     {controller}
     {running}
+    canStop={canStop ?? running}
     {stopping}
+    {stopLabel}
     {agent}
     {model}
     {modelTip}

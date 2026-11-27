@@ -22,6 +22,7 @@ import { hasOwnerCommand } from './owner-command-history';
 import { renewIntegrationDispatch, requireIntegrationDispatch } from './integration-dispatch-fence';
 import { decisionIsSafety } from './decision-authority';
 import { isTaskContinuationInput } from './integration-routing';
+import { ownerResumeText } from './task-follow-up';
 import type { TimelineEvent } from '@skaro/timeline';
 import { cancelQuestionRequests, supersedeQuestionInput } from './question-cancellation';
 import {
@@ -62,8 +63,8 @@ export class IntegrationControls {
     if (input.resumeTask || isTaskContinuationInput(input)) return false;
     const op = this.current(projectId, taskId);
     if (!op) return false;
-    // An immutable local verification candidate is not the stopped task's writer.
-    if (!input.internal && op.purpose === 'local') {
+    // Owner text in a parked task belongs to that task, even with a candidate in its feed.
+    if (!input.internal && (op.purpose === 'local' || ownerResumeText(input))) {
       const db = this.ctx.deps.db;
       const { tasks } = await this.ctx.project(projectId).summary();
       const task = tasks.find((item) => item.id === taskId);

@@ -1,5 +1,9 @@
 import type { AppDb, CoordinationOperation, ResourceLease } from '@skaro/core';
 import { EnvironmentRegistry, type EnvironmentRecord } from './task-environment-registry';
+import {
+  settledEnvironmentRemedy,
+  SETTLED_ENVIRONMENT_FAILURE,
+} from './environment-remedy-receipt';
 
 /** A stopped waiter has never owned capacity. A released/retained grant proves no such thing. */
 export function unstartedEnvironmentOperation(
@@ -33,15 +37,18 @@ export function unstartedEnvironmentOperation(
 export function reconcileUnstartedEnvironments(db: AppDb, projectId: string): void {
   const pending = db.coordination.pending(projectId);
   const leases = db.admission.all();
+  const registry = new EnvironmentRegistry(db);
   let records: EnvironmentRecord[] = [];
   try {
-    records = new EnvironmentRegistry(db).all().filter((row) => row.projectId === projectId);
+    records = registry.all().filter((row) => row.projectId === projectId);
   } catch {
     // Unreadable environment metadata cannot be evidence for dispatch recovery.
   }
   for (const operation of pending) {
+    const fingerprint = settledEnvironmentRemedy(db, operation, leases);
     const resource =
       operation.subject.kind === 'resource' && db.resources.get(operation.subject.id);
+    const receipt = registry.preflightFailure(projectId, operation.id);
     const preflight = records.some(
       (record) =>
         (operation.action !== 'incident.remedy' ||
@@ -50,17 +57,22 @@ export function reconcileUnstartedEnvironments(db: AppDb, projectId: string): vo
             resource.kind === 'environment' &&
             resource.identity.composeProject === record.name &&
             resource.owner.id === record.taskId)) &&
-        environmentPreflightFailed(operation, record, leases),
+        (receipt?.projectId === projectId && receipt.taskId === record.taskId
+          ? environmentPreflightFailed(operation, { ...record, lastStart: receipt.timing }, leases)
+          : environmentPreflightFailed(operation, record, leases)),
     );
-    if (!preflight && !unstartedEnvironmentOperation(operation, leases)) continue;
+    if (!preflight && !fingerprint && !unstartedEnvironmentOperation(operation, leases)) continue;
     db.coordination.reconcile(projectId, operation.id, {
       expectedRevision: operation.revision,
       state: 'failed',
       evidence: {
         code: preflight
           ? 'environment_preflight_failed'
-          : 'environment_not_dispatched_before_admission',
+          : fingerprint
+            ? SETTLED_ENVIRONMENT_FAILURE
+            : 'environment_not_dispatched_before_admission',
         refs: [operation.subject],
+        ...(fingerprint && !preflight ? { fingerprint } : {}),
       },
     });
   }

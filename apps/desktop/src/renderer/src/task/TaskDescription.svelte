@@ -5,8 +5,6 @@
   import StageTasks from './StageTasks.svelte';
   import TaskDescriptionHeader from './TaskDescriptionHeader.svelte';
   import './task-description.css';
-  import TaskStatusActions from './TaskStatusActions.svelte';
-  import type { TaskLifecycleAction } from './task-lifecycle-actions';
 
   /**
    * Right panel of the task screen: task and stage headers, status, links (the specification among them),
@@ -19,7 +17,6 @@
     ontoggle,
     onspec,
     onopen,
-    onaction,
   }: {
     task: TaskDetail;
     /** The acceptance of a stage: its state, its readiness criterion and its tasks. */
@@ -28,7 +25,6 @@
     onopen?: (taskId: string) => void;
     oncollapse: () => void;
     ontoggle: (index: number) => void;
-    onaction: (action: TaskLifecycleAction) => Promise<void>;
     /** Opens the specification in "Документы". */
     onspec: (path: string) => void;
   } = $props();
@@ -43,9 +39,9 @@
 </script>
 
 <div class="desc task-description">
-  <TaskDescriptionHeader {task} {oncollapse} />
+  <TaskDescriptionHeader {task} {oncollapse} showStatus={!stage} />
   <div class="meta">
-    {#if stage}<StageChip info={stage.info} />{:else}<TaskStatusActions {task} {onaction} />{/if}
+    {#if stage}<StageChip info={stage.info} />{/if}
     {#if task.dependsOn.length}
       <div class="line">
         {t('task.dependsOn')}

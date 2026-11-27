@@ -4,7 +4,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { SkaroApi } from '../src/shared/ipc';
-import { launchApp } from './launch';
+import { closeLiveApp, launchApp } from './launch';
 
 declare const window: Window & { skaro: SkaroApi };
 const profile = process.env['SKARO_LIFECYCLE_PROFILE'];
@@ -12,7 +12,7 @@ const project = process.env['SKARO_VERIFICATION_PROJECT'];
 const root = process.env['SKARO_E2E_WRITE_PROJECT_ROOT'];
 test.skip(!profile || !project || !root, 'Requires the registered Cat-pilot profile');
 
-test('a stopped task accepts a feed command and starts its real environment', async () => {
+test('the task composer stops work and resumes it on owner text in the real environment', async () => {
   test.setTimeout(240_000);
   const owner = { project: project!, task: 'T-010' };
   const tasks = join(root!, '.skaro', 'tasks');
@@ -39,36 +39,50 @@ test('a stopped task accepts a feed command and starts its real environment', as
     expect(worktree).toBeTruthy();
     const expected = await readFile(join(worktree!, 'index.html'), 'utf8');
     expect(before.run?.live).toBeFalsy();
-    const stopId = randomUUID();
-    await page.evaluate(
-      ({ project, task, stopId }) =>
-        window.skaro.invoke('task.park', project, task, 'stopped', stopId),
-      { ...owner, stopId },
-    );
+    await page.evaluate(async ({ project, task }) => {
+      await window.skaro.invoke('tabs.set', { projects: [project], active: project });
+      await window.skaro.invoke('app.setSetting', 'ui.workspace', {
+        view: 'project',
+        sections: { [project]: 'tasks' },
+        openTasks: { [project]: task },
+        openChats: {},
+      });
+    }, owner);
+    await page.reload();
+    const composer = page.locator('.task-conversation .composer');
+    const draft = composer.locator('textarea');
+    const stop = composer.locator('button.stop');
+    const send = composer.locator('button.send');
+    await expect(stop).toBeEnabled({ timeout: 30_000 });
+    await expect(
+      page.locator('.task-description button', { hasText: /^(Пауза|Возобновить|Остановить)$/ }),
+    ).toHaveCount(0);
+    await draft.fill('Черновик');
+    await expect(send).toBeEnabled();
+    await expect(stop).toHaveCount(0);
+    await draft.clear();
+    await expect(stop).toBeEnabled();
+    await stop.click();
+    await expect(send).toBeDisabled();
     parked = true;
     expect((await run()).task.stage).toBe('stopped');
-    const commandId = randomUUID();
-    const text =
-      'Возобнови задачу по этой команде. Через resume_task подтверди текущую команду, затем ' +
-      'запусти штатное окружение задачи через start_environment и выполни node --check js/controls.js. ' +
-      'Это узкая проверка Skaro. Не меняй файлы, конфигурацию, данные или критерии, не вызывай submit_result. ' +
-      'После этих двух проверок сообщи их результаты и жди.';
-    await page.evaluate(
-      ({ project, task, commandId, text }) =>
-        window.skaro.invoke('task.send', project, task, { commandId, text }),
-      { ...owner, commandId, text },
-    );
+    const marker = `COMPOSER_${randomUUID().slice(0, 8)}`;
+    const message =
+      `Доступно ли штатное окружение этой задачи? ${marker}. ` +
+      'Проверь через start_environment и выполни node --check js/controls.js. ' +
+      'Это узкая проверка Skaro. Не меняй файлы, конфигурацию, данные или критерии. ' +
+      'Не вызывай resume_task и submit_result. Сообщи результаты этих двух проверок.';
+    await draft.fill(message);
+    await expect(send).toBeEnabled();
+    expect((await run()).task.stage).toBe('stopped');
+    await draft.press('Enter');
     await expect
       .poll(
         async () => {
           const view = await run();
           const items = view.timeline?.items ?? [];
           const echo = items.find(
-            (item) =>
-              item.kind === 'message' &&
-              item.role === 'user' &&
-              item.text.includes(`command_id: ${commandId}\n`) &&
-              item.text.includes(text),
+            (item) => item.kind === 'message' && item.role === 'user' && item.text.includes(marker),
           );
           const current = echo ? items.filter((item) => item.turnId === echo.turnId) : [];
           const launched = current.some(
@@ -93,6 +107,9 @@ test('a stopped task accepts a feed command and starts its real environment', as
             status: view.task.stage,
             run: view.run?.id,
             startup: ready,
+            modelResume: current.some(
+              (item) => item.kind === 'tool' && item.name.endsWith('resume_task'),
+            ),
             check: current.some(
               (item) =>
                 item.kind === 'command' &&
@@ -107,6 +124,7 @@ test('a stopped task accepts a feed command and starts its real environment', as
         status: 'in_progress',
         run: before.run?.id,
         startup: true,
+        modelResume: false,
         check: true,
       });
   } finally {
@@ -118,14 +136,14 @@ test('a stopped task accepts a feed command and starts its real environment', as
           owner,
         );
     } finally {
-      await app
-        .evaluate(({ powerMonitor }) => powerMonitor.emit('shutdown'))
-        .catch(() => undefined);
-      await app.close();
-      const after = await readFile(source, 'utf8');
-      const restored = after.replace(/^status: stopped(?=\r?$)/m, 'status: in_progress');
-      if (restored === original && restored !== after) await writeFile(source, restored);
-      expect(restored).toBe(original);
+      try {
+        await closeLiveApp(app);
+      } finally {
+        const after = await readFile(source, 'utf8');
+        const restored = after.replace(/^status: stopped(?=\r?$)/m, 'status: in_progress');
+        if (restored === original && restored !== after) await writeFile(source, restored);
+        expect(restored).toBe(original);
+      }
     }
   }
 });

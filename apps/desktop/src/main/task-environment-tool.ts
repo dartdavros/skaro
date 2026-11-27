@@ -9,6 +9,7 @@ import { EnvironmentNotDispatched } from './environment-dispatch-error';
 import { inPlaceEnvironmentResult } from './task-environment-mode';
 import { incidentStartProhibition } from './incident-worker-repair';
 import { isTaskParked } from '@skaro/core';
+import { confirmTaskEnvironmentRepair } from './task-environment-repair-confirmation';
 
 /** `start_environment`: the agent of a task asks Skaro for running services. */
 export async function startTaskEnvironment(
@@ -35,6 +36,9 @@ export async function startTaskEnvironment(
     const info = await ctx.environments.start(checkoutKey(active), { waitForResources: false });
     const { variables } = await ctx.environments.describe(checkoutKey(active));
     ctx.continuation.execution(active).clearBlock();
+    await confirmTaskEnvironmentRepair(ctx, active).catch((error: unknown) =>
+      console.error('Task environment incident verification:', errorText(error)),
+    );
     const urls = Object.entries(info.urls).map(([name, url]) => `- ${name}: ${url}`);
     return {
       text:

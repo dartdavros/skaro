@@ -11,12 +11,13 @@ import {
 } from './environment-dispatch-error';
 import { incidentOperationId } from './incident-operation';
 import { IncidentDispatchAuthority } from './incident-dispatch-authority';
+import { SETTLED_ENVIRONMENT_FAILURE } from './environment-remedy-receipt';
 export async function executeIncident(
   ctx: TaskRunEngine,
   incidents: TaskIncidents,
   row: CoordinationBlocker,
   action: RemedyAction,
-): Promise<void> {
+): Promise<CoordinationBlocker | undefined> {
   const id = incidentOperationId(row);
   const authority = new IncidentDispatchAuthority(action);
   const validate = async () => {
@@ -134,12 +135,12 @@ export async function executeIncident(
       ctx.deps.coordinators!.reconcile(
         row.projectId,
         id,
-        { code: 'environment_start_failed_partial_effects_possible', refs: [row.subject] },
+        { code: SETTLED_ENVIRONMENT_FAILURE, refs: [row.subject] },
         'failed',
       );
     const current = incidents.store.get(row.projectId, row.id);
     if (current.state !== 'open') return; // Owner cancellation/resolution wins a concurrent dispatch.
-    incidents.store.update(current, {
+    const failed = incidents.store.update(current, {
       phase:
         ctx.deps.db.coordination.getOperation(row.projectId, id)?.state === 'uncertain'
           ? 'verifying'
@@ -149,8 +150,10 @@ export async function executeIncident(
     });
     ctx.deps.db.addEvent(row.projectId, 'incident_remedy_failed', {
       incident: row.id,
+      operation: id,
       error: incidentHash(String(error)),
     });
+    if (action.kind === 'environment.start') return failed;
   } finally {
     try {
       finishWork?.();

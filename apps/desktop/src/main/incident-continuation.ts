@@ -4,7 +4,11 @@ import { currentIncidentSubscriber } from './incident-condition';
 import { commitIncidentDelivery } from './incident-delivery';
 import { requireCoordinationDispatch } from './coordination-dispatch';
 /** Clear the blocker and commit the original continuation to the one inbox atomically. */
-export async function continueResolvedIncident(ctx: TaskRunEngine, row: CoordinationBlocker) {
+export async function continueResolvedIncident(
+  ctx: TaskRunEngine,
+  row: CoordinationBlocker,
+  currentTurn?: { runId: string; intent: number },
+) {
   if (row.state !== 'resolved' || !row.protocol) return;
   for (const subscription of row.protocol.subscriptions) {
     if (!(await currentIncidentSubscriber(ctx, row.projectId, subscription))) continue;
@@ -26,6 +30,14 @@ export async function continueResolvedIncident(ctx: TaskRunEngine, row: Coordina
       continue;
     }
     requireCoordinationDispatch(ctx.deps.db, row.projectId);
+    if (
+      currentTurn?.runId === subscription.runId &&
+      currentTurn.intent === subscription.intent &&
+      active.timeline.state.status === 'working'
+    ) {
+      execution.clearIncident(row.id, subscription.intent);
+      continue;
+    }
     commitIncidentDelivery(
       ctx.deps.db,
       row.projectId,

@@ -1,6 +1,7 @@
 import { TaskListViews } from './task-list-views';
 import { taskDispatchPending } from './session-dispatch-pending';
 import { taskResourceWait } from './resource-wait-view';
+import { taskEnvironmentRetry } from './task-environment-retry-view';
 import { presentationState } from './timeline-presentation';
 import { historyReads } from './history-read-service';
 import { emptyTimeline } from '@skaro/timeline';
@@ -49,12 +50,10 @@ export class TaskRunViews {
       console.error('Task history retirement:', error),
     );
     const context = this.ctx.project(projectId);
-    const listed = await context.summary();
-    const subject = findTask(listed, taskId);
-    const spec = listed.specs.find((entry) => entry.id === subject.spec);
-    const artifacts = listed;
-    const requirements = spec ? await context.documentRequirements(spec.path) : {};
+    const artifacts = await context.summary();
     const task = findTask(artifacts, taskId);
+    const spec = artifacts.specs.find((entry) => entry.id === task.spec);
+    const requirements = spec ? await context.documentRequirements(spec.path) : {};
     if (active) {
       if (task.status === 'done') this.ctx.results.closeMergeCard(active, 'answered');
       else {
@@ -82,10 +81,15 @@ export class TaskRunViews {
     );
     const stage = subjectStage(artifacts, taskId);
     const index = indexTasks(artifacts.tasks);
-    const shown = taskResourceWait(this.ctx.deps.db, projectId, {
-      ...detail(task, artifacts, runtime, active?.run),
-      ...requirements,
-    });
+    const shown = taskEnvironmentRetry(
+      this.ctx.deps.db,
+      taskResourceWait(this.ctx.deps.db, projectId, {
+        ...detail(task, artifacts, runtime, active?.run),
+        ...requirements,
+      }),
+      active?.run,
+      runtime.get(taskId)?.state,
+    );
     const integration = await this.ctx.integrations.history.project(
       projectId,
       taskId,

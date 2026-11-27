@@ -66,7 +66,6 @@
       {layout}
       {onspec}
       {onopen}
-      onaction={controller.lifecycle}
       ontoggle={(i) => void window.skaro.invoke('task.toggleCriterion', projectId, taskId, i)}
     />
   {/if}

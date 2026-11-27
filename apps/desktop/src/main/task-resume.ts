@@ -2,9 +2,7 @@ import { assertQuestionsAnswered, type TimelineState } from '@skaro/timeline';
 import type { SkaroScope, ToolResult } from '@skaro/mcp-server';
 import type { TaskExecution } from './task-execution';
 import { awaitsDecision } from './task-wait-card';
-import { taskC4WaitPolicy } from './c4-package-policy';
-import type { TaskC4WaitPolicy } from '../shared/feed-actions';
-import { incidentSubscribers, isTaskParked } from '@skaro/core';
+import { incidentSubscribers, isTaskParked, type Task } from '@skaro/core';
 import type { TaskRunEngine } from './task-run-engine';
 import { readTaskInputs } from './task-preflight';
 import { CommandCancelled } from './owner-commands';
@@ -12,6 +10,11 @@ import { key } from './task-run-helpers';
 import { requireTaskNotStopping } from './builtin-task-stop';
 import { resumeParkedTask } from './task-park';
 import { beginTransition, currentTransition, transitionPhase } from './task-lifecycle-journal';
+import type { ActiveRun } from './task-run-model';
+import { reportLifecycleConflict } from './task-lifecycle-conflict';
+import { RESUMED_ENVIRONMENT } from './task-agent-input';
+import { taskC4WaitPolicy } from './c4-package-policy';
+import type { TaskC4WaitPolicy } from '../shared/feed-actions';
 
 export function resumeTaskExecution(
   execution: TaskExecution,
@@ -78,9 +81,43 @@ export async function resumeTaskFromInstruction(
     (!isTaskParked(subject.status) && subject.status !== 'in_progress')
   )
     return { text: 'The current task state does not allow execution.', isError: true };
+  if (
+    !(await confirmTaskResume(
+      ctx,
+      active,
+      subject,
+      snapshot.version,
+      commandId,
+      instruction,
+      current,
+    ))
+  )
+    return { text: 'No matching current owner instruction.', isError: true };
+  const blocker = execution.read().blockedIncident;
+  const incident = blocker && ctx.deps.db.coordination.blockers.get(project, blocker);
+  const text = 'Task execution resumed for the current owner instruction.';
+  return incident && incident.state === 'open' && incident.protocol?.cause === 'environment'
+    ? { text: `${text} ${RESUMED_ENVIRONMENT}` }
+    : { text };
+}
+
+/** A recorded owner submission authorizes execution independently of native delivery. */
+export async function confirmTaskResume(
+  ctx: TaskRunEngine,
+  active: ActiveRun,
+  subject: Pick<Task, 'archived' | 'status'>,
+  inputs: string,
+  commandId: string,
+  instruction: string,
+  current: () => void,
+): Promise<boolean> {
+  const { projectId: project, taskId: task } = active;
+  if (subject.archived || (!isTaskParked(subject.status) && subject.status !== 'in_progress'))
+    return false;
   current();
+  const execution = ctx.continuation.execution(active);
   const db = ctx.deps.db;
-  const { result, transition } = db.settings.atomic(() => {
+  const { resumed, transition } = db.settings.atomic(() => {
     const pending = currentTransition(db, project, task);
     if (
       pending &&
@@ -92,25 +129,18 @@ export async function resumeTaskFromInstruction(
     const row = id && db.coordination.blockers.get(project, id);
     const environment =
       row && row.state === 'open' && row.protocol?.cause === 'environment' ? row : undefined;
-    const result = resumeTaskExecution(
-      execution,
-      active.timeline.state,
-      commandId,
-      instruction,
-      !!environment,
-      blocksC4,
-    );
-    if (result.isError) return { result };
+    const resumed = execution.resume(commandId, instruction, !!environment);
+    if (!resumed) return { resumed };
     if (environment) {
       const subscriptions = incidentSubscribers(environment.protocol!.subscriptions, {
         taskId: task,
         runId: active.run.id,
-        inputs: snapshot.version,
+        inputs,
         intent: execution.intentVersion(),
       });
       ctx.incidents.store.update(environment, { subscriptions });
     }
-    if (!isTaskParked(subject.status)) return { result };
+    if (!isTaskParked(subject.status)) return { resumed };
     const transition =
       pending && pending.phase !== 'settled'
         ? pending
@@ -121,16 +151,21 @@ export async function resumeTaskFromInstruction(
             from: subject.status,
             commandId,
           });
-    // The live agent receiving and quoting this command proves delivery, even if the native
-    // transport acknowledgement has not arrived yet. Recovery can finish the board write.
+    // The confirmed intent can finish its board write after a restart.
     transitionPhase(db, project, transition, 'confirmed');
-    return { result, transition };
+    return { resumed, transition };
   });
   if (transition) {
-    await resumeParkedTask(ctx, project, task, current);
-    current();
-    transitionPhase(db, project, transition, 'settled');
-    ctx.changed(project, task);
+    try {
+      await resumeParkedTask(ctx, project, task, current);
+      current();
+      transitionPhase(db, project, transition, 'settled');
+      ctx.changed(project, task);
+    } catch (error) {
+      if (!(error instanceof CommandCancelled))
+        await reportLifecycleConflict(ctx, project, transition);
+      throw error;
+    }
   }
-  return result;
+  return resumed;
 }

@@ -1,12 +1,20 @@
 <script lang="ts">
   import { t } from '@skaro/ui';
   import type { TaskDetail } from '../../../shared/ipc';
+  import StatusChip from './StatusChip.svelte';
   import TaskPanelIcon from './TaskPanelIcon.svelte';
-  let { task, oncollapse }: { task: TaskDetail; oncollapse: () => void } = $props();
+  let {
+    task,
+    oncollapse,
+    showStatus,
+  }: { task: TaskDetail; oncollapse: () => void; showStatus: boolean } = $props();
 </script>
 
 <div class="head">
   <span class="id">{task.id}</span>
+  {#if showStatus}
+    <StatusChip status={task.status} resourceWait={task.resourceWait} />
+  {/if}
   <button
     type="button"
     class="collapse"
@@ -42,7 +50,7 @@
   }
 
   .id {
-    flex: 1;
+    flex: none;
     font-family: var(--sk-mono);
     color: var(--sk-text-13);
   }
@@ -65,6 +73,7 @@
     justify-content: center;
     border: none;
     border-radius: 6px;
+    margin-inline-start: auto;
     background: transparent;
     color: var(--sk-text-23);
     cursor: pointer;

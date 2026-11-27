@@ -3,7 +3,6 @@
   import type { StageView, TaskDetail } from '../../../shared/ipc';
   import TaskDescription from './TaskDescription.svelte';
   import type { TaskDescriptionLayout } from './task-description-layout.svelte';
-  import type { TaskLifecycleAction } from './task-lifecycle-actions';
   let {
     task,
     stage,
@@ -11,7 +10,6 @@
     onspec,
     onopen,
     ontoggle,
-    onaction,
   }: {
     task: TaskDetail;
     /** The screen of a stage: the milestone with its tasks instead of a task. */
@@ -20,7 +18,6 @@
     onspec: (path: string) => void;
     onopen: (taskId: string) => void;
     ontoggle: (index: number) => void;
-    onaction: (action: TaskLifecycleAction) => Promise<void>;
   } = $props();
   const id = $props.id();
 </script>
@@ -43,7 +40,6 @@
     {onspec}
     {onopen}
     {ontoggle}
-    {onaction}
   />
 </div>
 

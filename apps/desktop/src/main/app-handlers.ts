@@ -86,7 +86,7 @@ export function appHandlers(
 > {
   return {
     'session.remember': (key, view) => background(dataDir, 'registry.session', key, view),
-    'commands.list': (projectId, ownerId) => db.commands.forOwner(`${projectId}:${ownerId}`),
+    'commands.list': (projectId, ownerId) => db.commands.forDisplay(`${projectId}:${ownerId}`),
     'window.minimize': () => window()?.minimize(),
     'window.toggleMaximize': () => {
       const win = window();
